@@ -24,9 +24,11 @@ export default function AppShell({ children, locale = defaultLocale }: { childre
                 </Link>
               ))}
             </nav>
-            <Link className="rounded-lg px-3 py-1.5 text-white/90 hover:bg-white/10" href="/logout">
-              {copy.nav.logout}
-            </Link>
+            <form action="/logout" method="post">
+              <button className="rounded-lg px-3 py-1.5 text-white/90 hover:bg-white/10" type="submit">
+                {copy.nav.logout}
+              </button>
+            </form>
           </div>
         </div>
       </header>
