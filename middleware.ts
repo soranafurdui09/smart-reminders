@@ -1,65 +1,33 @@
 // middleware.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
-import type { Database } from '@/lib/supabase/types';
-import { getRequiredEnv, getSupabaseServerUrl, getSupabaseStorageKey } from '@/lib/env';
 
-export async function middleware(request: NextRequest) {
-  // Lasă tot ce nu e /app în pace
-  if (!request.nextUrl.pathname.startsWith('/app')) {
+export function middleware(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+
+  // Lăsăm orice nu începe cu /app să treacă liber
+  if (!pathname.startsWith('/app')) {
     return NextResponse.next();
   }
 
-  const response = NextResponse.next({
-    request: {
-      headers: request.headers
-    }
-  });
+  // Verificăm doar dacă există un cookie Supabase de tip auth
+  const hasSupabaseAuthCookie = request.cookies
+    .getAll()
+    .some((cookie) =>
+      cookie.name.startsWith('sb-') && cookie.name.endsWith('auth-token.0')
+    );
 
-  const storageKey = getSupabaseStorageKey();
-  const supabase = createServerClient<Database>(
-    getSupabaseServerUrl(),
-    getRequiredEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
-    {
-      auth: storageKey ? { storageKey } : undefined,
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: Parameters<typeof response.cookies.set>[0]) {
-          const cookieOptions = typeof options === 'object' && options ? options : {};
-          response.cookies.set({ name, value, ...cookieOptions });
-        },
-        remove(name: string, options: Parameters<typeof response.cookies.set>[0]) {
-          const cookieOptions = typeof options === 'object' && options ? options : {};
-          response.cookies.set({ name, value: '', ...cookieOptions, maxAge: 0 });
-        }
-      }
-    }
-  );
-
-  const {
-    data: { user },
-    error
-  } = await supabase.auth.getUser();
-
-  if (error) {
-    console.error('[middleware] getUser error', error);
-  }
-
-  if (!user) {
+  if (!hasSupabaseAuthCookie) {
+    // Nu pare logat -> redirect la /auth, cu parametru next=...
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/auth';
-    redirectUrl.searchParams.set('next', request.nextUrl.pathname + request.nextUrl.search);
-
-    const redirect = NextResponse.redirect(redirectUrl);
-    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
-    return redirect;
+    redirectUrl.searchParams.set('next', pathname + search);
+    return NextResponse.redirect(redirectUrl);
   }
 
-  return response;
+  // Are cookie -> îl lăsăm mai departe
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/app/:path*']
+  matcher: ['/app/:path*'],
 };
