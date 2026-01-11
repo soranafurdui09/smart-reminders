@@ -25,8 +25,16 @@ export async function middleware(request: NextRequest) {
         },
         set(name: string, value: string, options: Parameters<typeof response.cookies.set>[0]) {
           const cookieOptions = (typeof options === 'object' && options) ? options : {};
-          response.cookies.set({ name, value, ...cookieOptions });
-        },
+          response.cookies.set({
+            name,
+            value,
+            httpOnly: true,
+            secure: true,
+            sameSite: 'lax',
+            path: '/',
+            ...cookieOptions
+          });
+                  },
         remove(name: string, options: Parameters<typeof response.cookies.set>[0]) {
           const cookieOptions = (typeof options === 'object' && options) ? options : {};
           response.cookies.set({ name, value: '', ...cookieOptions, maxAge: 0 });

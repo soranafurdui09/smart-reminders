@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
     url.pathname = '/auth';
     url.searchParams.delete('code');
     return NextResponse.redirect(url);
+    
   }
 
   const response = NextResponse.redirect(new URL(next, url.origin));
@@ -26,7 +27,16 @@ export async function GET(request: NextRequest) {
         },
         set(name: string, value: string, options: Parameters<typeof response.cookies.set>[0]) {
           const cookieOptions = (typeof options === 'object' && options) ? options : {};
-          response.cookies.set({ name, value, ...cookieOptions });
+          response.cookies.set({
+            name,
+            value,
+            httpOnly: true,
+            secure: true,
+            sameSite: 'lax',
+            path: '/',
+            ...cookieOptions
+          });
+          
         },
         remove(name: string, options: Parameters<typeof response.cookies.set>[0]) {
           const cookieOptions = (typeof options === 'object' && options) ? options : {};
