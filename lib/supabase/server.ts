@@ -1,35 +1,35 @@
-import { cookies } from 'next/headers';
-import { createServerClient as createSupabaseServerClient } from '@supabase/ssr';
-import type { Database } from './types';
-import { getEnvStatus, getRequiredEnv, getSupabaseServerUrl, getSupabaseStorageKey } from '@/lib/env';
+// lib/supabase/server.ts
+import { cookies } from 'next/headers'
+import {
+  createServerClient as createSupabaseServerClient,
+  type CookieOptions,
+} from '@supabase/ssr'
 
 export function createServerClient() {
-  const envStatus = getEnvStatus();
-  if (!envStatus.ok) {
-    throw new Error(`Missing env vars: ${envStatus.missing.join(', ')}`);
-  }
+  const cookieStore = cookies()
 
-  const cookieStore = cookies();
-  return createSupabaseServerClient<Database>(
-    getSupabaseServerUrl(),
-    getRequiredEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+  return createSupabaseServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      auth: {
-        storageKey: getSupabaseStorageKey()
-      },
       cookies: {
         get(name: string) {
-          return cookieStore.get(name)?.value;
+          return cookieStore.get(name)?.value
         },
-        set(name: string, value: string, options: Parameters<typeof cookieStore.set>[0]) {
-          const cookieOptions = typeof options === 'object' && options ? options : {};
-          cookieStore.set({ name, value, ...cookieOptions });
+        set(name: string, value: string, options: CookieOptions) {
+          // IMPORTANT: nu chemăm response.cookies.set aici,
+          // ci folosim cookieStore -> Next știe să le trimită înapoi
+          cookieStore.set({ name, value, ...options })
         },
-        remove(name: string, options: Parameters<typeof cookieStore.set>[0]) {
-          const cookieOptions = typeof options === 'object' && options ? options : {};
-          cookieStore.set({ name, value: '', ...cookieOptions, maxAge: 0 });
-        }
-      }
+        remove(name: string, options: CookieOptions) {
+          cookieStore.set({
+            name,
+            value: '',
+            ...options,
+            maxAge: 0,
+          })
+        },
+      },
     }
-  );
+  )
 }
