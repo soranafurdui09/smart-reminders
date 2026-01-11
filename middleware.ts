@@ -1,48 +1,54 @@
+// middleware.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import type { Database } from '@/lib/supabase/types';
-import { getEnvStatus, getRequiredEnv, getSupabaseServerUrl, getSupabaseStorageKey } from '@/lib/env';
 
 export async function middleware(request: NextRequest) {
-  const envStatus = getEnvStatus();
-  if (!envStatus.ok) {
-    return NextResponse.next();
-  }
-
+  // Lasă tot ce nu e /app în pace
   if (!request.nextUrl.pathname.startsWith('/app')) {
     return NextResponse.next();
   }
 
-  const response = NextResponse.next({ request: { headers: request.headers } });
+  const response = NextResponse.next({
+    request: {
+      headers: request.headers
+    }
+  });
+
   const supabase = createServerClient<Database>(
-    getSupabaseServerUrl(),
-    getRequiredEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
           return request.cookies.get(name)?.value;
         },
         set(name: string, value: string, options: Parameters<typeof response.cookies.set>[0]) {
-          const cookieOptions = typeof options === 'object' && options ? options : {};
+          const cookieOptions = (typeof options === 'object' && options) ? options : {};
           response.cookies.set({ name, value, ...cookieOptions });
         },
         remove(name: string, options: Parameters<typeof response.cookies.set>[0]) {
-          const cookieOptions = typeof options === 'object' && options ? options : {};
+          const cookieOptions = (typeof options === 'object' && options) ? options : {};
           response.cookies.set({ name, value: '', ...cookieOptions, maxAge: 0 });
         }
       }
     }
   );
-  
 
   const {
-    data: { user }
+    data: { user },
+    error
   } = await supabase.auth.getUser();
 
-  if (!user && request.nextUrl.pathname.startsWith('/app')) {
+  if (error) {
+    console.error('[middleware] getUser error', error);
+  }
+
+  if (!user) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/auth';
     redirectUrl.searchParams.set('next', request.nextUrl.pathname + request.nextUrl.search);
+
     const redirect = NextResponse.redirect(redirectUrl);
     response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
     return redirect;
@@ -50,6 +56,7 @@ export async function middleware(request: NextRequest) {
 
   return response;
 }
+
 export const config = {
-  matcher: ["/app/:path*"],
+  matcher: ['/app/:path*']
 };
