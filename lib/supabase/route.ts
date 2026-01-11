@@ -22,10 +22,12 @@ export function createRouteClient() {
           return cookieStore.get(name)?.value;
         },
         set(name: string, value: string, options: Parameters<typeof cookieStore.set>[0]) {
-          cookieStore.set({ name, value, ...options });
+          const cookieOptions = typeof options === 'object' && options ? options : {};
+          cookieStore.set({ name, value, ...cookieOptions });
         },
         remove(name: string, options: Parameters<typeof cookieStore.set>[0]) {
-          cookieStore.set({ name, value: '', ...options, maxAge: 0 });
+          const cookieOptions = typeof options === 'object' && options ? options : {};
+          cookieStore.set({ name, value: '', ...cookieOptions, maxAge: 0 });
         }
       }
     }

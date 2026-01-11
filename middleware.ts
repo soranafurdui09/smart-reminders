@@ -26,10 +26,12 @@ export async function middleware(request: NextRequest) {
           return request.cookies.get(name)?.value;
         },
         set(name: string, value: string, options: Parameters<typeof response.cookies.set>[0]) {
-          response.cookies.set({ name, value, ...options });
+          const cookieOptions = typeof options === 'object' && options ? options : {};
+          response.cookies.set({ name, value, ...cookieOptions });
         },
         remove(name: string, options: Parameters<typeof response.cookies.set>[0]) {
-          response.cookies.set({ name, value: '', ...options, maxAge: 0 });
+          const cookieOptions = typeof options === 'object' && options ? options : {};
+          response.cookies.set({ name, value: '', ...cookieOptions, maxAge: 0 });
         }
       }
     }
