@@ -54,23 +54,43 @@ export function createBrowserClient() {
     throw new Error(`Missing env vars: ${envStatus.missing.join(', ')}`);
   }
 
+  const storageKey = getSupabaseStorageKey();
+  const shouldManageCookie = (name: string) => {
+    if (!storageKey) {
+      return true;
+    }
+    if (name.includes(`${storageKey}-code-verifier`)) {
+      return true;
+    }
+    return !name.startsWith(storageKey);
+  };
+
   return createSupabaseBrowserClient<Database>(
     getRequiredPublicEnv('NEXT_PUBLIC_SUPABASE_URL'),
     getRequiredPublicEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
     {
       auth: {
-        storageKey: getSupabaseStorageKey()
+        storageKey
       },
       cookies: {
         get(name: string) {
+          if (!shouldManageCookie(name)) {
+            return undefined;
+          }
           return getCookie(name);
         },
         set(name: string, value: string, options: CookieOptions) {
           const cookieOptions = typeof options === 'object' && options ? options : {};
+          if (!shouldManageCookie(name)) {
+            return;
+          }
           setCookie(name, value, cookieOptions);
         },
         remove(name: string, options: CookieOptions) {
           const cookieOptions = typeof options === 'object' && options ? options : {};
+          if (!shouldManageCookie(name)) {
+            return;
+          }
           setCookie(name, '', { ...cookieOptions, maxAge: 0 });
         }
       }

@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import type { Database } from '@/lib/supabase/types';
+import { getRequiredEnv, getSupabaseServerUrl, getSupabaseStorageKey } from '@/lib/env';
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -16,27 +17,20 @@ export async function GET(request: NextRequest) {
   }
 
   const response = NextResponse.redirect(new URL(next, url.origin));
+  const storageKey = getSupabaseStorageKey();
 
   const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    getSupabaseServerUrl(),
+    getRequiredEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
     {
+      auth: storageKey ? { storageKey } : undefined,
       cookies: {
         get(name: string) {
           return request.cookies.get(name)?.value;
         },
         set(name: string, value: string, options: Parameters<typeof response.cookies.set>[0]) {
-          const cookieOptions = (typeof options === 'object' && options) ? options : {};
-          response.cookies.set({
-            name,
-            value,
-            httpOnly: true,
-            secure: true,
-            sameSite: 'lax',
-            path: '/',
-            ...cookieOptions
-          });
-          
+          const cookieOptions = typeof options === 'object' && options ? options : {};
+          response.cookies.set({ name, value, ...cookieOptions });
         },
         remove(name: string, options: Parameters<typeof response.cookies.set>[0]) {
           const cookieOptions = (typeof options === 'object' && options) ? options : {};

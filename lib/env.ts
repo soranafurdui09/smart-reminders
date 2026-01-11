@@ -48,7 +48,7 @@ export function getOptionalEnv(key: string) {
 }
 
 export function getSupabaseServerUrl() {
-  return normalizeEnvValue(process.env.SUPABASE_URL) || normalizeEnvValue(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  return normalizeEnvValue(process.env.NEXT_PUBLIC_SUPABASE_URL) || normalizeEnvValue(process.env.SUPABASE_URL);
 }
 
 export function getSupabaseStorageKey() {
