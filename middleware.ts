@@ -22,13 +22,13 @@ export async function middleware(request: NextRequest) {
         storageKey: getSupabaseStorageKey()
       },
       cookies: {
-        get(name) {
+        get(name: string) {
           return request.cookies.get(name)?.value;
         },
-        set(name, value, options) {
+        set(name: string, value: string, options: Parameters<typeof response.cookies.set>[0]) {
           response.cookies.set({ name, value, ...options });
         },
-        remove(name, options) {
+        remove(name: string, options: Parameters<typeof response.cookies.set>[0]) {
           response.cookies.set({ name, value: '', ...options, maxAge: 0 });
         }
       }
