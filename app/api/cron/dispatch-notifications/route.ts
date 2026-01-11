@@ -22,7 +22,7 @@ export async function GET() {
   }
 
   for (const occurrence of occurrences ?? []) {
-    const reminder = occurrence.reminder;
+    const reminder = Array.isArray(occurrence.reminder) ? occurrence.reminder[0] : occurrence.reminder;
     if (!reminder?.household_id || !reminder?.is_active) {
       continue;
     }
