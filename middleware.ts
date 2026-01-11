@@ -9,6 +9,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // În producție nu folosim middleware-ul pentru auth (se bazează pe SSR în pagini).
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.next();
+  }
+
   // Verificăm doar dacă există un cookie Supabase de tip auth
   const hasSupabaseAuthCookie = request.cookies
     .getAll()
