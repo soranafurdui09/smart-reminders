@@ -75,12 +75,17 @@ export async function inviteMember(formData: FormData) {
   const inviteLink = `${getAppUrl()}/invite?token=${token}`;
 
   if (isResendConfigured()) {
-    await sendEmail({
+    const result = await sendEmail({
       to: email,
       subject: 'Invitatie household',
       html: `<p>Ai fost invitat(a) in household. Click: <a href="${inviteLink}">Accepta invitatie</a></p>`
     });
-    redirect('/app/household?invite=sent');
+    if (result.status === 'sent') {
+      redirect('/app/household?invite=sent');
+    }
+    if (result.status === 'failed') {
+      redirect(`/app/household?invite=${encodeURIComponent(inviteLink)}&error=invite-email-failed`);
+    }
   }
 
   redirect(`/app/household?invite=${encodeURIComponent(inviteLink)}`);

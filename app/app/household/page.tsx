@@ -52,7 +52,9 @@ export default async function HouseholdPage({
 
         {searchParams.error ? (
           <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
-            {copy.household.actionFailed}
+            {searchParams.error === 'invite-email-failed'
+              ? copy.household.inviteEmailFailed
+              : copy.household.actionFailed}
           </div>
         ) : null}
 
