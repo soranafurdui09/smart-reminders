@@ -1,9 +1,8 @@
 import Link from 'next/link';
-import SubmitButton from '@/components/SubmitButton';
 import AuthRedirect from '@/components/AuthRedirect';
 import MagicLinkForm from '@/components/MagicLinkForm';
 import { getLocaleFromCookie, messages } from '@/lib/i18n';
-import { signInWithGoogle } from './actions';
+import GoogleOAuthButton from '@/components/GoogleOAuthButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,10 +63,13 @@ export default async function AuthPage({ searchParams }: { searchParams: { [key:
           <span className="h-px flex-1 bg-slate-200" />
         </div>
 
-        <form action={signInWithGoogle} className="space-y-3">
-          <input type="hidden" name="next" value={next} />
-          <SubmitButton label={copy.auth.googleButton} loading={copy.auth.redirecting} className="btn btn-secondary w-full" />
-        </form>
+        <GoogleOAuthButton
+          next={next}
+          label={copy.auth.googleButton}
+          loading={copy.auth.redirecting}
+          errorNotConfigured={copy.auth.errorOauthNotConfigured}
+          errorGeneric={copy.auth.errorGeneric}
+        />
       </div>
     </main>
   );
