@@ -18,9 +18,6 @@ export async function middleware(request: NextRequest) {
     getSupabaseServerUrl(),
     getRequiredEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
     {
-      auth: {
-        storageKey: getSupabaseStorageKey()
-      },
       cookies: {
         get(name: string) {
           return request.cookies.get(name)?.value;
@@ -36,6 +33,7 @@ export async function middleware(request: NextRequest) {
       }
     }
   );
+  
 
   const {
     data: { user }
