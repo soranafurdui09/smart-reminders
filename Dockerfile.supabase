@@ -1,0 +1,28 @@
+FROM alpine:3.20
+
+RUN apk add --no-cache bash curl ca-certificates tar gzip libc6-compat docker-cli
+
+WORKDIR /workspace
+
+# Install Supabase CLI from GitHub releases (latest), robustly.
+RUN set -eux; \
+  ARCH="$(uname -m)"; \
+  case "$ARCH" in \
+    x86_64) ASSET_ARCH="amd64" ;; \
+    aarch64) ASSET_ARCH="arm64" ;; \
+    *) echo "Unsupported arch: $ARCH" && exit 1 ;; \
+  esac; \
+  URL="$(curl -fsSL https://api.github.com/repos/supabase/cli/releases/latest | \
+    grep '"browser_download_url"' | \
+    grep "linux_${ASSET_ARCH}\.tar\.gz" | \
+    cut -d '"' -f 4 | head -n 1)"; \
+  echo "Downloading: $URL"; \
+  curl -fL --retry 5 --retry-delay 1 -o /tmp/supabase.tar.gz "$URL"; \
+  # sanity check: must be gzip
+  gzip -t /tmp/supabase.tar.gz; \
+  tar -xzf /tmp/supabase.tar.gz -C /usr/local/bin supabase; \
+  chmod +x /usr/local/bin/supabase; \
+  rm -f /tmp/supabase.tar.gz; \
+  supabase --version
+
+CMD ["bash", "-lc", "tail -f /dev/null"]
