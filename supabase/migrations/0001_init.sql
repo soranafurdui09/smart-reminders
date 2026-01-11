@@ -30,6 +30,10 @@ create table if not exists household_members (
   unique (household_id, user_id)
 );
 
+alter table household_members
+  add constraint household_members_user_id_fkey
+  foreign key (user_id) references profiles(user_id) on delete cascade;
+
 create table if not exists household_invites (
   id uuid primary key default gen_random_uuid(),
   household_id uuid not null references households(id) on delete cascade,
