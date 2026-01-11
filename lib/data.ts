@@ -17,6 +17,31 @@ type HouseholdMembership = {
   households: HouseholdRecord | null;
 };
 
+type ReminderPreview = {
+  id: string;
+  title?: string;
+  household_id?: string;
+  schedule_type?: string;
+  created_by?: string;
+  is_active?: boolean;
+};
+
+type OccurrenceWithReminder = {
+  id: string;
+  occur_at: string;
+  status: string;
+  snoozed_until?: string | null;
+  reminder?: ReminderPreview | null;
+};
+
+type DoneOccurrence = {
+  id: string;
+  occur_at?: string;
+  status?: string;
+  done_at?: string | null;
+  reminder?: Pick<ReminderPreview, 'id' | 'title' | 'household_id'> | null;
+};
+
 export async function getUserHousehold(userId: string) {
   const supabase = createServerClient();
   const { data, error } = await supabase
@@ -67,7 +92,7 @@ export async function getHouseholdInvites(householdId: string) {
   return data ?? [];
 }
 
-export async function getOpenOccurrencesForHousehold(householdId: string) {
+export async function getOpenOccurrencesForHousehold(householdId: string): Promise<OccurrenceWithReminder[]> {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('reminder_occurrences')
@@ -79,10 +104,15 @@ export async function getOpenOccurrencesForHousehold(householdId: string) {
     logDataError('getOpenOccurrencesForHousehold', error);
     return [];
   }
-  return data ?? [];
+  return (data ?? []).map((occurrence: any) => ({
+    ...occurrence,
+    reminder: Array.isArray(occurrence.reminder)
+      ? occurrence.reminder[0] ?? null
+      : occurrence.reminder ?? null
+  }));
 }
 
-export async function getDoneOccurrencesForHousehold(householdId: string, limit = 50) {
+export async function getDoneOccurrencesForHousehold(householdId: string, limit = 50): Promise<DoneOccurrence[]> {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('reminder_occurrences')
@@ -95,7 +125,12 @@ export async function getDoneOccurrencesForHousehold(householdId: string, limit 
     logDataError('getDoneOccurrencesForHousehold', error);
     return [];
   }
-  return data ?? [];
+  return (data ?? []).map((occurrence: any) => ({
+    ...occurrence,
+    reminder: Array.isArray(occurrence.reminder)
+      ? occurrence.reminder[0] ?? null
+      : occurrence.reminder ?? null
+  }));
 }
 
 export async function getUserLocale(userId: string) {
