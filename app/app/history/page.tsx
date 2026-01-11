@@ -18,7 +18,7 @@ export default async function HistoryPage({
     '7': copy.history.range7,
     '30': copy.history.range30,
     all: copy.history.rangeAll
-  };
+  } as const;
   const membership = await getUserHousehold(user.id);
 
   if (!membership?.households) {
@@ -32,7 +32,9 @@ export default async function HistoryPage({
     );
   }
 
-  const range = searchParams.range && rangeLabels[searchParams.range] ? searchParams.range : '7';
+  type RangeKey = keyof typeof rangeLabels;
+  const rangeParam = searchParams.range;
+  const range = (rangeParam && rangeParam in rangeLabels ? rangeParam : '7') as RangeKey;
   const allDone = await getDoneOccurrencesForHousehold(membership.households.id, 200);
   const cutoff = range === 'all' ? null : addDays(new Date(), -Number(range));
   const filtered = cutoff
