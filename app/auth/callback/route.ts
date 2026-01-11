@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     }
   } else if (token) {
     const otpType = (type || 'magiclink') as EmailOtpType;
-    const { error } = await supabase.auth.verifyOtp({ token, type: otpType });
+    const { error } = await supabase.auth.verifyOtp({ token_hash: token, type: otpType });
     if (error) {
       console.error('[auth] verifyOtp failed', error);
       return NextResponse.redirect(new URL('/auth?error=callback-failed', safeOrigin));
