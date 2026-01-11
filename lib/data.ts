@@ -5,6 +5,18 @@ function logDataError(scope: string, error: unknown) {
   console.error(`[data] ${scope} failed`, error);
 }
 
+type HouseholdRecord = {
+  id: string;
+  name?: string;
+  owner_user_id?: string;
+  notify_all_if_unassigned?: boolean;
+};
+
+type HouseholdMembership = {
+  role: string;
+  households: HouseholdRecord | null;
+};
+
 export async function getUserHousehold(userId: string) {
   const supabase = createServerClient();
   const { data, error } = await supabase
@@ -18,7 +30,13 @@ export async function getUserHousehold(userId: string) {
     logDataError('getUserHousehold', error);
     return null;
   }
-  return data;
+  if (!data) {
+    return null;
+  }
+  const household = Array.isArray(data.households)
+    ? data.households[0] ?? null
+    : data.households ?? null;
+  return { ...data, households: household } as HouseholdMembership;
 }
 
 export async function getHouseholdMembers(householdId: string) {
