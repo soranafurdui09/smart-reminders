@@ -71,22 +71,23 @@ export default async function HistoryPage({
         <section>
           <SectionHeader title={copy.history.sectionTitle} description={copy.history.sectionSubtitle} />
           {filtered.length ? (
-            <div className="relative space-y-4 pl-6">
-              <div className="absolute left-2 top-2 h-full w-px bg-borderSubtle" />
-              {filtered.map((occurrence) => (
-                <Link
-                  key={occurrence.id}
-                  href={`/app/reminders/${occurrence.reminder?.id}`}
-                  className="card relative hover:-translate-y-0.5 hover:shadow-md"
-                >
-                  <span className="absolute -left-6 top-6 h-3 w-3 rounded-full border border-primary/40 bg-primarySoft" />
-                  <div className="text-sm text-muted">
-                    {occurrence.done_at ? new Date(occurrence.done_at).toLocaleString(getLocaleTag(locale)) : copy.common.done}
-                  </div>
-                  <div className="text-sm font-semibold text-ink">{occurrence.reminder?.title || copy.reminderDetail.title}</div>
-                  <div className="text-xs text-muted">{copy.history.detailsHint}</div>
-                </Link>
-              ))}
+            <div className="space-y-4">
+              <div className="relative space-y-4 border-l border-borderSubtle pl-6">
+                {filtered.map((occurrence) => (
+                  <Link
+                    key={occurrence.id}
+                    href={`/app/reminders/${occurrence.reminder?.id}`}
+                    className="card relative block w-full hover:-translate-y-0.5 hover:shadow-md"
+                  >
+                    <span className="absolute -left-4 top-6 h-3 w-3 rounded-full border border-primary/40 bg-primarySoft shadow-sm" />
+                    <div className="text-sm text-muted">
+                      {occurrence.done_at ? new Date(occurrence.done_at).toLocaleString(getLocaleTag(locale)) : copy.common.done}
+                    </div>
+                    <div className="text-sm font-semibold text-ink">{occurrence.reminder?.title || copy.reminderDetail.title}</div>
+                    <div className="text-xs text-muted">{copy.history.detailsHint}</div>
+                  </Link>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="card text-sm text-muted">{copy.history.emptyFriendly}</div>
