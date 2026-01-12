@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ReactNode } from 'react';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
+import ActionFeedback from '@/components/ActionFeedback';
 
 export default function AppShell({
   children,
@@ -75,7 +76,11 @@ export default function AppShell({
                   {copy.common.profile}
                 </button>
                 <form action="/logout" method="post" className="mt-1">
-                  <button className="w-full rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-surfaceMuted" type="submit">
+                  <button
+                    className="w-full rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-surfaceMuted"
+                    type="submit"
+                    data-action-close="true"
+                  >
                     {copy.nav.logout}
                   </button>
                 </form>
@@ -103,6 +108,7 @@ export default function AppShell({
         </div>
       </header>
       <main className="page-wrap">{children}</main>
+      <ActionFeedback />
     </div>
   );
 }

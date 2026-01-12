@@ -40,18 +40,30 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
           <div className="absolute left-0 z-20 mt-3 w-56 rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft">
             {reminderId ? (
               <div className="space-y-1">
-                <Link className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted" href={`/app/reminders/${reminderId}`}>
+                <Link
+                  className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
+                  href={`/app/reminders/${reminderId}`}
+                  data-action-close="true"
+                >
                   {copy.common.details}
                 </Link>
                 <form action={cloneReminder}>
                   <input type="hidden" name="reminderId" value={reminderId} />
-                  <button className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted" type="submit">
+                  <button
+                    className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
+                    type="submit"
+                    data-action-feedback={copy.common.actionCloned}
+                  >
                     {copy.reminderDetail.clone}
                   </button>
                 </form>
                 <form action={deleteReminder}>
                   <input type="hidden" name="reminderId" value={reminderId} />
-                  <button className="w-full rounded-lg px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50" type="submit">
+                  <button
+                    className="w-full rounded-lg px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
+                    type="submit"
+                    data-action-feedback={copy.common.actionDeleted}
+                  >
                     {copy.common.delete}
                   </button>
                 </form>
@@ -77,7 +89,11 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
                 <input type="hidden" name="occurrenceId" value={occurrence.id} />
                 <input type="hidden" name="occurAt" value={occurrence.occur_at} />
                 <input type="hidden" name="mode" value="10" />
-                <button className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted" type="submit">
+                <button
+                  className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
+                  type="submit"
+                  data-action-feedback={copy.common.actionSnoozed}
+                >
                   {copy.common.snooze10}
                 </button>
               </form>
@@ -85,7 +101,11 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
                 <input type="hidden" name="occurrenceId" value={occurrence.id} />
                 <input type="hidden" name="occurAt" value={occurrence.occur_at} />
                 <input type="hidden" name="mode" value="60" />
-                <button className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted" type="submit">
+                <button
+                  className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
+                  type="submit"
+                  data-action-feedback={copy.common.actionSnoozed}
+                >
                   {copy.common.snooze60}
                 </button>
               </form>
@@ -93,7 +113,11 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
                 <input type="hidden" name="occurrenceId" value={occurrence.id} />
                 <input type="hidden" name="occurAt" value={occurrence.occur_at} />
                 <input type="hidden" name="mode" value="tomorrow" />
-                <button className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted" type="submit">
+                <button
+                  className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
+                  type="submit"
+                  data-action-feedback={copy.common.actionSnoozed}
+                >
                   {copy.common.snoozeTomorrow}
                 </button>
               </form>
@@ -116,7 +140,7 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
                 aria-label={copy.common.commentLabel}
               />
             </details>
-            <button className="btn btn-primary" type="submit">
+            <button className="btn btn-primary" type="submit" data-action-feedback={copy.common.actionDone}>
               <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <path
                   stroke="currentColor"
