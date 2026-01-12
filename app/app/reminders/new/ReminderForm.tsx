@@ -20,8 +20,21 @@ type TemplateLocale = 'ro' | 'en';
 
 type ScheduleType = 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly';
 
+type TemplateIcon =
+  | 'birthday'
+  | 'bank'
+  | 'rent'
+  | 'utilities'
+  | 'credit'
+  | 'itp'
+  | 'carInsurance'
+  | 'homeInsurance'
+  | 'boiler'
+  | 'taxes';
+
 type ReminderTemplate = {
   id: string;
+  icon: TemplateIcon;
   scheduleType: ScheduleType;
   preReminderMinutes?: number;
   recurrenceRule?: string;
@@ -32,9 +45,103 @@ type ReminderTemplate = {
   searchTerms?: string[];
 };
 
+const TEMPLATE_ICONS: Record<TemplateIcon, JSX.Element> = {
+  birthday: (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <path
+        stroke="currentColor"
+        strokeWidth="1.5"
+        d="M6 10h12M7 10V7a5 5 0 0110 0v3M5 10h14l-1.2 8.4a2 2 0 01-2 1.6H8.2a2 2 0 01-2-1.6L5 10z"
+      />
+    </svg>
+  ),
+  bank: (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <path
+        stroke="currentColor"
+        strokeWidth="1.5"
+        d="M3 9l9-4 9 4M4 10h16v8H4zM8 10v8M12 10v8M16 10v8"
+      />
+    </svg>
+  ),
+  rent: (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <path
+        stroke="currentColor"
+        strokeWidth="1.5"
+        d="M4 10l8-6 8 6v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8z"
+      />
+    </svg>
+  ),
+  utilities: (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <path
+        stroke="currentColor"
+        strokeWidth="1.5"
+        d="M13 3L4 14h6l-1 7 9-11h-6l1-7z"
+      />
+    </svg>
+  ),
+  credit: (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <path
+        stroke="currentColor"
+        strokeWidth="1.5"
+        d="M3 7h18v10H3zM3 10h18"
+      />
+    </svg>
+  ),
+  itp: (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <path
+        stroke="currentColor"
+        strokeWidth="1.5"
+        d="M4 13l2-5a2 2 0 012-1h8a2 2 0 012 1l2 5M6 13v5a1 1 0 001 1h1m10-6v5a1 1 0 01-1 1h-1M7 13h10"
+      />
+    </svg>
+  ),
+  carInsurance: (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <path
+        stroke="currentColor"
+        strokeWidth="1.5"
+        d="M12 3l7 4v6c0 4.4-3 7.2-7 8-4-0.8-7-3.6-7-8V7l7-4z"
+      />
+    </svg>
+  ),
+  homeInsurance: (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <path
+        stroke="currentColor"
+        strokeWidth="1.5"
+        d="M12 3l7 4v6c0 4.4-3 7.2-7 8-4-0.8-7-3.6-7-8V7l7-4z"
+      />
+    </svg>
+  ),
+  boiler: (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <path
+        stroke="currentColor"
+        strokeWidth="1.5"
+        d="M6 5h12a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2zM9 9h6M9 13h6"
+      />
+    </svg>
+  ),
+  taxes: (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <path
+        stroke="currentColor"
+        strokeWidth="1.5"
+        d="M7 7h7a3 3 0 013 3v7H10a3 3 0 01-3-3V7zM9 9h6M9 12h6"
+      />
+    </svg>
+  )
+};
+
 const REMINDER_TEMPLATES: ReminderTemplate[] = [
   {
     id: 'birthday',
+    icon: 'birthday',
     scheduleType: 'yearly',
     preReminderMinutes: 10080,
     recurrenceRule: 'FREQ=YEARLY',
@@ -46,6 +153,7 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
   },
   {
     id: 'loan-payment',
+    icon: 'bank',
     scheduleType: 'monthly',
     preReminderMinutes: 4320,
     recurrenceRule: 'FREQ=MONTHLY',
@@ -57,6 +165,7 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
   },
   {
     id: 'rent',
+    icon: 'rent',
     scheduleType: 'monthly',
     preReminderMinutes: 4320,
     recurrenceRule: 'FREQ=MONTHLY',
@@ -68,6 +177,7 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
   },
   {
     id: 'utilities',
+    icon: 'utilities',
     scheduleType: 'monthly',
     preReminderMinutes: 2880,
     recurrenceRule: 'FREQ=MONTHLY',
@@ -79,6 +189,7 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
   },
   {
     id: 'credit-card',
+    icon: 'credit',
     scheduleType: 'monthly',
     preReminderMinutes: 4320,
     recurrenceRule: 'FREQ=MONTHLY',
@@ -90,6 +201,7 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
   },
   {
     id: 'itp',
+    icon: 'itp',
     scheduleType: 'yearly',
     preReminderMinutes: 43200,
     recurrenceRule: 'FREQ=YEARLY',
@@ -101,6 +213,7 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
   },
   {
     id: 'car-insurance',
+    icon: 'carInsurance',
     scheduleType: 'yearly',
     preReminderMinutes: 43200,
     recurrenceRule: 'FREQ=YEARLY',
@@ -112,6 +225,7 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
   },
   {
     id: 'home-insurance',
+    icon: 'homeInsurance',
     scheduleType: 'yearly',
     preReminderMinutes: 43200,
     recurrenceRule: 'FREQ=YEARLY',
@@ -123,6 +237,7 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
   },
   {
     id: 'boiler-service',
+    icon: 'boiler',
     scheduleType: 'yearly',
     preReminderMinutes: 43200,
     recurrenceRule: 'FREQ=YEARLY',
@@ -134,6 +249,7 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
   },
   {
     id: 'local-taxes',
+    icon: 'taxes',
     scheduleType: 'yearly',
     preReminderMinutes: 20160,
     recurrenceRule: 'FREQ=YEARLY',
@@ -367,9 +483,14 @@ export default function ReminderForm({
                 return (
                   <div key={template.id} className="rounded-2xl border border-borderSubtle bg-surface p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="text-sm font-semibold text-ink">{template.title[activeLocale]}</div>
-                        <div className="text-xs text-muted">{template.description[activeLocale]}</div>
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primarySoft text-primaryStrong">
+                          {TEMPLATE_ICONS[template.icon]}
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-sm font-semibold text-ink">{template.title[activeLocale]}</div>
+                          <div className="text-xs text-muted">{template.description[activeLocale]}</div>
+                        </div>
                       </div>
                       <button
                         className="btn btn-secondary whitespace-nowrap"
