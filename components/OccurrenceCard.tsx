@@ -33,48 +33,51 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <details className="relative">
-          <summary className="btn btn-secondary dropdown-summary px-3 text-lg leading-none" aria-label={copy.common.moreActions}>
-            <span aria-hidden="true">...</span>
-          </summary>
-          <div className="absolute left-0 z-20 mt-3 w-56 rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft">
-            {reminderId ? (
-              <div className="space-y-1">
-                <Link
-                  className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
-                  href={`/app/reminders/${reminderId}`}
-                  data-action-close="true"
-                >
-                  {copy.common.details}
-                </Link>
-                <form action={cloneReminder}>
-                  <input type="hidden" name="reminderId" value={reminderId} />
-                  <button
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
-                    type="submit"
-                    data-action-feedback={copy.common.actionCloned}
-                  >
-                    {copy.reminderDetail.clone}
-                  </button>
-                </form>
-                <form action={deleteReminder}>
-                  <input type="hidden" name="reminderId" value={reminderId} />
-                  <button
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
-                    type="submit"
-                    data-action-feedback={copy.common.actionDeleted}
-                  >
-                    {copy.common.delete}
-                  </button>
-                </form>
-              </div>
-            ) : null}
-          </div>
-        </details>
-
         <div className="flex flex-wrap items-center gap-2">
           <details className="relative">
-            <summary className="btn btn-secondary dropdown-summary">
+            <summary
+              className="btn btn-secondary dropdown-summary h-10 w-10 p-0 text-lg leading-none"
+              aria-label={copy.common.moreActions}
+            >
+              <span aria-hidden="true">...</span>
+            </summary>
+            <div className="absolute left-0 z-20 mt-3 w-56 rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft">
+              {reminderId ? (
+                <div className="space-y-1">
+                  <Link
+                    className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
+                    href={`/app/reminders/${reminderId}`}
+                    data-action-close="true"
+                  >
+                    {copy.common.details}
+                  </Link>
+                  <form action={cloneReminder}>
+                    <input type="hidden" name="reminderId" value={reminderId} />
+                    <button
+                      className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
+                      type="submit"
+                      data-action-feedback={copy.common.actionCloned}
+                    >
+                      {copy.reminderDetail.clone}
+                    </button>
+                  </form>
+                  <form action={deleteReminder}>
+                    <input type="hidden" name="reminderId" value={reminderId} />
+                    <button
+                      className="w-full rounded-lg px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
+                      type="submit"
+                      data-action-feedback={copy.common.actionDeleted}
+                    >
+                      {copy.common.delete}
+                    </button>
+                  </form>
+                </div>
+              ) : null}
+            </div>
+          </details>
+
+          <details className="relative">
+            <summary className="btn btn-secondary dropdown-summary h-10">
               <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <path
                   stroke="currentColor"
@@ -123,35 +126,39 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
               </form>
             </div>
           </details>
+        </div>
 
-          <form action={markDone} className="flex flex-col items-end gap-2">
+        <details className="group w-full sm:w-auto">
+          <summary className="btn btn-primary dropdown-summary w-full sm:w-auto">
+            <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <path
+                stroke="currentColor"
+                strokeWidth="1.5"
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+            {copy.common.doneAction}
+          </summary>
+          <form
+            action={markDone}
+            className="mt-3 space-y-2 rounded-2xl border border-borderSubtle bg-surfaceMuted p-3 sm:w-72"
+          >
             <input type="hidden" name="occurrenceId" value={occurrence.id} />
             <input type="hidden" name="reminderId" value={reminderId} />
             <input type="hidden" name="occurAt" value={occurrence.occur_at} />
-            <details className="self-stretch">
-              <summary className="cursor-pointer text-xs font-semibold text-muted dropdown-summary">
-                {copy.common.commentOptional}
-              </summary>
-              <textarea
-                name="done_comment"
-                rows={2}
-                className="input mt-2 w-64 max-w-full"
-                placeholder={copy.common.commentPlaceholder}
-                aria-label={copy.common.commentLabel}
-              />
-            </details>
-            <button className="btn btn-primary" type="submit" data-action-feedback={copy.common.actionDone}>
-              <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
-                <path
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              {copy.common.doneAction}
+            <label className="text-xs font-semibold text-muted">{copy.common.commentOptional}</label>
+            <textarea
+              name="done_comment"
+              rows={2}
+              className="input"
+              placeholder={copy.common.commentPlaceholder}
+              aria-label={copy.common.commentLabel}
+            />
+            <button className="btn btn-primary w-full" type="submit" data-action-feedback={copy.common.actionDone}>
+              {copy.common.doneConfirm}
             </button>
           </form>
-        </div>
+        </details>
       </div>
     </div>
   );
