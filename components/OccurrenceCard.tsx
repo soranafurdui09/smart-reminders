@@ -25,30 +25,35 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
         </span>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          {reminderId ? (
-            <Link className="btn btn-secondary" href={`/app/reminders/${reminderId}`}>{copy.common.details}</Link>
-          ) : null}
-          {reminderId ? (
-            <form action={cloneReminder}>
-              <input type="hidden" name="reminderId" value={reminderId} />
-              <button className="btn btn-secondary" type="submit">{copy.reminderDetail.clone}</button>
-            </form>
-          ) : null}
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <form action={markDone}>
+          <input type="hidden" name="occurrenceId" value={occurrence.id} />
+          <input type="hidden" name="reminderId" value={reminderId} />
+          <input type="hidden" name="occurAt" value={occurrence.occur_at} />
+          <button className="btn btn-primary" type="submit">{copy.common.done}</button>
+        </form>
 
-        <div className="flex flex-wrap gap-2">
-          <form action={markDone}>
-            <input type="hidden" name="occurrenceId" value={occurrence.id} />
-            <input type="hidden" name="reminderId" value={reminderId} />
-            <input type="hidden" name="occurAt" value={occurrence.occur_at} />
-            <button className="btn btn-primary" type="submit">{copy.common.done}</button>
-          </form>
-
-          <details className="relative">
-            <summary className="btn btn-secondary dropdown-summary">{copy.common.snooze}</summary>
-            <div className="absolute right-0 z-10 mt-2 w-44 rounded-lg border border-slate-200 bg-white p-2 shadow-lg">
+        <details className="relative">
+          <summary className="btn btn-secondary dropdown-summary px-3 text-lg leading-none" aria-label={copy.common.moreActions}>
+            <span aria-hidden="true">...</span>
+          </summary>
+          <div className="absolute right-0 z-10 mt-2 w-56 rounded-lg border border-slate-200 bg-white p-2 shadow-lg">
+            {reminderId ? (
+              <div className="space-y-1">
+                <Link className="block w-full rounded-md px-2 py-1 text-left text-sm hover:bg-slate-100" href={`/app/reminders/${reminderId}`}>
+                  {copy.common.details}
+                </Link>
+                <form action={cloneReminder}>
+                  <input type="hidden" name="reminderId" value={reminderId} />
+                  <button className="w-full rounded-md px-2 py-1 text-left text-sm hover:bg-slate-100" type="submit">
+                    {copy.reminderDetail.clone}
+                  </button>
+                </form>
+              </div>
+            ) : null}
+            <div className="my-2 h-px bg-slate-100" />
+            <div className="space-y-1">
+              <div className="px-2 pt-1 text-xs font-semibold uppercase text-slate-400">{copy.common.snooze}</div>
               <form action={snoozeOccurrence}>
                 <input type="hidden" name="occurrenceId" value={occurrence.id} />
                 <input type="hidden" name="occurAt" value={occurrence.occur_at} />
@@ -74,8 +79,8 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
                 </button>
               </form>
             </div>
-          </details>
-        </div>
+          </div>
+        </details>
       </div>
     </div>
   );
