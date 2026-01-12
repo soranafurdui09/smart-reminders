@@ -1,5 +1,6 @@
 import AppShell from '@/components/AppShell';
 import SectionHeader from '@/components/SectionHeader';
+import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { requireUser } from '@/lib/auth';
 import { getHouseholdInvites, getHouseholdMembers, getUserHousehold, getUserLocale } from '@/lib/data';
 import { messages } from '@/lib/i18n';
@@ -25,7 +26,7 @@ export default async function HouseholdPage({
               <label className="text-sm font-semibold">{copy.household.createNameLabel}</label>
               <input name="name" className="input" placeholder={copy.household.createPlaceholder} required />
             </div>
-            <button className="btn btn-primary" type="submit">{copy.household.createButton}</button>
+            <ActionSubmitButton className="btn btn-primary" type="submit">{copy.household.createButton}</ActionSubmitButton>
           </form>
         </div>
       </AppShell>
@@ -132,7 +133,7 @@ export default async function HouseholdPage({
                 <option value="MEMBER">{copy.household.memberRoleLabel}</option>
               </select>
             </div>
-            <button className="btn btn-primary" type="submit">{copy.household.inviteButton}</button>
+            <ActionSubmitButton className="btn btn-primary" type="submit">{copy.household.inviteButton}</ActionSubmitButton>
           </form>
         </section>
       </div>

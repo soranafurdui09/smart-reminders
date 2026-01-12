@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from 'react';
+import ActionSubmitButton from '@/components/ActionSubmitButton';
 
 type MemberOption = {
   id: string;
@@ -623,9 +624,9 @@ export default function ReminderForm({
               onChange={(event) => setRecurrenceRule(event.target.value)}
             />
           </div>
-          <button className="btn btn-primary" type="submit">
+          <ActionSubmitButton className="btn btn-primary" type="submit">
             {copy.remindersNew.create}
-          </button>
+          </ActionSubmitButton>
         </section>
       </div>
     </form>

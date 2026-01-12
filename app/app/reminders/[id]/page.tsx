@@ -6,6 +6,7 @@ import { requireUser } from '@/lib/auth';
 import { getReminderById, getUserLocale } from '@/lib/data';
 import { messages } from '@/lib/i18n';
 import { cloneReminder, deleteReminder } from './actions';
+import ActionSubmitButton from '@/components/ActionSubmitButton';
 
 export default async function ReminderDetailPage({ params }: { params: { id: string } }) {
   const user = await requireUser(`/app/reminders/${params.id}`);
@@ -34,11 +35,15 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
           <div className="flex flex-wrap items-center gap-2">
             <form action={cloneReminder}>
               <input type="hidden" name="reminderId" value={reminder.id} />
-              <button className="btn btn-secondary" type="submit">{copy.reminderDetail.clone}</button>
+              <ActionSubmitButton className="btn btn-secondary" type="submit" data-action-feedback={copy.common.actionCloned}>
+                {copy.reminderDetail.clone}
+              </ActionSubmitButton>
             </form>
             <form action={deleteReminder}>
               <input type="hidden" name="reminderId" value={reminder.id} />
-              <button className="btn btn-secondary" type="submit">{copy.common.delete}</button>
+              <ActionSubmitButton className="btn btn-secondary" type="submit" data-action-feedback={copy.common.actionDeleted}>
+                {copy.common.delete}
+              </ActionSubmitButton>
             </form>
             <Link href="/app" className="btn btn-secondary">{copy.common.back}</Link>
           </div>

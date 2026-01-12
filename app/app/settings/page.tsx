@@ -2,6 +2,7 @@ import Link from 'next/link';
 import AppShell from '@/components/AppShell';
 import SectionHeader from '@/components/SectionHeader';
 import PushSettings from '@/components/PushSettings';
+import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { requireUser } from '@/lib/auth';
 import { getUserLocale } from '@/lib/data';
 import { getVapidPublicKey } from '@/lib/push';
@@ -33,7 +34,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { u
               <option value="ro">{copy.language.ro}</option>
               <option value="en">{copy.language.en}</option>
             </select>
-            <button className="btn btn-primary" type="submit">{copy.common.save}</button>
+            <ActionSubmitButton className="btn btn-primary" type="submit">{copy.common.save}</ActionSubmitButton>
           </form>
         </section>
         {vapidPublicKey ? (
