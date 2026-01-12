@@ -112,6 +112,32 @@ export async function getOpenOccurrencesForHousehold(householdId: string): Promi
   }));
 }
 
+export async function getOpenOccurrencesForHouseholdRange(
+  householdId: string,
+  startIso: string,
+  endIso: string
+): Promise<OccurrenceWithReminder[]> {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from('reminder_occurrences')
+    .select('id, occur_at, status, snoozed_until, reminder:reminders!inner(id, title, schedule_type, created_by, household_id, is_active)')
+    .eq('reminders.household_id', householdId)
+    .in('status', ['open', 'snoozed'])
+    .gte('occur_at', startIso)
+    .lte('occur_at', endIso)
+    .order('occur_at');
+  if (error) {
+    logDataError('getOpenOccurrencesForHouseholdRange', error);
+    return [];
+  }
+  return (data ?? []).map((occurrence: any) => ({
+    ...occurrence,
+    reminder: Array.isArray(occurrence.reminder)
+      ? occurrence.reminder[0] ?? null
+      : occurrence.reminder ?? null
+  }));
+}
+
 export async function getDoneOccurrencesForHousehold(householdId: string, limit = 50): Promise<DoneOccurrence[]> {
   const supabase = createServerClient();
   const { data, error } = await supabase

@@ -7,6 +7,7 @@ export default function AppShell({ children, locale = defaultLocale }: { childre
   const navLinks = [
     { href: '/app', label: copy.nav.dashboard },
     { href: '/app/reminders/new', label: copy.nav.newReminder },
+    { href: '/app/calendar', label: copy.nav.calendar },
     { href: '/app/history', label: copy.nav.history },
     { href: '/app/household', label: copy.nav.household },
     { href: '/app/settings', label: copy.nav.settings }

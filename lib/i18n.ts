@@ -10,6 +10,7 @@ export const messages = {
     nav: {
       dashboard: 'Dashboard',
       newReminder: 'Reminder nou',
+      calendar: 'Calendar',
       history: 'Istoric',
       household: 'Household',
       settings: 'Setari',
@@ -84,6 +85,17 @@ export const messages = {
       sectionSubtitle: 'Click pe un reminder pentru detalii.',
       empty: 'Nu exista remindere finalizate pentru acest interval.',
       detailsHint: 'Detalii →'
+    },
+    calendar: {
+      title: 'Calendar',
+      subtitle: 'Notificarile apar in ziua scadentei.',
+      noHousehold: 'Nu ai inca un household.',
+      createHousehold: 'Creeaza household',
+      prev: 'Luna anterioara',
+      next: 'Luna urmatoare',
+      weekdays: ['Lu', 'Ma', 'Mi', 'Jo', 'Vi', 'Sa', 'Du'],
+      empty: 'Fara notificari',
+      more: 'mai multe'
     },
     remindersNew: {
       title: 'Reminder nou',
@@ -181,6 +193,7 @@ export const messages = {
     nav: {
       dashboard: 'Dashboard',
       newReminder: 'New reminder',
+      calendar: 'Calendar',
       history: 'History',
       household: 'Household',
       settings: 'Settings',
@@ -255,6 +268,17 @@ export const messages = {
       sectionSubtitle: 'Click a reminder for details.',
       empty: 'No completed reminders in this range.',
       detailsHint: 'Details →'
+    },
+    calendar: {
+      title: 'Calendar',
+      subtitle: 'Notifications are shown on their due date.',
+      noHousehold: "You don't have a household yet.",
+      createHousehold: 'Create household',
+      prev: 'Previous month',
+      next: 'Next month',
+      weekdays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      empty: 'No notifications',
+      more: 'more'
     },
     remindersNew: {
       title: 'New reminder',
