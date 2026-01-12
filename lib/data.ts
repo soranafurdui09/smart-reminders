@@ -66,16 +66,31 @@ export async function getUserHousehold(userId: string) {
 
 export async function getHouseholdMembers(householdId: string) {
   const supabase = createServerClient();
-  const { data, error } = await supabase
+  const { data: members, error } = await supabase
     .from('household_members')
-    .select('id, user_id, role, profiles(name, email)')
+    .select('id, user_id, role')
     .eq('household_id', householdId)
     .order('created_at');
   if (error) {
     logDataError('getHouseholdMembers', error);
     return [];
   }
-  return data ?? [];
+  const userIds = (members ?? []).map((member) => member.user_id);
+  if (!userIds.length) {
+    return members ?? [];
+  }
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('user_id, name, email')
+    .in('user_id', userIds);
+  if (profilesError) {
+    logDataError('getHouseholdMembers profiles', profilesError);
+  }
+  const profileMap = new Map((profiles ?? []).map((profile: any) => [profile.user_id, profile]));
+  return (members ?? []).map((member: any) => ({
+    ...member,
+    profiles: profileMap.get(member.user_id) ?? null
+  }));
 }
 
 export async function getHouseholdInvites(householdId: string) {
