@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth';
+import { generateReminderEmbedding } from '@/lib/ai/embeddings';
 
 export async function updateReminder(formData: FormData) {
   const reminderId = String(formData.get('reminderId'));
@@ -26,6 +27,15 @@ export async function updateReminder(formData: FormData) {
   const { error } = await supabase.from('reminders').update(payload).eq('id', reminderId);
   if (error) {
     redirect(`/app/reminders/${reminderId}?error=1`);
+  }
+
+  try {
+    const embedding = await generateReminderEmbedding(title, notes || null);
+    if (embedding) {
+      await supabase.from('reminders').update({ embedding }).eq('id', reminderId);
+    }
+  } catch (error) {
+    console.error('[embeddings] update reminder failed', error);
   }
 
   revalidatePath(`/app/reminders/${reminderId}`);
@@ -64,6 +74,15 @@ export async function cloneReminder(formData: FormData) {
 
   if (cloneError || !cloned) {
     redirect(`/app/reminders/${reminderId}?error=1`);
+  }
+
+  try {
+    const embedding = await generateReminderEmbedding(`${reminder.title} (copie)`, reminder.notes || null);
+    if (embedding) {
+      await supabase.from('reminders').update({ embedding }).eq('id', cloned.id);
+    }
+  } catch (error) {
+    console.error('[embeddings] clone reminder failed', error);
   }
 
   await supabase.from('reminder_occurrences').insert({

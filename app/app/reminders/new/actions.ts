@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { createServerClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth';
 import { getUserHousehold } from '@/lib/data';
+import { generateReminderEmbedding } from '@/lib/ai/embeddings';
 
 export async function createReminder(formData: FormData) {
   const user = await requireUser('/app/reminders/new');
@@ -62,6 +63,15 @@ export async function createReminder(formData: FormData) {
 
   if (error || !reminder) {
     redirect('/app/reminders/new?error=failed');
+  }
+
+  try {
+    const embedding = await generateReminderEmbedding(title, notes || null);
+    if (embedding) {
+      await supabase.from('reminders').update({ embedding }).eq('id', reminder.id);
+    }
+  } catch (error) {
+    console.error('[embeddings] create reminder failed', error);
   }
 
   await supabase.from('reminder_occurrences').insert({

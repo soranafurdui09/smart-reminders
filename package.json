@@ -12,7 +12,8 @@
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",
     "docker:reset": "docker compose exec supabase supabase db reset",
-    "docker:logs": "docker compose logs -f"
+    "docker:logs": "docker compose logs -f",
+    "embeddings:backfill": "node scripts/backfill-reminder-embeddings.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",

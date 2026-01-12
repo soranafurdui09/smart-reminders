@@ -74,6 +74,16 @@ export const messages = {
       sectionSubtitle: 'Urmatoarele actiuni',
       empty: 'Nu ai remindere active.'
     },
+    search: {
+      title: 'Cautare semantica',
+      hint: 'Cauta dupa inteles, nu doar cuvinte exacte.',
+      placeholder: 'Ex: lucruri despre dentist, facturi, copii',
+      button: 'Cauta cu AI',
+      loading: 'Caut...',
+      empty: 'Nu am gasit remindere similare.',
+      error: 'Cautarea a esuat.',
+      scoreLabel: 'Potrivire'
+    },
     history: {
       title: 'Istoric',
       noHousehold: 'Nu ai inca un household.',
@@ -268,6 +278,16 @@ export const messages = {
       sectionTitle: 'Reminders',
       sectionSubtitle: 'Upcoming actions',
       empty: 'No active reminders yet.'
+    },
+    search: {
+      title: 'Semantic search',
+      hint: 'Search by meaning, not just exact words.',
+      placeholder: 'e.g. dentist, bills I keep postponing, kids tasks',
+      button: 'Search with AI',
+      loading: 'Searching...',
+      empty: 'No similar reminders found.',
+      error: 'Search failed.',
+      scoreLabel: 'Match'
     },
     history: {
       title: 'History',

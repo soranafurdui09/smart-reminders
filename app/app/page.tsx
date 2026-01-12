@@ -2,6 +2,7 @@ import Link from 'next/link';
 import SectionHeader from '@/components/SectionHeader';
 import OccurrenceCard from '@/components/OccurrenceCard';
 import AppShell from '@/components/AppShell';
+import SemanticSearch from '@/components/SemanticSearch';
 import { requireUser } from '@/lib/auth';
 import { getOpenOccurrencesForHousehold, getUserHousehold, getUserLocale } from '@/lib/data';
 import { getLocaleTag, messages } from '@/lib/i18n';
@@ -55,6 +56,12 @@ export default async function DashboardPage() {
             <div className="mt-2 text-lg font-semibold">{copy.dashboard.nextEmpty}</div>
           )}
         </section>
+
+        <SemanticSearch
+          householdId={membership.households.id}
+          localeTag={getLocaleTag(locale)}
+          copy={copy.search}
+        />
 
         <section>
           <SectionHeader title={copy.dashboard.sectionTitle} description={copy.dashboard.sectionSubtitle} />
