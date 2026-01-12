@@ -13,17 +13,57 @@ export async function updateReminder(formData: FormData) {
   const title = String(formData.get('title') || '').trim();
   const notes = String(formData.get('notes') || '').trim();
   const dueAtRaw = String(formData.get('due_at') || '').trim();
+  const scheduleTypeRaw = String(formData.get('schedule_type') || 'once');
+  const scheduleType = ['once', 'daily', 'weekly', 'monthly', 'yearly'].includes(scheduleTypeRaw)
+    ? scheduleTypeRaw
+    : 'once';
+  const recurrenceRuleRaw = String(formData.get('recurrence_rule') || '').trim();
+  const preReminderRaw = String(formData.get('pre_reminder_minutes') || '').trim();
+  const assignedMemberRaw = String(formData.get('assigned_member_id') || '').trim();
 
-  const payload: Record<string, string | null> = {
+  if (!title) {
+    redirect(`/app/reminders/${reminderId}/edit?error=missing-title`);
+  }
+
+  const payload: Record<string, string | number | null> = {
     title,
-    notes: notes || null
+    notes: notes || null,
+    schedule_type: scheduleType,
+    recurrence_rule: recurrenceRuleRaw || null
   };
+
+  const supabase = createServerClient();
+  const { data: reminderRecord } = await supabase
+    .from('reminders')
+    .select('id, household_id')
+    .eq('id', reminderId)
+    .maybeSingle();
+
+  if (!reminderRecord) {
+    redirect(`/app/reminders/${reminderId}?error=1`);
+  }
 
   if (dueAtRaw) {
     payload.due_at = new Date(dueAtRaw).toISOString();
   }
 
-  const supabase = createServerClient();
+  const preReminderMinutes = preReminderRaw ? Number(preReminderRaw) : null;
+  payload.pre_reminder_minutes = Number.isFinite(preReminderMinutes) ? preReminderMinutes : null;
+
+  let assignedMemberId: string | null = assignedMemberRaw || null;
+  if (assignedMemberId) {
+    const { data: member } = await supabase
+      .from('household_members')
+      .select('id')
+      .eq('id', assignedMemberId)
+      .eq('household_id', reminderRecord.household_id)
+      .maybeSingle();
+    if (!member) {
+      assignedMemberId = null;
+    }
+  }
+  payload.assigned_member_id = assignedMemberId;
+
   const { error } = await supabase.from('reminders').update(payload).eq('id', reminderId);
   if (error) {
     redirect(`/app/reminders/${reminderId}?error=1`);
@@ -39,6 +79,9 @@ export async function updateReminder(formData: FormData) {
   }
 
   revalidatePath(`/app/reminders/${reminderId}`);
+  revalidatePath('/app');
+  revalidatePath('/app/calendar');
+  redirect(`/app/reminders/${reminderId}`);
 }
 
 export async function cloneReminder(formData: FormData) {

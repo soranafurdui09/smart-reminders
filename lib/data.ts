@@ -24,6 +24,7 @@ type ReminderPreview = {
   schedule_type?: string;
   created_by?: string;
   is_active?: boolean;
+  assigned_member_id?: string | null;
 };
 
 type OccurrenceWithReminder = {
@@ -111,7 +112,7 @@ export async function getOpenOccurrencesForHousehold(householdId: string): Promi
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('reminder_occurrences')
-    .select('id, occur_at, status, snoozed_until, reminder:reminders!inner(id, title, schedule_type, created_by, household_id, is_active)')
+    .select('id, occur_at, status, snoozed_until, reminder:reminders!inner(id, title, schedule_type, created_by, household_id, is_active, assigned_member_id)')
     .eq('reminders.household_id', householdId)
     .in('status', ['open', 'snoozed'])
     .order('occur_at');
@@ -135,7 +136,7 @@ export async function getOpenOccurrencesForHouseholdRange(
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('reminder_occurrences')
-    .select('id, occur_at, status, snoozed_until, reminder:reminders!inner(id, title, schedule_type, created_by, household_id, is_active)')
+    .select('id, occur_at, status, snoozed_until, reminder:reminders!inner(id, title, schedule_type, created_by, household_id, is_active, assigned_member_id)')
     .eq('reminders.household_id', householdId)
     .in('status', ['open', 'snoozed'])
     .gte('occur_at', startIso)
@@ -192,7 +193,7 @@ export async function getReminderById(reminderId: string) {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('reminders')
-    .select('id, title, notes, schedule_type, due_at, is_active, reminder_occurrences(id, occur_at, status, done_comment)')
+    .select('id, title, notes, schedule_type, due_at, is_active, household_id, assigned_member_id, recurrence_rule, pre_reminder_minutes, reminder_occurrences(id, occur_at, status, done_comment)')
     .eq('id', reminderId)
     .order('occur_at', { foreignTable: 'reminder_occurrences' })
     .maybeSingle();

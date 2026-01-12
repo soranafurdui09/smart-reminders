@@ -6,7 +6,7 @@ import AppShell from '@/components/AppShell';
 import SemanticSearch from '@/components/SemanticSearch';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { requireUser } from '@/lib/auth';
-import { getOpenOccurrencesForHousehold, getUserHousehold, getUserLocale } from '@/lib/data';
+import { getHouseholdMembers, getOpenOccurrencesForHousehold, getUserHousehold, getUserLocale } from '@/lib/data';
 import { getLocaleTag, messages } from '@/lib/i18n';
 import { createHousehold } from './household/actions';
 
@@ -34,7 +34,32 @@ export default async function DashboardPage() {
   }
 
   const occurrencesAll = await getOpenOccurrencesForHousehold(membership.households.id);
-  const occurrences = occurrencesAll.filter((occurrence) => occurrence.reminder?.is_active);
+  const members = await getHouseholdMembers(membership.households.id);
+  const memberMap = new Map(
+    members.map((member: any) => [
+      member.id,
+      member.profiles?.name || member.profiles?.email || member.user_id
+    ])
+  );
+  const occurrences = occurrencesAll
+    .filter((occurrence) => occurrence.reminder?.is_active)
+    .map((occurrence) => {
+      const assignedId = occurrence.reminder?.assigned_member_id;
+      if (!assignedId) {
+        return occurrence;
+      }
+      const label = memberMap.get(assignedId);
+      if (!label) {
+        return occurrence;
+      }
+      return {
+        ...occurrence,
+        reminder: {
+          ...occurrence.reminder,
+          assigned_member_label: label
+        }
+      };
+    });
   const nextOccurrence = occurrences[0];
 
   const groups: Record<string, typeof occurrences> = {

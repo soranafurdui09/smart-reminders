@@ -20,6 +20,7 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
       ? 'border-warning/20 bg-warning/10 text-warning'
       : 'border-primary/20 bg-primarySoft text-primaryStrong';
   const commentText = occurrence.done_comment || copy.common.commentEmpty;
+  const assigneeLabel = reminder?.assigned_member_label;
   return (
     <div className="card space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -29,6 +30,11 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
           </span>
           <div className="text-lg font-semibold text-ink">{reminder?.title}</div>
           <div className="text-sm text-muted">{commentText}</div>
+          {assigneeLabel ? (
+            <div className="text-xs text-muted">
+              {copy.common.assigneeLabel}: {assigneeLabel}
+            </div>
+          ) : null}
         </div>
         <span className={`pill border ${statusClass}`}>{statusLabel}</span>
       </div>
@@ -51,6 +57,13 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
                     data-action-close="true"
                   >
                     {copy.common.details}
+                  </Link>
+                  <Link
+                    className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
+                    href={`/app/reminders/${reminderId}/edit`}
+                    data-action-close="true"
+                  >
+                    {copy.common.edit}
                   </Link>
                   <form action={cloneReminder}>
                     <input type="hidden" name="reminderId" value={reminderId} />

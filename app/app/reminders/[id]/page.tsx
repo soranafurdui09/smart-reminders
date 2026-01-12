@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import AppShell from '@/components/AppShell';
 import SectionHeader from '@/components/SectionHeader';
 import { requireUser } from '@/lib/auth';
-import { getReminderById, getUserLocale } from '@/lib/data';
+import { getHouseholdMembers, getReminderById, getUserLocale } from '@/lib/data';
 import { messages } from '@/lib/i18n';
 import { cloneReminder, deleteReminder } from './actions';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
@@ -23,6 +23,19 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
       </AppShell>
     );
   }
+
+  const members = reminder.household_id
+    ? await getHouseholdMembers(reminder.household_id)
+    : [];
+  const memberMap = new Map(
+    members.map((member: any) => [
+      member.id,
+      member.profiles?.name || member.profiles?.email || member.user_id
+    ])
+  );
+  const assigneeLabel = reminder.assigned_member_id
+    ? memberMap.get(reminder.assigned_member_id) || copy.common.assigneeUnassigned
+    : copy.common.assigneeUnassigned;
 
   return (
     <AppShell locale={locale} userEmail={user.email}>
@@ -45,6 +58,9 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
                 {copy.common.delete}
               </ActionSubmitButton>
             </form>
+            <Link href={`/app/reminders/${reminder.id}/edit`} className="btn btn-secondary">
+              {copy.common.edit}
+            </Link>
             <Link href="/app" className="btn btn-secondary">{copy.common.back}</Link>
           </div>
         </div>
@@ -71,6 +87,9 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
                 {copy.reminderDetail.firstDate}: {format(new Date(reminder.due_at), 'dd MMM yyyy HH:mm')}
               </div>
             ) : null}
+            <div className="text-sm text-muted">
+              {copy.common.assigneeLabel}: {assigneeLabel}
+            </div>
             {reminder.notes ? <p className="text-sm text-muted">{reminder.notes}</p> : null}
           </div>
         </section>
