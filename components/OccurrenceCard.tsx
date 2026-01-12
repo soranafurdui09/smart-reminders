@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
-import { cloneReminder } from '@/app/app/reminders/[id]/actions';
+import { cloneReminder, deleteReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
 
 export default function OccurrenceCard({ occurrence, locale = defaultLocale }: { occurrence: any; locale?: Locale }) {
@@ -59,6 +59,12 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
                   <input type="hidden" name="reminderId" value={reminderId} />
                   <button className="w-full rounded-md px-2 py-1 text-left text-sm hover:bg-slate-100" type="submit">
                     {copy.reminderDetail.clone}
+                  </button>
+                </form>
+                <form action={deleteReminder}>
+                  <input type="hidden" name="reminderId" value={reminderId} />
+                  <button className="w-full rounded-md px-2 py-1 text-left text-sm text-rose-600 hover:bg-rose-50" type="submit">
+                    {copy.common.delete}
                   </button>
                 </form>
               </div>

@@ -5,7 +5,7 @@ import SectionHeader from '@/components/SectionHeader';
 import { requireUser } from '@/lib/auth';
 import { getReminderById, getUserLocale } from '@/lib/data';
 import { messages } from '@/lib/i18n';
-import { cloneReminder } from './actions';
+import { cloneReminder, deleteReminder } from './actions';
 
 export default async function ReminderDetailPage({ params }: { params: { id: string } }) {
   const user = await requireUser(`/app/reminders/${params.id}`);
@@ -35,6 +35,10 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
             <form action={cloneReminder}>
               <input type="hidden" name="reminderId" value={reminder.id} />
               <button className="btn btn-secondary" type="submit">{copy.reminderDetail.clone}</button>
+            </form>
+            <form action={deleteReminder}>
+              <input type="hidden" name="reminderId" value={reminder.id} />
+              <button className="btn btn-secondary" type="submit">{copy.common.delete}</button>
             </form>
             <Link href="/app" className="btn btn-secondary">{copy.common.back}</Link>
           </div>

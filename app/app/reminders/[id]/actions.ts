@@ -93,3 +93,21 @@ export async function cloneReminder(formData: FormData) {
 
   redirect(`/app/reminders/${cloned.id}`);
 }
+
+export async function deleteReminder(formData: FormData) {
+  const reminderId = String(formData.get('reminderId'));
+  await requireUser(`/app/reminders/${reminderId}`);
+
+  const supabase = createServerClient();
+  const { error } = await supabase
+    .from('reminders')
+    .delete()
+    .eq('id', reminderId);
+
+  if (error) {
+    redirect(`/app/reminders/${reminderId}?error=1`);
+  }
+
+  revalidatePath('/app');
+  redirect('/app');
+}
