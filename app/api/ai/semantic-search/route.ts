@@ -5,6 +5,16 @@ import { getOptionalEnv } from '@/lib/env';
 
 export const runtime = 'nodejs';
 
+const MIN_SIMILARITY = 0.45;
+
+function normalizeSimilarity(distance: number) {
+  const similarity = 1 - distance;
+  if (!Number.isFinite(similarity)) {
+    return 0;
+  }
+  return Math.min(1, Math.max(0, similarity));
+}
+
 export async function POST(request: Request) {
   let payload: { query?: string; householdId?: string; limit?: number };
   try {
@@ -63,5 +73,50 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Search failed.' }, { status: 500 });
   }
 
-  return NextResponse.json({ results: data ?? [] });
+  const semanticResults = (data ?? []).map((item: any) => {
+    const similarity = normalizeSimilarity(Number(item.distance));
+    return {
+      id: item.id,
+      title: item.title,
+      notes: item.notes,
+      dueAt: item.due_at,
+      similarity
+    };
+  }).filter((item: any) => item.similarity >= MIN_SIMILARITY)
+    .sort((a: any, b: any) => (b.similarity ?? 0) - (a.similarity ?? 0));
+
+  const topScore = semanticResults[0]?.similarity ?? 0;
+
+  if (semanticResults.length) {
+    console.log('[ai-search] semantic', { query, count: semanticResults.length, topScore });
+    return NextResponse.json({ results: semanticResults, isKeywordFallback: false });
+  }
+
+  const { data: keywordResults, error: keywordError } = await supabase
+    .from('reminders')
+    .select('id, title, notes, due_at, household_id')
+    .eq('household_id', householdId)
+    .or(`title.ilike.%${query}%,notes.ilike.%${query}%`)
+    .order('due_at', { ascending: true })
+    .limit(limit);
+
+  if (keywordError) {
+    console.error('[ai] keyword search failed', keywordError);
+    return NextResponse.json({ error: 'Search failed.' }, { status: 500 });
+  }
+
+  const keywordPayload = (keywordResults ?? []).map((item: any) => ({
+    id: item.id,
+    title: item.title,
+    notes: item.notes,
+    dueAt: item.due_at,
+    similarity: null
+  }));
+
+  console.log('[ai-search] fallback', { query, count: keywordPayload.length, topScore });
+
+  return NextResponse.json({
+    results: keywordPayload,
+    isKeywordFallback: keywordPayload.length > 0
+  });
 }

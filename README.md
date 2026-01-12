@@ -141,6 +141,28 @@ curl http://localhost:3000/api/cron/dispatch-notifications
 Cron este configurat in `vercel.json`:
 - `/api/cron/dispatch-notifications` ruleaza la 15 minute.
 
+## Supabase Edge Function (Backfill embeddings)
+Functia edge pentru a genera embeddings direct in Supabase Cloud.
+
+Deploy:
+```bash
+supabase functions deploy backfill-reminder-embeddings
+```
+
+Seteaza variabilele in Supabase (Project Settings → Functions):
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `OPENAI_API_KEY`
+- `OPENAI_EMBEDDING_MODEL` (optional, default `text-embedding-3-small`)
+- `ADMIN_TOKEN`
+
+Apel:
+```bash
+curl -X POST \
+  -H "x-admin-token: <ADMIN_TOKEN>" \
+  "https://<projectref>.functions.supabase.co/backfill-reminder-embeddings?forceAll=true"
+```
+
 ## Structura
 - `app/` - Next.js App Router pages + API routes
 - `components/` - UI

@@ -7,7 +7,7 @@ type SearchResult = {
   id: string;
   title: string;
   notes: string | null;
-  due_at: string | null;
+  dueAt: string | null;
   similarity?: number | null;
 };
 
@@ -27,17 +27,20 @@ export default function SemanticSearch({
     error: string;
     hint: string;
     scoreLabel: string;
+    fallbackLabel: string;
   };
 }) {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [isFallback, setIsFallback] = useState(false);
 
   const handleSearch = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!query.trim()) {
       setResults([]);
+      setIsFallback(false);
       return;
     }
     setLoading(true);
@@ -52,13 +55,16 @@ export default function SemanticSearch({
         const payload = await response.json().catch(() => ({}));
         setError(payload.error || copy.error);
         setResults([]);
+        setIsFallback(false);
         return;
       }
       const payload = await response.json();
       setResults((payload?.results ?? []) as SearchResult[]);
+      setIsFallback(Boolean(payload?.isKeywordFallback));
     } catch (err) {
       console.error('[ai] semantic search failed', err);
       setError(copy.error);
+      setIsFallback(false);
     } finally {
       setLoading(false);
     }
@@ -81,6 +87,11 @@ export default function SemanticSearch({
           {loading ? copy.loading : copy.button}
         </button>
       </form>
+      {isFallback && results.length ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+          {copy.fallbackLabel}
+        </div>
+      ) : null}
       {error ? (
         <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>
       ) : null}
@@ -89,7 +100,7 @@ export default function SemanticSearch({
           {results.length ? results.map((item) => (
             <Link key={item.id} href={`/app/reminders/${item.id}`} className="card hover:border-sky-200 hover:shadow-md">
               <div className="text-sm text-slate-500">
-                {item.due_at ? new Date(item.due_at).toLocaleString(localeTag) : null}
+                {item.dueAt ? new Date(item.dueAt).toLocaleString(localeTag) : null}
               </div>
               <div className="text-sm font-semibold">{item.title}</div>
               {item.notes ? <div className="text-xs text-slate-400">{item.notes}</div> : null}

@@ -4,8 +4,11 @@ type EmbeddingResponse = {
   data?: Array<{ embedding?: number[] }>;
 };
 
-export function buildReminderEmbeddingInput(title: string, notes?: string | null) {
-  const parts = [title.trim(), (notes || '').trim()].filter(Boolean);
+// Embeddings use OpenAI text-embedding-3-small (1536 dimensions).
+// Keep reminder text consistent across create/update/search.
+export function buildReminderEmbeddingInput(title: string, notes?: string | null, tags?: string[] | null) {
+  const tagText = tags?.length ? tags.join(' ') : '';
+  const parts = [title.trim(), (notes || '').trim(), tagText.trim()].filter(Boolean);
   return parts.join('\n');
 }
 
@@ -40,8 +43,8 @@ export async function generateEmbedding(input: string) {
   return embedding;
 }
 
-export async function generateReminderEmbedding(title: string, notes?: string | null) {
-  const input = buildReminderEmbeddingInput(title, notes);
+export async function generateReminderEmbedding(title: string, notes?: string | null, tags?: string[] | null) {
+  const input = buildReminderEmbeddingInput(title, notes, tags);
   if (!input) {
     return null;
   }

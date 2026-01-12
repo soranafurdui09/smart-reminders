@@ -81,9 +81,10 @@ export const messages = {
       placeholder: 'Ex: lucruri despre dentist, facturi, copii',
       button: 'Cauta cu AI',
       loading: 'Caut...',
-      empty: 'Nu am gasit remindere similare.',
+      empty: 'Nu am gasit rezultate relevante. Incearca alte cuvinte sau cauta dupa text exact.',
       error: 'Cautarea a esuat.',
-      scoreLabel: 'Potrivire'
+      scoreLabel: 'Potrivire',
+      fallbackLabel: 'Rezultate pe baza de cautare text (fallback).'
     },
     history: {
       title: 'Istoric',
@@ -287,9 +288,10 @@ export const messages = {
       placeholder: 'e.g. dentist, bills I keep postponing, kids tasks',
       button: 'Search with AI',
       loading: 'Searching...',
-      empty: 'No similar reminders found.',
+      empty: 'No relevant results. Try different words or use exact text.',
       error: 'Search failed.',
-      scoreLabel: 'Match'
+      scoreLabel: 'Match',
+      fallbackLabel: 'Results based on keyword search (fallback).'
     },
     history: {
       title: 'History',

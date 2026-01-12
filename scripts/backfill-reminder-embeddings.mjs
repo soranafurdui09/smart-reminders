@@ -1,9 +1,11 @@
+// Replaced by Supabase Edge Function at supabase/functions/backfill-reminder-embeddings
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const openaiKey = process.env.OPENAI_API_KEY;
 const model = process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small';
+const forceAll = process.env.EMBEDDING_FORCE_ALL === '1';
 
 if (!supabaseUrl || !serviceKey) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.');
@@ -48,11 +50,16 @@ const getEmbedding = async (input) => {
 };
 
 while (true) {
-  const { data, error } = await supabase
+  let query = supabase
     .from('reminders')
     .select('id, title, notes')
-    .is('embedding', null)
     .limit(batchSize);
+
+  if (!forceAll) {
+    query = query.is('embedding', null);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('Failed to fetch reminders', error);
