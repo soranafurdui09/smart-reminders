@@ -40,7 +40,9 @@ function closeRelatedDetails(element: HTMLElement | null) {
   const form = element.closest('form');
   if (!form) return;
   form.querySelectorAll('details[open]').forEach((openDetails) => {
-    openDetails.open = false;
+    if (openDetails instanceof HTMLDetailsElement) {
+      openDetails.open = false;
+    }
   });
 }
 
