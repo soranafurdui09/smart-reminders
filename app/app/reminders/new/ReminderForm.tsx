@@ -445,12 +445,12 @@ export default function ReminderForm({
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <section className="space-y-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-ink">{copy.remindersNew.templatesTitle}</h2>
               <p className="text-sm text-muted">{copy.remindersNew.templatesSubtitle}</p>
             </div>
-            <div className="relative md:w-72">
+            <div className="relative w-full md:w-64">
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
                 <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
                   <path
@@ -475,33 +475,27 @@ export default function ReminderForm({
             </div>
           </div>
           {filteredTemplates.length ? (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               {filteredTemplates.map((template) => {
                 const preReminder = template.preReminderMinutes
                   ? formatPreReminder(activeLocale, template.preReminderMinutes)
                   : '';
                 return (
-                  <div key={template.id} className="rounded-2xl border border-borderSubtle bg-surface p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primarySoft text-primaryStrong">
-                          {TEMPLATE_ICONS[template.icon]}
-                        </div>
-                        <div className="space-y-1">
-                          <div className="text-sm font-semibold text-ink">{template.title[activeLocale]}</div>
-                          <div className="text-xs text-muted">{template.description[activeLocale]}</div>
-                        </div>
+                  <div
+                    key={template.id}
+                    className="flex flex-col gap-3 rounded-2xl border border-borderSubtle bg-surface p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primarySoft text-primaryStrong">
+                        {TEMPLATE_ICONS[template.icon]}
                       </div>
-                      <button
-                        className="btn btn-secondary whitespace-nowrap"
-                        type="button"
-                        onClick={() => applyTemplate(template)}
-                      >
-                        {copy.remindersNew.templatesApply}
-                      </button>
+                      <div className="min-w-0 space-y-1">
+                        <div className="text-sm font-semibold text-ink">{template.title[activeLocale]}</div>
+                        <div className="text-xs text-muted">{template.description[activeLocale]}</div>
+                      </div>
                     </div>
                     {template.tags[activeLocale].length ? (
-                      <div className="mt-3 flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2">
                         {template.tags[activeLocale].map((tag) => (
                           <span key={tag} className="chip">
                             {tag}
@@ -509,15 +503,26 @@ export default function ReminderForm({
                         ))}
                       </div>
                     ) : null}
-                    <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted">
-                      <span>{copy.remindersNew.repeatLabel}: {scheduleLabels[template.scheduleType]}</span>
+                    <div className="flex flex-wrap gap-2 text-xs text-muted">
+                      <span className="chip">
+                        {copy.remindersNew.repeatLabel}: {scheduleLabels[template.scheduleType]}
+                      </span>
                       {preReminder ? (
-                        <span>{copy.remindersNew.templatesPreReminderLabel}: {preReminder}</span>
+                        <span className="chip">
+                          {copy.remindersNew.templatesPreReminderLabel}: {preReminder}
+                        </span>
                       ) : null}
                     </div>
                     {template.notes?.[activeLocale] ? (
-                      <div className="mt-3 text-xs text-muted">{template.notes[activeLocale]}</div>
+                      <div className="text-xs text-muted">{template.notes[activeLocale]}</div>
                     ) : null}
+                    <button
+                      className="btn btn-secondary mt-1 w-full"
+                      type="button"
+                      onClick={() => applyTemplate(template)}
+                    >
+                      {copy.remindersNew.templatesApply}
+                    </button>
                   </div>
                 );
               })}
