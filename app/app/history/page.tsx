@@ -52,7 +52,7 @@ export default async function HistoryPage({
           <Link className="btn btn-secondary" href="/app">{copy.common.back}</Link>
         </div>
 
-        <div className="inline-flex flex-wrap gap-1 rounded-full border border-border-subtle bg-surfaceMuted/70 p-1">
+        <div className="inline-flex flex-wrap gap-1 rounded-full border border-borderSubtle bg-surfaceMuted/70 p-1">
           {(['7', '30', 'all'] as const).map((key) => (
             <Link
               key={key}
@@ -72,7 +72,7 @@ export default async function HistoryPage({
           <SectionHeader title={copy.history.sectionTitle} description={copy.history.sectionSubtitle} />
           {filtered.length ? (
             <div className="relative space-y-4 pl-6">
-              <div className="absolute left-2 top-2 h-full w-px bg-border-subtle" />
+              <div className="absolute left-2 top-2 h-full w-px bg-borderSubtle" />
               {filtered.map((occurrence) => (
                 <Link
                   key={occurrence.id}

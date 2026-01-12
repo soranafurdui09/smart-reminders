@@ -40,7 +40,7 @@ export default function AppShell({
             <span>{copy.appName}</span>
           </Link>
           <div className="flex flex-1 items-center justify-end gap-3 md:justify-between">
-            <nav className="hidden flex-wrap items-center gap-1 rounded-full border border-border-subtle bg-surfaceMuted/80 p-1 text-sm md:flex">
+            <nav className="hidden flex-wrap items-center gap-1 rounded-full border border-borderSubtle bg-surfaceMuted/80 p-1 text-sm md:flex">
               {navLinks.map((link) => {
                 const active = isActive(link.href);
                 return (
@@ -62,7 +62,7 @@ export default function AppShell({
               <summary className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-surfaceMuted text-sm font-semibold text-ink shadow-sm transition hover:bg-surface">
                 {userInitial}
               </summary>
-              <div className="absolute right-0 z-20 mt-3 w-56 rounded-2xl border border-border-subtle bg-surface p-2 shadow-soft">
+              <div className="absolute right-0 z-20 mt-3 w-56 rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft">
                 <div className="px-3 py-2 text-xs text-muted">
                   {safeEmail || copy.common.profile}
                 </div>
@@ -92,7 +92,7 @@ export default function AppShell({
                   className={`rounded-full border px-3 py-1 text-xs transition ${
                     active
                       ? 'border-primary/40 bg-primarySoft text-primaryStrong'
-                      : 'border-border-subtle text-muted hover:border-primary/30 hover:bg-surface'
+                      : 'border-borderSubtle text-muted hover:border-primary/30 hover:bg-surface'
                   }`}
                 >
                   {link.label}

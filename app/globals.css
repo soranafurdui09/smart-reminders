@@ -47,7 +47,7 @@ h3 {
 }
 
 .card {
-  @apply rounded-2xl border border-border-subtle bg-surface p-5 shadow-soft transition-all;
+  @apply rounded-2xl border border-borderSubtle bg-surface p-5 shadow-soft transition-all;
 }
 
 .btn {
@@ -71,7 +71,7 @@ h3 {
 }
 
 .chip {
-  @apply inline-flex items-center rounded-full border border-border-subtle bg-surfaceMuted px-2.5 py-1 text-xs font-semibold text-muted;
+  @apply inline-flex items-center rounded-full border border-borderSubtle bg-surfaceMuted px-2.5 py-1 text-xs font-semibold text-muted;
 }
 
 :where(a, button, input, textarea, select, summary):focus-visible {

@@ -111,7 +111,7 @@ export default async function DashboardPage() {
                   <div key={key} className="space-y-3">
                     <div className="flex items-center gap-3 text-xs font-semibold uppercase text-muted">
                       <span>{groupLabels[key]}</span>
-                      <span className="h-px flex-1 bg-border-subtle" />
+                      <span className="h-px flex-1 bg-borderSubtle" />
                     </div>
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                       {items.map((occurrence) => (

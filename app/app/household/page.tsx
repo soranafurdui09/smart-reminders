@@ -69,7 +69,7 @@ export default async function HouseholdPage({
                 const label = member.profiles?.name || member.profiles?.email || member.user_id;
                 const initial = String(label || 'U').charAt(0).toUpperCase();
                 return (
-                  <div key={member.user_id} className="flex items-center justify-between rounded-2xl border border-border-subtle bg-surface p-3">
+                  <div key={member.user_id} className="flex items-center justify-between rounded-2xl border border-borderSubtle bg-surface p-3">
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primarySoft text-sm font-semibold text-primaryStrong">
                         {initial}
@@ -95,7 +95,7 @@ export default async function HouseholdPage({
               {invites.length ? invites.map((invite: any) => {
                 const initial = String(invite.email || 'U').charAt(0).toUpperCase();
                 return (
-                  <div key={invite.id} className="flex items-center justify-between rounded-2xl border border-border-subtle bg-surface p-3">
+                  <div key={invite.id} className="flex items-center justify-between rounded-2xl border border-borderSubtle bg-surface p-3">
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surfaceMuted text-sm font-semibold text-ink">
                         {initial}

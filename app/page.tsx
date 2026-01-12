@@ -39,7 +39,7 @@ export default function LandingPage() {
               <p className="text-lg font-semibold text-ink">{copy.landing.upcomingTitle}</p>
               <p className="text-sm text-muted">{copy.landing.upcomingNotify}</p>
             </div>
-            <div className="rounded-2xl border border-dashed border-border-subtle p-4 text-sm text-muted">
+            <div className="rounded-2xl border border-dashed border-borderSubtle p-4 text-sm text-muted">
               {copy.landing.familyShare}
             </div>
           </div>

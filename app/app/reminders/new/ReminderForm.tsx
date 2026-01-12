@@ -365,7 +365,7 @@ export default function ReminderForm({
                   ? formatPreReminder(activeLocale, template.preReminderMinutes)
                   : '';
                 return (
-                  <div key={template.id} className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                  <div key={template.id} className="rounded-2xl border border-borderSubtle bg-surface p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
                         <div className="text-sm font-semibold text-ink">{template.title[activeLocale]}</div>

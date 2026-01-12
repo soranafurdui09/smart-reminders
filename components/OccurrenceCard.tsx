@@ -37,7 +37,7 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
           <summary className="btn btn-secondary dropdown-summary px-3 text-lg leading-none" aria-label={copy.common.moreActions}>
             <span aria-hidden="true">...</span>
           </summary>
-          <div className="absolute left-0 z-20 mt-3 w-56 rounded-2xl border border-border-subtle bg-surface p-2 shadow-soft">
+          <div className="absolute left-0 z-20 mt-3 w-56 rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft">
             {reminderId ? (
               <div className="space-y-1">
                 <Link className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted" href={`/app/reminders/${reminderId}`}>
@@ -72,7 +72,7 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
               </svg>
               {copy.common.snooze}
             </summary>
-            <div className="absolute right-0 z-20 mt-3 w-48 rounded-2xl border border-border-subtle bg-surface p-2 shadow-soft">
+            <div className="absolute right-0 z-20 mt-3 w-48 rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft">
               <form action={snoozeOccurrence}>
                 <input type="hidden" name="occurrenceId" value={occurrence.id} />
                 <input type="hidden" name="occurAt" value={occurrence.occur_at} />

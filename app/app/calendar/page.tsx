@@ -81,7 +81,7 @@ export default async function CalendarPage({
             <h1>{copy.calendar.title}</h1>
             <p className="text-sm text-muted">{copy.calendar.subtitle}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 rounded-full border border-border-subtle bg-surfaceMuted/70 p-1">
+          <div className="flex flex-wrap items-center gap-2 rounded-full border border-borderSubtle bg-surfaceMuted/70 p-1">
             <Link className="btn btn-secondary" href={`/app/calendar?month=${prevMonth}`}>{copy.calendar.prev}</Link>
             <div className="rounded-full bg-surface px-4 py-2 text-sm font-semibold text-ink shadow-sm">
               {monthLabel}
@@ -90,7 +90,7 @@ export default async function CalendarPage({
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-px rounded-3xl border border-border-subtle bg-border-subtle/70 p-px">
+        <div className="grid grid-cols-7 gap-px rounded-3xl border border-borderSubtle bg-borderSubtle/70 p-px">
           {copy.calendar.weekdays.map((label) => (
             <div key={label} className="rounded-t-xl bg-surfaceMuted px-3 py-2 text-xs font-semibold uppercase text-muted">
               {label}
@@ -119,7 +119,7 @@ export default async function CalendarPage({
                       key={occurrence.id}
                       href={`/app/reminders/${occurrence.reminder?.id ?? ''}`}
                       title={occurrence.reminder?.title ?? copy.reminderDetail.title}
-                      className="block rounded-full border border-border-subtle bg-surfaceMuted px-2 py-1 text-xs text-ink transition hover:border-primary/30 hover:bg-white"
+                      className="block rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-1 text-xs text-ink transition hover:border-primary/30 hover:bg-white"
                     >
                       <div className="truncate font-semibold">
                         {format(new Date(occurrence.occur_at), 'HH:mm')} {occurrence.reminder?.title ?? copy.reminderDetail.title}
