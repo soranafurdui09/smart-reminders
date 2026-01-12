@@ -62,6 +62,7 @@ export async function createReminder(formData: FormData) {
     .single();
 
   if (error || !reminder) {
+    console.error('[reminders] create failed', error);
     redirect('/app/reminders/new?error=failed');
   }
 
@@ -74,11 +75,14 @@ export async function createReminder(formData: FormData) {
     console.error('[embeddings] create reminder failed', error);
   }
 
-  await supabase.from('reminder_occurrences').insert({
+  const { error: occurrenceError } = await supabase.from('reminder_occurrences').insert({
     reminder_id: reminder.id,
     occur_at: dueAt.toISOString(),
     status: 'open'
   });
+  if (occurrenceError) {
+    console.error('[reminders] create occurrence failed', occurrenceError);
+  }
 
   redirect('/app');
 }
