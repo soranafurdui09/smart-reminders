@@ -19,7 +19,7 @@ export const viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ro" className={spaceGrotesk.variable}>
-      <body className="min-h-screen font-sans" style={{ fontFamily: 'var(--font-space)' }}>
+      <body className="min-h-screen font-sans">
         <ConfigGate>{children}</ConfigGate>
       </body>
     </html>

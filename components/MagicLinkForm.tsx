@@ -65,7 +65,7 @@ export default function MagicLinkForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className={`${className ?? ''} space-y-3`}>
+    <form onSubmit={handleSubmit} className={`${className ?? ''} space-y-4`}>
       <input className="input" name="email" type="email" placeholder={copy.placeholder} required />
       {sent ? (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">

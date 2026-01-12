@@ -15,13 +15,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: { u
   const vapidPublicKey = getVapidPublicKey();
 
   return (
-    <AppShell locale={locale}>
+    <AppShell locale={locale} activePath="/app/settings" userEmail={user.email}>
       <div className="space-y-6">
         <SectionHeader title={copy.settings.title} description={copy.settings.subtitle} />
         <section className="card space-y-4 max-w-lg">
           <div>
-            <div className="text-lg font-semibold">{copy.language.title}</div>
-            <p className="text-sm text-slate-500">{copy.language.subtitle}</p>
+            <div className="text-lg font-semibold text-ink">{copy.language.title}</div>
+            <p className="text-sm text-muted">{copy.language.subtitle}</p>
           </div>
           {searchParams.updated ? (
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
@@ -52,7 +52,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { u
             }}
           />
         ) : (
-          <div className="card text-sm text-slate-600">
+          <div className="card text-sm text-muted">
             {copy.settings.pushMissing}
           </div>
         )}

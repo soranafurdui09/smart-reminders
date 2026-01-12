@@ -26,50 +26,59 @@ export default async function AuthPage({ searchParams }: { searchParams: { [key:
     console.log('[auth] render', { next, hasError: Boolean(error), checkEmail });
   }
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <main className="min-h-screen">
       <AuthRedirect next={next} />
-      <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-10">
-        <Link href="/" className="text-sm text-slate-500">{copy.auth.back}</Link>
-        <h1 className="mt-6 text-2xl font-semibold">{copy.auth.title}</h1>
-        <p className="text-sm text-slate-500">{copy.auth.subtitle}</p>
-        {checkEmail ? (
-          <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-            {copy.auth.checkEmail}
-          </div>
-        ) : null}
-        {errorMessage ? (
-          <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
-            {errorMessage}
-          </div>
-        ) : null}
+      <div className="page-wrap flex min-h-screen items-center">
+        <div className="mx-auto w-full max-w-lg space-y-6">
+          <Link href="/" className="text-sm text-muted">{copy.auth.back}</Link>
+          <div className="card space-y-6">
+            <div className="space-y-2">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primaryStrong via-primary to-accent text-base font-semibold text-white">
+                RI
+              </div>
+              <h1>{copy.auth.title}</h1>
+              <p className="text-sm text-muted">{copy.auth.subtitle}</p>
+            </div>
+            {checkEmail ? (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+                {copy.auth.checkEmail}
+              </div>
+            ) : null}
+            {errorMessage ? (
+              <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+                {errorMessage}
+              </div>
+            ) : null}
 
-        <MagicLinkForm
-          next={next}
-          className="mt-6"
-          copy={{
-            placeholder: copy.magicLink.placeholder,
-            sending: copy.magicLink.sending,
-            button: copy.magicLink.button,
-            invalidEmail: copy.magicLink.invalidEmail,
-            emailSent: copy.magicLink.emailSent,
-            failedSend: copy.magicLink.failedSend,
-            errorGeneric: copy.auth.errorGeneric
-          }}
-        />
+            <MagicLinkForm
+              next={next}
+              className=""
+              copy={{
+                placeholder: copy.magicLink.placeholder,
+                sending: copy.magicLink.sending,
+                button: copy.magicLink.button,
+                invalidEmail: copy.magicLink.invalidEmail,
+                emailSent: copy.magicLink.emailSent,
+                failedSend: copy.magicLink.failedSend,
+                errorGeneric: copy.auth.errorGeneric
+              }}
+            />
 
-        <div className="my-6 flex items-center gap-3 text-xs text-slate-400">
-          <span className="h-px flex-1 bg-slate-200" />
-          {copy.auth.or}
-          <span className="h-px flex-1 bg-slate-200" />
+            <div className="flex items-center gap-3 text-xs text-muted">
+              <span className="h-px flex-1 bg-border-subtle" />
+              {copy.auth.or}
+              <span className="h-px flex-1 bg-border-subtle" />
+            </div>
+
+            <GoogleOAuthButton
+              next={next}
+              label={copy.auth.googleButton}
+              loading={copy.auth.redirecting}
+              errorNotConfigured={copy.auth.errorOauthNotConfigured}
+              errorGeneric={copy.auth.errorGeneric}
+            />
+          </div>
         </div>
-
-        <GoogleOAuthButton
-          next={next}
-          label={copy.auth.googleButton}
-          loading={copy.auth.redirecting}
-          errorNotConfigured={copy.auth.errorOauthNotConfigured}
-          errorGeneric={copy.auth.errorGeneric}
-        />
       </div>
     </main>
   );

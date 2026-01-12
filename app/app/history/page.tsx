@@ -23,7 +23,7 @@ export default async function HistoryPage({
 
   if (!membership?.households) {
     return (
-      <AppShell locale={locale}>
+      <AppShell locale={locale} activePath="/app/history" userEmail={user.email}>
         <div className="space-y-4">
           <SectionHeader title={copy.history.title} description={copy.history.noHousehold} />
           <Link className="btn btn-primary" href="/app">{copy.history.createHousehold}</Link>
@@ -42,22 +42,26 @@ export default async function HistoryPage({
     : allDone;
 
   return (
-    <AppShell locale={locale}>
+    <AppShell locale={locale} activePath="/app/history" userEmail={user.email}>
       <div className="space-y-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold">{copy.history.title}</h1>
-            <p className="text-sm text-slate-500">{rangeLabels[range]}</p>
+            <h1>{copy.history.title}</h1>
+            <p className="text-sm text-muted">{rangeLabels[range]}</p>
           </div>
           <Link className="btn btn-secondary" href="/app">{copy.common.back}</Link>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="inline-flex flex-wrap gap-1 rounded-full border border-border-subtle bg-surfaceMuted/70 p-1">
           {(['7', '30', 'all'] as const).map((key) => (
             <Link
               key={key}
               href={`/app/history?range=${key}`}
-              className={`btn ${range === key ? 'btn-primary' : 'btn-secondary'}`}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                range === key
+                  ? 'bg-surface text-ink shadow-sm'
+                  : 'text-muted hover:bg-surface hover:text-ink'
+              }`}
             >
               {rangeLabels[key]}
             </Link>
@@ -66,21 +70,27 @@ export default async function HistoryPage({
 
         <section>
           <SectionHeader title={copy.history.sectionTitle} description={copy.history.sectionSubtitle} />
-          <div className="grid gap-3 md:grid-cols-2">
-            {filtered.length ? filtered.map((occurrence) => (
-              <Link
-                key={occurrence.id}
-                href={`/app/reminders/${occurrence.reminder?.id}`}
-                className="card transition hover:border-sky-200 hover:shadow-md"
-              >
-                <div className="text-sm text-slate-500">
-                  {occurrence.done_at ? new Date(occurrence.done_at).toLocaleString(getLocaleTag(locale)) : copy.common.done}
-                </div>
-                <div className="text-sm font-semibold">{occurrence.reminder?.title || copy.reminderDetail.title}</div>
-                <div className="text-xs text-slate-400">{copy.history.detailsHint}</div>
-              </Link>
-            )) : <div className="text-sm text-slate-500">{copy.history.empty}</div>}
-          </div>
+          {filtered.length ? (
+            <div className="relative space-y-4 pl-6">
+              <div className="absolute left-2 top-2 h-full w-px bg-border-subtle" />
+              {filtered.map((occurrence) => (
+                <Link
+                  key={occurrence.id}
+                  href={`/app/reminders/${occurrence.reminder?.id}`}
+                  className="card relative hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <span className="absolute -left-6 top-6 h-3 w-3 rounded-full border border-primary/40 bg-primarySoft" />
+                  <div className="text-sm text-muted">
+                    {occurrence.done_at ? new Date(occurrence.done_at).toLocaleString(getLocaleTag(locale)) : copy.common.done}
+                  </div>
+                  <div className="text-sm font-semibold text-ink">{occurrence.reminder?.title || copy.reminderDetail.title}</div>
+                  <div className="text-xs text-muted">{copy.history.detailsHint}</div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="card text-sm text-muted">{copy.history.emptyFriendly}</div>
+          )}
         </section>
       </div>
     </AppShell>

@@ -28,6 +28,7 @@ export default function SemanticSearch({
     hint: string;
     scoreLabel: string;
     fallbackLabel: string;
+    example: string;
   };
 }) {
   const [query, setQuery] = useState('');
@@ -74,19 +75,31 @@ export default function SemanticSearch({
     <section className="space-y-3">
       <div>
         <h2 className="text-xl font-semibold">{copy.title}</h2>
-        <p className="text-sm text-slate-500">{copy.hint}</p>
+        <p className="text-sm text-muted">{copy.hint}</p>
       </div>
       <form onSubmit={handleSearch} className="card flex flex-col gap-3 md:flex-row md:items-center">
-        <input
-          className="input flex-1"
-          placeholder={copy.placeholder}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <button className="btn btn-secondary" type="submit" disabled={loading}>
+        <div className="relative flex-1">
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted">
+            <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <path
+                stroke="currentColor"
+                strokeWidth="1.5"
+                d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </span>
+          <input
+            className="input w-full rounded-full py-3 pl-11 pr-4"
+            placeholder={copy.placeholder}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+        <button className="btn btn-primary md:shrink-0" type="submit" disabled={loading}>
           {loading ? copy.loading : copy.button}
         </button>
       </form>
+      <p className="text-xs text-muted">{copy.example}</p>
       {isFallback && results.length ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
           {copy.fallbackLabel}
@@ -98,19 +111,19 @@ export default function SemanticSearch({
       {query.trim() ? (
         <div className="grid gap-3 md:grid-cols-2">
           {results.length ? results.map((item) => (
-            <Link key={item.id} href={`/app/reminders/${item.id}`} className="card hover:border-sky-200 hover:shadow-md">
-              <div className="text-sm text-slate-500">
+            <Link key={item.id} href={`/app/reminders/${item.id}`} className="card hover:-translate-y-0.5 hover:shadow-md">
+              <div className="text-sm text-muted">
                 {item.dueAt ? new Date(item.dueAt).toLocaleString(localeTag) : null}
               </div>
-              <div className="text-sm font-semibold">{item.title}</div>
-              {item.notes ? <div className="text-xs text-slate-400">{item.notes}</div> : null}
+              <div className="text-sm font-semibold text-ink">{item.title}</div>
+              {item.notes ? <div className="text-xs text-muted">{item.notes}</div> : null}
               {typeof item.similarity === 'number' ? (
-                <div className="mt-2 text-xs text-slate-400">
+                <div className="mt-2 text-xs text-muted">
                   {copy.scoreLabel}: {(item.similarity * 100).toFixed(0)}%
                 </div>
               ) : null}
             </Link>
-          )) : !loading ? <div className="text-sm text-slate-500">{copy.empty}</div> : null}
+          )) : !loading ? <div className="text-sm text-muted">{copy.empty}</div> : null}
         </div>
       ) : null}
     </section>

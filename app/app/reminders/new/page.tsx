@@ -18,10 +18,10 @@ export default async function NewReminderPage({
 
   if (!membership?.households) {
     return (
-      <AppShell locale={locale}>
+      <AppShell locale={locale} activePath="/app/reminders/new" userEmail={user.email}>
         <div className="space-y-4">
-          <h1 className="text-2xl font-semibold">{copy.remindersNew.title}</h1>
-          <p className="text-sm text-slate-500">{copy.history.noHousehold}</p>
+          <h1>{copy.remindersNew.title}</h1>
+          <p className="text-sm text-muted">{copy.history.noHousehold}</p>
           <Link href="/app" className="btn btn-primary">{copy.history.createHousehold}</Link>
         </div>
       </AppShell>
@@ -35,12 +35,12 @@ export default async function NewReminderPage({
   }));
 
   return (
-    <AppShell locale={locale}>
+    <AppShell locale={locale} activePath="/app/reminders/new" userEmail={user.email}>
       <div className="space-y-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold">{copy.remindersNew.title}</h1>
-            <p className="text-sm text-slate-500">{copy.remindersNew.subtitle}</p>
+            <h1>{copy.remindersNew.title}</h1>
+            <p className="text-sm text-muted">{copy.remindersNew.subtitle}</p>
           </div>
           <Link href="/app" className="btn btn-secondary">{copy.common.back}</Link>
         </div>

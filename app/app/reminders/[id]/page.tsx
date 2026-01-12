@@ -14,7 +14,7 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
   const reminder = await getReminderById(params.id);
   if (!reminder) {
     return (
-      <AppShell locale={locale}>
+      <AppShell locale={locale} userEmail={user.email}>
         <div className="space-y-4">
           <SectionHeader title={copy.reminderDetail.title} description={copy.reminderDetail.notFound} />
           <Link href="/app" className="btn btn-secondary">{copy.common.back}</Link>
@@ -24,14 +24,14 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
   }
 
   return (
-    <AppShell locale={locale}>
+    <AppShell locale={locale} userEmail={user.email}>
       <div className="space-y-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold">{copy.reminderDetail.title}</h1>
-            <p className="text-sm text-slate-500">{reminder.title}</p>
+            <h1>{copy.reminderDetail.title}</h1>
+            <p className="text-sm text-muted">{reminder.title}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <form action={cloneReminder}>
               <input type="hidden" name="reminderId" value={reminder.id} />
               <button className="btn btn-secondary" type="submit">{copy.reminderDetail.clone}</button>
@@ -46,9 +46,9 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
 
         <section>
           <SectionHeader title={copy.reminderDetail.details} />
-          <div className="card space-y-2">
-            <div className="text-sm text-slate-500">{copy.reminderDetail.schedule}</div>
-            <div className="text-sm font-semibold">
+          <div className="card space-y-3">
+            <div className="text-sm text-muted">{copy.reminderDetail.schedule}</div>
+            <div className="text-sm font-semibold text-ink">
               {reminder.schedule_type === 'once'
                 ? copy.remindersNew.once
                 : reminder.schedule_type === 'daily'
@@ -59,24 +59,24 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
                       ? copy.remindersNew.monthly
                       : reminder.schedule_type === 'yearly'
                         ? copy.remindersNew.yearly
-                      : reminder.schedule_type}
+                        : reminder.schedule_type}
             </div>
             {reminder.due_at ? (
-              <div className="text-sm text-slate-500">
+              <div className="text-sm text-muted">
                 {copy.reminderDetail.firstDate}: {format(new Date(reminder.due_at), 'dd MMM yyyy HH:mm')}
               </div>
             ) : null}
-            {reminder.notes ? <p className="text-sm text-slate-600">{reminder.notes}</p> : null}
+            {reminder.notes ? <p className="text-sm text-muted">{reminder.notes}</p> : null}
           </div>
         </section>
 
         <section>
           <SectionHeader title={copy.reminderDetail.occurrences} />
-          <div className="grid gap-3">
+          <div className="grid gap-3 md:grid-cols-2">
             {(reminder.reminder_occurrences || []).map((occurrence: any) => (
-              <div key={occurrence.id} className="card">
-                <div className="text-sm text-slate-500">{format(new Date(occurrence.occur_at), 'dd MMM yyyy HH:mm')}</div>
-                <div className="text-sm font-semibold">
+              <div key={occurrence.id} className="card space-y-2">
+                <div className="text-sm text-muted">{format(new Date(occurrence.occur_at), 'dd MMM yyyy HH:mm')}</div>
+                <div className="text-sm font-semibold text-ink">
                   {occurrence.status === 'done'
                     ? copy.common.done
                     : occurrence.status === 'snoozed'
@@ -84,7 +84,7 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
                       : copy.common.statusOpen}
                 </div>
                 {occurrence.done_comment ? (
-                  <div className="text-xs text-slate-500">
+                  <div className="text-xs text-muted">
                     {copy.common.commentLabel}: {occurrence.done_comment}
                   </div>
                 ) : null}

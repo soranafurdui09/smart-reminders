@@ -69,14 +69,14 @@ export default function PushSettings({
   return (
     <div className="card space-y-4">
       <div>
-        <div className="text-lg font-semibold">{copy.title}</div>
-        <p className="text-sm text-slate-500">{copy.subtitle}</p>
+        <div className="text-lg font-semibold text-ink">{copy.title}</div>
+        <p className="text-sm text-muted">{copy.subtitle}</p>
       </div>
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <button className="btn btn-primary" onClick={handleSubscribe} type="button">{copy.activate}</button>
         <button className="btn btn-secondary" onClick={handleUnsubscribe} type="button">{copy.deactivate}</button>
       </div>
-      {status ? <div className="text-sm text-slate-500">{status}</div> : null}
+      {status ? <div className="text-sm text-muted">{status}</div> : null}
     </div>
   );
 }

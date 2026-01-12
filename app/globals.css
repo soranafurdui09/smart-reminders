@@ -4,34 +4,83 @@
 
 :root {
   color-scheme: light;
+  --color-bg: 245 247 251;
+  --color-surface: 255 255 255;
+  --color-surface-muted: 241 246 250;
+  --color-border: 226 232 240;
+  --color-border-subtle: 234 240 246;
+  --color-text: 15 23 42;
+  --color-text-muted: 100 116 139;
+  --color-primary: 56 189 248;
+  --color-primary-strong: 2 132 199;
+  --color-primary-soft: 224 242 254;
+  --color-accent: 20 184 166;
+  --color-success: 16 185 129;
+  --color-warning: 245 158 11;
+  --color-danger: 244 63 94;
 }
 
 body {
-  @apply bg-soft text-ink antialiased;
+  @apply text-ink antialiased;
+  background-color: rgb(var(--color-bg));
+  background-image:
+    radial-gradient(1000px 600px at 5% -10%, rgba(56, 189, 248, 0.18), transparent),
+    radial-gradient(900px 500px at 95% 0%, rgba(20, 184, 166, 0.18), transparent),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0));
+  background-attachment: fixed;
+}
+
+h1 {
+  @apply text-3xl font-semibold tracking-tight text-ink md:text-4xl;
+}
+
+h2 {
+  @apply text-2xl font-semibold tracking-tight text-ink;
+}
+
+h3 {
+  @apply text-xl font-semibold tracking-tight text-ink;
+}
+
+.page-wrap {
+  @apply mx-auto w-full max-w-6xl px-4 py-8 sm:px-6;
 }
 
 .card {
-  @apply rounded-xl border border-slate-200 bg-white p-4 shadow-sm;
+  @apply rounded-2xl border border-border-subtle bg-surface p-5 shadow-soft transition-all;
 }
 
 .btn {
-  @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition active:translate-y-px active:shadow-none disabled:cursor-not-allowed disabled:opacity-60;
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold shadow-sm transition-all duration-200 active:translate-y-px active:shadow-none disabled:cursor-not-allowed disabled:opacity-60;
 }
 
 .btn-primary {
-  @apply bg-sky-600 text-white hover:bg-sky-500 active:bg-sky-700;
+  @apply bg-gradient-to-r from-primaryStrong via-primary to-accent text-white shadow-md shadow-sky-500/20 hover:brightness-105;
 }
 
 .btn-secondary {
-  @apply border border-slate-200 text-ink hover:bg-slate-100;
+  @apply border border-border text-ink hover:border-primary/30 hover:bg-surfaceMuted;
 }
 
 .input {
-  @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300;
+  @apply w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-ink shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary/30;
+}
+
+.pill {
+  @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold;
+}
+
+.chip {
+  @apply inline-flex items-center rounded-full border border-border-subtle bg-surfaceMuted px-2.5 py-1 text-xs font-semibold text-muted;
+}
+
+:where(a, button, input, textarea, select, summary):focus-visible {
+  @apply ring-2 ring-primary/40 ring-offset-2 ring-offset-bg;
 }
 
 .dropdown-summary {
   list-style: none;
+  cursor: pointer;
 }
 
 .dropdown-summary::-webkit-details-marker {

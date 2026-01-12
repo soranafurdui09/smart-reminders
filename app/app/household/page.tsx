@@ -17,7 +17,7 @@ export default async function HouseholdPage({
 
   if (!membership?.households) {
     return (
-      <AppShell locale={locale}>
+      <AppShell locale={locale} activePath="/app/household" userEmail={user.email}>
         <div className="space-y-6">
           <SectionHeader title={copy.household.title} description={copy.household.subtitleCreate} />
           <form action={createHousehold} className="card space-y-4 max-w-lg">
@@ -36,7 +36,7 @@ export default async function HouseholdPage({
   const invites = await getHouseholdInvites(membership.households.id);
 
   return (
-    <AppShell locale={locale}>
+    <AppShell locale={locale} activePath="/app/household" userEmail={user.email}>
       <div className="space-y-8">
         <SectionHeader title={copy.household.title} description={copy.household.subtitleManage} />
 
@@ -58,39 +58,69 @@ export default async function HouseholdPage({
           </div>
         ) : null}
 
-        <section>
-          <SectionHeader title={copy.household.membersTitle} />
-          <div className="grid gap-3">
-            {members.map((member: any) => (
-              <div key={member.user_id} className="card flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-semibold">
-                    {member.profiles?.name || member.profiles?.email || member.user_id}
+        <section className="grid gap-6 lg:grid-cols-2">
+          <div className="card space-y-4">
+            <div>
+              <div className="text-lg font-semibold text-ink">{copy.household.membersTitle}</div>
+              <p className="text-sm text-muted">{copy.household.membersSubtitle}</p>
+            </div>
+            <div className="space-y-3">
+              {members.map((member: any) => {
+                const label = member.profiles?.name || member.profiles?.email || member.user_id;
+                const initial = String(label || 'U').charAt(0).toUpperCase();
+                return (
+                  <div key={member.user_id} className="flex items-center justify-between rounded-2xl border border-border-subtle bg-surface p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primarySoft text-sm font-semibold text-primaryStrong">
+                        {initial}
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-ink">{label}</div>
+                        <div className="text-xs text-muted">{member.role}</div>
+                      </div>
+                    </div>
+                    <span className="chip">{member.role}</span>
                   </div>
-                  <div className="text-xs text-slate-500">{member.role}</div>
-                </div>
-              </div>
-            ))}
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="card space-y-4">
+            <div>
+              <div className="text-lg font-semibold text-ink">{copy.household.invitesTitle}</div>
+              <p className="text-sm text-muted">{copy.household.invitesSubtitle}</p>
+            </div>
+            <div className="space-y-3">
+              {invites.length ? invites.map((invite: any) => {
+                const initial = String(invite.email || 'U').charAt(0).toUpperCase();
+                return (
+                  <div key={invite.id} className="flex items-center justify-between rounded-2xl border border-border-subtle bg-surface p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surfaceMuted text-sm font-semibold text-ink">
+                        {initial}
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-ink">{invite.email}</div>
+                        <div className="text-xs text-muted">
+                          {invite.role} - {invite.accepted_at ? copy.household.inviteAccepted : copy.household.invitePending}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="chip">{invite.accepted_at ? copy.common.statusAccepted : copy.common.statusPending}</span>
+                  </div>
+                );
+              }) : <div className="text-sm text-muted">{copy.household.noInvites}</div>}
+            </div>
           </div>
         </section>
 
-        <section>
-          <SectionHeader title={copy.household.invitesTitle} />
-          <div className="grid gap-3">
-            {invites.length ? invites.map((invite: any) => (
-              <div key={invite.id} className="card">
-                <div className="text-sm font-semibold">{invite.email}</div>
-                <div className="text-xs text-slate-500">
-                  {invite.role} - {invite.accepted_at ? copy.household.inviteAccepted : copy.household.invitePending}
-                </div>
-              </div>
-            )) : <div className="text-sm text-slate-500">{copy.household.noInvites}</div>}
+        <section className="card space-y-4 max-w-lg">
+          <div>
+            <div className="text-lg font-semibold text-ink">{copy.household.inviteTitle}</div>
+            <p className="text-sm text-muted">{copy.household.inviteSubtitle}</p>
           </div>
-        </section>
-
-        <section>
-          <SectionHeader title={copy.household.inviteTitle} />
-          <form action={inviteMember} className="card space-y-4 max-w-lg">
+          <form action={inviteMember} className="space-y-4">
             <input type="hidden" name="household_id" value={membership.households.id} />
             <div>
               <label className="text-sm font-semibold">{copy.common.email}</label>

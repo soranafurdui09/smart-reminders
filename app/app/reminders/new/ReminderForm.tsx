@@ -212,6 +212,7 @@ export default function ReminderForm({
   const [recurrenceRule, setRecurrenceRule] = useState('');
   const [preReminderMinutes, setPreReminderMinutes] = useState('');
   const [assignedMemberId, setAssignedMemberId] = useState('');
+  const aiCharCount = aiText.length;
 
   const memberOptions = useMemo(
     () => [{ id: '', label: copy.remindersNew.assigneeNone }, ...members],
@@ -296,183 +297,210 @@ export default function ReminderForm({
   };
 
   return (
-    <form action={action} className="space-y-6">
-      <div className="card space-y-3">
-        <div>
-          <label className="text-sm font-semibold">{copy.remindersNew.aiTitle}</label>
+    <form action={action} className="space-y-8">
+      <section className="card space-y-4">
+        <div className="space-y-1">
+          <div className="text-lg font-semibold text-ink">{copy.remindersNew.aiTitle}</div>
+          <p className="text-sm text-muted">{copy.remindersNew.aiSubtitle}</p>
+        </div>
+        <div className="space-y-2">
           <textarea
-            className="input"
-            rows={2}
+            className="input min-h-[120px] resize-y"
+            rows={4}
             placeholder={copy.remindersNew.aiPlaceholder}
             value={aiText}
             onChange={(event) => setAiText(event.target.value)}
           />
+          <div className="flex items-center justify-between text-xs text-muted">
+            <span>{copy.remindersNew.aiHint}</span>
+            <span>{aiCharCount} {copy.remindersNew.aiCounterLabel}</span>
+          </div>
         </div>
         {aiError ? (
           <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{aiError}</div>
         ) : null}
-        <button className="btn btn-secondary" type="button" onClick={handleParse} disabled={aiLoading}>
-          {aiLoading ? copy.remindersNew.aiLoading : copy.remindersNew.aiButton}
-        </button>
-      </div>
-
-      <div className="card space-y-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">{copy.remindersNew.templatesTitle}</h2>
-            <p className="text-sm text-slate-500">{copy.remindersNew.templatesSubtitle}</p>
-          </div>
-          <input
-            className="input md:w-72"
-            aria-label={copy.remindersNew.templatesSearchPlaceholder}
-            placeholder={copy.remindersNew.templatesSearchPlaceholder}
-            value={templateQuery}
-            onChange={(event) => setTemplateQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault();
-              }
-            }}
-          />
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <p className="text-xs text-muted">{copy.remindersNew.aiExample}</p>
+          <button className="btn btn-primary w-full md:w-auto" type="button" onClick={handleParse} disabled={aiLoading}>
+            {aiLoading ? copy.remindersNew.aiLoading : copy.remindersNew.aiButton}
+          </button>
         </div>
-        {filteredTemplates.length ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            {filteredTemplates.map((template) => {
-              const preReminder = template.preReminderMinutes
-                ? formatPreReminder(activeLocale, template.preReminderMinutes)
-                : '';
-              return (
-                <div key={template.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="text-sm font-semibold">{template.title[activeLocale]}</div>
-                      <div className="text-xs text-slate-500">{template.description[activeLocale]}</div>
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <section className="space-y-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-ink">{copy.remindersNew.templatesTitle}</h2>
+              <p className="text-sm text-muted">{copy.remindersNew.templatesSubtitle}</p>
+            </div>
+            <div className="relative md:w-72">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
+                <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <path
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </span>
+              <input
+                className="input pl-9"
+                aria-label={copy.remindersNew.templatesSearchPlaceholder}
+                placeholder={copy.remindersNew.templatesSearchPlaceholder}
+                value={templateQuery}
+                onChange={(event) => setTemplateQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          {filteredTemplates.length ? (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {filteredTemplates.map((template) => {
+                const preReminder = template.preReminderMinutes
+                  ? formatPreReminder(activeLocale, template.preReminderMinutes)
+                  : '';
+                return (
+                  <div key={template.id} className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="text-sm font-semibold text-ink">{template.title[activeLocale]}</div>
+                        <div className="text-xs text-muted">{template.description[activeLocale]}</div>
+                      </div>
+                      <button
+                        className="btn btn-secondary whitespace-nowrap"
+                        type="button"
+                        onClick={() => applyTemplate(template)}
+                      >
+                        {copy.remindersNew.templatesApply}
+                      </button>
                     </div>
-                    <button
-                      className="btn btn-secondary whitespace-nowrap"
-                      type="button"
-                      onClick={() => applyTemplate(template)}
-                    >
-                      {copy.remindersNew.templatesApply}
-                    </button>
-                  </div>
-                  {template.tags[activeLocale].length ? (
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
-                      {template.tags[activeLocale].map((tag) => (
-                        <span key={tag} className="rounded-full bg-slate-100 px-2 py-0.5">
-                          {tag}
-                        </span>
-                      ))}
+                    {template.tags[activeLocale].length ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {template.tags[activeLocale].map((tag) => (
+                          <span key={tag} className="chip">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                    <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted">
+                      <span>{copy.remindersNew.repeatLabel}: {scheduleLabels[template.scheduleType]}</span>
+                      {preReminder ? (
+                        <span>{copy.remindersNew.templatesPreReminderLabel}: {preReminder}</span>
+                      ) : null}
                     </div>
-                  ) : null}
-                  <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-500">
-                    <span>{copy.remindersNew.repeatLabel}: {scheduleLabels[template.scheduleType]}</span>
-                    {preReminder ? (
-                      <span>{copy.remindersNew.templatesPreReminderLabel}: {preReminder}</span>
+                    {template.notes?.[activeLocale] ? (
+                      <div className="mt-3 text-xs text-muted">{template.notes[activeLocale]}</div>
                     ) : null}
                   </div>
-                  {template.notes?.[activeLocale] ? (
-                    <div className="mt-2 text-xs text-slate-400">{template.notes[activeLocale]}</div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-sm text-slate-500">{copy.remindersNew.templatesEmpty}</div>
-        )}
-      </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-sm text-muted">{copy.remindersNew.templatesEmpty}</div>
+          )}
+        </section>
 
-      <div className="card space-y-4">
-        <div>
-          <label className="text-sm font-semibold">{copy.remindersNew.titleLabel}</label>
-          <input
-            name="title"
-            className="input"
-            placeholder={copy.remindersNew.titlePlaceholder}
-            required
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-          />
-        </div>
-        <div>
-          <label className="text-sm font-semibold">{copy.remindersNew.notesLabel}</label>
-          <textarea
-            name="notes"
-            className="input"
-            rows={3}
-            placeholder={copy.remindersNew.notesPlaceholder}
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-          />
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
+        <section className="card space-y-4">
           <div>
-            <label className="text-sm font-semibold">{copy.remindersNew.dateLabel}</label>
+            <h3 className="text-lg font-semibold text-ink">{copy.remindersNew.details}</h3>
+            <p className="text-sm text-muted">{copy.remindersNew.detailsSubtitle}</p>
+          </div>
+          <div>
+            <label className="text-sm font-semibold">{copy.remindersNew.titleLabel}</label>
             <input
-              name="due_at"
-              type="datetime-local"
+              name="title"
               className="input"
-              value={dueAt}
-              onChange={(event) => setDueAt(event.target.value)}
+              placeholder={copy.remindersNew.titlePlaceholder}
+              required
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
             />
           </div>
           <div>
-            <label className="text-sm font-semibold">{copy.remindersNew.repeatLabel}</label>
-            <select
-              name="schedule_type"
+            <label className="text-sm font-semibold">{copy.remindersNew.notesLabel}</label>
+            <textarea
+              name="notes"
               className="input"
-              value={scheduleType}
-              onChange={(event) => setScheduleType(event.target.value)}
-            >
-              <option value="once">{copy.remindersNew.once}</option>
-              <option value="daily">{copy.remindersNew.daily}</option>
-              <option value="weekly">{copy.remindersNew.weekly}</option>
-              <option value="monthly">{copy.remindersNew.monthly}</option>
-              <option value="yearly">{copy.remindersNew.yearly}</option>
-            </select>
-          </div>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="text-sm font-semibold">{copy.remindersNew.preReminderLabel}</label>
-            <input
-              name="pre_reminder_minutes"
-              type="number"
-              className="input"
-              value={preReminderMinutes}
-              onChange={(event) => setPreReminderMinutes(event.target.value)}
+              rows={3}
+              placeholder={copy.remindersNew.notesPlaceholder}
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
             />
           </div>
-          <div>
-            <label className="text-sm font-semibold">{copy.remindersNew.assigneeLabel}</label>
-            <select
-              name="assigned_member_id"
-              className="input"
-              value={assignedMemberId}
-              onChange={(event) => setAssignedMemberId(event.target.value)}
-            >
-              {memberOptions.map((member) => (
-                <option key={member.id || 'none'} value={member.id}>
-                  {member.label}
-                </option>
-              ))}
-            </select>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="text-sm font-semibold">{copy.remindersNew.dateLabel}</label>
+              <input
+                name="due_at"
+                type="datetime-local"
+                className="input"
+                value={dueAt}
+                onChange={(event) => setDueAt(event.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold">{copy.remindersNew.repeatLabel}</label>
+              <select
+                name="schedule_type"
+                className="input"
+                value={scheduleType}
+                onChange={(event) => setScheduleType(event.target.value)}
+              >
+                <option value="once">{copy.remindersNew.once}</option>
+                <option value="daily">{copy.remindersNew.daily}</option>
+                <option value="weekly">{copy.remindersNew.weekly}</option>
+                <option value="monthly">{copy.remindersNew.monthly}</option>
+                <option value="yearly">{copy.remindersNew.yearly}</option>
+              </select>
+            </div>
           </div>
-        </div>
-        <div>
-          <label className="text-sm font-semibold">{copy.remindersNew.recurrenceRuleLabel}</label>
-          <input
-            name="recurrence_rule"
-            className="input"
-            placeholder={copy.remindersNew.recurrenceRulePlaceholder}
-            value={recurrenceRule}
-            onChange={(event) => setRecurrenceRule(event.target.value)}
-          />
-        </div>
-        <button className="btn btn-primary" type="submit">
-          {copy.remindersNew.create}
-        </button>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="text-sm font-semibold">{copy.remindersNew.preReminderLabel}</label>
+              <input
+                name="pre_reminder_minutes"
+                type="number"
+                className="input"
+                value={preReminderMinutes}
+                onChange={(event) => setPreReminderMinutes(event.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold">{copy.remindersNew.assigneeLabel}</label>
+              <select
+                name="assigned_member_id"
+                className="input"
+                value={assignedMemberId}
+                onChange={(event) => setAssignedMemberId(event.target.value)}
+              >
+                {memberOptions.map((member) => (
+                  <option key={member.id || 'none'} value={member.id}>
+                    {member.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-semibold">{copy.remindersNew.recurrenceRuleLabel}</label>
+            <input
+              name="recurrence_rule"
+              className="input"
+              placeholder={copy.remindersNew.recurrenceRulePlaceholder}
+              value={recurrenceRule}
+              onChange={(event) => setRecurrenceRule(event.target.value)}
+            />
+          </div>
+          <button className="btn btn-primary" type="submit">
+            {copy.remindersNew.create}
+          </button>
+        </section>
       </div>
     </form>
   );

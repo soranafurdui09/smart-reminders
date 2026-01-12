@@ -11,7 +11,7 @@ export default async function BillingPage() {
   const copy = messages[locale];
 
   return (
-    <AppShell locale={locale}>
+    <AppShell locale={locale} activePath="/app/billing" userEmail={user.email}>
       <div className="space-y-6">
         <SectionHeader title={copy.billing.title} description={copy.billing.subtitle} />
         <Link className="btn btn-secondary" href="/app">{copy.common.back}</Link>
