@@ -68,7 +68,7 @@ export async function getHouseholdMembers(householdId: string) {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('household_members')
-    .select('user_id, role, profiles(name, email)')
+    .select('id, user_id, role, profiles(name, email)')
     .eq('household_id', householdId)
     .order('created_at');
   if (error) {

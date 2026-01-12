@@ -17,6 +17,9 @@ export async function createReminder(formData: FormData) {
   const scheduleTypeRaw = String(formData.get('schedule_type') || 'once');
   const scheduleType = ['once', 'daily', 'weekly', 'monthly'].includes(scheduleTypeRaw) ? scheduleTypeRaw : 'once';
   const dueAtRaw = String(formData.get('due_at') || '').trim();
+  const recurrenceRuleRaw = String(formData.get('recurrence_rule') || '').trim();
+  const preReminderRaw = String(formData.get('pre_reminder_minutes') || '').trim();
+  const assignedMemberRaw = String(formData.get('assigned_member_id') || '').trim();
 
   if (!title) {
     redirect('/app/reminders/new?error=missing-title');
@@ -25,6 +28,20 @@ export async function createReminder(formData: FormData) {
   const dueAt = dueAtRaw ? new Date(dueAtRaw) : new Date();
 
   const supabase = createServerClient();
+  let assignedMemberId: string | null = assignedMemberRaw || null;
+  if (assignedMemberId) {
+    const { data: member } = await supabase
+      .from('household_members')
+      .select('id')
+      .eq('id', assignedMemberId)
+      .eq('household_id', membership.households.id)
+      .maybeSingle();
+    if (!member) {
+      assignedMemberId = null;
+    }
+  }
+  const preReminderMinutes = preReminderRaw ? Number(preReminderRaw) : null;
+  const preReminderValue = Number.isFinite(preReminderMinutes) ? preReminderMinutes : null;
   const { data: reminder, error } = await supabase
     .from('reminders')
     .insert({
@@ -35,7 +52,10 @@ export async function createReminder(formData: FormData) {
       schedule_type: scheduleType,
       due_at: dueAt.toISOString(),
       tz: 'UTC',
-      is_active: true
+      is_active: true,
+      recurrence_rule: recurrenceRuleRaw || null,
+      pre_reminder_minutes: preReminderValue,
+      assigned_member_id: assignedMemberId
     })
     .select('id')
     .single();
