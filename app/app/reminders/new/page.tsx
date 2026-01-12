@@ -56,6 +56,7 @@ export default async function NewReminderPage({
           copy={copy}
           householdId={membership.households.id}
           members={members}
+          locale={locale}
         />
       </div>
     </AppShell>

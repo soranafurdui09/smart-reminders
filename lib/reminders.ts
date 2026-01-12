@@ -1,6 +1,6 @@
-import { addDays, addMinutes, addMonths, addWeeks, startOfDay } from 'date-fns';
+import { addDays, addMinutes, addMonths, addWeeks, addYears, startOfDay } from 'date-fns';
 
-export type ScheduleType = 'once' | 'daily' | 'weekly' | 'monthly';
+export type ScheduleType = 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export function getNextOccurrence(occurAt: Date, scheduleType: ScheduleType) {
   if (scheduleType === 'daily') {
@@ -11,6 +11,9 @@ export function getNextOccurrence(occurAt: Date, scheduleType: ScheduleType) {
   }
   if (scheduleType === 'monthly') {
     return addMonths(occurAt, 1);
+  }
+  if (scheduleType === 'yearly') {
+    return addYears(occurAt, 1);
   }
   return null;
 }

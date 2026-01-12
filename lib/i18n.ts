@@ -120,6 +120,12 @@ export const messages = {
       aiFailed: 'AI nu a putut procesa textul.',
       aiMissingText: 'Scrie un text pentru AI.',
       aiMissingHousehold: 'Creeaza un household inainte sa folosesti AI.',
+      templatesTitle: 'Template-uri rapide',
+      templatesSubtitle: 'Alege un template si apoi ajusteaza datele.',
+      templatesSearchPlaceholder: 'Cauta template-uri dupa cuvinte cheie',
+      templatesApply: 'Foloseste',
+      templatesEmpty: 'Niciun template gasit pentru cautarea asta.',
+      templatesPreReminderLabel: 'Notificare',
       details: 'Detalii',
       titleLabel: 'Titlu',
       titlePlaceholder: 'Ex: Control dentist',
@@ -136,6 +142,7 @@ export const messages = {
       daily: 'Zilnic',
       weekly: 'Saptamanal',
       monthly: 'Lunar',
+      yearly: 'Anual',
       create: 'Creeaza'
     },
     reminderDetail: {
@@ -327,6 +334,12 @@ export const messages = {
       aiFailed: 'AI could not parse the text.',
       aiMissingText: 'Enter some text for AI.',
       aiMissingHousehold: 'Create a household before using AI.',
+      templatesTitle: 'Quick templates',
+      templatesSubtitle: 'Pick one and tweak the details.',
+      templatesSearchPlaceholder: 'Search templates by keywords',
+      templatesApply: 'Use',
+      templatesEmpty: 'No templates match your search.',
+      templatesPreReminderLabel: 'Notify',
       details: 'Details',
       titleLabel: 'Title',
       titlePlaceholder: 'e.g. Dentist checkup',
@@ -343,6 +356,7 @@ export const messages = {
       daily: 'Daily',
       weekly: 'Weekly',
       monthly: 'Monthly',
+      yearly: 'Yearly',
       create: 'Create'
     },
     reminderDetail: {

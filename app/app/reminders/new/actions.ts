@@ -16,7 +16,9 @@ export async function createReminder(formData: FormData) {
   const title = String(formData.get('title') || '').trim();
   const notes = String(formData.get('notes') || '').trim();
   const scheduleTypeRaw = String(formData.get('schedule_type') || 'once');
-  const scheduleType = ['once', 'daily', 'weekly', 'monthly'].includes(scheduleTypeRaw) ? scheduleTypeRaw : 'once';
+  const scheduleType = ['once', 'daily', 'weekly', 'monthly', 'yearly'].includes(scheduleTypeRaw)
+    ? scheduleTypeRaw
+    : 'once';
   const dueAtRaw = String(formData.get('due_at') || '').trim();
   const recurrenceRuleRaw = String(formData.get('recurrence_rule') || '').trim();
   const preReminderRaw = String(formData.get('pre_reminder_minutes') || '').trim();

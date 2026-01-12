@@ -53,6 +53,8 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
                     ? copy.remindersNew.weekly
                     : reminder.schedule_type === 'monthly'
                       ? copy.remindersNew.monthly
+                      : reminder.schedule_type === 'yearly'
+                        ? copy.remindersNew.yearly
                       : reminder.schedule_type}
             </div>
             {reminder.due_at ? (
