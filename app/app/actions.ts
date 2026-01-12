@@ -22,6 +22,7 @@ export async function markDone(formData: FormData) {
   const occurrenceId = String(formData.get('occurrenceId'));
   const reminderId = String(formData.get('reminderId'));
   const occurAt = String(formData.get('occurAt'));
+  const doneComment = String(formData.get('done_comment') || '').trim();
   await requireUser();
 
   const supabase = createServerClient();
@@ -29,7 +30,8 @@ export async function markDone(formData: FormData) {
     .from('reminder_occurrences')
     .update({
       status: 'done',
-      done_at: new Date().toISOString()
+      done_at: new Date().toISOString(),
+      done_comment: doneComment || null
     })
     .eq('id', occurrenceId);
 

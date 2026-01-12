@@ -26,10 +26,22 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <form action={markDone}>
+        <form action={markDone} className="flex flex-col items-end gap-2">
           <input type="hidden" name="occurrenceId" value={occurrence.id} />
           <input type="hidden" name="reminderId" value={reminderId} />
           <input type="hidden" name="occurAt" value={occurrence.occur_at} />
+          <details className="self-stretch">
+            <summary className="cursor-pointer text-xs font-semibold text-slate-500 dropdown-summary">
+              {copy.common.commentOptional}
+            </summary>
+            <textarea
+              name="done_comment"
+              rows={2}
+              className="input mt-2 w-64 max-w-full"
+              placeholder={copy.common.commentPlaceholder}
+              aria-label={copy.common.commentLabel}
+            />
+          </details>
           <button className="btn btn-primary" type="submit">{copy.common.done}</button>
         </form>
 

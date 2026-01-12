@@ -79,6 +79,11 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
                       ? copy.common.statusSnoozed
                       : copy.common.statusOpen}
                 </div>
+                {occurrence.done_comment ? (
+                  <div className="text-xs text-slate-500">
+                    {copy.common.commentLabel}: {occurrence.done_comment}
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
