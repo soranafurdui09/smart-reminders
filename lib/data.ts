@@ -13,6 +13,7 @@ type HouseholdRecord = {
 };
 
 type HouseholdMembership = {
+  id: string;
   role: string;
   households: HouseholdRecord | null;
 };
@@ -47,7 +48,7 @@ export async function getUserHousehold(userId: string) {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('household_members')
-    .select('role, households(*)')
+    .select('id, role, households(*)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
