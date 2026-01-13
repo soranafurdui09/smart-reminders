@@ -29,13 +29,14 @@ export default function SmartSnoozeMenu({
     const parsed = new Date(dueAt);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   }, [dueAt]);
+  const dueAtTime = useMemo(() => (dueAtDate ? dueAtDate.getTime() : null), [dueAtDate]);
   const normalizedCategory = useMemo(
     () => inferReminderCategory({ title, notes, category }),
     [title, notes, category]
   );
   const options = useMemo(
-    () => getSmartSnoozeOptions({ now, category: normalizedCategory, dueAt: dueAtDate }),
-    [now, normalizedCategory, dueAtDate?.getTime()]
+    () => getSmartSnoozeOptions({ now, category: normalizedCategory, dueAt: dueAtTime ? new Date(dueAtTime) : null }),
+    [now, normalizedCategory, dueAtTime]
   );
   const hasCustom = options.some((option) => option.id === 'custom');
   const handleToggle = (event: React.SyntheticEvent<HTMLDetailsElement>) => {

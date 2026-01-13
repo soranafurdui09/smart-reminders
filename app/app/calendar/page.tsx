@@ -55,13 +55,13 @@ export default async function CalendarPage({
     monthEnd.toISOString()
   );
   const hasOccurrences = occurrences.length > 0;
-
-  const itemsByDay = new Map<string, typeof occurrences>();
+  type CalendarOccurrence = (typeof occurrences)[number] & { effective_at: string };
+  const itemsByDay = new Map<string, CalendarOccurrence[]>();
   occurrences.forEach((occurrence) => {
     // Calendar uses snoozed_until as the effective due time when present.
     const effectiveAt = occurrence.snoozed_until ?? occurrence.occur_at;
     const key = format(new Date(effectiveAt), 'yyyy-MM-dd');
-    const existing = itemsByDay.get(key) ?? [];
+    const existing = itemsByDay.get(key) ?? ([] as CalendarOccurrence[]);
     existing.push({ ...occurrence, effective_at: effectiveAt });
     itemsByDay.set(key, existing);
   });
@@ -124,7 +124,7 @@ export default async function CalendarPage({
                       className="block rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-1 text-xs text-ink transition hover:border-primary/30 hover:bg-white"
                     >
                       <div className="truncate font-semibold">
-                        {format(new Date((occurrence as any).effective_at ?? occurrence.occur_at), 'HH:mm')} {occurrence.reminder?.title ?? copy.reminderDetail.title}
+                        {format(new Date(occurrence.effective_at), 'HH:mm')} {occurrence.reminder?.title ?? copy.reminderDetail.title}
                       </div>
                     </Link>
                   ))}
