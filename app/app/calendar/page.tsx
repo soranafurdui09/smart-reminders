@@ -58,9 +58,11 @@ export default async function CalendarPage({
 
   const itemsByDay = new Map<string, typeof occurrences>();
   occurrences.forEach((occurrence) => {
-    const key = format(new Date(occurrence.occur_at), 'yyyy-MM-dd');
+    // Calendar uses snoozed_until as the effective due time when present.
+    const effectiveAt = occurrence.snoozed_until ?? occurrence.occur_at;
+    const key = format(new Date(effectiveAt), 'yyyy-MM-dd');
     const existing = itemsByDay.get(key) ?? [];
-    existing.push(occurrence);
+    existing.push({ ...occurrence, effective_at: effectiveAt });
     itemsByDay.set(key, existing);
   });
 
@@ -122,7 +124,7 @@ export default async function CalendarPage({
                       className="block rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-1 text-xs text-ink transition hover:border-primary/30 hover:bg-white"
                     >
                       <div className="truncate font-semibold">
-                        {format(new Date(occurrence.occur_at), 'HH:mm')} {occurrence.reminder?.title ?? copy.reminderDetail.title}
+                        {format(new Date((occurrence as any).effective_at ?? occurrence.occur_at), 'HH:mm')} {occurrence.reminder?.title ?? copy.reminderDetail.title}
                       </div>
                     </Link>
                   ))}

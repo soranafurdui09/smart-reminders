@@ -36,6 +36,7 @@ export default function OccurrenceDateChip({
   const [flash, setFlash] = useState(false);
 
   useEffect(() => {
+    // The chip highlights when a snoozed occurrence gets a new effective due time.
     const payload = readHighlight();
     if (!payload) return;
     if (payload.id !== occurrenceId) return;

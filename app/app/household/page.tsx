@@ -15,9 +15,10 @@ export default async function HouseholdPage({
   const locale = await getUserLocale(user.id);
   const copy = messages[locale];
   const membership = await getUserHousehold(user.id);
+  const household = membership?.households;
   const isOwner = membership?.role === 'OWNER';
 
-  if (!membership?.households) {
+  if (!household) {
     return (
       <AppShell locale={locale} activePath="/app/household" userEmail={user.email}>
         <div className="space-y-6">
@@ -40,7 +41,6 @@ export default async function HouseholdPage({
     );
   }
 
-  const household = membership.households;
   const householdId = household.id;
   const members = await getHouseholdMembers(householdId);
   const invites = await getHouseholdInvites(householdId);

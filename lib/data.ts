@@ -119,6 +119,7 @@ export async function getHouseholdInvites(householdId: string) {
 }
 
 export async function getOpenOccurrencesForHousehold(householdId: string): Promise<OccurrenceWithReminder[]> {
+  // Occurrences represent the next due time; snoozed_until (when present) overrides the effective schedule.
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('reminder_occurrences')
@@ -149,8 +150,9 @@ export async function getOpenOccurrencesForHouseholdRange(
     .select('id, occur_at, status, snoozed_until, performed_by, performed_at, reminder:reminders!inner(id, title, schedule_type, created_by, household_id, is_active, assigned_member_id)')
     .eq('reminders.household_id', householdId)
     .in('status', ['open', 'snoozed'])
-    .gte('occur_at', startIso)
-    .lte('occur_at', endIso)
+    .or(
+      `and(snoozed_until.gte.${startIso},snoozed_until.lte.${endIso}),and(snoozed_until.is.null,occur_at.gte.${startIso},occur_at.lte.${endIso})`
+    )
     .order('occur_at');
   if (error) {
     logDataError('getOpenOccurrencesForHouseholdRange', error);

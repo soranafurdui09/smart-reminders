@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth';
-import { getNextOccurrence, snoozeByMinutes, snoozeTomorrow, type ScheduleType } from '@/lib/reminders';
+import { getNextOccurrence, type ScheduleType } from '@/lib/reminders';
+import { getSmartSnoozeOptions, inferReminderCategory, type SnoozeOptionId } from '@/lib/reminders/snooze';
 
 async function createNextOccurrence(reminderId: string, occurAt: Date, scheduleType: ScheduleType) {
   const next = getNextOccurrence(occurAt, scheduleType);
@@ -19,6 +20,7 @@ async function createNextOccurrence(reminderId: string, occurAt: Date, scheduleT
 }
 
 export async function markDone(formData: FormData) {
+  // Done flow: mark the current occurrence complete, then generate the next occurrence from schedule_type.
   const occurrenceId = String(formData.get('occurrenceId'));
   const reminderId = String(formData.get('reminderId'));
   const occurAt = String(formData.get('occurAt'));
@@ -33,6 +35,7 @@ export async function markDone(formData: FormData) {
       status: 'done',
       done_at: performedAt,
       done_comment: doneComment || null,
+      snoozed_until: null,
       performed_by: user.id,
       performed_at: performedAt
     })
@@ -52,30 +55,75 @@ export async function markDone(formData: FormData) {
 }
 
 export async function snoozeOccurrence(formData: FormData) {
+  // Snooze flow: keep the occurrence open and set snoozed_until as the next due time.
   const occurrenceId = String(formData.get('occurrenceId'));
-  const remindAt = new Date(String(formData.get('occurAt')));
-  const mode = String(formData.get('mode'));
-  const customMinutesRaw = String(formData.get('custom_minutes') || '').trim();
+  const optionIdRaw = String(formData.get('option_id') || '').trim();
+  const customAtRaw = String(formData.get('custom_at') || '').trim();
+  const legacyMode = String(formData.get('mode') || '').trim();
   const user = await requireUser();
-
-  let nextOccurAt: Date;
-  if (mode === 'custom') {
-    const customMinutes = Number(customMinutesRaw);
-    const minutes = Number.isFinite(customMinutes) && customMinutes > 0 ? customMinutes : 10;
-    nextOccurAt = snoozeByMinutes(new Date(), minutes);
-  } else if (mode === 'tomorrow') {
-    nextOccurAt = snoozeTomorrow(new Date());
-  } else {
-    const minutes = Number(mode);
-    nextOccurAt = snoozeByMinutes(remindAt, Number.isFinite(minutes) ? minutes : 10);
-  }
+  const now = new Date();
 
   const supabase = createServerClient();
+  const { data: occurrence } = await supabase
+    .from('reminder_occurrences')
+    .select('id, occur_at, reminder:reminders(id, title, notes, due_at, household_id, is_active)')
+    .eq('id', occurrenceId)
+    .maybeSingle();
+
+  if (!occurrence) {
+    return;
+  }
+
+  const reminder = Array.isArray(occurrence.reminder) ? occurrence.reminder[0] : occurrence.reminder;
+  if (!reminder?.household_id || reminder.is_active === false) {
+    return;
+  }
+
+  const { data: membership } = await supabase
+    .from('household_members')
+    .select('id')
+    .eq('household_id', reminder.household_id)
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (!membership) {
+    return;
+  }
+
+  const dueAt = occurrence.occur_at ? new Date(occurrence.occur_at) : reminder.due_at ? new Date(reminder.due_at) : null;
+  const category = inferReminderCategory({
+    title: reminder.title,
+    notes: reminder.notes,
+    category: (reminder as { category?: string | null })?.category
+  });
+
+  let target: Date | null = null;
+  const optionId = optionIdRaw as SnoozeOptionId;
+  if (optionId && optionId !== 'custom') {
+    const options = getSmartSnoozeOptions({ now, category, dueAt });
+    const selected = options.find((option) => option.id === optionId);
+    if (selected && selected.target !== 'custom') {
+      target = selected.target;
+    }
+  } else if (customAtRaw) {
+    const customAt = new Date(customAtRaw);
+    if (!Number.isNaN(customAt.getTime())) {
+      target = customAt;
+    }
+  } else if (legacyMode) {
+    const minutes = Number(legacyMode);
+    if (Number.isFinite(minutes) && minutes > 0) {
+      target = new Date(now.getTime() + minutes * 60 * 1000);
+    }
+  }
+
+  if (!target || target.getTime() <= now.getTime()) {
+    return;
+  }
+
   await supabase
     .from('reminder_occurrences')
     .update({
-      occur_at: nextOccurAt.toISOString(),
-      snoozed_until: nextOccurAt.toISOString(),
+      snoozed_until: target.toISOString(),
       status: 'snoozed',
       performed_by: user.id,
       performed_at: new Date().toISOString()
@@ -83,4 +131,5 @@ export async function snoozeOccurrence(formData: FormData) {
     .eq('id', occurrenceId);
 
   revalidatePath('/app');
+  revalidatePath('/app/calendar');
 }

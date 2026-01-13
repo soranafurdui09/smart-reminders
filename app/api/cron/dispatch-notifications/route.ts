@@ -10,12 +10,15 @@ export const runtime = 'nodejs';
 export async function GET() {
   const admin = createAdminClient();
   const now = new Date();
+  const nowIso = now.toISOString();
 
   const { data: occurrences, error } = await admin
     .from('reminder_occurrences')
-    .select('id, occur_at, status, reminder:reminders(id, title, household_id, is_active)')
-    .lte('occur_at', now.toISOString())
-    .in('status', ['open', 'snoozed']);
+    .select('id, occur_at, snoozed_until, status, reminder:reminders(id, title, household_id, is_active)')
+    // Notification flow: use snoozed_until as the effective due time when present.
+    .or(
+      `and(status.eq.snoozed,snoozed_until.lte.${nowIso}),and(status.eq.open,occur_at.lte.${nowIso})`
+    );
 
   if (error) {
     return NextResponse.json({ error: 'failed' }, { status: 500 });
@@ -27,6 +30,7 @@ export async function GET() {
       continue;
     }
 
+    const effectiveAt = occurrence.snoozed_until ?? occurrence.occur_at;
     const { data: insertData, error: insertError } = await admin
       .from('notification_log')
       .insert({
@@ -71,7 +75,7 @@ export async function GET() {
 
     const html = reminderEmailTemplate({
       title: reminder.title,
-      occurAt: format(new Date(occurrence.occur_at), 'dd MMM yyyy HH:mm')
+      occurAt: format(new Date(effectiveAt), 'dd MMM yyyy HH:mm')
     });
 
     let finalStatus: 'sent' | 'skipped' | 'failed' = 'sent';
@@ -129,7 +133,7 @@ export async function GET() {
 
     const payload = {
       title: reminder.title,
-      body: `Scadenta: ${format(new Date(occurrence.occur_at), 'dd MMM yyyy HH:mm')}`,
+      body: `Scadenta: ${format(new Date(effectiveAt), 'dd MMM yyyy HH:mm')}`,
       url: `${getAppUrl()}/app`
     };
 

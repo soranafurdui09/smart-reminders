@@ -36,6 +36,7 @@ export default function OccurrenceHighlightCard({
   const [flash, setFlash] = useState(false);
 
   useEffect(() => {
+    // Highlight the card when snoozed_until updates the effective due time.
     const payload = readHighlight();
     if (!payload) return;
     if (payload.id !== occurrenceId) return;

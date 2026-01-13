@@ -60,23 +60,31 @@ export default async function DashboardPage({
   const occurrences = occurrencesAll
     .filter((occurrence) => occurrence.reminder?.is_active)
     .map((occurrence) => {
+      // Next due time comes from the occurrence itself, overridden by snoozed_until if set.
+      const effectiveAt = occurrence.snoozed_until ?? occurrence.occur_at;
       const assignedId = occurrence.reminder?.assigned_member_id;
       const performedBy = occurrence.performed_by;
       const performedByLabel = performedBy ? memberUserMap.get(performedBy) : null;
       if (!assignedId) {
         return performedByLabel
-          ? { ...occurrence, performed_by_label: performedByLabel }
-          : occurrence;
+          ? { ...occurrence, performed_by_label: performedByLabel, effective_at: effectiveAt }
+          : { ...occurrence, effective_at: effectiveAt };
       }
       const label = memberMap.get(assignedId);
       const base = {
         ...occurrence,
+        effective_at: effectiveAt,
         reminder: label
           ? { ...occurrence.reminder, assigned_member_label: label }
           : occurrence.reminder
       };
       return performedByLabel ? { ...base, performed_by_label: performedByLabel } : base;
     });
+  const sortedOccurrences = [...occurrences].sort((a: any, b: any) => {
+    const aTime = new Date(a.effective_at ?? a.occur_at).getTime();
+    const bTime = new Date(b.effective_at ?? b.occur_at).getTime();
+    return aTime - bTime;
+  });
   const createdFilter = searchParams?.created === 'me'
     ? 'me'
     : searchParams?.created === 'others'
@@ -84,7 +92,7 @@ export default async function DashboardPage({
       : 'all';
   const assignedFilter = searchParams?.assigned === 'me' ? 'me' : 'all';
   const memberId = membership.id;
-  const filteredOccurrences = occurrences.filter((occurrence) => {
+  const filteredOccurrences = sortedOccurrences.filter((occurrence) => {
     if (createdFilter === 'me' && occurrence.reminder?.created_by !== user.id) {
       return false;
     }
@@ -105,7 +113,7 @@ export default async function DashboardPage({
     later: []
   };
   filteredOccurrences.forEach((occurrence) => {
-    const date = new Date(occurrence.occur_at);
+    const date = new Date(occurrence.effective_at ?? occurrence.occur_at);
     if (isToday(date)) {
       groups.today.push(occurrence);
     } else if (isTomorrow(date)) {

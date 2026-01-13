@@ -6,11 +6,14 @@ import { defaultLocale, messages, type Locale } from '@/lib/i18n';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import OccurrenceDateChip from '@/components/OccurrenceDateChip';
 import OccurrenceHighlightCard from '@/components/OccurrenceHighlightCard';
+import SmartSnoozeMenu from '@/components/SmartSnoozeMenu';
 
 export default function OccurrenceCard({ occurrence, locale = defaultLocale }: { occurrence: any; locale?: Locale }) {
   const copy = messages[locale];
   const reminder = occurrence.reminder;
   const reminderId = reminder?.id;
+  // Next due time comes from the occurrence, with snoozed_until overriding it when present.
+  const displayAt = occurrence.snoozed_until ?? occurrence.occur_at;
   const statusLabel = occurrence.status === 'done'
     ? copy.common.done
     : occurrence.status === 'snoozed'
@@ -29,14 +32,14 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
     <OccurrenceHighlightCard
       className="card space-y-4"
       occurrenceId={occurrence.id}
-      highlightKey={occurrence.occur_at}
+      highlightKey={displayAt}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <OccurrenceDateChip
             occurrenceId={occurrence.id}
-            label={format(new Date(occurrence.occur_at), 'dd MMM yyyy HH:mm')}
-            highlightKey={occurrence.occur_at}
+            label={format(new Date(displayAt), 'dd MMM yyyy HH:mm')}
+            highlightKey={displayAt}
           />
           <div className="text-lg font-semibold text-ink">{reminder?.title}</div>
           {commentText ? (
@@ -120,86 +123,15 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
           </div>
         </details>
 
-          <details className="relative">
-            <summary className="btn btn-secondary dropdown-summary h-10">
-              <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
-                <path
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"
-                />
-              </svg>
-              {copy.common.snooze}
-            </summary>
-            <div className="absolute right-0 z-20 mt-3 w-48 rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft">
-              <form action={snoozeOccurrence}>
-                <input type="hidden" name="occurrenceId" value={occurrence.id} />
-                <input type="hidden" name="occurAt" value={occurrence.occur_at} />
-                <input type="hidden" name="mode" value="10" />
-                <ActionSubmitButton
-                  className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
-                  type="submit"
-                  data-action-feedback={copy.common.actionSnoozed}
-                  data-highlight-id={occurrence.id}
-                  data-highlight-kind="snooze"
-                >
-                  {copy.common.snooze10}
-                </ActionSubmitButton>
-              </form>
-              <form action={snoozeOccurrence}>
-                <input type="hidden" name="occurrenceId" value={occurrence.id} />
-                <input type="hidden" name="occurAt" value={occurrence.occur_at} />
-                <input type="hidden" name="mode" value="60" />
-                <ActionSubmitButton
-                  className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
-                  type="submit"
-                  data-action-feedback={copy.common.actionSnoozed}
-                  data-highlight-id={occurrence.id}
-                  data-highlight-kind="snooze"
-                >
-                  {copy.common.snooze60}
-                </ActionSubmitButton>
-              </form>
-              <form action={snoozeOccurrence}>
-                <input type="hidden" name="occurrenceId" value={occurrence.id} />
-                <input type="hidden" name="occurAt" value={occurrence.occur_at} />
-                <input type="hidden" name="mode" value="tomorrow" />
-                <ActionSubmitButton
-                  className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
-                  type="submit"
-                  data-action-feedback={copy.common.actionSnoozed}
-                  data-highlight-id={occurrence.id}
-                  data-highlight-kind="snooze"
-                >
-                  {copy.common.snoozeTomorrow}
-                </ActionSubmitButton>
-              </form>
-              <form action={snoozeOccurrence} className="mt-2 border-t border-borderSubtle pt-2">
-                <input type="hidden" name="occurrenceId" value={occurrence.id} />
-                <input type="hidden" name="occurAt" value={occurrence.occur_at} />
-                <input type="hidden" name="mode" value="custom" />
-                <div className="flex items-center gap-2">
-                  <input
-                    name="custom_minutes"
-                    type="number"
-                    min="1"
-                    className="input h-9 w-24"
-                    placeholder={copy.common.snoozeCustomPlaceholder}
-                    aria-label={copy.common.snoozeCustom}
-                  />
-                  <ActionSubmitButton
-                    className="btn btn-secondary h-9"
-                    type="submit"
-                    data-action-feedback={copy.common.actionSnoozed}
-                    data-highlight-id={occurrence.id}
-                    data-highlight-kind="snooze"
-                  >
-                    {copy.common.snoozeCustomButton}
-                  </ActionSubmitButton>
-                </div>
-              </form>
-            </div>
-          </details>
+          <SmartSnoozeMenu
+            occurrenceId={occurrence.id}
+            dueAt={displayAt}
+            title={reminder?.title}
+            notes={reminder?.notes}
+            category={reminder?.category}
+            copy={copy}
+            snoozeAction={snoozeOccurrence}
+          />
         </div>
 
         <details className="group w-full sm:w-auto">
