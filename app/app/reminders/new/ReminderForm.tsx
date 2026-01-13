@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
+import { useSpeechToText } from '@/hooks/useSpeechToText';
 
 type MemberOption = {
   id: string;
@@ -333,6 +334,15 @@ export default function ReminderForm({
   const highlightTimer = useRef<number | null>(null);
   const detailsRef = useRef<HTMLElement>(null);
   const aiCharCount = aiText.length;
+  const {
+    supported: speechSupported,
+    listening: speechListening,
+    transcript: speechTranscript,
+    error: speechError,
+    start: startSpeech,
+    stop: stopSpeech,
+    reset: resetSpeech
+  } = useSpeechToText(activeLocale === 'en' ? 'en-US' : 'ro-RO');
 
   const memberOptions = useMemo(
     () => [{ id: '', label: copy.remindersNew.assigneeNone }, ...members],
@@ -390,6 +400,46 @@ export default function ReminderForm({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!speechListening && speechTranscript.trim()) {
+      setAiText(speechTranscript.trim());
+      setAiError(null);
+    }
+  }, [speechListening, speechTranscript]);
+
+  const speechErrorMessage = useMemo(() => {
+    if (!speechError) return null;
+    if (speechError === 'not-allowed' || speechError === 'service-not-allowed') {
+      return copy.remindersNew.voicePermission;
+    }
+    if (speechError === 'no-speech') {
+      return copy.remindersNew.voiceNoSpeech;
+    }
+    if (speechError === 'not-supported') {
+      return copy.remindersNew.voiceNotSupported;
+    }
+    return copy.remindersNew.voiceError;
+  }, [
+    copy.remindersNew.voiceError,
+    copy.remindersNew.voiceNoSpeech,
+    copy.remindersNew.voiceNotSupported,
+    copy.remindersNew.voicePermission,
+    speechError
+  ]);
+
+  const handleSpeechToggle = () => {
+    if (!speechSupported) {
+      return;
+    }
+    if (speechListening) {
+      stopSpeech();
+      return;
+    }
+    resetSpeech();
+    setAiError(null);
+    startSpeech();
+  };
 
   const handleParse = async () => {
     if (!aiText.trim()) {
@@ -450,10 +500,30 @@ export default function ReminderForm({
             value={aiText}
             onChange={(event) => setAiText(event.target.value)}
           />
-          <div className="flex items-center justify-between text-xs text-muted">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
             <span>{copy.remindersNew.aiHint}</span>
-            <span>{aiCharCount} {copy.remindersNew.aiCounterLabel}</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                className="btn btn-secondary h-9 px-3 text-xs"
+                type="button"
+                onClick={handleSpeechToggle}
+                disabled={!speechSupported}
+                title={!speechSupported ? copy.remindersNew.voiceNotSupported : undefined}
+              >
+                {speechListening ? copy.remindersNew.voiceStop : copy.remindersNew.voiceStart}
+              </button>
+              <span>{aiCharCount} {copy.remindersNew.aiCounterLabel}</span>
+            </div>
           </div>
+          {speechListening ? (
+            <div className="text-xs text-muted">{copy.remindersNew.voiceListening}</div>
+          ) : null}
+          {!speechSupported ? (
+            <div className="text-xs text-muted">{copy.remindersNew.voiceNotSupported}</div>
+          ) : null}
+          {speechErrorMessage ? (
+            <div className="text-xs text-rose-600">{speechErrorMessage}</div>
+          ) : null}
         </div>
         {aiError ? (
           <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{aiError}</div>
