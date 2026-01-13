@@ -4,7 +4,7 @@ import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { requireUser } from '@/lib/auth';
 import { getHouseholdInvites, getHouseholdMembers, getUserHousehold, getUserLocale } from '@/lib/data';
 import { messages } from '@/lib/i18n';
-import { createHousehold, inviteMember } from './actions';
+import { createHousehold, inviteMember, removeMember, updateMemberRole } from './actions';
 
 export default async function HouseholdPage({
   searchParams
@@ -15,6 +15,7 @@ export default async function HouseholdPage({
   const locale = await getUserLocale(user.id);
   const copy = messages[locale];
   const membership = await getUserHousehold(user.id);
+  const isOwner = membership?.role === 'OWNER';
 
   if (!membership?.households) {
     return (
@@ -41,6 +42,12 @@ export default async function HouseholdPage({
 
   const members = await getHouseholdMembers(membership.households.id);
   const invites = await getHouseholdInvites(membership.households.id);
+  const roleLabels: Record<string, string> = {
+    OWNER: copy.household.roleOwner,
+    MEMBER: copy.household.roleMember,
+    VIEWER: copy.household.roleViewer
+  };
+  const formatRole = (role: string) => roleLabels[role] || role;
 
   return (
     <AppShell locale={locale} activePath="/app/household" userEmail={user.email}>
@@ -61,7 +68,15 @@ export default async function HouseholdPage({
           <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
             {searchParams.error === 'invite-email-failed'
               ? copy.household.inviteEmailFailed
-              : copy.household.actionFailed}
+              : searchParams.error === 'not-authorized'
+                ? copy.household.errorNotAuthorized
+                : searchParams.error === 'last-owner'
+                  ? copy.household.errorLastOwner
+                  : searchParams.error === 'member-not-found'
+                    ? copy.household.errorMemberMissing
+                    : searchParams.error === 'invalid-role'
+                      ? copy.household.errorInvalidRole
+                      : copy.household.actionFailed}
           </div>
         ) : null}
 
@@ -83,10 +98,52 @@ export default async function HouseholdPage({
                       </div>
                       <div>
                         <div className="text-sm font-semibold text-ink">{label}</div>
-                        <div className="text-xs text-muted">{member.role}</div>
+                        <div className="text-xs text-muted">{formatRole(member.role)}</div>
                       </div>
                     </div>
-                    <span className="chip">{member.role}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="chip">{formatRole(member.role)}</span>
+                      {isOwner ? (
+                        <details className="relative">
+                          <summary
+                            className="btn btn-secondary dropdown-summary h-9 w-9 p-0"
+                            aria-label={copy.household.manageActionsLabel}
+                          >
+                            <span aria-hidden="true">...</span>
+                          </summary>
+                          <div className="absolute right-0 z-20 mt-2 w-60 rounded-2xl border border-borderSubtle bg-surface p-3 shadow-soft">
+                            <form action={updateMemberRole} className="space-y-2">
+                              <input type="hidden" name="household_id" value={membership.households.id} />
+                              <input type="hidden" name="member_id" value={member.id} />
+                              <label className="text-xs font-semibold text-muted">{copy.common.role}</label>
+                              <select name="role" className="input h-9" defaultValue={member.role}>
+                                <option value="OWNER">{copy.household.roleOwner}</option>
+                                <option value="MEMBER">{copy.household.roleMember}</option>
+                                <option value="VIEWER">{copy.household.roleViewer}</option>
+                              </select>
+                              <ActionSubmitButton
+                                className="btn btn-secondary w-full"
+                                type="submit"
+                                data-action-feedback={copy.common.actionSaved}
+                              >
+                                {copy.common.save}
+                              </ActionSubmitButton>
+                            </form>
+                            <form action={removeMember} className="mt-3 border-t border-borderSubtle pt-3">
+                              <input type="hidden" name="household_id" value={membership.households.id} />
+                              <input type="hidden" name="member_id" value={member.id} />
+                              <ActionSubmitButton
+                                className="w-full rounded-lg px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
+                                type="submit"
+                                data-action-feedback={copy.household.memberRemoved}
+                              >
+                                {copy.household.removeMemberLabel}
+                              </ActionSubmitButton>
+                            </form>
+                          </div>
+                        </details>
+                      ) : null}
+                    </div>
                   </div>
                 );
               })}
@@ -110,7 +167,7 @@ export default async function HouseholdPage({
                       <div>
                         <div className="text-sm font-semibold text-ink">{invite.email}</div>
                         <div className="text-xs text-muted">
-                          {invite.role} - {invite.accepted_at ? copy.household.inviteAccepted : copy.household.invitePending}
+                          {formatRole(invite.role)} - {invite.accepted_at ? copy.household.inviteAccepted : copy.household.invitePending}
                         </div>
                       </div>
                     </div>
@@ -122,32 +179,37 @@ export default async function HouseholdPage({
           </div>
         </section>
 
-        <section className="card space-y-4 max-w-lg">
-          <div>
-            <div className="text-lg font-semibold text-ink">{copy.household.inviteTitle}</div>
-            <p className="text-sm text-muted">{copy.household.inviteSubtitle}</p>
-          </div>
-          <form action={inviteMember} className="space-y-4">
-            <input type="hidden" name="household_id" value={membership.households.id} />
+        {isOwner ? (
+          <section className="card space-y-4 max-w-lg">
             <div>
-              <label className="text-sm font-semibold">{copy.common.email}</label>
-              <input name="email" className="input" placeholder={copy.magicLink.placeholder} required />
+              <div className="text-lg font-semibold text-ink">{copy.household.inviteTitle}</div>
+              <p className="text-sm text-muted">{copy.household.inviteSubtitle}</p>
             </div>
-            <div>
-              <label className="text-sm font-semibold">{copy.common.role}</label>
-              <select name="role" className="input">
-                <option value="MEMBER">{copy.household.memberRoleLabel}</option>
-              </select>
-            </div>
-            <ActionSubmitButton
-              className="btn btn-primary"
-              type="submit"
-              data-action-feedback={copy.common.actionInvited}
-            >
-              {copy.household.inviteButton}
-            </ActionSubmitButton>
-          </form>
-        </section>
+            <form action={inviteMember} className="space-y-4">
+              <input type="hidden" name="household_id" value={membership.households.id} />
+              <div>
+                <label className="text-sm font-semibold">{copy.common.email}</label>
+                <input name="email" className="input" placeholder={copy.magicLink.placeholder} required />
+              </div>
+              <div>
+                <label className="text-sm font-semibold">{copy.common.role}</label>
+                <select name="role" className="input">
+                  <option value="MEMBER">{copy.household.roleMember}</option>
+                  <option value="VIEWER">{copy.household.roleViewer}</option>
+                </select>
+              </div>
+              <ActionSubmitButton
+                className="btn btn-primary"
+                type="submit"
+                data-action-feedback={copy.common.actionInvited}
+              >
+                {copy.household.inviteButton}
+              </ActionSubmitButton>
+            </form>
+          </section>
+        ) : (
+          <section className="card max-w-lg text-sm text-muted">{copy.household.inviteRestricted}</section>
+        )}
       </div>
     </AppShell>
   );

@@ -1,4 +1,4 @@
-export type Role = 'OWNER' | 'ADMIN' | 'MEMBER';
+export type Role = 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
 
 export function canEditReminder(role: Role) {
   return role === 'OWNER' || role === 'ADMIN';

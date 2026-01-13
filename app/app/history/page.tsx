@@ -3,13 +3,19 @@ import { addDays } from 'date-fns';
 import AppShell from '@/components/AppShell';
 import SectionHeader from '@/components/SectionHeader';
 import { requireUser } from '@/lib/auth';
-import { getDoneOccurrencesForHousehold, getUserHousehold, getUserLocale } from '@/lib/data';
+import {
+  getActionOccurrencesForHousehold,
+  getDoneOccurrencesForHousehold,
+  getHouseholdMembers,
+  getUserHousehold,
+  getUserLocale
+} from '@/lib/data';
 import { getLocaleTag, messages } from '@/lib/i18n';
 
 export default async function HistoryPage({
   searchParams
 }: {
-  searchParams: { range?: string };
+  searchParams: { range?: string; performer?: string };
 }) {
   const user = await requireUser('/app/history');
   const locale = await getUserLocale(user.id);
@@ -35,11 +41,63 @@ export default async function HistoryPage({
   type RangeKey = keyof typeof rangeLabels;
   const rangeParam = searchParams.range;
   const range = (rangeParam && rangeParam in rangeLabels ? rangeParam : '7') as RangeKey;
-  const allDone = await getDoneOccurrencesForHousehold(membership.households.id, 200);
+  const members = await getHouseholdMembers(membership.households.id);
+  const memberLabelMap = new Map(
+    members.map((member: any) => [
+      member.user_id,
+      member.profiles?.name || member.profiles?.email || member.user_id
+    ])
+  );
+  const performerParam = searchParams.performer;
+  const performerFilter = performerParam && memberLabelMap.has(performerParam) ? performerParam : 'all';
+  const allDone = await getDoneOccurrencesForHousehold(
+    membership.households.id,
+    200,
+    performerFilter === 'all' ? undefined : performerFilter
+  );
   const cutoff = range === 'all' ? null : addDays(new Date(), -Number(range));
+  const cutoffIso = cutoff ? cutoff.toISOString() : null;
   const filtered = cutoff
     ? allDone.filter((occurrence) => occurrence.done_at && new Date(occurrence.done_at) >= cutoff)
     : allDone;
+  const actionOccurrences = await getActionOccurrencesForHousehold(
+    membership.households.id,
+    ['done', 'snoozed'],
+    cutoffIso
+  );
+  const statsMap = new Map<string, { done: number; snoozed: number }>();
+  actionOccurrences.forEach((occurrence) => {
+    if (!occurrence.performed_by) {
+      return;
+    }
+    const current = statsMap.get(occurrence.performed_by) ?? { done: 0, snoozed: 0 };
+    if (occurrence.status === 'done') {
+      current.done += 1;
+    }
+    if (occurrence.status === 'snoozed') {
+      current.snoozed += 1;
+    }
+    statsMap.set(occurrence.performed_by, current);
+  });
+  const statsRows = members.map((member: any) => {
+    const label = member.profiles?.name || member.profiles?.email || member.user_id;
+    const initial = String(label || 'U').charAt(0).toUpperCase();
+    const counts = statsMap.get(member.user_id) ?? { done: 0, snoozed: 0 };
+    return { id: member.user_id, label, initial, counts };
+  });
+  const hasStats = statsRows.some((row) => row.counts.done > 0 || row.counts.snoozed > 0);
+
+  const buildHistoryUrl = (nextRange: RangeKey) => {
+    const params = new URLSearchParams();
+    if (nextRange !== '7') {
+      params.set('range', nextRange);
+    }
+    if (performerFilter !== 'all') {
+      params.set('performer', performerFilter);
+    }
+    const query = params.toString();
+    return query ? `/app/history?${query}` : '/app/history';
+  };
 
   return (
     <AppShell locale={locale} activePath="/app/history" userEmail={user.email}>
@@ -52,41 +110,110 @@ export default async function HistoryPage({
           <Link className="btn btn-secondary" href="/app">{copy.common.back}</Link>
         </div>
 
-        <div className="inline-flex flex-wrap gap-1 rounded-full border border-borderSubtle bg-surfaceMuted/70 p-1">
-          {(['7', '30', 'all'] as const).map((key) => (
-            <Link
-              key={key}
-              href={`/app/history?range=${key}`}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                range === key
-                  ? 'bg-surface text-ink shadow-sm'
-                  : 'text-muted hover:bg-surface hover:text-ink'
-              }`}
-            >
-              {rangeLabels[key]}
-            </Link>
-          ))}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="inline-flex flex-wrap gap-1 rounded-full border border-borderSubtle bg-surfaceMuted/70 p-1">
+            {(['7', '30', 'all'] as const).map((key) => (
+              <Link
+                key={key}
+                href={buildHistoryUrl(key)}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  range === key
+                    ? 'bg-surface text-ink shadow-sm'
+                    : 'text-muted hover:bg-surface hover:text-ink'
+                }`}
+              >
+                {rangeLabels[key]}
+              </Link>
+            ))}
+          </div>
+          <form action="/app/history" method="get" className="flex flex-wrap items-center gap-2">
+            <input type="hidden" name="range" value={range} />
+            <label className="text-xs font-semibold text-muted">{copy.history.filterPerformerLabel}</label>
+            <select name="performer" className="input h-9" defaultValue={performerFilter}>
+              <option value="all">{copy.history.filterAllMembers}</option>
+              {members.map((member: any) => {
+                const label = member.profiles?.name || member.profiles?.email || member.user_id;
+                return (
+                  <option key={member.user_id} value={member.user_id}>
+                    {label}
+                  </option>
+                );
+              })}
+            </select>
+            <button className="btn btn-secondary h-9" type="submit">{copy.history.filterApply}</button>
+          </form>
         </div>
+
+        <section className="card space-y-4">
+          <div>
+            <div className="text-lg font-semibold text-ink">{copy.history.statsTitle}</div>
+            <p className="text-sm text-muted">{copy.history.statsSubtitle}</p>
+          </div>
+          {hasStats ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {statsRows.map((row) => (
+                <div key={row.id} className="flex items-center justify-between rounded-2xl border border-borderSubtle bg-surface p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-surfaceMuted text-sm font-semibold text-ink">
+                      {row.initial}
+                    </div>
+                    <div className="text-sm font-semibold text-ink">{row.label}</div>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-muted">
+                    <span className="inline-flex items-center gap-1">
+                      <svg aria-hidden="true" className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24">
+                        <path stroke="currentColor" strokeWidth="1.5" d="M5 13l4 4L19 7" />
+                      </svg>
+                      {row.counts.done} {copy.history.statsDoneLabel}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <svg aria-hidden="true" className="h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24">
+                        <path
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"
+                        />
+                      </svg>
+                      {row.counts.snoozed} {copy.history.statsSnoozedLabel}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-muted">{copy.history.statsEmpty}</div>
+          )}
+        </section>
 
         <section>
           <SectionHeader title={copy.history.sectionTitle} description={copy.history.sectionSubtitle} />
           {filtered.length ? (
             <div className="space-y-4">
               <div className="relative space-y-4 border-l border-borderSubtle pl-6">
-                {filtered.map((occurrence) => (
-                  <Link
-                    key={occurrence.id}
-                    href={`/app/reminders/${occurrence.reminder?.id}`}
-                    className="card relative block w-full hover:-translate-y-0.5 hover:shadow-md"
-                  >
-                    <span className="absolute -left-4 top-6 h-3 w-3 rounded-full border border-primary/40 bg-primarySoft shadow-sm" />
-                    <div className="text-sm text-muted">
-                      {occurrence.done_at ? new Date(occurrence.done_at).toLocaleString(getLocaleTag(locale)) : copy.common.done}
-                    </div>
-                    <div className="text-sm font-semibold text-ink">{occurrence.reminder?.title || copy.reminderDetail.title}</div>
-                    <div className="text-xs text-muted">{copy.history.detailsHint}</div>
-                  </Link>
-                ))}
+                {filtered.map((occurrence) => {
+                  const performerLabel = occurrence.performed_by
+                    ? memberLabelMap.get(occurrence.performed_by) || copy.history.performerUnknown
+                    : null;
+                  return (
+                    <Link
+                      key={occurrence.id}
+                      href={`/app/reminders/${occurrence.reminder?.id}`}
+                      className="card relative block w-full hover:-translate-y-0.5 hover:shadow-md"
+                    >
+                      <span className="absolute -left-4 top-6 h-3 w-3 rounded-full border border-primary/40 bg-primarySoft shadow-sm" />
+                      <div className="text-sm text-muted">
+                        {occurrence.done_at ? new Date(occurrence.done_at).toLocaleString(getLocaleTag(locale)) : copy.common.done}
+                      </div>
+                      <div className="text-sm font-semibold text-ink">{occurrence.reminder?.title || copy.reminderDetail.title}</div>
+                      {performerLabel ? (
+                        <div className="text-xs text-muted">
+                          {copy.history.performedBy} {performerLabel}
+                        </div>
+                      ) : null}
+                      <div className="text-xs text-muted">{copy.history.detailsHint}</div>
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           ) : (

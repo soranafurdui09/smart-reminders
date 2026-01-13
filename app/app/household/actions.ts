@@ -7,6 +7,7 @@ import { createServerClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireUser } from '@/lib/auth';
 import { getAppUrl, isResendConfigured, sendEmail } from '@/lib/notifications';
+import { changeHouseholdMemberRole, removeHouseholdMember, type HouseholdRole } from '@/lib/householdRoles';
 
 export async function createHousehold(formData: FormData) {
   const user = await requireUser('/app');
@@ -39,7 +40,7 @@ export async function inviteMember(formData: FormData) {
   const householdId = String(formData.get('household_id') || '');
   const email = String(formData.get('email') || '').trim();
   const roleRaw = String(formData.get('role') || 'MEMBER');
-  const role = roleRaw === 'MEMBER' ? 'MEMBER' : 'MEMBER';
+  const role = roleRaw === 'VIEWER' ? 'VIEWER' : 'MEMBER';
   if (!householdId || !email) {
     redirect('/app/household?error=missing');
   }
@@ -121,4 +122,48 @@ export async function acceptInvite(token: string, userId: string) {
     .from('household_invites')
     .update({ accepted_at: new Date().toISOString() })
     .eq('id', invite.id);
+}
+
+function normalizeRole(value: string): HouseholdRole {
+  if (value === 'OWNER') return 'OWNER';
+  if (value === 'VIEWER') return 'VIEWER';
+  return 'MEMBER';
+}
+
+export async function updateMemberRole(formData: FormData) {
+  const user = await requireUser('/app/household');
+  const householdId = String(formData.get('household_id') || '');
+  const memberId = String(formData.get('member_id') || '');
+  const roleRaw = String(formData.get('role') || '');
+  if (!householdId || !memberId || !roleRaw) {
+    redirect('/app/household?error=missing');
+  }
+
+  const result = await changeHouseholdMemberRole(
+    householdId,
+    memberId,
+    normalizeRole(roleRaw),
+    user.id
+  );
+  if (!result.ok) {
+    redirect(`/app/household?error=${encodeURIComponent(result.error)}`);
+  }
+
+  redirect('/app/household');
+}
+
+export async function removeMember(formData: FormData) {
+  const user = await requireUser('/app/household');
+  const householdId = String(formData.get('household_id') || '');
+  const memberId = String(formData.get('member_id') || '');
+  if (!householdId || !memberId) {
+    redirect('/app/household?error=missing');
+  }
+
+  const result = await removeHouseholdMember(householdId, memberId, user.id);
+  if (!result.ok) {
+    redirect(`/app/household?error=${encodeURIComponent(result.error)}`);
+  }
+
+  redirect('/app/household');
 }

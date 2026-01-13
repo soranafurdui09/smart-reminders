@@ -5,10 +5,11 @@ import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth';
 import { generateReminderEmbedding } from '@/lib/ai/embeddings';
+import { clearReminderAssignment, setReminderAssignment } from '@/lib/reminderAssignments';
 
 export async function updateReminder(formData: FormData) {
   const reminderId = String(formData.get('reminderId'));
-  await requireUser(`/app/reminders/${reminderId}`);
+  const user = await requireUser(`/app/reminders/${reminderId}`);
 
   const title = String(formData.get('title') || '').trim();
   const notes = String(formData.get('notes') || '').trim();
@@ -51,15 +52,18 @@ export async function updateReminder(formData: FormData) {
   payload.pre_reminder_minutes = Number.isFinite(preReminderMinutes) ? preReminderMinutes : null;
 
   let assignedMemberId: string | null = assignedMemberRaw || null;
+  let assignedUserId: string | null = null;
   if (assignedMemberId) {
     const { data: member } = await supabase
       .from('household_members')
-      .select('id')
+      .select('id, user_id')
       .eq('id', assignedMemberId)
       .eq('household_id', reminderRecord.household_id)
       .maybeSingle();
     if (!member) {
       assignedMemberId = null;
+    } else {
+      assignedUserId = member.user_id;
     }
   }
   payload.assigned_member_id = assignedMemberId;
@@ -67,6 +71,18 @@ export async function updateReminder(formData: FormData) {
   const { error } = await supabase.from('reminders').update(payload).eq('id', reminderId);
   if (error) {
     redirect(`/app/reminders/${reminderId}?error=1`);
+  }
+
+  if (assignedUserId) {
+    const result = await setReminderAssignment(reminderId, assignedUserId, user.id);
+    if (!result.ok) {
+      console.error('[reminders] assignment update failed', result.error);
+    }
+  } else {
+    const result = await clearReminderAssignment(reminderId, user.id);
+    if (!result.ok) {
+      console.error('[reminders] assignment clear failed', result.error);
+    }
   }
 
   try {

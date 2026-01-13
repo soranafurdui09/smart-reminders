@@ -5,6 +5,7 @@ import { createServerClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth';
 import { getUserHousehold } from '@/lib/data';
 import { generateReminderEmbedding } from '@/lib/ai/embeddings';
+import { setReminderAssignment } from '@/lib/reminderAssignments';
 
 export async function createReminder(formData: FormData) {
   const user = await requireUser('/app/reminders/new');
@@ -32,15 +33,18 @@ export async function createReminder(formData: FormData) {
 
   const supabase = createServerClient();
   let assignedMemberId: string | null = assignedMemberRaw || null;
+  let assignedUserId: string | null = null;
   if (assignedMemberId) {
     const { data: member } = await supabase
       .from('household_members')
-      .select('id')
+      .select('id, user_id')
       .eq('id', assignedMemberId)
       .eq('household_id', membership.households.id)
       .maybeSingle();
     if (!member) {
       assignedMemberId = null;
+    } else {
+      assignedUserId = member.user_id;
     }
   }
   const preReminderMinutes = preReminderRaw ? Number(preReminderRaw) : null;
@@ -66,6 +70,13 @@ export async function createReminder(formData: FormData) {
   if (error || !reminder) {
     console.error('[reminders] create failed', error);
     redirect('/app/reminders/new?error=failed');
+  }
+
+  if (assignedUserId) {
+    const result = await setReminderAssignment(reminder.id, assignedUserId, user.id);
+    if (!result.ok) {
+      console.error('[reminders] assignment failed', result.error);
+    }
   }
 
   try {

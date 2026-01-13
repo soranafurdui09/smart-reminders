@@ -23,15 +23,18 @@ export async function markDone(formData: FormData) {
   const reminderId = String(formData.get('reminderId'));
   const occurAt = String(formData.get('occurAt'));
   const doneComment = String(formData.get('done_comment') || '').trim();
-  await requireUser();
+  const user = await requireUser();
+  const performedAt = new Date().toISOString();
 
   const supabase = createServerClient();
   await supabase
     .from('reminder_occurrences')
     .update({
       status: 'done',
-      done_at: new Date().toISOString(),
-      done_comment: doneComment || null
+      done_at: performedAt,
+      done_comment: doneComment || null,
+      performed_by: user.id,
+      performed_at: performedAt
     })
     .eq('id', occurrenceId);
 
@@ -53,7 +56,7 @@ export async function snoozeOccurrence(formData: FormData) {
   const remindAt = new Date(String(formData.get('occurAt')));
   const mode = String(formData.get('mode'));
   const customMinutesRaw = String(formData.get('custom_minutes') || '').trim();
-  await requireUser();
+  const user = await requireUser();
 
   let nextOccurAt: Date;
   if (mode === 'custom') {
@@ -73,7 +76,9 @@ export async function snoozeOccurrence(formData: FormData) {
     .update({
       occur_at: nextOccurAt.toISOString(),
       snoozed_until: nextOccurAt.toISOString(),
-      status: 'snoozed'
+      status: 'snoozed',
+      performed_by: user.id,
+      performed_at: new Date().toISOString()
     })
     .eq('id', occurrenceId);
 

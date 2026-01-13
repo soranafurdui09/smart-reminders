@@ -41,9 +41,16 @@ type DoneOccurrence = {
   occur_at?: string;
   status?: string;
   done_at?: string | null;
+  performed_by?: string | null;
   reminder?: Pick<ReminderPreview, 'id' | 'title' | 'household_id'> | null;
 };
 
+type ActionOccurrence = {
+  id: string;
+  status?: string;
+  performed_at?: string | null;
+  performed_by?: string | null;
+};
 export async function getUserHousehold(userId: string) {
   const supabase = createServerClient();
   const { data, error } = await supabase
@@ -155,15 +162,23 @@ export async function getOpenOccurrencesForHouseholdRange(
   }));
 }
 
-export async function getDoneOccurrencesForHousehold(householdId: string, limit = 50): Promise<DoneOccurrence[]> {
+export async function getDoneOccurrencesForHousehold(
+  householdId: string,
+  limit = 50,
+  performedBy?: string | null
+): Promise<DoneOccurrence[]> {
   const supabase = createServerClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from('reminder_occurrences')
-    .select('id, occur_at, status, done_at, reminder:reminders!inner(id, title, household_id)')
+    .select('id, occur_at, status, done_at, performed_by, reminder:reminders!inner(id, title, household_id)')
     .eq('reminders.household_id', householdId)
     .eq('status', 'done')
     .order('done_at', { ascending: false })
     .limit(limit);
+  if (performedBy) {
+    query = query.eq('performed_by', performedBy);
+  }
+  const { data, error } = await query;
   if (error) {
     logDataError('getDoneOccurrencesForHousehold', error);
     return [];
@@ -173,6 +188,33 @@ export async function getDoneOccurrencesForHousehold(householdId: string, limit 
     reminder: Array.isArray(occurrence.reminder)
       ? occurrence.reminder[0] ?? null
       : occurrence.reminder ?? null
+  }));
+}
+
+export async function getActionOccurrencesForHousehold(
+  householdId: string,
+  statuses: string[],
+  startIso?: string | null
+): Promise<ActionOccurrence[]> {
+  const supabase = createServerClient();
+  let query = supabase
+    .from('reminder_occurrences')
+    .select('id, status, performed_by, performed_at, reminder:reminders!inner(id, household_id)')
+    .eq('reminders.household_id', householdId)
+    .in('status', statuses);
+  if (startIso) {
+    query = query.gte('performed_at', startIso);
+  }
+  const { data, error } = await query;
+  if (error) {
+    logDataError('getActionOccurrencesForHousehold', error);
+    return [];
+  }
+  return (data ?? []).map((occurrence: any) => ({
+    id: occurrence.id,
+    status: occurrence.status,
+    performed_at: occurrence.performed_at,
+    performed_by: occurrence.performed_by
   }));
 }
 
