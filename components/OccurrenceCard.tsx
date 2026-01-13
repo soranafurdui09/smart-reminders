@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
-import { cloneReminder, deleteReminder } from '@/app/app/reminders/[id]/actions';
+import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import OccurrenceDateChip from '@/components/OccurrenceDateChip';
 import OccurrenceHighlightCard from '@/components/OccurrenceHighlightCard';
 import SmartSnoozeMenu from '@/components/SmartSnoozeMenu';
+import GoogleCalendarDeleteDialog from '@/components/GoogleCalendarDeleteDialog';
 
 export default function OccurrenceCard({ occurrence, locale = defaultLocale }: { occurrence: any; locale?: Locale }) {
   const copy = messages[locale];
@@ -98,8 +99,8 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
                   >
                     {copy.common.edit}
                   </Link>
-                  <form action={cloneReminder}>
-                    <input type="hidden" name="reminderId" value={reminderId} />
+                <form action={cloneReminder}>
+                  <input type="hidden" name="reminderId" value={reminderId} />
                   <ActionSubmitButton
                     className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
                     type="submit"
@@ -108,16 +109,18 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
                     {copy.reminderDetail.clone}
                   </ActionSubmitButton>
                 </form>
-                <form action={deleteReminder}>
-                  <input type="hidden" name="reminderId" value={reminderId} />
-                  <ActionSubmitButton
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
-                    type="submit"
-                    data-action-feedback={copy.common.actionDeleted}
-                  >
-                    {copy.common.delete}
-                  </ActionSubmitButton>
-                </form>
+                <GoogleCalendarDeleteDialog
+                  reminderId={reminderId}
+                  hasGoogleEvent={Boolean(reminder?.google_event_id)}
+                  copy={{
+                    label: copy.common.delete,
+                    dialogTitle: copy.reminderDetail.googleCalendarDeleteTitle,
+                    dialogHint: copy.reminderDetail.googleCalendarDeleteHint,
+                    justReminder: copy.reminderDetail.googleCalendarDeleteOnly,
+                    reminderAndCalendar: copy.reminderDetail.googleCalendarDeleteBoth,
+                    cancel: copy.reminderDetail.googleCalendarDeleteCancel
+                  }}
+                />
               </div>
             ) : null}
           </div>
