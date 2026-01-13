@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 
@@ -277,7 +277,9 @@ function toLocalInputValue(iso: string) {
   if (Number.isNaN(date.getTime())) {
     return '';
   }
-  return date.toISOString().slice(0, 16);
+  const offsetMs = date.getTimezoneOffset() * 60000;
+  const local = new Date(date.getTime() - offsetMs);
+  return local.toISOString().slice(0, 16);
 }
 
 function formatPreReminder(locale: TemplateLocale, minutes: number) {
@@ -331,6 +333,9 @@ export default function ReminderForm({
   const [preReminderMinutes, setPreReminderMinutes] = useState('');
   const [assignedMemberId, setAssignedMemberId] = useState('');
   const [aiHighlight, setAiHighlight] = useState(false);
+  const [pendingAutoCreate, setPendingAutoCreate] = useState(false);
+  const [autoCreateFromVoice, setAutoCreateFromVoice] = useState(false);
+  const formRef = useRef<HTMLFormElement | null>(null);
   const highlightTimer = useRef<number | null>(null);
   const detailsRef = useRef<HTMLElement>(null);
   const aiCharCount = aiText.length;
@@ -393,6 +398,60 @@ export default function ReminderForm({
     detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
+  const parseReminder = useCallback(async (textToParse: string, autoCreate: boolean) => {
+    const normalizedText = textToParse.trim();
+    if (!normalizedText) {
+      setAiError(copy.remindersNew.aiMissingText);
+      return;
+    }
+    if (!householdId) {
+      setAiError(copy.remindersNew.aiMissingHousehold);
+      return;
+    }
+    setAiLoading(true);
+    setAiError(null);
+    setAiText(normalizedText);
+    try {
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+      const response = await fetch('/api/ai/parse-reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: normalizedText, timezone, householdId })
+      });
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        setAiError(errorBody.error || copy.remindersNew.aiFailed);
+        return;
+      }
+      const data = (await response.json()) as AiResult;
+      setTitle(data.title || '');
+      setNotes(data.description || '');
+      setDueAt(data.dueAt ? toLocalInputValue(data.dueAt) : '');
+      setRecurrenceRule(data.recurrenceRule || '');
+      setPreReminderMinutes(
+        data.preReminderMinutes !== null && data.preReminderMinutes !== undefined
+          ? String(data.preReminderMinutes)
+          : ''
+      );
+      setAssignedMemberId(data.assignedMemberId || '');
+      setScheduleType(deriveScheduleType(data.recurrenceRule));
+      triggerHighlight();
+      if (autoCreate) {
+        setPendingAutoCreate(true);
+      }
+    } catch (error) {
+      console.error('[ai] parse reminder failed', error);
+      setAiError(copy.remindersNew.aiFailed);
+    } finally {
+      setAiLoading(false);
+    }
+  }, [
+    copy.remindersNew.aiFailed,
+    copy.remindersNew.aiMissingHousehold,
+    copy.remindersNew.aiMissingText,
+    householdId
+  ]);
+
   useEffect(() => {
     return () => {
       if (highlightTimer.current) {
@@ -402,11 +461,24 @@ export default function ReminderForm({
   }, []);
 
   useEffect(() => {
-    if (!speechListening && speechTranscript.trim()) {
-      setAiText(speechTranscript.trim());
+    const transcript = speechTranscript.trim();
+    if (!speechListening && transcript) {
+      setAiText(transcript);
       setAiError(null);
+      if (autoCreateFromVoice) {
+        void parseReminder(transcript, true);
+      }
     }
-  }, [speechListening, speechTranscript]);
+  }, [autoCreateFromVoice, parseReminder, speechListening, speechTranscript]);
+
+  useEffect(() => {
+    if (!pendingAutoCreate) return;
+    const frame = window.requestAnimationFrame(() => {
+      formRef.current?.requestSubmit();
+      setPendingAutoCreate(false);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [pendingAutoCreate]);
 
   const speechErrorMessage = useMemo(() => {
     if (!speechError) return null;
@@ -441,52 +513,8 @@ export default function ReminderForm({
     startSpeech();
   };
 
-  const handleParse = async () => {
-    if (!aiText.trim()) {
-      setAiError(copy.remindersNew.aiMissingText);
-      return;
-    }
-    if (!householdId) {
-      setAiError(copy.remindersNew.aiMissingHousehold);
-      return;
-    }
-    setAiLoading(true);
-    setAiError(null);
-    try {
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-      const response = await fetch('/api/ai/parse-reminder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: aiText, timezone, householdId })
-      });
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({}));
-        setAiError(errorBody.error || copy.remindersNew.aiFailed);
-        return;
-      }
-      const data = (await response.json()) as AiResult;
-      setTitle(data.title || '');
-      setNotes(data.description || '');
-      setDueAt(data.dueAt ? toLocalInputValue(data.dueAt) : '');
-      setRecurrenceRule(data.recurrenceRule || '');
-      setPreReminderMinutes(
-        data.preReminderMinutes !== null && data.preReminderMinutes !== undefined
-          ? String(data.preReminderMinutes)
-          : ''
-      );
-      setAssignedMemberId(data.assignedMemberId || '');
-      setScheduleType(deriveScheduleType(data.recurrenceRule));
-      triggerHighlight();
-    } catch (error) {
-      console.error('[ai] parse reminder failed', error);
-      setAiError(copy.remindersNew.aiFailed);
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
   return (
-    <form action={action} className="space-y-8">
+    <form ref={formRef} action={action} className="space-y-8">
       <section className="card space-y-4">
         <div className="space-y-1">
           <div className="text-lg font-semibold text-ink">{copy.remindersNew.aiTitle}</div>
@@ -512,6 +540,15 @@ export default function ReminderForm({
               >
                 {speechListening ? copy.remindersNew.voiceStop : copy.remindersNew.voiceStart}
               </button>
+              <label className="flex items-center gap-2 text-xs text-muted">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                  checked={autoCreateFromVoice}
+                  onChange={(event) => setAutoCreateFromVoice(event.target.checked)}
+                />
+                {copy.remindersNew.voiceAutoCreate}
+              </label>
               <span>{aiCharCount} {copy.remindersNew.aiCounterLabel}</span>
             </div>
           </div>
@@ -530,9 +567,24 @@ export default function ReminderForm({
         ) : null}
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <p className="text-xs text-muted">{copy.remindersNew.aiExample}</p>
-          <button className="btn btn-primary w-full md:w-auto" type="button" onClick={handleParse} disabled={aiLoading}>
-            {aiLoading ? copy.remindersNew.aiLoading : copy.remindersNew.aiButton}
-          </button>
+          <div className="flex flex-col gap-2 md:flex-row">
+            <button
+              className="btn btn-secondary w-full md:w-auto"
+              type="button"
+              onClick={() => parseReminder(aiText, true)}
+              disabled={aiLoading}
+            >
+              {copy.remindersNew.aiButtonCreate}
+            </button>
+            <button
+              className="btn btn-primary w-full md:w-auto"
+              type="button"
+              onClick={() => parseReminder(aiText, false)}
+              disabled={aiLoading}
+            >
+              {aiLoading ? copy.remindersNew.aiLoading : copy.remindersNew.aiButton}
+            </button>
+          </div>
         </div>
       </section>
 
