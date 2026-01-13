@@ -22,10 +22,20 @@ Server-only (never exposed to browser):
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `RESEND_API_KEY`
 - `RESEND_FROM`
+- `VAPID_PRIVATE_KEY`
+- `VAPID_SUBJECT`
+
+Client-side (push config, exposed in browser via `NEXT_PUBLIC_`):
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
 
 To get local Supabase keys/URLs after starting Supabase:
 ```bash
 supabase status
+```
+
+Genereaza chei VAPID pentru push:
+```bash
+npx web-push generate-vapid-keys
 ```
 
 ## Setup local (non-Docker)
@@ -120,6 +130,7 @@ Persistenta date:
 ```bash
 curl http://localhost:3000/api/cron/dispatch-notifications
 ```
+7) Activeaza push notifications din `/app/settings` (necesita chei VAPID).
 
 ## Common issues / Troubleshooting
 - Ports already in use (54321/54322/54323/3000): opreste serviciile care folosesc portul sau modifica porturile in `supabase/config.toml` si `docker-compose.yml`.
@@ -128,6 +139,7 @@ curl http://localhost:3000/api/cron/dispatch-notifications
 - Google OAuth se blocheaza in browser: verifica ca `NEXT_PUBLIC_SUPABASE_URL` este `http://localhost:54321` (nu `host.docker.internal`).
 - node_modules volume issues: sterge `node_modules` local si ruleaza `docker compose up --build` din nou.
 - Resend not configured: fara `RESEND_API_KEY`, emailurile se sar si sunt marcate ca skipped in cron.
+- Push not configured: lipsesc `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (butonul din `/app/settings` nu va putea activa).
 - Google OAuth missing: daca providerul nu e configurat in Supabase, butonul Google va afisa un mesaj explicativ.
 
 ## Supabase Auth
