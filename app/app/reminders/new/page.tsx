@@ -9,7 +9,7 @@ import ReminderForm from './ReminderForm';
 export default async function NewReminderPage({
   searchParams
 }: {
-  searchParams: { error?: string };
+  searchParams: { error?: string; voice?: string };
 }) {
   const user = await requireUser('/app/reminders/new');
   const locale = await getUserLocale(user.id);
@@ -57,6 +57,7 @@ export default async function NewReminderPage({
           householdId={membership.households.id}
           members={members}
           locale={locale}
+          autoVoice={searchParams.voice === '1' || searchParams.voice === 'true'}
         />
       </div>
     </AppShell>

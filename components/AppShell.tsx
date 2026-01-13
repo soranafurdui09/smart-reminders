@@ -44,6 +44,36 @@ export default function AppShell({
             <nav className="hidden flex-wrap items-center gap-1 rounded-full border border-borderSubtle bg-surfaceMuted/80 p-1 text-sm md:flex">
               {navLinks.map((link) => {
                 const active = isActive(link.href);
+                if (link.href === '/app/reminders/new') {
+                  return (
+                    <div key={link.href} className="flex items-center gap-1">
+                      <Link
+                        href={link.href}
+                        className={`rounded-full px-4 py-2 transition-all ${
+                          active
+                            ? 'bg-surface text-ink shadow-sm'
+                            : 'text-muted hover:bg-surface hover:text-ink'
+                        }`}
+                      >
+                        {link.label}
+                      </Link>
+                      <Link
+                        href="/app/reminders/new?voice=1"
+                        className="flex h-9 w-9 items-center justify-center rounded-full border border-borderSubtle bg-surface text-ink transition hover:border-primary/30 hover:bg-white"
+                        aria-label={copy.remindersNew.voiceNavLabel}
+                        title={copy.remindersNew.voiceNavLabel}
+                      >
+                        <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <path
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            d="M12 3a3 3 0 013 3v6a3 3 0 11-6 0V6a3 3 0 013-3zm0 14a7 7 0 007-7h-2a5 5 0 01-10 0H5a7 7 0 007 7zm0 0v4"
+                          />
+                        </svg>
+                      </Link>
+                    </div>
+                  );
+                }
                 return (
                   <Link
                     key={link.href}
@@ -90,6 +120,36 @@ export default function AppShell({
           <nav className="flex w-full flex-wrap items-center gap-2 md:hidden">
             {navLinks.map((link) => {
               const active = isActive(link.href);
+              if (link.href === '/app/reminders/new') {
+                return (
+                  <div key={link.href} className="flex items-center gap-2">
+                    <Link
+                      href={link.href}
+                      className={`rounded-full border px-3 py-1 text-xs transition ${
+                        active
+                          ? 'border-primary/40 bg-primarySoft text-primaryStrong'
+                          : 'border-borderSubtle text-muted hover:border-primary/30 hover:bg-surface'
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                    <Link
+                      href="/app/reminders/new?voice=1"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-borderSubtle bg-surface text-ink transition hover:border-primary/30 hover:bg-white"
+                      aria-label={copy.remindersNew.voiceNavLabel}
+                      title={copy.remindersNew.voiceNavLabel}
+                    >
+                      <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                        <path
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          d="M12 3a3 3 0 013 3v6a3 3 0 11-6 0V6a3 3 0 013-3zm0 14a7 7 0 007-7h-2a5 5 0 01-10 0H5a7 7 0 007 7zm0 0v4"
+                        />
+                      </svg>
+                    </Link>
+                  </div>
+                );
+              }
               return (
                 <Link
                   key={link.href}

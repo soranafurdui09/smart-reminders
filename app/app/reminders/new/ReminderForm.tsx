@@ -311,13 +311,15 @@ export default function ReminderForm({
   copy,
   householdId,
   members,
-  locale
+  locale,
+  autoVoice = false
 }: {
   action: (formData: FormData) => void;
   copy: any;
   householdId: string | null;
   members: MemberOption[];
   locale: string;
+  autoVoice?: boolean;
 }) {
   const activeLocale: TemplateLocale = locale === 'en' ? 'en' : 'ro';
   const [aiText, setAiText] = useState('');
@@ -334,8 +336,8 @@ export default function ReminderForm({
   const [assignedMemberId, setAssignedMemberId] = useState('');
   const [aiHighlight, setAiHighlight] = useState(false);
   const [pendingAutoCreate, setPendingAutoCreate] = useState(false);
-  const [autoCreateFromVoice, setAutoCreateFromVoice] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const voiceStartRef = useRef(false);
   const highlightTimer = useRef<number | null>(null);
   const detailsRef = useRef<HTMLElement>(null);
   const aiCharCount = aiText.length;
@@ -453,6 +455,16 @@ export default function ReminderForm({
   ]);
 
   useEffect(() => {
+    if (!autoVoice || voiceStartRef.current || !speechSupported) {
+      return;
+    }
+    voiceStartRef.current = true;
+    resetSpeech();
+    setAiError(null);
+    startSpeech();
+  }, [autoVoice, resetSpeech, speechSupported, startSpeech]);
+
+  useEffect(() => {
     return () => {
       if (highlightTimer.current) {
         window.clearTimeout(highlightTimer.current);
@@ -465,11 +477,11 @@ export default function ReminderForm({
     if (!speechListening && transcript) {
       setAiText(transcript);
       setAiError(null);
-      if (autoCreateFromVoice) {
+      if (autoVoice) {
         void parseReminder(transcript, true);
       }
     }
-  }, [autoCreateFromVoice, parseReminder, speechListening, speechTranscript]);
+  }, [autoVoice, parseReminder, speechListening, speechTranscript]);
 
   useEffect(() => {
     if (!pendingAutoCreate) return;
@@ -500,17 +512,10 @@ export default function ReminderForm({
     speechError
   ]);
 
-  const handleSpeechToggle = () => {
-    if (!speechSupported) {
-      return;
-    }
+  const handleVoiceStop = () => {
     if (speechListening) {
       stopSpeech();
-      return;
     }
-    resetSpeech();
-    setAiError(null);
-    startSpeech();
   };
 
   return (
@@ -531,31 +536,20 @@ export default function ReminderForm({
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
             <span>{copy.remindersNew.aiHint}</span>
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                className="btn btn-secondary h-9 px-3 text-xs"
-                type="button"
-                onClick={handleSpeechToggle}
-                disabled={!speechSupported}
-                title={!speechSupported ? copy.remindersNew.voiceNotSupported : undefined}
-              >
-                {speechListening ? copy.remindersNew.voiceStop : copy.remindersNew.voiceStart}
-              </button>
-              <label className="flex items-center gap-2 text-xs text-muted">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
-                  checked={autoCreateFromVoice}
-                  onChange={(event) => setAutoCreateFromVoice(event.target.checked)}
-                />
-                {copy.remindersNew.voiceAutoCreate}
-              </label>
               <span>{aiCharCount} {copy.remindersNew.aiCounterLabel}</span>
             </div>
           </div>
           {speechListening ? (
-            <div className="text-xs text-muted">{copy.remindersNew.voiceListening}</div>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+              <span>{copy.remindersNew.voiceListening}</span>
+              <button className="btn btn-secondary h-7 px-3 text-xs" type="button" onClick={handleVoiceStop}>
+                {copy.remindersNew.voiceStop}
+              </button>
+            </div>
+          ) : autoVoice ? (
+            <div className="text-xs text-muted">{copy.remindersNew.voiceAutoActive}</div>
           ) : null}
-          {!speechSupported ? (
+          {autoVoice && !speechSupported ? (
             <div className="text-xs text-muted">{copy.remindersNew.voiceNotSupported}</div>
           ) : null}
           {speechErrorMessage ? (
