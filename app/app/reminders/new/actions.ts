@@ -24,6 +24,7 @@ export async function createReminder(formData: FormData) {
   const recurrenceRuleRaw = String(formData.get('recurrence_rule') || '').trim();
   const preReminderRaw = String(formData.get('pre_reminder_minutes') || '').trim();
   const assignedMemberRaw = String(formData.get('assigned_member_id') || '').trim();
+  const voiceAuto = String(formData.get('voice_auto') || '') === '1';
 
   if (!title) {
     redirect('/app/reminders/new?error=missing-title');
@@ -97,5 +98,8 @@ export async function createReminder(formData: FormData) {
     console.error('[reminders] create occurrence failed', occurrenceError);
   }
 
+  if (voiceAuto) {
+    redirect(`/app?voice_created=${reminder.id}`);
+  }
   redirect('/app');
 }

@@ -4,7 +4,7 @@ import { requireUser } from '@/lib/auth';
 import { getHouseholdMembers, getUserHousehold, getUserLocale } from '@/lib/data';
 import { messages } from '@/lib/i18n';
 import { createReminder } from './actions';
-import ReminderForm from './ReminderForm';
+import ReminderNewClient from './ReminderNewClient';
 
 export default async function NewReminderPage({
   searchParams
@@ -36,30 +36,15 @@ export default async function NewReminderPage({
 
   return (
     <AppShell locale={locale} activePath="/app/reminders/new" userEmail={user.email}>
-      <div className="space-y-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1>{copy.remindersNew.title}</h1>
-            <p className="text-sm text-muted">{copy.remindersNew.subtitle}</p>
-          </div>
-          <Link href="/app" className="btn btn-secondary">{copy.common.back}</Link>
-        </div>
-
-        {searchParams.error ? (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
-            {copy.remindersNew.error}
-          </div>
-        ) : null}
-
-        <ReminderForm
-          action={createReminder}
-          copy={copy}
-          householdId={membership.households.id}
-          members={members}
-          locale={locale}
-          autoVoice={searchParams.voice === '1' || searchParams.voice === 'true'}
-        />
-      </div>
+      <ReminderNewClient
+        action={createReminder}
+        copy={copy}
+        householdId={membership.households.id}
+        members={members}
+        locale={locale}
+        error={searchParams.error}
+        autoVoice={searchParams.voice === '1' || searchParams.voice === 'true'}
+      />
     </AppShell>
   );
 }

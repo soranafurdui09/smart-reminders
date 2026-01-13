@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { ReactNode } from 'react';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
 import ActionFeedback from '@/components/ActionFeedback';
+import VoiceCreateToast from '@/components/VoiceCreateToast';
+import { deleteReminder } from '@/app/app/reminders/[id]/actions';
 
 export default function AppShell({
   children,
@@ -168,6 +170,7 @@ export default function AppShell({
         </div>
       </header>
       <main className="page-wrap">{children}</main>
+      <VoiceCreateToast copy={copy} locale={locale} undoAction={deleteReminder} />
       <ActionFeedback />
     </div>
   );

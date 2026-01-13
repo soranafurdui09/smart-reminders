@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'AI is not configured.' }, { status: 500 });
   }
 
-  let payload: { text?: string; timezone?: string; householdId?: string };
+  let payload: { text?: string; timezone?: string; householdId?: string; clientNow?: string };
   try {
     payload = await request.json();
   } catch {
@@ -67,6 +67,7 @@ export async function POST(request: Request) {
   const text = String(payload.text ?? '').trim();
   const timezone = String(payload.timezone ?? 'UTC').trim() || 'UTC';
   const householdId = String(payload.householdId ?? '').trim();
+  const clientNow = String(payload.clientNow ?? '').trim();
 
   if (!text || !householdId) {
     return NextResponse.json({ error: 'Missing text or householdId.' }, { status: 400 });
@@ -121,7 +122,7 @@ export async function POST(request: Request) {
           content: JSON.stringify({
             text,
             timezone,
-            currentTime: new Date().toISOString(),
+            currentTime: clientNow || new Date().toISOString(),
             householdMembers: memberList,
             examples: EXAMPLE_INPUTS,
             schema: {
@@ -159,7 +160,13 @@ export async function POST(request: Request) {
   }
 
   const normalized = normalizeParsed(parsed, memberIds);
-  if (!normalized.title || !normalized.dueAt) {
+  const hasAnySignal =
+    Boolean(normalized.title) ||
+    Boolean(normalized.dueAt) ||
+    Boolean(normalized.recurrenceRule) ||
+    normalized.preReminderMinutes !== null ||
+    Boolean(normalized.assignedMemberId);
+  if (!hasAnySignal) {
     return NextResponse.json({ error: 'AI could not parse the reminder.' }, { status: 422 });
   }
 

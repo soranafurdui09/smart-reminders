@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
-import { useSpeechToText } from '@/hooks/useSpeechToText';
+import { useSpeechToReminder, type SpeechStatus } from '@/hooks/useSpeechToReminder';
 
 type MemberOption = {
   id: string;
@@ -16,6 +16,14 @@ type AiResult = {
   recurrenceRule: string | null;
   preReminderMinutes: number | null;
   assignedMemberId: string | null;
+};
+
+export type ReminderFormVoiceHandle = {
+  startVoice: () => void;
+  stopVoice: () => void;
+  toggleVoice: () => void;
+  supported: boolean;
+  status: SpeechStatus;
 };
 
 type TemplateLocale = 'ro' | 'en';
@@ -282,6 +290,18 @@ function toLocalInputValue(iso: string) {
   return local.toISOString().slice(0, 16);
 }
 
+function toLocalIsoWithOffset(date: Date) {
+  const pad = (value: number) => String(Math.floor(Math.abs(value))).padStart(2, '0');
+  const offsetMinutes = -date.getTimezoneOffset();
+  const sign = offsetMinutes >= 0 ? '+' : '-';
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  const seconds = pad(date.getSeconds());
+  const offsetHours = pad(Math.floor(Math.abs(offsetMinutes) / 60));
+  const offsetMins = pad(Math.abs(offsetMinutes) % 60);
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${hours}:${minutes}:${seconds}${sign}${offsetHours}:${offsetMins}`;
+}
+
 function formatPreReminder(locale: TemplateLocale, minutes: number) {
   if (!Number.isFinite(minutes) || minutes <= 0) {
     return '';
@@ -306,21 +326,25 @@ function formatPreReminder(locale: TemplateLocale, minutes: number) {
   return `${minutes} min before`;
 }
 
-export default function ReminderForm({
-  action,
-  copy,
-  householdId,
-  members,
-  locale,
-  autoVoice = false
-}: {
-  action: (formData: FormData) => void;
+type ReminderFormProps = {
+  action: (formData: FormData) => void | Promise<void>;
   copy: any;
   householdId: string | null;
   members: MemberOption[];
   locale: string;
   autoVoice?: boolean;
-}) {
+  onVoiceStateChange?: (payload: { status: SpeechStatus; supported: boolean }) => void;
+};
+
+const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(function ReminderForm({
+  action,
+  copy,
+  householdId,
+  members,
+  locale,
+  autoVoice = false,
+  onVoiceStateChange
+}, ref) {
   const activeLocale: TemplateLocale = locale === 'en' ? 'en' : 'ro';
   const [aiText, setAiText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -336,20 +360,17 @@ export default function ReminderForm({
   const [assignedMemberId, setAssignedMemberId] = useState('');
   const [aiHighlight, setAiHighlight] = useState(false);
   const [pendingAutoCreate, setPendingAutoCreate] = useState(false);
+  const [autoCreateSource, setAutoCreateSource] = useState<'voice' | 'manual' | null>(null);
+  const [autoCreateSummary, setAutoCreateSummary] = useState<{ title: string; dueAt: string | null } | null>(null);
+  const [voiceUseAi, setVoiceUseAi] = useState(true);
+  const [voiceMissingMessage, setVoiceMissingMessage] = useState<string | null>(null);
+  const [voiceErrorCode, setVoiceErrorCode] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
-  const voiceStartRef = useRef(false);
   const highlightTimer = useRef<number | null>(null);
   const detailsRef = useRef<HTMLElement>(null);
+  const titleRef = useRef<HTMLInputElement | null>(null);
+  const dueAtRef = useRef<HTMLInputElement | null>(null);
   const aiCharCount = aiText.length;
-  const {
-    supported: speechSupported,
-    listening: speechListening,
-    transcript: speechTranscript,
-    error: speechError,
-    start: startSpeech,
-    stop: stopSpeech,
-    reset: resetSpeech
-  } = useSpeechToText(activeLocale === 'en' ? 'en-US' : 'ro-RO');
 
   const memberOptions = useMemo(
     () => [{ id: '', label: copy.remindersNew.assigneeNone }, ...members],
@@ -400,50 +421,51 @@ export default function ReminderForm({
     detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
-  const parseReminder = useCallback(async (textToParse: string, autoCreate: boolean) => {
+  const parseReminderText = useCallback(async (textToParse: string, showErrors: boolean) => {
     const normalizedText = textToParse.trim();
     if (!normalizedText) {
-      setAiError(copy.remindersNew.aiMissingText);
-      return;
+      if (showErrors) {
+        setAiError(copy.remindersNew.aiMissingText);
+      }
+      return null;
     }
     if (!householdId) {
-      setAiError(copy.remindersNew.aiMissingHousehold);
-      return;
+      if (showErrors) {
+        setAiError(copy.remindersNew.aiMissingHousehold);
+      }
+      return null;
     }
     setAiLoading(true);
-    setAiError(null);
+    if (showErrors) {
+      setAiError(null);
+    }
     setAiText(normalizedText);
     try {
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
       const response = await fetch('/api/ai/parse-reminder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: normalizedText, timezone, householdId })
+        body: JSON.stringify({
+          text: normalizedText,
+          timezone,
+          householdId,
+          clientNow: toLocalIsoWithOffset(new Date())
+        })
       });
       if (!response.ok) {
         const errorBody = await response.json().catch(() => ({}));
-        setAiError(errorBody.error || copy.remindersNew.aiFailed);
-        return;
+        if (showErrors) {
+          setAiError(errorBody.error || copy.remindersNew.aiFailed);
+        }
+        return null;
       }
-      const data = (await response.json()) as AiResult;
-      setTitle(data.title || '');
-      setNotes(data.description || '');
-      setDueAt(data.dueAt ? toLocalInputValue(data.dueAt) : '');
-      setRecurrenceRule(data.recurrenceRule || '');
-      setPreReminderMinutes(
-        data.preReminderMinutes !== null && data.preReminderMinutes !== undefined
-          ? String(data.preReminderMinutes)
-          : ''
-      );
-      setAssignedMemberId(data.assignedMemberId || '');
-      setScheduleType(deriveScheduleType(data.recurrenceRule));
-      triggerHighlight();
-      if (autoCreate) {
-        setPendingAutoCreate(true);
-      }
+      return (await response.json()) as AiResult;
     } catch (error) {
       console.error('[ai] parse reminder failed', error);
-      setAiError(copy.remindersNew.aiFailed);
+      if (showErrors) {
+        setAiError(copy.remindersNew.aiFailed);
+      }
+      return null;
     } finally {
       setAiLoading(false);
     }
@@ -454,15 +476,87 @@ export default function ReminderForm({
     householdId
   ]);
 
-  useEffect(() => {
-    if (!autoVoice || voiceStartRef.current || !speechSupported) {
-      return;
+  const applyParsedReminder = useCallback((data: AiResult) => {
+    setTitle(data.title || '');
+    setNotes(data.description || '');
+    setDueAt(data.dueAt ? toLocalInputValue(data.dueAt) : '');
+    setRecurrenceRule(data.recurrenceRule || '');
+    setPreReminderMinutes(
+      data.preReminderMinutes !== null && data.preReminderMinutes !== undefined
+        ? String(data.preReminderMinutes)
+        : ''
+    );
+    setAssignedMemberId(data.assignedMemberId || '');
+    setScheduleType(deriveScheduleType(data.recurrenceRule));
+  }, []);
+
+  const getCompleteness = useCallback((data: AiResult) => {
+    const missing: string[] = [];
+    if (!data.title) {
+      missing.push('title');
     }
-    voiceStartRef.current = true;
-    resetSpeech();
-    setAiError(null);
-    startSpeech();
-  }, [autoVoice, resetSpeech, speechSupported, startSpeech]);
+    if (!data.dueAt && !data.recurrenceRule) {
+      missing.push('due_at');
+    }
+    return { complete: missing.length === 0, missing };
+  }, []);
+
+  const queueAutoCreate = useCallback((source: 'voice' | 'manual', data: AiResult) => {
+    setAutoCreateSource(source);
+    setAutoCreateSummary({ title: data.title, dueAt: data.dueAt || null });
+    setPendingAutoCreate(true);
+  }, []);
+
+  const handleVoiceFallback = useCallback((text: string) => {
+    setTitle(text);
+    setAiText(text);
+    setVoiceMissingMessage(null);
+    setVoiceErrorCode(null);
+    titleRef.current?.focus();
+    detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, []);
+
+  const handleVoiceIncomplete = useCallback((data: AiResult, missing: string[]) => {
+    applyParsedReminder(data);
+    setVoiceMissingMessage(copy.remindersNew.voiceMissingDate);
+    setVoiceErrorCode(null);
+    if (missing.includes('due_at')) {
+      dueAtRef.current?.focus();
+    } else if (missing.includes('title')) {
+      titleRef.current?.focus();
+    }
+    detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [applyParsedReminder, copy.remindersNew.voiceMissingDate]);
+
+  const voice = useSpeechToReminder<AiResult>({
+    lang: activeLocale === 'en' ? 'en-US' : 'ro-RO',
+    autoStart: autoVoice,
+    useAi: voiceUseAi,
+    parseText: (text) => parseReminderText(text, false),
+    isComplete: getCompleteness,
+    onParsed: (data) => {
+      applyParsedReminder(data);
+      triggerHighlight();
+      setVoiceMissingMessage(null);
+      setVoiceErrorCode(null);
+    },
+    onIncomplete: handleVoiceIncomplete,
+    onCreate: (data) => queueAutoCreate('voice', data),
+    onFallback: handleVoiceFallback,
+    onError: (message) => setVoiceErrorCode(message)
+  });
+
+  useImperativeHandle(ref, () => ({
+    startVoice: voice.start,
+    stopVoice: voice.stop,
+    toggleVoice: voice.toggle,
+    supported: voice.supported,
+    status: voice.status
+  }), [voice]);
+
+  useEffect(() => {
+    onVoiceStateChange?.({ status: voice.status, supported: voice.supported });
+  }, [onVoiceStateChange, voice.status, voice.supported]);
 
   useEffect(() => {
     return () => {
@@ -473,34 +567,76 @@ export default function ReminderForm({
   }, []);
 
   useEffect(() => {
-    const transcript = speechTranscript.trim();
-    if (!speechListening && transcript) {
-      setAiText(transcript);
-      setAiError(null);
-      if (autoVoice) {
-        void parseReminder(transcript, true);
-      }
+    if (!pendingAutoCreate || !autoCreateSummary) return;
+    if (autoCreateSource === 'voice' && typeof window !== 'undefined') {
+      window.sessionStorage.setItem(
+        'voice-create-summary',
+        JSON.stringify({ ...autoCreateSummary, source: autoCreateSource, ts: Date.now() })
+      );
     }
-  }, [autoVoice, parseReminder, speechListening, speechTranscript]);
-
-  useEffect(() => {
-    if (!pendingAutoCreate) return;
     const frame = window.requestAnimationFrame(() => {
       formRef.current?.requestSubmit();
       setPendingAutoCreate(false);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [pendingAutoCreate]);
+  }, [autoCreateSource, autoCreateSummary, pendingAutoCreate]);
 
-  const speechErrorMessage = useMemo(() => {
-    if (!speechError) return null;
-    if (speechError === 'not-allowed' || speechError === 'service-not-allowed') {
+  const handleParse = useCallback(async (autoCreate: boolean) => {
+    const data = await parseReminderText(aiText, true);
+    if (!data) {
+      return;
+    }
+    applyParsedReminder(data);
+    triggerHighlight();
+    setVoiceMissingMessage(null);
+    setVoiceErrorCode(null);
+    if (!autoCreate) {
+      return;
+    }
+    const completeness = getCompleteness(data);
+    if (!completeness.complete) {
+      setVoiceMissingMessage(copy.remindersNew.voiceMissingDate);
+      dueAtRef.current?.focus();
+      detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    queueAutoCreate('manual', data);
+  }, [
+    aiText,
+    applyParsedReminder,
+    copy.remindersNew.voiceMissingDate,
+    getCompleteness,
+    parseReminderText,
+    queueAutoCreate,
+    triggerHighlight
+  ]);
+
+  const voiceStatusLabel = useMemo(() => {
+    if (voice.status === 'parsing') return copy.remindersNew.voiceParsing;
+    if (voice.status === 'creating') return copy.remindersNew.voiceCreating;
+    if (voice.status === 'transcribing') return copy.remindersNew.voiceTranscribing;
+    if (voice.status === 'listening') return copy.remindersNew.voiceListening;
+    return '';
+  }, [
+    copy.remindersNew.voiceCreating,
+    copy.remindersNew.voiceListening,
+    copy.remindersNew.voiceParsing,
+    copy.remindersNew.voiceTranscribing,
+    voice.status
+  ]);
+
+  const voiceErrorMessage = useMemo(() => {
+    if (!voiceErrorCode) return null;
+    if (voiceErrorCode === 'parse-failed') {
+      return copy.remindersNew.voiceParseFailed;
+    }
+    if (voiceErrorCode === 'not-allowed' || voiceErrorCode === 'service-not-allowed') {
       return copy.remindersNew.voicePermission;
     }
-    if (speechError === 'no-speech') {
+    if (voiceErrorCode === 'no-speech') {
       return copy.remindersNew.voiceNoSpeech;
     }
-    if (speechError === 'not-supported') {
+    if (voiceErrorCode === 'not-supported') {
       return copy.remindersNew.voiceNotSupported;
     }
     return copy.remindersNew.voiceError;
@@ -508,52 +644,88 @@ export default function ReminderForm({
     copy.remindersNew.voiceError,
     copy.remindersNew.voiceNoSpeech,
     copy.remindersNew.voiceNotSupported,
+    copy.remindersNew.voiceParseFailed,
     copy.remindersNew.voicePermission,
-    speechError
+    voiceErrorCode
   ]);
 
-  const handleVoiceStop = () => {
-    if (speechListening) {
-      stopSpeech();
-    }
-  };
+  const voiceTranscript = voice.transcript.trim();
 
   return (
     <form ref={formRef} action={action} className="space-y-8">
+      <input type="hidden" name="voice_auto" value={autoCreateSource === 'voice' ? '1' : ''} />
       <section className="card space-y-4">
         <div className="space-y-1">
           <div className="text-lg font-semibold text-ink">{copy.remindersNew.aiTitle}</div>
           <p className="text-sm text-muted">{copy.remindersNew.aiSubtitle}</p>
         </div>
         <div className="space-y-2">
-          <textarea
-            className="input min-h-[120px] resize-y"
-            rows={4}
-            placeholder={copy.remindersNew.aiPlaceholder}
-            value={aiText}
-            onChange={(event) => setAiText(event.target.value)}
-          />
+          <div className="relative">
+            <textarea
+              className="input min-h-[120px] resize-y pr-12"
+              rows={4}
+              placeholder={copy.remindersNew.aiPlaceholder}
+              value={aiText}
+              onChange={(event) => setAiText(event.target.value)}
+            />
+            <button
+              className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-borderSubtle bg-surface text-ink transition hover:border-primary/30 hover:bg-white ${
+                voice.status === 'listening' || voice.status === 'transcribing'
+                  ? 'animate-pulse border-primary/40 text-primaryStrong'
+                  : ''
+              }`}
+              type="button"
+              onClick={voice.toggle}
+              disabled={!voice.supported}
+              aria-label={copy.remindersNew.voiceNavLabel}
+              title={!voice.supported ? copy.remindersNew.voiceNotSupported : copy.remindersNew.voiceNavLabel}
+            >
+              <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+                <path
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  d="M12 3a3 3 0 013 3v6a3 3 0 11-6 0V6a3 3 0 013-3zm0 14a7 7 0 007-7h-2a5 5 0 01-10 0H5a7 7 0 007 7zm0 0v4"
+                />
+              </svg>
+            </button>
+          </div>
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
             <span>{copy.remindersNew.aiHint}</span>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                  checked={voiceUseAi}
+                  onChange={(event) => setVoiceUseAi(event.target.checked)}
+                />
+                {copy.remindersNew.voiceUseAi}
+              </label>
               <span>{aiCharCount} {copy.remindersNew.aiCounterLabel}</span>
             </div>
           </div>
-          {speechListening ? (
+          {voiceStatusLabel ? (
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-              <span>{copy.remindersNew.voiceListening}</span>
-              <button className="btn btn-secondary h-7 px-3 text-xs" type="button" onClick={handleVoiceStop}>
-                {copy.remindersNew.voiceStop}
-              </button>
+              <span>{voiceStatusLabel}</span>
+              {voice.status === 'transcribing' && voiceTranscript ? (
+                <span className="rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-0.5 text-[11px]">
+                  {voiceTranscript}
+                </span>
+              ) : null}
+              {voice.status === 'listening' || voice.status === 'transcribing' ? (
+                <button className="btn btn-secondary h-7 px-3 text-xs" type="button" onClick={voice.stop}>
+                  {copy.remindersNew.voiceStop}
+                </button>
+              ) : null}
             </div>
           ) : autoVoice ? (
             <div className="text-xs text-muted">{copy.remindersNew.voiceAutoActive}</div>
           ) : null}
-          {autoVoice && !speechSupported ? (
+          {!voice.supported ? (
             <div className="text-xs text-muted">{copy.remindersNew.voiceNotSupported}</div>
           ) : null}
-          {speechErrorMessage ? (
-            <div className="text-xs text-rose-600">{speechErrorMessage}</div>
+          {voiceErrorMessage ? (
+            <div className="text-xs text-rose-600">{voiceErrorMessage}</div>
           ) : null}
         </div>
         {aiError ? (
@@ -565,7 +737,7 @@ export default function ReminderForm({
             <button
               className="btn btn-secondary w-full md:w-auto"
               type="button"
-              onClick={() => parseReminder(aiText, true)}
+              onClick={() => handleParse(true)}
               disabled={aiLoading}
             >
               {copy.remindersNew.aiButtonCreate}
@@ -573,7 +745,7 @@ export default function ReminderForm({
             <button
               className="btn btn-primary w-full md:w-auto"
               type="button"
-              onClick={() => parseReminder(aiText, false)}
+              onClick={() => handleParse(false)}
               disabled={aiLoading}
             >
               {aiLoading ? copy.remindersNew.aiLoading : copy.remindersNew.aiButton}
@@ -679,6 +851,11 @@ export default function ReminderForm({
             <h3 className="text-lg font-semibold text-ink">{copy.remindersNew.details}</h3>
             <p className="text-sm text-muted">{copy.remindersNew.detailsSubtitle}</p>
           </div>
+          {voiceMissingMessage ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              {voiceMissingMessage}
+            </div>
+          ) : null}
           <div>
             <label className="text-sm font-semibold">{copy.remindersNew.titleLabel}</label>
             <input
@@ -688,6 +865,7 @@ export default function ReminderForm({
               required
               value={title}
               onChange={(event) => setTitle(event.target.value)}
+              ref={titleRef}
             />
           </div>
           <div>
@@ -710,6 +888,7 @@ export default function ReminderForm({
                 className="input"
                 value={dueAt}
                 onChange={(event) => setDueAt(event.target.value)}
+                ref={dueAtRef}
               />
             </div>
             <div>
@@ -776,4 +955,6 @@ export default function ReminderForm({
       </div>
     </form>
   );
-}
+});
+
+export default ReminderForm;
