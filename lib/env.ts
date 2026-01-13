@@ -47,6 +47,26 @@ export function getOptionalEnv(key: string) {
   return normalizeEnvValue(process.env[key]);
 }
 
+function getRequiredNonTestEnv(key: string) {
+  const value = normalizeEnvValue(process.env[key]);
+  if (!value && process.env.NODE_ENV !== 'test') {
+    throw new Error(`Missing env var: ${key}`);
+  }
+  return value;
+}
+
+export function getGoogleClientId() {
+  return getRequiredNonTestEnv('GOOGLE_CLIENT_ID');
+}
+
+export function getGoogleClientSecret() {
+  return getRequiredNonTestEnv('GOOGLE_CLIENT_SECRET');
+}
+
+export function getGoogleCalendarRedirectUrl() {
+  return getRequiredNonTestEnv('GOOGLE_CALENDAR_REDIRECT_URL');
+}
+
 export function getSupabaseServerUrl() {
   return normalizeEnvValue(process.env.NEXT_PUBLIC_SUPABASE_URL) || normalizeEnvValue(process.env.SUPABASE_URL);
 }

@@ -230,7 +230,13 @@ export const messages = {
       details: 'Detalii',
       schedule: 'Programare',
       firstDate: 'Prima data',
-      occurrences: 'Occurrences'
+      occurrences: 'Occurrences',
+      googleCalendarSync: 'Trimite in Google Calendar',
+      googleCalendarSyncing: 'Se trimite...',
+      googleCalendarSyncSuccess: 'Event creat in calendar.',
+      googleCalendarSyncError: 'Nu am putut trimite in calendar.',
+      googleCalendarConnectFirst: 'Conecteaza intai Google Calendar.',
+      googleCalendarConnectLink: 'Setari'
     },
     household: {
       title: 'Household',
@@ -269,7 +275,17 @@ export const messages = {
     settings: {
       title: 'Setari',
       subtitle: 'Configureaza optiunile de notificari.',
-      pushMissing: 'Lipsesc cheile VAPID. Completeaza `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` si `VAPID_SUBJECT`.'
+      pushMissing: 'Lipsesc cheile VAPID. Completeaza `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` si `VAPID_SUBJECT`.',
+      integrationsTitle: 'Integrari',
+      integrationsSubtitle: 'Conecteaza servicii externe.',
+      googleCalendarTitle: 'Google Calendar',
+      googleCalendarSubtitle: 'Trimite reminderele in calendarul tau.',
+      googleCalendarConnect: 'Conecteaza Google Calendar',
+      googleCalendarStatus: 'Conectat.',
+      googleCalendarReconnect: 'Reautentifica',
+      googleCalendarConnected: 'Google Calendar conectat.',
+      googleCalendarError: 'Nu am putut conecta Google Calendar.',
+      googleCalendarHint: 'Vei fi redirectionat sa aprobi accesul.'
     },
     language: {
       title: 'Limba',
@@ -536,7 +552,13 @@ export const messages = {
       details: 'Details',
       schedule: 'Schedule',
       firstDate: 'First date',
-      occurrences: 'Occurrences'
+      occurrences: 'Occurrences',
+      googleCalendarSync: 'Send to Google Calendar',
+      googleCalendarSyncing: 'Sending...',
+      googleCalendarSyncSuccess: 'Event created in calendar.',
+      googleCalendarSyncError: 'Could not send to calendar.',
+      googleCalendarConnectFirst: 'Connect Google Calendar first.',
+      googleCalendarConnectLink: 'Settings'
     },
     household: {
       title: 'Household',
@@ -575,7 +597,17 @@ export const messages = {
     settings: {
       title: 'Settings',
       subtitle: 'Configure notification options.',
-      pushMissing: 'VAPID keys missing. Fill `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT`.'
+      pushMissing: 'VAPID keys missing. Fill `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT`.',
+      integrationsTitle: 'Integrations',
+      integrationsSubtitle: 'Connect external services.',
+      googleCalendarTitle: 'Google Calendar',
+      googleCalendarSubtitle: 'Send reminders to your calendar.',
+      googleCalendarConnect: 'Connect Google Calendar',
+      googleCalendarStatus: 'Connected.',
+      googleCalendarReconnect: 'Reconnect',
+      googleCalendarConnected: 'Google Calendar connected.',
+      googleCalendarError: 'Could not connect Google Calendar.',
+      googleCalendarHint: 'You will be redirected to approve access.'
     },
     language: {
       title: 'Language',

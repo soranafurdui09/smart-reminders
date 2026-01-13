@@ -8,12 +8,15 @@ import { getUserLocale } from '@/lib/data';
 import { getVapidPublicKey } from '@/lib/push';
 import { messages } from '@/lib/i18n';
 import { updateLocale } from './actions';
+import { getUserGoogleConnection } from '@/lib/google/calendar';
 
-export default async function SettingsPage({ searchParams }: { searchParams: { updated?: string } }) {
+export default async function SettingsPage({ searchParams }: { searchParams: { updated?: string; google?: string } }) {
   const user = await requireUser('/app/settings');
   const locale = await getUserLocale(user.id);
   const copy = messages[locale];
   const vapidPublicKey = getVapidPublicKey();
+  const googleConnection = await getUserGoogleConnection(user.id);
+  const googleStatus = searchParams.google;
 
   return (
     <AppShell locale={locale} activePath="/app/settings" userEmail={user.email}>
@@ -42,6 +45,41 @@ export default async function SettingsPage({ searchParams }: { searchParams: { u
               {copy.common.save}
             </ActionSubmitButton>
           </form>
+        </section>
+        <section className="card space-y-4 max-w-lg">
+          <div>
+            <div className="text-lg font-semibold text-ink">{copy.settings.integrationsTitle}</div>
+            <p className="text-sm text-muted">{copy.settings.integrationsSubtitle}</p>
+          </div>
+          {googleStatus === 'connected' ? (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+              {copy.settings.googleCalendarConnected}
+            </div>
+          ) : null}
+          {googleStatus === 'error' ? (
+            <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+              {copy.settings.googleCalendarError}
+            </div>
+          ) : null}
+          <div className="space-y-2">
+            <div className="text-sm font-semibold text-ink">{copy.settings.googleCalendarTitle}</div>
+            <p className="text-sm text-muted">{copy.settings.googleCalendarSubtitle}</p>
+          </div>
+          {googleConnection ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-emerald-700">{copy.settings.googleCalendarStatus}</span>
+              <Link className="btn btn-secondary" href="/api/integrations/google/calendar/connect">
+                {copy.settings.googleCalendarReconnect}
+              </Link>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <Link className="btn btn-primary" href="/api/integrations/google/calendar/connect">
+                {copy.settings.googleCalendarConnect}
+              </Link>
+              <span className="text-xs text-muted">{copy.settings.googleCalendarHint}</span>
+            </div>
+          )}
         </section>
         {vapidPublicKey ? (
           <PushSettings

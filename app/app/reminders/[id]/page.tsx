@@ -7,12 +7,15 @@ import { getHouseholdMembers, getReminderById, getUserLocale } from '@/lib/data'
 import { messages } from '@/lib/i18n';
 import { cloneReminder, deleteReminder } from './actions';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
+import { getUserGoogleConnection } from '@/lib/google/calendar';
+import GoogleCalendarSyncButton from '@/components/GoogleCalendarSyncButton';
 
 export default async function ReminderDetailPage({ params }: { params: { id: string } }) {
   const user = await requireUser(`/app/reminders/${params.id}`);
   const locale = await getUserLocale(user.id);
   const copy = messages[locale];
   const reminder = await getReminderById(params.id);
+  const googleConnection = await getUserGoogleConnection(user.id);
   if (!reminder) {
     return (
       <AppShell locale={locale} userEmail={user.email}>
@@ -67,6 +70,18 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
             <Link href={`/app/reminders/${reminder.id}/edit`} className="btn btn-secondary">
               {copy.common.edit}
             </Link>
+            <GoogleCalendarSyncButton
+              reminderId={reminder.id}
+              connected={Boolean(googleConnection)}
+              copy={{
+                syncLabel: copy.reminderDetail.googleCalendarSync,
+                syncLoading: copy.reminderDetail.googleCalendarSyncing,
+                syncSuccess: copy.reminderDetail.googleCalendarSyncSuccess,
+                syncError: copy.reminderDetail.googleCalendarSyncError,
+                connectFirst: copy.reminderDetail.googleCalendarConnectFirst,
+                connectLink: copy.reminderDetail.googleCalendarConnectLink
+              }}
+            />
             <Link href="/app" className="btn btn-secondary">{copy.common.back}</Link>
           </div>
         </div>
