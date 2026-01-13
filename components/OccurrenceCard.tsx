@@ -19,7 +19,7 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
     : occurrence.status === 'snoozed'
       ? 'border-warning/20 bg-warning/10 text-warning'
       : 'border-primary/20 bg-primarySoft text-primaryStrong';
-  const commentText = occurrence.done_comment || copy.common.commentEmpty;
+  const commentText = occurrence.done_comment?.trim();
   const assigneeLabel = reminder?.assigned_member_label;
   return (
     <div className="card space-y-4">
@@ -29,14 +29,29 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
             {format(new Date(occurrence.occur_at), 'dd MMM yyyy HH:mm')}
           </span>
           <div className="text-lg font-semibold text-ink">{reminder?.title}</div>
-          <div className="text-sm text-muted">{commentText}</div>
-          {assigneeLabel ? (
-            <div className="text-xs text-muted">
-              {copy.common.assigneeLabel}: {assigneeLabel}
-            </div>
+          {commentText ? (
+            <div className="text-sm text-muted">{commentText}</div>
           ) : null}
         </div>
-        <span className={`pill border ${statusClass}`}>{statusLabel}</span>
+        <div className="flex items-center gap-2">
+          {assigneeLabel ? (
+            <details className="relative">
+              <summary className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-borderSubtle bg-surfaceMuted text-ink shadow-sm transition hover:bg-surface dropdown-summary">
+                <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <path
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5z"
+                  />
+                </svg>
+              </summary>
+              <div className="absolute right-0 z-20 mt-2 w-max rounded-xl border border-borderSubtle bg-surface px-3 py-2 text-xs font-semibold text-ink shadow-soft">
+                {assigneeLabel}
+              </div>
+            </details>
+          ) : null}
+          <span className={`pill border ${statusClass}`}>{statusLabel}</span>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
