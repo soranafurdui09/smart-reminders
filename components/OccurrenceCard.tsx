@@ -23,17 +23,29 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
       : 'border-primary/20 bg-primarySoft text-primaryStrong';
   const commentText = occurrence.done_comment?.trim();
   const assigneeLabel = reminder?.assigned_member_label;
+  const performedByLabel = occurrence.performed_by_label;
+  const snoozedByLabel = occurrence.status === 'snoozed' ? performedByLabel : null;
   return (
-    <OccurrenceHighlightCard className="card space-y-4" occurrenceId={occurrence.id}>
+    <OccurrenceHighlightCard
+      className="card space-y-4"
+      occurrenceId={occurrence.id}
+      highlightKey={occurrence.occur_at}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <OccurrenceDateChip
             occurrenceId={occurrence.id}
             label={format(new Date(occurrence.occur_at), 'dd MMM yyyy HH:mm')}
+            highlightKey={occurrence.occur_at}
           />
           <div className="text-lg font-semibold text-ink">{reminder?.title}</div>
           {commentText ? (
             <div className="text-sm text-muted">{commentText}</div>
+          ) : null}
+          {snoozedByLabel ? (
+            <div className="text-xs text-muted">
+              {copy.common.snoozedBy} {snoozedByLabel}
+            </div>
           ) : null}
         </div>
         <div className="flex items-center gap-2">

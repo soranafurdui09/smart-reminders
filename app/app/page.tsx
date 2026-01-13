@@ -51,24 +51,32 @@ export default async function DashboardPage({
       member.profiles?.name || member.profiles?.email || member.user_id
     ])
   );
+  const memberUserMap = new Map(
+    members.map((member: any) => [
+      member.user_id,
+      member.profiles?.name || member.profiles?.email || member.user_id
+    ])
+  );
   const occurrences = occurrencesAll
     .filter((occurrence) => occurrence.reminder?.is_active)
     .map((occurrence) => {
       const assignedId = occurrence.reminder?.assigned_member_id;
+      const performedBy = occurrence.performed_by;
+      const performedByLabel = performedBy ? memberUserMap.get(performedBy) : null;
       if (!assignedId) {
-        return occurrence;
+        return performedByLabel
+          ? { ...occurrence, performed_by_label: performedByLabel }
+          : occurrence;
       }
       const label = memberMap.get(assignedId);
-      if (!label) {
-        return occurrence;
-      }
-      return {
+      const base = {
         ...occurrence,
         reminder: {
           ...occurrence.reminder,
-          assigned_member_label: label
+          assigned_member_label: label ?? occurrence.reminder?.assigned_member_label
         }
       };
+      return performedByLabel ? { ...base, performed_by_label: performedByLabel } : base;
     });
   const createdFilter = searchParams?.created === 'me'
     ? 'me'

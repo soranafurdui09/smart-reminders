@@ -33,6 +33,12 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
       member.profiles?.name || member.profiles?.email || member.user_id
     ])
   );
+  const memberUserMap = new Map(
+    members.map((member: any) => [
+      member.user_id,
+      member.profiles?.name || member.profiles?.email || member.user_id
+    ])
+  );
   const assigneeLabel = reminder.assigned_member_id
     ? memberMap.get(reminder.assigned_member_id) || copy.common.assigneeUnassigned
     : copy.common.assigneeUnassigned;
@@ -107,6 +113,16 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
                       ? copy.common.statusSnoozed
                       : copy.common.statusOpen}
                 </div>
+                {occurrence.performed_by && (occurrence.status === 'done' || occurrence.status === 'snoozed') ? (
+                  <div className="text-xs text-muted">
+                    {occurrence.status === 'done'
+                      ? copy.common.doneBy
+                      : occurrence.status === 'snoozed'
+                        ? copy.common.snoozedBy
+                        : null}{' '}
+                    {memberUserMap.get(occurrence.performed_by) || copy.history.performerUnknown}
+                  </div>
+                ) : null}
                 {occurrence.done_comment ? (
                   <div className="text-xs text-muted">
                     {copy.common.commentLabel}: {occurrence.done_comment}

@@ -33,6 +33,8 @@ type OccurrenceWithReminder = {
   occur_at: string;
   status: string;
   snoozed_until?: string | null;
+  performed_by?: string | null;
+  performed_at?: string | null;
   reminder?: ReminderPreview | null;
 };
 
@@ -120,7 +122,7 @@ export async function getOpenOccurrencesForHousehold(householdId: string): Promi
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('reminder_occurrences')
-    .select('id, occur_at, status, snoozed_until, reminder:reminders!inner(id, title, schedule_type, created_by, household_id, is_active, assigned_member_id)')
+    .select('id, occur_at, status, snoozed_until, performed_by, performed_at, reminder:reminders!inner(id, title, schedule_type, created_by, household_id, is_active, assigned_member_id)')
     .eq('reminders.household_id', householdId)
     .in('status', ['open', 'snoozed'])
     .order('occur_at');
@@ -144,7 +146,7 @@ export async function getOpenOccurrencesForHouseholdRange(
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('reminder_occurrences')
-    .select('id, occur_at, status, snoozed_until, reminder:reminders!inner(id, title, schedule_type, created_by, household_id, is_active, assigned_member_id)')
+    .select('id, occur_at, status, snoozed_until, performed_by, performed_at, reminder:reminders!inner(id, title, schedule_type, created_by, household_id, is_active, assigned_member_id)')
     .eq('reminders.household_id', householdId)
     .in('status', ['open', 'snoozed'])
     .gte('occur_at', startIso)
@@ -236,7 +238,7 @@ export async function getReminderById(reminderId: string) {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('reminders')
-    .select('id, title, notes, schedule_type, due_at, is_active, household_id, assigned_member_id, recurrence_rule, pre_reminder_minutes, reminder_occurrences(id, occur_at, status, done_comment)')
+    .select('id, title, notes, schedule_type, due_at, is_active, household_id, assigned_member_id, recurrence_rule, pre_reminder_minutes, reminder_occurrences(id, occur_at, status, done_comment, performed_by, performed_at)')
     .eq('id', reminderId)
     .order('occur_at', { foreignTable: 'reminder_occurrences' })
     .maybeSingle();

@@ -25,11 +25,13 @@ function readHighlight() {
 export default function OccurrenceHighlightCard({
   occurrenceId,
   className,
-  children
+  children,
+  highlightKey
 }: {
   occurrenceId: string;
   className?: string;
   children: ReactNode;
+  highlightKey?: string;
 }) {
   const [flash, setFlash] = useState(false);
 
@@ -44,7 +46,7 @@ export default function OccurrenceHighlightCard({
     setFlash(true);
     const timer = window.setTimeout(() => setFlash(false), 2000);
     return () => window.clearTimeout(timer);
-  }, [occurrenceId]);
+  }, [occurrenceId, highlightKey]);
 
   return (
     <div className={`${className ?? ''} ${flash ? 'flash-outline flash-bg' : ''}`.trim()}>

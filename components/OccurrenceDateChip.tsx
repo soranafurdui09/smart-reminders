@@ -25,11 +25,13 @@ function readHighlight() {
 export default function OccurrenceDateChip({
   occurrenceId,
   label,
-  className
+  className,
+  highlightKey
 }: {
   occurrenceId: string;
   label: string;
   className?: string;
+  highlightKey?: string;
 }) {
   const [flash, setFlash] = useState(false);
 
@@ -44,7 +46,7 @@ export default function OccurrenceDateChip({
     setFlash(true);
     const timer = window.setTimeout(() => setFlash(false), 2000);
     return () => window.clearTimeout(timer);
-  }, [occurrenceId]);
+  }, [occurrenceId, highlightKey, label]);
 
   return (
     <span className={`chip ${flash ? 'flash-outline-strong' : ''} ${className ?? ''}`.trim()}>
