@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.ReminderInteligent" parent="Theme.Material3.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/splash_navy</item>
+        <item name="android:navigationBarColor">@android:color/white</item>
+    </style>
+
+    <style name="Theme.ReminderInteligent.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_navy</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/splash_navy</item>
+        <item name="postSplashScreenTheme">@style/Theme.ReminderInteligent</item>
+    </style>
+</resources>
