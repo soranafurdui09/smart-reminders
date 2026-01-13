@@ -71,10 +71,9 @@ export default async function DashboardPage({
       const label = memberMap.get(assignedId);
       const base = {
         ...occurrence,
-        reminder: {
-          ...occurrence.reminder,
-          assigned_member_label: label ?? occurrence.reminder?.assigned_member_label
-        }
+        reminder: label
+          ? { ...occurrence.reminder, assigned_member_label: label }
+          : occurrence.reminder
       };
       return performedByLabel ? { ...base, performed_by_label: performedByLabel } : base;
     });
