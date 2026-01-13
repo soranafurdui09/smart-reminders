@@ -145,7 +145,7 @@ export default async function DashboardPage({
 
   return (
     <AppShell locale={locale} activePath="/app" userEmail={user.email}>
-      <div className="dashboard-test space-y-10 rounded-3xl p-6">
+      <div className="space-y-10">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1>{copy.dashboard.title}</h1>

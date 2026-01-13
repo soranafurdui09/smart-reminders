@@ -118,15 +118,6 @@ h3 {
   }
 }
 
-.dashboard-test {
-  background-color: #000000;
-  color: #facc15;
-}
-
-.dashboard-test * {
-  color: inherit;
-  text-shadow: 0 0 8px rgba(250, 204, 21, 0.75);
-}
 
 @keyframes toast-pop {
   0% {
