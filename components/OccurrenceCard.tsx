@@ -5,6 +5,7 @@ import { cloneReminder, deleteReminder } from '@/app/app/reminders/[id]/actions'
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import OccurrenceDateChip from '@/components/OccurrenceDateChip';
+import OccurrenceHighlightCard from '@/components/OccurrenceHighlightCard';
 
 export default function OccurrenceCard({ occurrence, locale = defaultLocale }: { occurrence: any; locale?: Locale }) {
   const copy = messages[locale];
@@ -23,7 +24,7 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
   const commentText = occurrence.done_comment?.trim();
   const assigneeLabel = reminder?.assigned_member_label;
   return (
-    <div className="card space-y-4">
+    <OccurrenceHighlightCard className="card space-y-4" occurrenceId={occurrence.id}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <OccurrenceDateChip
@@ -221,6 +222,6 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
           </form>
         </details>
       </div>
-    </div>
+    </OccurrenceHighlightCard>
   );
 }

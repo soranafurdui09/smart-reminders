@@ -17,6 +17,7 @@ const STORAGE_KEY = 'action-feedback';
 const HIGHLIGHT_KEY = 'action-highlight';
 const DISPLAY_MS = 3200;
 const MAX_AGE_MS = 15000;
+const HIGHLIGHT_TTL_MS = 3500;
 
 function readStoredFeedback() {
   if (typeof window === 'undefined') return null;
@@ -69,6 +70,26 @@ export default function ActionFeedback() {
     }
     if (typeof window !== 'undefined') {
       window.sessionStorage.removeItem(STORAGE_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const raw = window.sessionStorage.getItem(HIGHLIGHT_KEY);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as StoredHighlight;
+      const age = Date.now() - parsed.ts;
+      if (age > MAX_AGE_MS) {
+        window.sessionStorage.removeItem(HIGHLIGHT_KEY);
+        return;
+      }
+      const timeout = window.setTimeout(() => {
+        window.sessionStorage.removeItem(HIGHLIGHT_KEY);
+      }, Math.max(0, HIGHLIGHT_TTL_MS - age));
+      return () => window.clearTimeout(timeout);
+    } catch {
+      window.sessionStorage.removeItem(HIGHLIGHT_KEY);
     }
   }, []);
 

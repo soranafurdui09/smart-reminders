@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 
 type HighlightPayload = {
   id: string;
@@ -22,14 +22,14 @@ function readHighlight() {
   }
 }
 
-export default function OccurrenceDateChip({
+export default function OccurrenceHighlightCard({
   occurrenceId,
-  label,
-  className
+  className,
+  children
 }: {
   occurrenceId: string;
-  label: string;
   className?: string;
+  children: ReactNode;
 }) {
   const [flash, setFlash] = useState(false);
 
@@ -47,8 +47,8 @@ export default function OccurrenceDateChip({
   }, [occurrenceId]);
 
   return (
-    <span className={`chip ${flash ? 'flash-outline-strong' : ''} ${className ?? ''}`.trim()}>
-      {label}
-    </span>
+    <div className={`${className ?? ''} ${flash ? 'flash-outline flash-bg' : ''}`.trim()}>
+      {children}
+    </div>
   );
 }
