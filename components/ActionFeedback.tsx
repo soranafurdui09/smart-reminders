@@ -7,7 +7,14 @@ type StoredFeedback = {
   ts: number;
 };
 
+type StoredHighlight = {
+  id: string;
+  kind?: string;
+  ts: number;
+};
+
 const STORAGE_KEY = 'action-feedback';
+const HIGHLIGHT_KEY = 'action-highlight';
 const DISPLAY_MS = 3200;
 const MAX_AGE_MS = 15000;
 
@@ -28,6 +35,12 @@ function storeFeedback(message: string) {
   if (typeof window === 'undefined') return;
   const payload: StoredFeedback = { message, ts: Date.now() };
   window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+
+function storeHighlight(id: string, kind?: string | null) {
+  if (typeof window === 'undefined') return;
+  const payload: StoredHighlight = { id, kind: kind || undefined, ts: Date.now() };
+  window.sessionStorage.setItem(HIGHLIGHT_KEY, JSON.stringify(payload));
 }
 
 function closeRelatedDetails(element: HTMLElement | null) {
@@ -71,6 +84,11 @@ export default function ActionFeedback() {
       const feedback = element.getAttribute('data-action-feedback');
       if (feedback) {
         storeFeedback(feedback);
+      }
+      const highlightId = element.getAttribute('data-highlight-id');
+      if (highlightId) {
+        const highlightKind = element.getAttribute('data-highlight-kind');
+        storeHighlight(highlightId, highlightKind);
       }
       closeRelatedDetails(element);
     };

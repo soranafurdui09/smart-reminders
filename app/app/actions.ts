@@ -52,12 +52,20 @@ export async function snoozeOccurrence(formData: FormData) {
   const occurrenceId = String(formData.get('occurrenceId'));
   const remindAt = new Date(String(formData.get('occurAt')));
   const mode = String(formData.get('mode'));
+  const customMinutesRaw = String(formData.get('custom_minutes') || '').trim();
   await requireUser();
 
-  const minutes = Number(mode);
-  const nextOccurAt = mode === 'tomorrow'
-    ? snoozeTomorrow(new Date())
-    : snoozeByMinutes(remindAt, Number.isFinite(minutes) ? minutes : 10);
+  let nextOccurAt: Date;
+  if (mode === 'custom') {
+    const customMinutes = Number(customMinutesRaw);
+    const minutes = Number.isFinite(customMinutes) && customMinutes > 0 ? customMinutes : 10;
+    nextOccurAt = snoozeByMinutes(new Date(), minutes);
+  } else if (mode === 'tomorrow') {
+    nextOccurAt = snoozeTomorrow(new Date());
+  } else {
+    const minutes = Number(mode);
+    nextOccurAt = snoozeByMinutes(remindAt, Number.isFinite(minutes) ? minutes : 10);
+  }
 
   const supabase = createServerClient();
   await supabase
