@@ -9,6 +9,123 @@ export interface GoogleTokens {
   scope?: string;
 }
 
+export interface TimeBlockingOptions {
+  userId: string;
+  reminderId: string;
+  durationMinutes?: number;
+  workdayStartHour?: number;
+  workdayEndHour?: number;
+}
+
+export interface TimeBlockingResult {
+  eventId: string;
+  start: string;
+  end: string;
+}
+
+type BusySlot = { start: Date; end: Date };
+
+const MS_PER_MINUTE = 60000;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function clampToWorkHours(date: Date, startHour: number, endHour: number) {
+  const normalized = new Date(date);
+  const dayStart = new Date(normalized);
+  dayStart.setHours(startHour, 0, 0, 0);
+  const dayEnd = new Date(normalized);
+  dayEnd.setHours(endHour, 0, 0, 0);
+  if (normalized.getTime() < dayStart.getTime()) {
+    return dayStart;
+  }
+  if (normalized.getTime() >= dayEnd.getTime()) {
+    const nextDay = new Date(dayStart);
+    nextDay.setDate(nextDay.getDate() + 1);
+    return nextDay;
+  }
+  return normalized;
+}
+
+function normalizeBusySlots(raw: Array<{ start: string; end: string }>) {
+  return raw
+    .map((entry) => ({
+      start: new Date(entry.start),
+      end: new Date(entry.end)
+    }))
+    .filter((slot) => slot.end.getTime() > slot.start.getTime())
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
+}
+
+function findFreeSlot(
+  busySlots: BusySlot[],
+  windowStart: Date,
+  windowEnd: Date,
+  durationMs: number,
+  workdayStartHour: number,
+  workdayEndHour: number
+): Date | null {
+  if (windowEnd.getTime() <= windowStart.getTime()) {
+    return null;
+  }
+  const dayCursor = new Date(windowStart);
+  dayCursor.setHours(0, 0, 0, 0);
+  while (dayCursor.getTime() <= windowEnd.getTime()) {
+    const dayStart = new Date(dayCursor);
+    dayStart.setHours(workdayStartHour, 0, 0, 0);
+    const dayEnd = new Date(dayCursor);
+    dayEnd.setHours(workdayEndHour, 0, 0, 0);
+    const segmentStart = new Date(Math.max(dayStart.getTime(), windowStart.getTime()));
+    const segmentEnd = new Date(Math.min(dayEnd.getTime(), windowEnd.getTime()));
+    if (segmentEnd.getTime() > segmentStart.getTime()) {
+      let cursor = new Date(segmentStart);
+      const intervals = busySlots.filter(
+        (slot) => slot.end.getTime() > segmentStart.getTime() && slot.start.getTime() < segmentEnd.getTime()
+      );
+      for (const interval of intervals) {
+        const busyStart = new Date(Math.max(interval.start.getTime(), segmentStart.getTime()));
+        const busyEnd = new Date(Math.min(interval.end.getTime(), segmentEnd.getTime()));
+        if (busyStart.getTime() - cursor.getTime() >= durationMs) {
+          return cursor;
+        }
+        if (busyEnd.getTime() > cursor.getTime()) {
+          cursor = new Date(busyEnd);
+        }
+      }
+      if (segmentEnd.getTime() - cursor.getTime() >= durationMs) {
+        return cursor;
+      }
+    }
+    dayCursor.setDate(dayCursor.getDate() + 1);
+  }
+  return null;
+}
+
+async function queryBusySlots(
+  accessToken: string,
+  timeMin: Date,
+  timeMax: Date,
+  timeZone: string
+) {
+  const response = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      timeMin: timeMin.toISOString(),
+      timeMax: timeMax.toISOString(),
+      timeZone,
+      items: [{ id: 'primary' }]
+    })
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    console.error('[google] freeBusy query failed', payload);
+    throw new Error('Could not read calendar availability.');
+  }
+  const busy = payload?.calendars?.primary?.busy ?? [];
+  return normalizeBusySlots(busy);
+}
 type GoogleConnectionRow = {
   access_token: string;
   refresh_token: string;
@@ -225,6 +342,93 @@ export async function createOrUpdateCalendarEventForReminder(options: {
   }
 
   return { eventId: String(payload.id || '') };
+}
+
+export async function autoBlockTimeForReminder(options: TimeBlockingOptions): Promise<TimeBlockingResult> {
+  const durationMinutes = options.durationMinutes ?? 30;
+  const workdayStartHour = options.workdayStartHour ?? 9;
+  const workdayEndHour = options.workdayEndHour ?? 20;
+  if (workdayEndHour <= workdayStartHour) {
+    throw new Error('Invalid working hours.');
+  }
+  const durationMs = durationMinutes * MS_PER_MINUTE;
+
+  const supabase = createServerClient();
+  const { data: reminder, error } = await supabase
+    .from('reminders')
+    .select('id, title, notes, due_at, tz')
+    .eq('id', options.reminderId)
+    .maybeSingle();
+  if (error) {
+    console.error('[google] reminder lookup failed', error);
+    throw new Error('Could not load reminder.');
+  }
+  if (!reminder) {
+    throw new Error('Reminder not found.');
+  }
+  if (!reminder.due_at) {
+    throw new Error('Reminder must have a due date for auto-blocking.');
+  }
+  const timeZone = reminder.tz || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  const now = new Date();
+  let searchStart = clampToWorkHours(now, workdayStartHour, workdayEndHour);
+  const deadline = new Date(reminder.due_at);
+  const primaryEnd = new Date(deadline);
+  const fallbackStart = clampToWorkHours(
+    new Date(Math.max(primaryEnd.getTime(), searchStart.getTime())),
+    workdayStartHour,
+    workdayEndHour
+  );
+  const fallbackEnd = new Date(Math.max(primaryEnd.getTime(), fallbackStart.getTime()) + 7 * MS_PER_DAY);
+  const busySlots = await queryBusySlots(
+    (await ensureValidTokens(options.userId)).accessToken,
+    searchStart,
+    fallbackEnd,
+    timeZone
+  );
+  const targetStart = findFreeSlot(
+    busySlots,
+    searchStart,
+    primaryEnd,
+    durationMs,
+    workdayStartHour,
+    workdayEndHour
+  );
+  const finalStart =
+    targetStart ??
+    findFreeSlot(busySlots, fallbackStart, fallbackEnd, durationMs, workdayStartHour, workdayEndHour);
+  if (!finalStart) {
+    throw new Error('No free time slot available in the next 7 days.');
+  }
+  const finalEnd = new Date(finalStart.getTime() + durationMs);
+  const { client } = await getGoogleOAuthClient(options.userId);
+  const event: CalendarEventInput = {
+    summary: reminder.title,
+    description: reminder.notes
+      ? `${reminder.notes}\n\nAutomatically scheduled via Reminder inteligent.`
+      : 'Automatically scheduled via Reminder inteligent.',
+    start: { dateTime: finalStart.toISOString(), timeZone },
+    end: { dateTime: finalEnd.toISOString(), timeZone }
+  };
+
+  const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${client.accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(event)
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    console.error('[google] auto-block event failed', payload);
+    throw new Error('Could not create calendar event.');
+  }
+  return {
+    eventId: String(payload.id || ''),
+    start: finalStart.toISOString(),
+    end: finalEnd.toISOString()
+  };
 }
 
 async function refreshAccessToken(refreshToken: string) {

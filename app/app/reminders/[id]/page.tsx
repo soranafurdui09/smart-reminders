@@ -9,6 +9,7 @@ import { cloneReminder, deleteReminder } from './actions';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { getUserGoogleConnection } from '@/lib/google/calendar';
 import GoogleCalendarSyncButton from '@/components/GoogleCalendarSyncButton';
+import GoogleCalendarAutoBlockButton from '@/components/GoogleCalendarAutoBlockButton';
 
 export default async function ReminderDetailPage({ params }: { params: { id: string } }) {
   const user = await requireUser(`/app/reminders/${params.id}`);
@@ -80,6 +81,20 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
                 syncError: copy.reminderDetail.googleCalendarSyncError,
                 connectFirst: copy.reminderDetail.googleCalendarConnectFirst,
                 connectLink: copy.reminderDetail.googleCalendarConnectLink
+              }}
+            />
+            <GoogleCalendarAutoBlockButton
+              reminderId={reminder.id}
+              connected={Boolean(googleConnection)}
+              hasDueDate={Boolean(reminder.due_at)}
+              copy={{
+                label: copy.reminderDetail.googleCalendarAutoBlock,
+                loading: copy.reminderDetail.googleCalendarAutoBlocking,
+                success: copy.reminderDetail.googleCalendarAutoBlockSuccess,
+                error: copy.reminderDetail.googleCalendarAutoBlockError,
+                connectHint: copy.reminderDetail.googleCalendarConnectFirst,
+                connectLink: copy.reminderDetail.googleCalendarConnectLink,
+                missingDueDate: copy.reminderDetail.googleCalendarAutoBlockMissingDueDate
               }}
             />
             <Link href="/app" className="btn btn-secondary">{copy.common.back}</Link>
