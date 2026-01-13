@@ -7,6 +7,60 @@ import { requireUser } from '@/lib/auth';
 import { generateReminderEmbedding } from '@/lib/ai/embeddings';
 import { clearReminderAssignment, setReminderAssignment } from '@/lib/reminderAssignments';
 import { deleteCalendarEventForReminder } from '@/lib/google/calendar';
+import { getDefaultContextSettings, isDefaultContextSettings, type DayOfWeek } from '@/lib/reminders/context';
+
+const DAYS: DayOfWeek[] = [
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday'
+];
+
+function normalizeHour(value: FormDataEntryValue | null, fallback: number) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.min(23, Math.max(0, Math.floor(num)));
+}
+
+function normalizeMinutes(value: FormDataEntryValue | null, fallback: number) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num <= 0) return fallback;
+  return Math.min(1440, Math.floor(num));
+}
+
+function buildContextSettings(formData: FormData) {
+  const defaults = getDefaultContextSettings();
+  const timeWindowEnabled = String(formData.get('context_time_window_enabled') || '') === '1';
+  const startHour = normalizeHour(formData.get('context_time_start_hour'), defaults.timeWindow?.startHour ?? 9);
+  const endHour = normalizeHour(formData.get('context_time_end_hour'), defaults.timeWindow?.endHour ?? 20);
+  const daysOfWeek = formData
+    .getAll('context_time_days')
+    .map((day) => String(day))
+    .filter((day): day is DayOfWeek => DAYS.includes(day as DayOfWeek));
+  const calendarEnabled = String(formData.get('context_calendar_busy_enabled') || '') === '1';
+  const snoozeMinutes = normalizeMinutes(
+    formData.get('context_calendar_snooze_minutes'),
+    defaults.calendarBusy?.snoozeMinutes ?? 15
+  );
+
+  const settings = {
+    timeWindow: {
+      enabled: timeWindowEnabled,
+      startHour,
+      endHour,
+      daysOfWeek
+    },
+    calendarBusy: {
+      enabled: calendarEnabled,
+      snoozeMinutes
+    }
+  };
+
+  return isDefaultContextSettings(settings) ? null : settings;
+}
 
 export async function updateReminder(formData: FormData) {
   const reminderId = String(formData.get('reminderId'));
@@ -22,12 +76,13 @@ export async function updateReminder(formData: FormData) {
   const recurrenceRuleRaw = String(formData.get('recurrence_rule') || '').trim();
   const preReminderRaw = String(formData.get('pre_reminder_minutes') || '').trim();
   const assignedMemberRaw = String(formData.get('assigned_member_id') || '').trim();
+  const contextSettings = buildContextSettings(formData);
 
   if (!title) {
     redirect(`/app/reminders/${reminderId}/edit?error=missing-title`);
   }
 
-  const payload: Record<string, string | number | null> = {
+  const payload: Record<string, string | number | null | object> = {
     title,
     notes: notes || null,
     schedule_type: scheduleType,
@@ -68,6 +123,7 @@ export async function updateReminder(formData: FormData) {
     }
   }
   payload.assigned_member_id = assignedMemberId;
+  payload.context_settings = contextSettings;
 
   const { error } = await supabase.from('reminders').update(payload).eq('id', reminderId);
   if (error) {

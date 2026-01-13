@@ -509,3 +509,23 @@ async function refreshAccessToken(refreshToken: string) {
     scope
   };
 }
+
+export async function isUserBusyInCalendarAt(options: {
+  userId: string;
+  at: Date;
+}): Promise<boolean> {
+  try {
+    const tokens = await ensureValidTokens(options.userId);
+    const windowMs = 5 * 60000;
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const timeMin = new Date(options.at.getTime() - windowMs);
+    const timeMax = new Date(options.at.getTime() + windowMs);
+    const busySlots = await queryBusySlots(tokens.accessToken, timeMin, timeMax, timeZone);
+    return busySlots.some(
+      (slot) => slot.start.getTime() <= options.at.getTime() && options.at.getTime() < slot.end.getTime()
+    );
+  } catch (error) {
+    console.error('[google] is user busy failed', error);
+    return false;
+  }
+}

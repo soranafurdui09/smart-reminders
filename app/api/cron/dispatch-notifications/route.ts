@@ -4,155 +4,137 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAppUrl, sendEmail } from '@/lib/notifications';
 import { sendPushNotification } from '@/lib/push';
 import { reminderEmailTemplate } from '@/lib/templates';
+import { evaluateReminderContext, parseContextSettings } from '@/lib/reminders/context';
+import { isUserBusyInCalendarAt } from '@/lib/google/calendar';
 
 export const runtime = 'nodejs';
+
+type NotificationStatus = 'sent' | 'skipped' | 'failed';
 
 export async function GET() {
   const admin = createAdminClient();
   const now = new Date();
   const nowIso = now.toISOString();
+  const appUrl = getAppUrl();
 
   const { data: occurrences, error } = await admin
     .from('reminder_occurrences')
-    .select('id, occur_at, snoozed_until, status, reminder:reminders(id, title, household_id, is_active)')
+    .select(
+      'id, occur_at, snoozed_until, status, reminder:reminders(id, title, household_id, is_active, created_by, context_settings)'
+    )
     // Notification flow: use snoozed_until as the effective due time when present.
     .or(
       `and(status.eq.snoozed,snoozed_until.lte.${nowIso}),and(status.eq.open,occur_at.lte.${nowIso})`
     );
 
   if (error) {
+    console.error('[notifications] fetch occurrences failed', error);
     return NextResponse.json({ error: 'failed' }, { status: 500 });
   }
 
+  const updateLogStatus = async (logId: string, status: NotificationStatus) => {
+    await admin
+      .from('notification_log')
+      .update({ status })
+      .eq('id', logId);
+  };
+
   for (const occurrence of occurrences ?? []) {
     const reminder = Array.isArray(occurrence.reminder) ? occurrence.reminder[0] : occurrence.reminder;
-    if (!reminder?.household_id || !reminder?.is_active) {
+    if (!reminder?.household_id || !reminder?.is_active || !reminder.created_by) {
       continue;
     }
 
     const effectiveAt = occurrence.snoozed_until ?? occurrence.occur_at;
-    const { data: insertData, error: insertError } = await admin
-      .from('notification_log')
-      .insert({
-        reminder_occurrence_id: occurrence.id,
-        channel: 'email',
-        status: 'sent'
-      })
-      .select('id')
-      .single();
-
-    if (insertError || !insertData) {
+    const dueAt = new Date(effectiveAt);
+    const occurAtLabel = format(dueAt, 'dd MMM yyyy, HH:mm');
+    const settings = parseContextSettings(reminder.context_settings ?? null);
+    let isBusy = false;
+    if (settings.calendarBusy?.enabled) {
+      isBusy = await isUserBusyInCalendarAt({ userId: reminder.created_by, at: now });
+    }
+    const decision = evaluateReminderContext({
+      now,
+      reminderDueAt: dueAt,
+      settings,
+      isCalendarBusy: isBusy
+    });
+    if (decision.type === 'skip_for_now') {
       continue;
     }
-
-    const { data: memberIds } = await admin
-      .from('household_members')
-      .select('user_id')
-      .eq('household_id', reminder.household_id);
-
-    const userIds = (memberIds ?? []).map((item) => item.user_id);
-    if (!userIds.length) {
+    if (decision.type === 'auto_snooze' && decision.newScheduledAt) {
       await admin
-        .from('notification_log')
-        .update({ status: 'skipped' })
-        .eq('id', insertData.id);
+        .from('reminder_occurrences')
+        .update({
+          snoozed_until: decision.newScheduledAt,
+          status: 'snoozed'
+        })
+        .eq('id', occurrence.id);
       continue;
     }
 
-    const { data: profiles } = await admin
+    const { data: profile } = await admin
       .from('profiles')
       .select('email')
-      .in('user_id', userIds);
+      .eq('user_id', reminder.created_by)
+      .maybeSingle();
 
-    const emails = (profiles ?? []).map((profile) => profile.email).filter(Boolean) as string[];
-    if (!emails.length) {
-      await admin
+    if (profile?.email) {
+      const { data: emailLog, error: emailLogError } = await admin
         .from('notification_log')
-        .update({ status: 'skipped' })
-        .eq('id', insertData.id);
-      continue;
-    }
+        .insert({
+          reminder_occurrence_id: occurrence.id,
+          channel: 'email',
+          status: 'sent',
+          sent_at: nowIso
+        })
+        .select('id')
+        .single();
 
-    const html = reminderEmailTemplate({
-      title: reminder.title,
-      occurAt: format(new Date(effectiveAt), 'dd MMM yyyy HH:mm')
-    });
-
-    let finalStatus: 'sent' | 'skipped' | 'failed' = 'sent';
-    for (const email of emails) {
-      const result = await sendEmail({
-        to: email,
-        subject: `Reminder: ${reminder.title}`,
-        html
-      });
-      if (result.status === 'skipped') {
-        console.log('Resend not configured, skipping email notifications.');
-        finalStatus = 'skipped';
-        break;
-      }
-      if (result.status === 'failed') {
-        finalStatus = 'failed';
-        break;
+      if (!emailLogError && emailLog) {
+        const emailResult = await sendEmail({
+          to: profile.email,
+          subject: `Reminder: ${reminder.title}`,
+          html: reminderEmailTemplate({ title: reminder.title, occurAt: occurAtLabel })
+        });
+        if (emailResult.status !== 'sent') {
+          await updateLogStatus(emailLog.id, emailResult.status);
+        }
       }
     }
 
-    await admin
-      .from('notification_log')
-      .update({
-        status: finalStatus,
-        sent_at: finalStatus === 'sent' ? now.toISOString() : null
-      })
-      .eq('id', insertData.id);
+    const { data: subscriptions } = await admin
+      .from('push_subscriptions')
+      .select('endpoint, p256dh, auth')
+      .eq('user_id', reminder.created_by);
 
     const { data: pushLog, error: pushLogError } = await admin
       .from('notification_log')
       .insert({
         reminder_occurrence_id: occurrence.id,
         channel: 'push',
-        status: 'sent'
+        status: 'sent',
+        sent_at: nowIso
       })
       .select('id')
       .single();
 
-    if (pushLogError || !pushLog) {
-      continue;
+    if (!pushLogError && pushLog) {
+      const pushResult = await sendPushNotification(subscriptions ?? [], {
+        title: reminder.title,
+        body: `Scadenta: ${occurAtLabel}`,
+        url: `${appUrl}/app/reminders/${reminder.id}`
+      });
+      if (pushResult.status !== 'sent') {
+        await updateLogStatus(pushLog.id, pushResult.status);
+      }
+      if (pushResult.staleEndpoints.length) {
+        await admin
+          .from('push_subscriptions')
+          .delete()
+          .in('endpoint', pushResult.staleEndpoints);
+      }
     }
-
-    const { data: subscriptions } = await admin
-      .from('push_subscriptions')
-      .select('endpoint, p256dh, auth, user_id')
-      .in('user_id', userIds);
-
-    if (!subscriptions?.length) {
-      await admin
-        .from('notification_log')
-        .update({ status: 'skipped' })
-        .eq('id', pushLog.id);
-      continue;
-    }
-
-    const payload = {
-      title: reminder.title,
-      body: `Scadenta: ${format(new Date(effectiveAt), 'dd MMM yyyy HH:mm')}`,
-      url: `${getAppUrl()}/app`
-    };
-
-    const pushResult = await sendPushNotification(subscriptions, payload);
-
-    if (pushResult.staleEndpoints.length) {
-      await admin
-        .from('push_subscriptions')
-        .delete()
-        .in('endpoint', pushResult.staleEndpoints);
-    }
-
-    await admin
-      .from('notification_log')
-      .update({
-        status: pushResult.status,
-        sent_at: pushResult.status === 'sent' ? now.toISOString() : null
-      })
-      .eq('id', pushLog.id);
   }
 
   return NextResponse.json({ ok: true, processed: occurrences?.length ?? 0 });

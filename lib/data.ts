@@ -240,7 +240,7 @@ export async function getReminderById(reminderId: string) {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('reminders')
-    .select('id, title, notes, schedule_type, due_at, is_active, household_id, assigned_member_id, recurrence_rule, pre_reminder_minutes, google_event_id, google_calendar_id, reminder_occurrences(id, occur_at, status, done_comment, performed_by, performed_at)')
+    .select('id, title, notes, schedule_type, due_at, is_active, household_id, assigned_member_id, recurrence_rule, pre_reminder_minutes, google_event_id, google_calendar_id, context_settings, reminder_occurrences(id, occur_at, status, done_comment, performed_by, performed_at)')
     .eq('id', reminderId)
     .order('occur_at', { foreignTable: 'reminder_occurrences' })
     .maybeSingle();

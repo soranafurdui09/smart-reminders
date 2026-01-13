@@ -3,6 +3,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { useSpeechToReminder, type SpeechStatus } from '@/hooks/useSpeechToReminder';
+import { getDefaultContextSettings, type DayOfWeek } from '@/lib/reminders/context';
 
 type MemberOption = {
   id: string;
@@ -365,6 +366,15 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const [voiceUseAi, setVoiceUseAi] = useState(true);
   const [voiceMissingMessage, setVoiceMissingMessage] = useState<string | null>(null);
   const [voiceErrorCode, setVoiceErrorCode] = useState<string | null>(null);
+  const defaultContext = useMemo(() => getDefaultContextSettings(), []);
+  const [timeWindowEnabled, setTimeWindowEnabled] = useState(defaultContext.timeWindow?.enabled ?? false);
+  const [timeWindowStartHour, setTimeWindowStartHour] = useState(defaultContext.timeWindow?.startHour ?? 9);
+  const [timeWindowEndHour, setTimeWindowEndHour] = useState(defaultContext.timeWindow?.endHour ?? 20);
+  const [timeWindowDays, setTimeWindowDays] = useState<DayOfWeek[]>(defaultContext.timeWindow?.daysOfWeek ?? []);
+  const [calendarBusyEnabled, setCalendarBusyEnabled] = useState(defaultContext.calendarBusy?.enabled ?? false);
+  const [calendarSnoozeMinutes, setCalendarSnoozeMinutes] = useState(
+    defaultContext.calendarBusy?.snoozeMinutes ?? 15
+  );
   const formRef = useRef<HTMLFormElement | null>(null);
   const highlightTimer = useRef<number | null>(null);
   const detailsRef = useRef<HTMLElement>(null);
@@ -375,6 +385,27 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const memberOptions = useMemo(
     () => [{ id: '', label: copy.remindersNew.assigneeNone }, ...members],
     [members, copy.remindersNew.assigneeNone]
+  );
+  const hourOptions = useMemo(() => Array.from({ length: 24 }, (_, index) => index), []);
+  const dayOptions = useMemo(
+    () => ([
+      { value: 'monday', label: copy.remindersNew.contextDayMonday },
+      { value: 'tuesday', label: copy.remindersNew.contextDayTuesday },
+      { value: 'wednesday', label: copy.remindersNew.contextDayWednesday },
+      { value: 'thursday', label: copy.remindersNew.contextDayThursday },
+      { value: 'friday', label: copy.remindersNew.contextDayFriday },
+      { value: 'saturday', label: copy.remindersNew.contextDaySaturday },
+      { value: 'sunday', label: copy.remindersNew.contextDaySunday }
+    ] as const),
+    [
+      copy.remindersNew.contextDayFriday,
+      copy.remindersNew.contextDayMonday,
+      copy.remindersNew.contextDaySaturday,
+      copy.remindersNew.contextDaySunday,
+      copy.remindersNew.contextDayThursday,
+      copy.remindersNew.contextDayTuesday,
+      copy.remindersNew.contextDayWednesday
+    ]
   );
   const scheduleLabels: Record<ScheduleType, string> = {
     once: copy.remindersNew.once,
@@ -943,6 +974,111 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
               value={recurrenceRule}
               onChange={(event) => setRecurrenceRule(event.target.value)}
             />
+          </div>
+          <div className="rounded-2xl border border-borderSubtle bg-surfaceMuted/60 p-4 space-y-4">
+            <div>
+              <div className="text-sm font-semibold text-ink">{copy.remindersNew.contextTitle}</div>
+              <p className="text-xs text-muted">{copy.remindersNew.contextSubtitle}</p>
+            </div>
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="context_time_window_enabled"
+                  value="1"
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                  checked={timeWindowEnabled}
+                  onChange={(event) => setTimeWindowEnabled(event.target.checked)}
+                />
+                {copy.remindersNew.contextTimeWindowLabel}
+              </label>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextStartLabel}</label>
+                  <select
+                    name="context_time_start_hour"
+                    className="input"
+                    value={timeWindowStartHour}
+                    onChange={(event) => setTimeWindowStartHour(Number(event.target.value))}
+                    disabled={!timeWindowEnabled}
+                  >
+                    {hourOptions.map((hour) => (
+                      <option key={`start-${hour}`} value={hour}>
+                        {String(hour).padStart(2, '0')}:00
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextEndLabel}</label>
+                  <select
+                    name="context_time_end_hour"
+                    className="input"
+                    value={timeWindowEndHour}
+                    onChange={(event) => setTimeWindowEndHour(Number(event.target.value))}
+                    disabled={!timeWindowEnabled}
+                  >
+                    {hourOptions.map((hour) => (
+                      <option key={`end-${hour}`} value={hour}>
+                        {String(hour).padStart(2, '0')}:00
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-muted">{copy.remindersNew.contextDaysLabel}</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {dayOptions.map((day) => (
+                    <label key={day.value} className="flex items-center gap-2 text-xs text-muted">
+                      <input
+                        type="checkbox"
+                        name="context_time_days"
+                        value={day.value}
+                        className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                        checked={timeWindowDays.includes(day.value)}
+                        onChange={(event) => {
+                          setTimeWindowDays((prev) => {
+                            if (event.target.checked) {
+                              return [...prev, day.value];
+                            }
+                            return prev.filter((item) => item !== day.value);
+                          });
+                        }}
+                        disabled={!timeWindowEnabled}
+                      />
+                      {day.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="context_calendar_busy_enabled"
+                  value="1"
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                  checked={calendarBusyEnabled}
+                  onChange={(event) => setCalendarBusyEnabled(event.target.checked)}
+                />
+                {copy.remindersNew.contextCalendarLabel}
+              </label>
+              <div className="max-w-xs">
+                <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextSnoozeLabel}</label>
+                <input
+                  type="number"
+                  name="context_calendar_snooze_minutes"
+                  className="input"
+                  min={5}
+                  max={240}
+                  value={calendarSnoozeMinutes}
+                  onChange={(event) => setCalendarSnoozeMinutes(Number(event.target.value))}
+                  disabled={!calendarBusyEnabled}
+                />
+              </div>
+            </div>
           </div>
           <ActionSubmitButton
             className="btn btn-primary"

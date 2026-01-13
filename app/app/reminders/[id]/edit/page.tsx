@@ -5,6 +5,7 @@ import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { requireUser } from '@/lib/auth';
 import { getHouseholdMembers, getReminderById, getUserLocale } from '@/lib/data';
 import { messages } from '@/lib/i18n';
+import { parseContextSettings, type DayOfWeek } from '@/lib/reminders/context';
 import { updateReminder } from '../actions';
 
 function toLocalInputValue(iso?: string | null) {
@@ -40,6 +41,19 @@ export default async function EditReminderPage({ params }: { params: { id: strin
     id: member.id,
     label: member.profiles?.name || member.profiles?.email || member.user_id
   }));
+  const contextSettings = parseContextSettings(reminder.context_settings ?? null);
+  const timeWindow = contextSettings.timeWindow ?? { enabled: false, startHour: 9, endHour: 20, daysOfWeek: [] };
+  const calendarBusy = contextSettings.calendarBusy ?? { enabled: false, snoozeMinutes: 15 };
+  const hourOptions = Array.from({ length: 24 }, (_, index) => index);
+  const dayOptions: { value: DayOfWeek; label: string }[] = [
+    { value: 'monday', label: copy.remindersNew.contextDayMonday },
+    { value: 'tuesday', label: copy.remindersNew.contextDayTuesday },
+    { value: 'wednesday', label: copy.remindersNew.contextDayWednesday },
+    { value: 'thursday', label: copy.remindersNew.contextDayThursday },
+    { value: 'friday', label: copy.remindersNew.contextDayFriday },
+    { value: 'saturday', label: copy.remindersNew.contextDaySaturday },
+    { value: 'sunday', label: copy.remindersNew.contextDaySunday }
+  ];
 
   return (
     <AppShell locale={locale} userEmail={user.email}>
@@ -128,6 +142,94 @@ export default async function EditReminderPage({ params }: { params: { id: strin
               defaultValue={reminder.recurrence_rule ?? ''}
               placeholder={copy.remindersNew.recurrenceRulePlaceholder}
             />
+          </div>
+          <div className="rounded-2xl border border-borderSubtle bg-surfaceMuted/60 p-4 space-y-4">
+            <div>
+              <div className="text-sm font-semibold text-ink">{copy.remindersNew.contextTitle}</div>
+              <p className="text-xs text-muted">{copy.remindersNew.contextSubtitle}</p>
+            </div>
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="context_time_window_enabled"
+                  value="1"
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                  defaultChecked={timeWindow.enabled}
+                />
+                {copy.remindersNew.contextTimeWindowLabel}
+              </label>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextStartLabel}</label>
+                  <select
+                    name="context_time_start_hour"
+                    className="input"
+                    defaultValue={timeWindow.startHour}
+                  >
+                    {hourOptions.map((hour) => (
+                      <option key={`start-${hour}`} value={hour}>
+                        {String(hour).padStart(2, '0')}:00
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextEndLabel}</label>
+                  <select
+                    name="context_time_end_hour"
+                    className="input"
+                    defaultValue={timeWindow.endHour}
+                  >
+                    {hourOptions.map((hour) => (
+                      <option key={`end-${hour}`} value={hour}>
+                        {String(hour).padStart(2, '0')}:00
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-muted">{copy.remindersNew.contextDaysLabel}</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {dayOptions.map((day) => (
+                    <label key={day.value} className="flex items-center gap-2 text-xs text-muted">
+                      <input
+                        type="checkbox"
+                        name="context_time_days"
+                        value={day.value}
+                        className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                        defaultChecked={timeWindow.daysOfWeek.includes(day.value)}
+                      />
+                      {day.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="context_calendar_busy_enabled"
+                  value="1"
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                  defaultChecked={calendarBusy.enabled}
+                />
+                {copy.remindersNew.contextCalendarLabel}
+              </label>
+              <div className="max-w-xs">
+                <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextSnoozeLabel}</label>
+                <input
+                  type="number"
+                  name="context_calendar_snooze_minutes"
+                  className="input"
+                  min={5}
+                  max={240}
+                  defaultValue={calendarBusy.snoozeMinutes}
+                />
+              </div>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <ActionSubmitButton className="btn btn-primary" type="submit" data-action-feedback={copy.common.actionSaved}>
