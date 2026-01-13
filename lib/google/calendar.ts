@@ -424,11 +424,57 @@ export async function autoBlockTimeForReminder(options: TimeBlockingOptions): Pr
     console.error('[google] auto-block event failed', payload);
     throw new Error('Could not create calendar event.');
   }
+  await supabase
+    .from('reminders')
+    .update({
+      google_event_id: String(payload.id || null),
+      google_calendar_id: 'primary'
+    })
+    .eq('id', reminder.id);
   return {
     eventId: String(payload.id || ''),
     start: finalStart.toISOString(),
     end: finalEnd.toISOString()
   };
+}
+
+export async function deleteCalendarEventForReminder(options: {
+  userId: string;
+  reminderId: string;
+}): Promise<void> {
+  const supabase = createServerClient();
+  const { data: reminder, error } = await supabase
+    .from('reminders')
+    .select('id, google_event_id, google_calendar_id')
+    .eq('id', options.reminderId)
+    .maybeSingle();
+  if (error) {
+    console.error('[google] reminder lookup failed', error);
+    throw new Error('Could not load reminder.');
+  }
+  if (!reminder || !reminder.google_event_id) {
+    return;
+  }
+  const calendarId = reminder.google_calendar_id || 'primary';
+  const { client } = await getGoogleOAuthClient(options.userId);
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+    calendarId
+  )}/events/${encodeURIComponent(reminder.google_event_id)}`;
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${client.accessToken}`
+    }
+  });
+  if (!response.ok && response.status !== 404) {
+    const payload = await response.json().catch(() => ({}));
+    console.error('[google] delete event failed', payload);
+    throw new Error('Could not delete calendar event.');
+  }
+  await supabase
+    .from('reminders')
+    .update({ google_event_id: null, google_calendar_id: 'primary' })
+    .eq('id', options.reminderId);
 }
 
 async function refreshAccessToken(refreshToken: string) {

@@ -6,6 +6,7 @@ import { createServerClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth';
 import { generateReminderEmbedding } from '@/lib/ai/embeddings';
 import { clearReminderAssignment, setReminderAssignment } from '@/lib/reminderAssignments';
+import { deleteCalendarEventForReminder } from '@/lib/google/calendar';
 
 export async function updateReminder(formData: FormData) {
   const reminderId = String(formData.get('reminderId'));
@@ -155,7 +156,16 @@ export async function cloneReminder(formData: FormData) {
 
 export async function deleteReminder(formData: FormData) {
   const reminderId = String(formData.get('reminderId'));
-  await requireUser(`/app/reminders/${reminderId}`);
+  const user = await requireUser(`/app/reminders/${reminderId}`);
+  const deleteFromCalendar = String(formData.get('deleteFromCalendar') || '') === '1';
+  if (deleteFromCalendar) {
+    try {
+      await deleteCalendarEventForReminder({ userId: user.id, reminderId });
+    } catch (error) {
+      console.error('[google] delete reminder event failed', error);
+      redirect(`/app/reminders/${reminderId}?error=calendar-delete`);
+    }
+  }
 
   const supabase = createServerClient();
   const { error } = await supabase

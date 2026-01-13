@@ -5,11 +5,12 @@ import SectionHeader from '@/components/SectionHeader';
 import { requireUser } from '@/lib/auth';
 import { getHouseholdMembers, getReminderById, getUserLocale } from '@/lib/data';
 import { messages } from '@/lib/i18n';
-import { cloneReminder, deleteReminder } from './actions';
+import { cloneReminder } from './actions';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { getUserGoogleConnection } from '@/lib/google/calendar';
 import GoogleCalendarSyncButton from '@/components/GoogleCalendarSyncButton';
 import GoogleCalendarAutoBlockButton from '@/components/GoogleCalendarAutoBlockButton';
+import GoogleCalendarDeleteDialog from '@/components/GoogleCalendarDeleteDialog';
 
 export default async function ReminderDetailPage({ params }: { params: { id: string } }) {
   const user = await requireUser(`/app/reminders/${params.id}`);
@@ -62,12 +63,18 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
                 {copy.reminderDetail.clone}
               </ActionSubmitButton>
             </form>
-            <form action={deleteReminder}>
-              <input type="hidden" name="reminderId" value={reminder.id} />
-              <ActionSubmitButton className="btn btn-secondary" type="submit" data-action-feedback={copy.common.actionDeleted}>
-                {copy.common.delete}
-              </ActionSubmitButton>
-            </form>
+            <GoogleCalendarDeleteDialog
+              reminderId={reminder.id}
+              hasGoogleEvent={Boolean(reminder.google_event_id)}
+              copy={{
+                label: copy.common.delete,
+                dialogTitle: copy.reminderDetail.googleCalendarDeleteTitle,
+                dialogHint: copy.reminderDetail.googleCalendarDeleteHint,
+                justReminder: copy.reminderDetail.googleCalendarDeleteOnly,
+                reminderAndCalendar: copy.reminderDetail.googleCalendarDeleteBoth,
+                cancel: copy.reminderDetail.googleCalendarDeleteCancel
+              }}
+            />
             <Link href={`/app/reminders/${reminder.id}/edit`} className="btn btn-secondary">
               {copy.common.edit}
             </Link>
