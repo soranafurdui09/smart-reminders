@@ -6,6 +6,20 @@ import { requireUser } from '@/lib/auth';
 import { getNextOccurrence, type ScheduleType } from '@/lib/reminders';
 import { getSmartSnoozeOptions, inferReminderCategory, type SnoozeOptionId } from '@/lib/reminders/snooze';
 
+function parseDateTimeLocal(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value);
+  if (!match) return null;
+  const [, year, month, day, hour, minute] = match;
+  const parsed = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute)
+  );
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 async function createNextOccurrence(reminderId: string, occurAt: Date, scheduleType: ScheduleType) {
   const next = getNextOccurrence(occurAt, scheduleType);
   if (!next) {
@@ -105,10 +119,7 @@ export async function snoozeOccurrence(formData: FormData) {
       target = selected.target;
     }
   } else if (customAtRaw) {
-    const customAt = new Date(customAtRaw);
-    if (!Number.isNaN(customAt.getTime())) {
-      target = customAt;
-    }
+    target = parseDateTimeLocal(customAtRaw);
   } else if (legacyMode) {
     const minutes = Number(legacyMode);
     if (Number.isFinite(minutes) && minutes > 0) {

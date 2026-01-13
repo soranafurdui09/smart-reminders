@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { getSmartSnoozeOptions, inferReminderCategory } from '@/lib/reminders/snooze';
 
@@ -21,6 +21,7 @@ export default function SmartSnoozeMenu({
   copy: any;
   snoozeAction: (formData: FormData) => void;
 }) {
+  const detailsRef = useRef<HTMLDetailsElement | null>(null);
   // UI flow: compute options instantly on the client, while the server recomputes before saving.
   const [nowKey, setNowKey] = useState(() => Date.now());
   const now = useMemo(() => new Date(nowKey), [nowKey]);
@@ -45,8 +46,31 @@ export default function SmartSnoozeMenu({
     }
   };
 
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const details = detailsRef.current;
+      if (!details || !details.open) return;
+      const target = event.target as Node | null;
+      if (target && details.contains(target)) return;
+      details.open = false;
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && detailsRef.current?.open) {
+        detailsRef.current.open = false;
+      }
+    };
+    document.addEventListener('mousedown', handlePointerDown, true);
+    document.addEventListener('touchstart', handlePointerDown, true);
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown, true);
+      document.removeEventListener('touchstart', handlePointerDown, true);
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, []);
+
   return (
-    <details className="relative" onToggle={handleToggle}>
+    <details ref={detailsRef} className="relative" onToggle={handleToggle}>
       <summary className="btn btn-secondary dropdown-summary h-10">
         <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
           <path
