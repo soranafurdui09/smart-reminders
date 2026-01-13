@@ -40,8 +40,10 @@ export default async function HouseholdPage({
     );
   }
 
-  const members = await getHouseholdMembers(membership.households.id);
-  const invites = await getHouseholdInvites(membership.households.id);
+  const household = membership.households;
+  const householdId = household.id;
+  const members = await getHouseholdMembers(householdId);
+  const invites = await getHouseholdInvites(householdId);
   const roleLabels: Record<string, string> = {
     OWNER: copy.household.roleOwner,
     MEMBER: copy.household.roleMember,
@@ -113,7 +115,7 @@ export default async function HouseholdPage({
                           </summary>
                           <div className="absolute right-0 z-20 mt-2 w-60 rounded-2xl border border-borderSubtle bg-surface p-3 shadow-soft">
                             <form action={updateMemberRole} className="space-y-2">
-                              <input type="hidden" name="household_id" value={membership.households.id} />
+                              <input type="hidden" name="household_id" value={householdId} />
                               <input type="hidden" name="member_id" value={member.id} />
                               <label className="text-xs font-semibold text-muted">{copy.common.role}</label>
                               <select name="role" className="input h-9" defaultValue={member.role}>
@@ -130,7 +132,7 @@ export default async function HouseholdPage({
                               </ActionSubmitButton>
                             </form>
                             <form action={removeMember} className="mt-3 border-t border-borderSubtle pt-3">
-                              <input type="hidden" name="household_id" value={membership.households.id} />
+                              <input type="hidden" name="household_id" value={householdId} />
                               <input type="hidden" name="member_id" value={member.id} />
                               <ActionSubmitButton
                                 className="w-full rounded-lg px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
@@ -186,7 +188,7 @@ export default async function HouseholdPage({
               <p className="text-sm text-muted">{copy.household.inviteSubtitle}</p>
             </div>
             <form action={inviteMember} className="space-y-4">
-              <input type="hidden" name="household_id" value={membership.households.id} />
+              <input type="hidden" name="household_id" value={householdId} />
               <div>
                 <label className="text-sm font-semibold">{copy.common.email}</label>
                 <input name="email" className="input" placeholder={copy.magicLink.placeholder} required />
