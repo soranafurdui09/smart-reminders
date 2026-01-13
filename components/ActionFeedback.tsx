@@ -101,9 +101,9 @@ export default function ActionFeedback() {
   if (!message) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-[min(90vw,320px)]">
-      <div className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-surface/95 p-4 text-sm font-semibold text-ink shadow-soft backdrop-blur">
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primarySoft text-primaryStrong">
+    <div className="fixed bottom-6 right-6 z-50 w-[min(92vw,360px)] toast-pop" role="status" aria-live="polite">
+      <div className="flex items-center gap-3 rounded-2xl border border-primary/40 bg-white/95 p-4 text-sm font-semibold text-ink shadow-xl backdrop-blur">
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primaryStrong via-primary to-accent text-white shadow-md">
           <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
             <path stroke="currentColor" strokeWidth="1.5" d="M5 13l4 4L19 7" />
           </svg>

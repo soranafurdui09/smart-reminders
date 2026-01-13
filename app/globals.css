@@ -90,3 +90,44 @@ h3 {
 .dropdown-summary::marker {
   content: '';
 }
+
+@keyframes flash-outline {
+  0% {
+    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgba(56, 189, 248, 0);
+  }
+}
+
+@keyframes flash-bg {
+  0% {
+    background-color: rgba(224, 242, 254, 0.85);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes toast-pop {
+  0% {
+    transform: translateY(16px) scale(0.98);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.flash-outline {
+  animation: flash-outline 1.8s ease-out 1;
+}
+
+.flash-bg {
+  animation: flash-bg 1.8s ease-out 1;
+}
+
+.toast-pop {
+  animation: toast-pop 0.25s ease-out 1;
+}

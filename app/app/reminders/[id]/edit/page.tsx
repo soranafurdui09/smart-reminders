@@ -130,7 +130,7 @@ export default async function EditReminderPage({ params }: { params: { id: strin
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <ActionSubmitButton className="btn btn-primary" type="submit">
+            <ActionSubmitButton className="btn btn-primary" type="submit" data-action-feedback={copy.common.actionSaved}>
               {copy.common.save}
             </ActionSubmitButton>
             <Link href={`/app/reminders/${reminder.id}`} className="btn btn-secondary">

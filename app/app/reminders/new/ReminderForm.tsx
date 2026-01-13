@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 
 type MemberOption = {
@@ -329,6 +329,9 @@ export default function ReminderForm({
   const [recurrenceRule, setRecurrenceRule] = useState('');
   const [preReminderMinutes, setPreReminderMinutes] = useState('');
   const [assignedMemberId, setAssignedMemberId] = useState('');
+  const [aiHighlight, setAiHighlight] = useState(false);
+  const highlightTimer = useRef<number | null>(null);
+  const detailsRef = useRef<HTMLElement>(null);
   const aiCharCount = aiText.length;
 
   const memberOptions = useMemo(
@@ -368,7 +371,25 @@ export default function ReminderForm({
     setRecurrenceRule(template.recurrenceRule || '');
     setPreReminderMinutes(template.preReminderMinutes ? String(template.preReminderMinutes) : '');
     setAiError(null);
+    triggerHighlight();
   };
+
+  const triggerHighlight = () => {
+    setAiHighlight(true);
+    if (highlightTimer.current) {
+      window.clearTimeout(highlightTimer.current);
+    }
+    highlightTimer.current = window.setTimeout(() => setAiHighlight(false), 2200);
+    detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimer.current) {
+        window.clearTimeout(highlightTimer.current);
+      }
+    };
+  }, []);
 
   const handleParse = async () => {
     if (!aiText.trim()) {
@@ -405,6 +426,7 @@ export default function ReminderForm({
       );
       setAssignedMemberId(data.assignedMemberId || '');
       setScheduleType(deriveScheduleType(data.recurrenceRule));
+      triggerHighlight();
     } catch (error) {
       console.error('[ai] parse reminder failed', error);
       setAiError(copy.remindersNew.aiFailed);
@@ -533,7 +555,10 @@ export default function ReminderForm({
           )}
         </section>
 
-        <section className="card space-y-4">
+        <section
+          ref={detailsRef}
+          className={`card space-y-4 ${aiHighlight ? 'flash-outline flash-bg' : ''}`}
+        >
           <div>
             <h3 className="text-lg font-semibold text-ink">{copy.remindersNew.details}</h3>
             <p className="text-sm text-muted">{copy.remindersNew.detailsSubtitle}</p>
@@ -624,7 +649,11 @@ export default function ReminderForm({
               onChange={(event) => setRecurrenceRule(event.target.value)}
             />
           </div>
-          <ActionSubmitButton className="btn btn-primary" type="submit">
+          <ActionSubmitButton
+            className="btn btn-primary"
+            type="submit"
+            data-action-feedback={copy.common.actionCreated}
+          >
             {copy.remindersNew.create}
           </ActionSubmitButton>
         </section>

@@ -26,7 +26,13 @@ export default async function DashboardPage() {
               <label className="text-sm font-semibold">{copy.household.createNameLabel}</label>
               <input name="name" className="input" placeholder={copy.household.createPlaceholder} required />
             </div>
-            <ActionSubmitButton className="btn btn-primary" type="submit">{copy.household.createButton}</ActionSubmitButton>
+            <ActionSubmitButton
+              className="btn btn-primary"
+              type="submit"
+              data-action-feedback={copy.common.actionCreated}
+            >
+              {copy.household.createButton}
+            </ActionSubmitButton>
           </form>
         </div>
       </AppShell>

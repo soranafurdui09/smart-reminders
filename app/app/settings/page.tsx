@@ -34,7 +34,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: { u
               <option value="ro">{copy.language.ro}</option>
               <option value="en">{copy.language.en}</option>
             </select>
-            <ActionSubmitButton className="btn btn-primary" type="submit">{copy.common.save}</ActionSubmitButton>
+            <ActionSubmitButton
+              className="btn btn-primary"
+              type="submit"
+              data-action-feedback={copy.common.actionSaved}
+            >
+              {copy.common.save}
+            </ActionSubmitButton>
           </form>
         </section>
         {vapidPublicKey ? (
