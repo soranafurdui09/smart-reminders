@@ -155,6 +155,7 @@ export async function updateReminder(formData: FormData) {
     const title = String(formData.get('title') || '').trim();
     const notes = String(formData.get('notes') || '').trim();
     const dueAtRaw = String(formData.get('due_at') || '').trim();
+    const dueAtIso = String(formData.get('due_at_iso') || '').trim();
     const scheduleTypeRaw = String(formData.get('schedule_type') || 'once');
     const scheduleType = ['once', 'daily', 'weekly', 'monthly', 'yearly'].includes(scheduleTypeRaw)
       ? scheduleTypeRaw
@@ -173,14 +174,14 @@ export async function updateReminder(formData: FormData) {
     payload.notes = notes || null;
     payload.schedule_type = scheduleType;
     payload.recurrence_rule = recurrenceRuleRaw || null;
-    if (dueAtRaw) {
-      payload.due_at = new Date(dueAtRaw).toISOString();
+    if (dueAtIso || dueAtRaw) {
+      payload.due_at = new Date(dueAtIso || dueAtRaw).toISOString();
     }
     const preReminderMinutes = preReminderRaw ? Number(preReminderRaw) : null;
     payload.pre_reminder_minutes = Number.isFinite(preReminderMinutes) ? preReminderMinutes : null;
     assignedMemberId = assignedMemberRaw || null;
-    effectiveDueAt = dueAtRaw
-      ? new Date(dueAtRaw)
+    effectiveDueAt = dueAtIso || dueAtRaw
+      ? new Date(dueAtIso || dueAtRaw)
       : reminderRecord.due_at
         ? new Date(reminderRecord.due_at)
         : null;
@@ -203,6 +204,10 @@ export async function updateReminder(formData: FormData) {
     }
   }
   payload.assigned_member_id = assignedMemberId;
+  const tz = String(formData.get('tz') || '').trim();
+  if (tz) {
+    payload.tz = tz;
+  }
 
   const { error } = await supabase.from('reminders').update(payload).eq('id', reminderId);
   if (error) {

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import AppShell from '@/components/AppShell';
 import SectionHeader from '@/components/SectionHeader';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
+import DateTimeLocalField from '@/components/DateTimeLocalField';
 import { requireUser } from '@/lib/auth';
 import { getHouseholdMembers, getReminderById, getUserLocale } from '@/lib/data';
 import { messages } from '@/lib/i18n';
@@ -16,7 +17,9 @@ function toLocalInputValue(iso?: string | null) {
   if (Number.isNaN(date.getTime())) {
     return '';
   }
-  return date.toISOString().slice(0, 16);
+  const offsetMs = date.getTimezoneOffset() * 60000;
+  const local = new Date(date.getTime() - offsetMs);
+  return local.toISOString().slice(0, 16);
 }
 
 export default async function EditReminderPage({ params }: { params: { id: string } }) {
@@ -204,6 +207,7 @@ export default async function EditReminderPage({ params }: { params: { id: strin
           <form action={updateReminder} className="card space-y-4 max-w-2xl">
             <input type="hidden" name="reminderId" value={reminder.id} />
             <input type="hidden" name="context_category" value={contextSettings?.category ?? ''} />
+            <input type="hidden" name="tz" value={reminder.tz ?? ''} />
             <div>
               <label className="text-sm font-semibold">{copy.remindersNew.titleLabel}</label>
               <input
@@ -227,9 +231,8 @@ export default async function EditReminderPage({ params }: { params: { id: strin
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="text-sm font-semibold">{copy.remindersNew.dateLabel}</label>
-                <input
+                <DateTimeLocalField
                   name="due_at"
-                  type="datetime-local"
                   className="input"
                   defaultValue={toLocalInputValue(reminder.due_at)}
                 />

@@ -306,6 +306,13 @@ function toLocalIsoWithOffset(date: Date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${hours}:${minutes}:${seconds}${sign}${offsetHours}:${offsetMins}`;
 }
 
+function toIsoFromLocalInput(value: string) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return toLocalIsoWithOffset(date);
+}
+
 function formatPreReminder(locale: TemplateLocale, minutes: number) {
   if (!Number.isFinite(minutes) || minutes <= 0) {
     return '';
@@ -791,6 +798,16 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
         type="hidden"
         name="context_category"
         value={categoryId && categoryId !== 'default' ? categoryId : ''}
+      />
+      <input
+        type="hidden"
+        name="due_at_iso"
+        value={dueAt ? toIsoFromLocalInput(dueAt) : ''}
+      />
+      <input
+        type="hidden"
+        name="tz"
+        value={Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'}
       />
 
       <section className="card space-y-4">

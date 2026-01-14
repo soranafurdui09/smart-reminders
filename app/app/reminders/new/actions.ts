@@ -91,10 +91,12 @@ export async function createReminder(formData: FormData) {
     ? scheduleTypeRaw
     : 'once';
   const dueAtRaw = String(formData.get('due_at') || '').trim();
+  const dueAtIso = String(formData.get('due_at_iso') || '').trim();
   const recurrenceRuleRaw = String(formData.get('recurrence_rule') || '').trim();
   const preReminderRaw = String(formData.get('pre_reminder_minutes') || '').trim();
   const assignedMemberRaw = String(formData.get('assigned_member_id') || '').trim();
   const voiceAuto = String(formData.get('voice_auto') || '') === '1';
+  const tz = String(formData.get('tz') || '').trim() || 'UTC';
   const contextSettings = buildContextSettings(formData);
   const medicationDetailsRaw = String(formData.get('medication_details') || '').trim();
   const medicationAddCalendar = String(formData.get('medication_add_to_calendar') || '') === '1';
@@ -130,8 +132,10 @@ export async function createReminder(formData: FormData) {
     ? medicationDetails
       ? new Date(getFirstMedicationDose(medicationDetails) || new Date().toISOString())
       : new Date()
-    : dueAtRaw
-      ? new Date(dueAtRaw)
+    : dueAtIso
+      ? new Date(dueAtIso)
+      : dueAtRaw
+        ? new Date(dueAtRaw)
       : new Date();
 
   const supabase = createServerClient();
@@ -164,7 +168,7 @@ export async function createReminder(formData: FormData) {
       notes: resolvedNotes || null,
       schedule_type: scheduleType,
       due_at: dueAt.toISOString(),
-      tz: 'UTC',
+      tz,
       is_active: true,
       recurrence_rule: recurrenceRuleRaw || null,
       pre_reminder_minutes: preReminderValue,
