@@ -653,6 +653,10 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     onError: (message) => setVoiceErrorCode(message)
   });
 
+  const voiceIsListening = voice.status === 'listening' || voice.status === 'transcribing';
+  const voiceIsProcessing =
+    voice.status === 'processing' || voice.status === 'parsing' || voice.status === 'creating';
+
   useImperativeHandle(ref, () => ({
     startVoice: voice.start,
     stopVoice: voice.stop,
@@ -719,6 +723,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   ]);
 
   const voiceStatusLabel = useMemo(() => {
+    if (voice.status === 'processing') return copy.remindersNew.voiceProcessing;
     if (voice.status === 'parsing') return copy.remindersNew.voiceParsing;
     if (voice.status === 'creating') return copy.remindersNew.voiceCreating;
     if (voice.status === 'transcribing') return copy.remindersNew.voiceTranscribing;
@@ -728,6 +733,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     copy.remindersNew.voiceCreating,
     copy.remindersNew.voiceListening,
     copy.remindersNew.voiceParsing,
+    copy.remindersNew.voiceProcessing,
     copy.remindersNew.voiceTranscribing,
     voice.status
   ]);
@@ -743,6 +749,9 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     if (voiceErrorCode === 'no-speech') {
       return copy.remindersNew.voiceNoSpeech;
     }
+    if (voiceErrorCode === 'too-short') {
+      return copy.remindersNew.voiceTooShort;
+    }
     if (voiceErrorCode === 'not-supported') {
       return copy.remindersNew.voiceNotSupported;
     }
@@ -753,6 +762,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     copy.remindersNew.voiceNotSupported,
     copy.remindersNew.voiceParseFailed,
     copy.remindersNew.voicePermission,
+    copy.remindersNew.voiceTooShort,
     voiceErrorCode
   ]);
 
@@ -817,17 +827,23 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
               onChange={(event) => setAiText(event.target.value)}
             />
             <button
-              className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-borderSubtle bg-surface text-ink transition hover:border-primary/30 hover:bg-white ${
-                voice.status === 'listening' || voice.status === 'transcribing'
-                  ? 'animate-pulse border-primary/40 text-primaryStrong'
-                  : ''
+              className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-borderSubtle bg-surface text-ink transition hover:border-primary/30 hover:bg-white relative ${
+                voiceIsListening ? 'border-primary/40 text-primaryStrong' : ''
               }`}
               type="button"
-              onClick={voice.toggle}
-              disabled={!voice.supported}
+              onClick={() => {
+                if (voiceIsProcessing) return;
+                voice.toggle();
+              }}
+              disabled={!voice.supported || voiceIsProcessing}
               aria-label={copy.remindersNew.voiceNavLabel}
+              aria-pressed={voiceIsListening}
+              aria-busy={voiceIsProcessing}
               title={!voice.supported ? copy.remindersNew.voiceNotSupported : copy.remindersNew.voiceNavLabel}
             >
+              {voiceIsListening ? (
+                <span className="absolute -inset-1 rounded-full bg-sky-300/30 animate-ping" aria-hidden="true" />
+              ) : null}
               <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <path
                   stroke="currentColor"
@@ -852,15 +868,24 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
               <span>{aiCharCount} {copy.remindersNew.aiCounterLabel}</span>
             </div>
           </div>
+          {voiceIsListening ? (
+            <div className="text-xs text-muted">{copy.remindersNew.voicePrompt}</div>
+          ) : null}
           {voiceStatusLabel ? (
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
               <span>{voiceStatusLabel}</span>
+              {voiceIsProcessing ? (
+                <span className="inline-flex items-center gap-2 rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-0.5 text-[11px]">
+                  <span className="h-3 w-3 animate-spin rounded-full border border-slate-300 border-t-slate-600" />
+                  <span className="sr-only">{copy.remindersNew.voiceProcessing}</span>
+                </span>
+              ) : null}
               {voice.status === 'transcribing' && voiceTranscript ? (
                 <span className="rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-0.5 text-[11px]">
                   {voiceTranscript}
                 </span>
               ) : null}
-              {voice.status === 'listening' || voice.status === 'transcribing' ? (
+              {voiceIsListening ? (
                 <button className="btn btn-secondary h-7 px-3 text-xs" type="button" onClick={voice.stop}>
                   {copy.remindersNew.voiceStop}
                 </button>

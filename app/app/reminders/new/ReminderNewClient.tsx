@@ -38,14 +38,15 @@ export default function ReminderNewClient({
   });
 
   const isListening = voiceStatus.status === 'listening' || voiceStatus.status === 'transcribing';
+  const isBusy = voiceStatus.status === 'processing' || voiceStatus.status === 'parsing' || voiceStatus.status === 'creating';
   const micClasses = useMemo(() => (
-    `flex h-10 w-10 items-center justify-center rounded-full border border-borderSubtle bg-surface text-ink transition hover:border-primary/30 hover:bg-white ${
-      isListening ? 'animate-pulse border-primary/40 text-primaryStrong' : ''
+    `relative flex h-10 w-10 items-center justify-center rounded-full border border-borderSubtle bg-surface text-ink transition hover:border-primary/30 hover:bg-white ${
+      isListening ? 'border-primary/40 text-primaryStrong' : ''
     }`
   ), [isListening]);
 
   const handleMicClick = () => {
-    if (!voiceStatus.supported) return;
+    if (!voiceStatus.supported || isBusy) return;
     if (isListening) {
       formRef.current?.stopVoice();
       return;
@@ -65,10 +66,15 @@ export default function ReminderNewClient({
             className={micClasses}
             type="button"
             onClick={handleMicClick}
-            disabled={!voiceStatus.supported}
+            disabled={!voiceStatus.supported || isBusy}
             aria-label={copy.remindersNew.voiceNavLabel}
+            aria-pressed={isListening}
+            aria-busy={isBusy}
             title={voiceStatus.supported ? copy.remindersNew.voiceNavLabel : copy.remindersNew.voiceNotSupported}
           >
+            {isListening ? (
+              <span className="absolute -inset-1 rounded-full bg-sky-300/30 animate-ping" aria-hidden="true" />
+            ) : null}
             <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
               <path
                 stroke="currentColor"
@@ -100,15 +106,20 @@ export default function ReminderNewClient({
       />
 
       <button
-        className={`fixed bottom-20 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-borderSubtle bg-surface text-ink shadow-lg transition md:hidden ${
-          isListening ? 'animate-pulse border-primary/40 text-primaryStrong' : ''
+        className={`fixed bottom-20 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-borderSubtle bg-surface text-ink shadow-lg transition md:hidden relative ${
+          isListening ? 'border-primary/40 text-primaryStrong' : ''
         }`}
         type="button"
         onClick={handleMicClick}
         aria-label={copy.remindersNew.voiceNavLabel}
+        aria-pressed={isListening}
+        aria-busy={isBusy}
         title={voiceStatus.supported ? copy.remindersNew.voiceNavLabel : copy.remindersNew.voiceNotSupported}
-        disabled={!voiceStatus.supported}
+        disabled={!voiceStatus.supported || isBusy}
       >
+        {isListening ? (
+          <span className="absolute -inset-1 rounded-full bg-sky-300/30 animate-ping" aria-hidden="true" />
+        ) : null}
         <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
           <path
             stroke="currentColor"

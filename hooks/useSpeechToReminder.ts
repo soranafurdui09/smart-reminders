@@ -5,6 +5,7 @@ export type SpeechStatus =
   | 'idle'
   | 'listening'
   | 'transcribing'
+  | 'processing'
   | 'parsing'
   | 'creating'
   | 'success'
@@ -57,6 +58,7 @@ export function useSpeechToReminder<TParsed>({
     resetSpeech();
     setError(null);
     setStatus('listening');
+    lastTranscriptRef.current = '';
     startSpeech();
   }, [autoStart, resetSpeech, startSpeech, supported]);
 
@@ -74,19 +76,20 @@ export function useSpeechToReminder<TParsed>({
 
   useEffect(() => {
     if (listening) return;
+    if (speechError) return;
     const finalTranscript = transcript.trim();
     if (!finalTranscript || finalTranscript === lastTranscriptRef.current) {
       return;
     }
     lastTranscriptRef.current = finalTranscript;
 
+    setStatus('processing');
     if (!useAi || !parseText) {
       setStatus('idle');
       onFallback?.(finalTranscript);
       return;
     }
 
-    setStatus('parsing');
     const runParse = async () => {
       const parsed = await parseText(finalTranscript);
       if (!parsed) {
@@ -107,7 +110,19 @@ export function useSpeechToReminder<TParsed>({
       onCreate?.(parsed);
     };
     void runParse();
-  }, [isComplete, listening, onCreate, onError, onFallback, onIncomplete, onParsed, parseText, transcript, useAi]);
+  }, [
+    isComplete,
+    listening,
+    onCreate,
+    onError,
+    onFallback,
+    onIncomplete,
+    onParsed,
+    parseText,
+    speechError,
+    transcript,
+    useAi
+  ]);
 
   const start = useCallback(() => {
     if (!supported) {
@@ -119,6 +134,7 @@ export function useSpeechToReminder<TParsed>({
     resetSpeech();
     setError(null);
     setStatus('listening');
+    lastTranscriptRef.current = '';
     startSpeech();
   }, [listening, onError, resetSpeech, startSpeech, supported]);
 
