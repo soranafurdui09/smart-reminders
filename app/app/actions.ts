@@ -158,7 +158,7 @@ export async function snoozeOccurrence(formData: FormData) {
 
   if (reminder?.created_by) {
     await scheduleNotificationJobsForReminder({
-      reminderId,
+      reminderId: reminder.id,
       userId: reminder.created_by,
       dueAt: target,
       preReminderMinutes: reminder.pre_reminder_minutes ?? undefined,
