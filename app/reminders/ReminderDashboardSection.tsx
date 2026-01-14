@@ -93,6 +93,11 @@ export default function ReminderDashboardSection({
   const [kindFilter, setKindFilter] = useState<'all' | 'tasks' | 'medications'>('all');
   const [doseState, setDoseState] = useState<MedicationDose[]>(medicationDoses);
   const [visibleMonthGroups, setVisibleMonthGroups] = useState(2);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    tomorrow: true,
+    nextWeek: false,
+    nextMonth: false
+  });
 
   const filteredOccurrences = useMemo(() => {
     const normalized = occurrences
@@ -186,6 +191,10 @@ export default function ReminderDashboardSection({
     () => new Intl.DateTimeFormat(localeTag, { month: 'long', year: 'numeric' }),
     [localeTag]
   );
+
+  const toggleSection = (key: string) => {
+    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
   const visibleDoses = useMemo(
     () => doseState.filter((dose) => dose.status === 'pending').slice(0, 5),
     [doseState]
@@ -353,19 +362,38 @@ export default function ReminderDashboardSection({
               items.length ? (
                 <div key={key} className="space-y-3">
                   <div className="flex items-center gap-3 text-xs font-semibold uppercase text-muted">
-                    <span>{labels[key as keyof typeof labels]}</span>
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(key)}
+                      className="inline-flex items-center gap-2 text-xs font-semibold uppercase text-muted hover:text-slate-700"
+                      aria-expanded={expandedSections[key] ?? false}
+                      aria-label={expandedSections[key] ? copy.common.hide : copy.common.show}
+                    >
+                      <svg
+                        aria-hidden="true"
+                        className={`h-3.5 w-3.5 transition ${expandedSections[key] ? 'rotate-90' : ''}`}
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path d="M7 5l6 5-6 5V5z" />
+                      </svg>
+                      <span>{labels[key as keyof typeof labels]}</span>
+                      <span className="text-[10px] font-semibold text-slate-400">({items.length})</span>
+                    </button>
                     <span className="h-px flex-1 bg-borderSubtle" />
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {items.map((occurrence) => (
-                      <OccurrenceCard
-                        key={occurrence.id}
-                        occurrence={occurrence}
-                        locale={locale}
-                        googleConnected={googleConnected}
-                      />
-                    ))}
-                  </div>
+                  {expandedSections[key] ? (
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {items.map((occurrence) => (
+                        <OccurrenceCard
+                          key={occurrence.id}
+                          occurrence={occurrence}
+                          locale={locale}
+                          googleConnected={googleConnected}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               ) : null
             )}
@@ -374,22 +402,43 @@ export default function ReminderDashboardSection({
                 {visibleMonthEntries.map(([monthKey, items]) => {
                   const [year, month] = monthKey.split('-').map(Number);
                   const labelDate = new Date(year, Math.max(0, month - 1), 1);
+                  const sectionKey = `month:${monthKey}`;
+                  const isExpanded = expandedSections[sectionKey] ?? false;
                   return (
                     <div key={monthKey} className="space-y-3">
                       <div className="flex items-center gap-3 text-xs font-semibold uppercase text-muted">
-                        <span>{monthLabelFormatter.format(labelDate)}</span>
+                        <button
+                          type="button"
+                          onClick={() => toggleSection(sectionKey)}
+                          className="inline-flex items-center gap-2 text-xs font-semibold uppercase text-muted hover:text-slate-700"
+                          aria-expanded={isExpanded}
+                          aria-label={isExpanded ? copy.common.hide : copy.common.show}
+                        >
+                          <svg
+                            aria-hidden="true"
+                            className={`h-3.5 w-3.5 transition ${isExpanded ? 'rotate-90' : ''}`}
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path d="M7 5l6 5-6 5V5z" />
+                          </svg>
+                          <span>{monthLabelFormatter.format(labelDate)}</span>
+                          <span className="text-[10px] font-semibold text-slate-400">({items.length})</span>
+                        </button>
                         <span className="h-px flex-1 bg-borderSubtle" />
                       </div>
-                      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                        {items.map((occurrence) => (
-                          <OccurrenceCard
-                            key={occurrence.id}
-                            occurrence={occurrence}
-                            locale={locale}
-                            googleConnected={googleConnected}
-                          />
-                        ))}
-                      </div>
+                      {isExpanded ? (
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                          {items.map((occurrence) => (
+                            <OccurrenceCard
+                              key={occurrence.id}
+                              occurrence={occurrence}
+                              locale={locale}
+                              googleConnected={googleConnected}
+                            />
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })}
