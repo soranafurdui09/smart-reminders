@@ -67,10 +67,21 @@ export function parseContextSettings(raw: any | null | undefined): ContextSettin
   }
   const timeWindow = typeof raw.timeWindow === 'object' && raw.timeWindow ? raw.timeWindow : {};
   const calendarBusy = typeof raw.calendarBusy === 'object' && raw.calendarBusy ? raw.calendarBusy : {};
+  const defaultTimeWindow = defaults.timeWindow ?? {
+    enabled: false,
+    startHour: 9,
+    endHour: 20,
+    daysOfWeek: []
+  };
+  const defaultCalendarBusy = defaults.calendarBusy ?? {
+    enabled: false,
+    snoozeMinutes: 15
+  };
+
   const parsedTimeWindow: TimeWindowContext = {
     enabled: Boolean(timeWindow.enabled),
-    startHour: sanitizeHour(timeWindow.startHour ?? defaults.timeWindow.startHour),
-    endHour: sanitizeHour(timeWindow.endHour ?? defaults.timeWindow.endHour),
+    startHour: sanitizeHour(timeWindow.startHour ?? defaultTimeWindow.startHour),
+    endHour: sanitizeHour(timeWindow.endHour ?? defaultTimeWindow.endHour),
     daysOfWeek: Array.isArray(timeWindow.daysOfWeek)
       ? timeWindow.daysOfWeek
         .map((item) => sanitizeDay(item))
@@ -79,7 +90,7 @@ export function parseContextSettings(raw: any | null | undefined): ContextSettin
   };
   const parsedCalendarBusy: CalendarBusyContext = {
     enabled: Boolean(calendarBusy.enabled),
-    snoozeMinutes: sanitizeMinutes(calendarBusy.snoozeMinutes ?? defaults.calendarBusy.snoozeMinutes)
+    snoozeMinutes: sanitizeMinutes(calendarBusy.snoozeMinutes ?? defaultCalendarBusy.snoozeMinutes)
   };
   return {
     timeWindow: parsedTimeWindow,
