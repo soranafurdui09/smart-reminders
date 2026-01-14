@@ -1,7 +1,5 @@
 import Link from 'next/link';
-import { isThisWeek, isToday, isTomorrow } from 'date-fns';
 import SectionHeader from '@/components/SectionHeader';
-import OccurrenceCard from '@/components/OccurrenceCard';
 import AppShell from '@/components/AppShell';
 import SemanticSearch from '@/components/SemanticSearch';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
@@ -10,6 +8,7 @@ import { getHouseholdMembers, getOpenOccurrencesForHousehold, getUserHousehold, 
 import { getLocaleTag, messages } from '@/lib/i18n';
 import { createHousehold } from './household/actions';
 import { getUserGoogleConnection } from '@/lib/google/calendar';
+import ReminderDashboardSection from '@/app/reminders/ReminderDashboardSection';
 
 export default async function DashboardPage({
   searchParams
@@ -87,63 +86,13 @@ export default async function DashboardPage({
     const bTime = new Date(b.effective_at ?? b.occur_at).getTime();
     return aTime - bTime;
   });
-  const createdFilter = searchParams?.created === 'me'
+  const initialCreatedBy = searchParams?.created === 'me'
     ? 'me'
     : searchParams?.created === 'others'
       ? 'others'
       : 'all';
-  const assignedFilter = searchParams?.assigned === 'me' ? 'me' : 'all';
-  const memberId = membership.id;
-  const filteredOccurrences = sortedOccurrences.filter((occurrence) => {
-    if (createdFilter === 'me' && occurrence.reminder?.created_by !== user.id) {
-      return false;
-    }
-    if (createdFilter === 'others' && occurrence.reminder?.created_by === user.id) {
-      return false;
-    }
-    if (assignedFilter === 'me' && occurrence.reminder?.assigned_member_id !== memberId) {
-      return false;
-    }
-    return true;
-  });
-  const nextOccurrence = filteredOccurrences[0];
-
-  const groups: Record<string, typeof occurrences> = {
-    today: [],
-    tomorrow: [],
-    week: [],
-    later: []
-  };
-  filteredOccurrences.forEach((occurrence) => {
-    const date = new Date(occurrence.effective_at ?? occurrence.occur_at);
-    if (isToday(date)) {
-      groups.today.push(occurrence);
-    } else if (isTomorrow(date)) {
-      groups.tomorrow.push(occurrence);
-    } else if (isThisWeek(date, { weekStartsOn: 1 })) {
-      groups.week.push(occurrence);
-    } else {
-      groups.later.push(occurrence);
-    }
-  });
-  const groupLabels: Record<string, string> = {
-    today: copy.dashboard.groupToday,
-    tomorrow: copy.dashboard.groupTomorrow,
-    week: copy.dashboard.groupWeek,
-    later: copy.dashboard.groupLater
-  };
-
-  const buildFilterUrl = (created: string, assigned: string) => {
-    const params = new URLSearchParams();
-    if (created !== 'all') {
-      params.set('created', created);
-    }
-    if (assigned !== 'all') {
-      params.set('assigned', assigned);
-    }
-    const query = params.toString();
-    return query ? `/app?${query}` : '/app';
-  };
+  const initialAssignment = searchParams?.assigned === 'me' ? 'assigned_to_me' : 'all';
+  const nextOccurrence = sortedOccurrences[0];
 
   return (
     <AppShell locale={locale} activePath="/app" userEmail={user.email}>
@@ -186,76 +135,16 @@ export default async function DashboardPage({
           copy={copy.search}
         />
 
-        <section className="space-y-4">
-          <SectionHeader title={copy.dashboard.sectionTitle} description={copy.dashboard.sectionSubtitle} />
-          <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-borderSubtle bg-surface p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase text-muted">{copy.dashboard.filtersTitle}</div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold text-muted">{copy.dashboard.filtersCreatedLabel}</span>
-              {(['all', 'me', 'others'] as const).map((value) => (
-                <Link
-                  key={value}
-                  href={buildFilterUrl(value, assignedFilter)}
-                  className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                    createdFilter === value
-                      ? 'border-primary/40 bg-primarySoft text-primaryStrong'
-                      : 'border-borderSubtle text-muted hover:border-primary/30 hover:bg-surface'
-                  }`}
-                >
-                  {value === 'all'
-                    ? copy.dashboard.filtersCreatedAll
-                    : value === 'me'
-                      ? copy.dashboard.filtersCreatedMe
-                      : copy.dashboard.filtersCreatedOthers}
-                </Link>
-              ))}
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold text-muted">{copy.dashboard.filtersAssignedLabel}</span>
-              {(['all', 'me'] as const).map((value) => (
-                <Link
-                  key={value}
-                  href={buildFilterUrl(createdFilter, value)}
-                  className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                    assignedFilter === value
-                      ? 'border-primary/40 bg-primarySoft text-primaryStrong'
-                      : 'border-borderSubtle text-muted hover:border-primary/30 hover:bg-surface'
-                  }`}
-                >
-                  {value === 'all'
-                    ? copy.dashboard.filtersAssignedAll
-                    : copy.dashboard.filtersAssignedMe}
-                </Link>
-              ))}
-            </div>
-          </div>
-          {filteredOccurrences.length ? (
-            <div className="space-y-6">
-              {Object.entries(groups).map(([key, items]) => (
-                items.length ? (
-                  <div key={key} className="space-y-3">
-                    <div className="flex items-center gap-3 text-xs font-semibold uppercase text-muted">
-                      <span>{groupLabels[key]}</span>
-                      <span className="h-px flex-1 bg-borderSubtle" />
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                      {items.map((occurrence) => (
-                        <OccurrenceCard
-                          key={occurrence.id}
-                          occurrence={occurrence}
-                          locale={locale}
-                          googleConnected={Boolean(googleConnection)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ) : null
-              ))}
-            </div>
-          ) : (
-            <div className="card text-sm text-muted">{copy.dashboard.emptyFriendly}</div>
-          )}
-        </section>
+        <ReminderDashboardSection
+          occurrences={occurrences}
+          copy={copy}
+          membershipId={membership.id}
+          googleConnected={Boolean(googleConnection)}
+          initialCreatedBy={initialCreatedBy}
+          initialAssignment={initialAssignment}
+          locale={locale}
+          localeTag={getLocaleTag(locale)}
+        />
       </div>
     </AppShell>
   );
