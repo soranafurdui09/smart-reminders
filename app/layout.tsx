@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import ConfigGate from '@/components/ConfigGate';
+import { getLocaleFromCookie } from '@/lib/i18n/server';
 
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-space' });
 
@@ -17,8 +18,10 @@ export const viewport = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  const locale = getLocaleFromCookie();
+  const lang = locale === 'en' ? 'en' : locale === 'de' ? 'de' : 'ro';
   return (
-    <html lang="ro" className={spaceGrotesk.variable}>
+    <html lang={lang} className={spaceGrotesk.variable}>
       <body className="min-h-screen font-sans">
         <ConfigGate>{children}</ConfigGate>
       </body>

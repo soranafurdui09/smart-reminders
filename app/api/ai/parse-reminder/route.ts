@@ -7,7 +7,10 @@ export const runtime = 'nodejs';
 const EXAMPLE_INPUTS = [
   'Pay rent on the 1st of every month at 9am, remind me the day before',
   'Every Tuesday and Thursday at 20:00 Andrei should take out the trash',
-  'Doctor appointment tomorrow at 3pm, remind me 2 hours before'
+  'Doctor appointment tomorrow at 3pm, remind me 2 hours before',
+  'Miete jeden Monat am 1. um 9:00 zahlen, einen Tag vorher erinnern',
+  'Zahnarzttermin morgen um 15 Uhr, 2 Stunden vorher erinnern',
+  'Jeden Dienstag und Donnerstag um 20:00 soll Andrei den Muell rausbringen'
 ];
 
 function buildSystemPrompt() {

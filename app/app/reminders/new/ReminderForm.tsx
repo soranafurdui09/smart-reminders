@@ -28,7 +28,7 @@ export type ReminderFormVoiceHandle = {
   status: SpeechStatus;
 };
 
-type TemplateLocale = 'ro' | 'en';
+type TemplateLocale = 'ro' | 'en' | 'de';
 
 type ScheduleType = 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly';
 
@@ -157,11 +157,11 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
     scheduleType: 'yearly',
     preReminderMinutes: 10080,
     recurrenceRule: 'FREQ=YEARLY',
-    title: { ro: 'Zi de nastere', en: 'Birthday' },
-    description: { ro: 'Anual, cu timp pentru cadou.', en: 'Yearly, with time for a gift.' },
-    notes: { ro: 'Nume, cadou, locatie, mesaj.', en: 'Name, gift, venue, message.' },
-    tags: { ro: ['aniversare', 'familie', 'cadou'], en: ['birthday', 'family', 'gift'] },
-    searchTerms: ['zi de nastere', 'aniversare', 'birthday', 'cadou']
+    title: { ro: 'Zi de nastere', en: 'Birthday', de: 'Geburtstag' },
+    description: { ro: 'Anual, cu timp pentru cadou.', en: 'Yearly, with time for a gift.', de: 'Jährlich, mit Zeit für ein Geschenk.' },
+    notes: { ro: 'Nume, cadou, locatie, mesaj.', en: 'Name, gift, venue, message.', de: 'Name, Geschenk, Ort, Nachricht.' },
+    tags: { ro: ['aniversare', 'familie', 'cadou'], en: ['birthday', 'family', 'gift'], de: ['geburtstag', 'familie', 'geschenk'] },
+    searchTerms: ['zi de nastere', 'aniversare', 'birthday', 'cadou', 'geburtstag', 'geschenk']
   },
   {
     id: 'loan-payment',
@@ -169,11 +169,11 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
     scheduleType: 'monthly',
     preReminderMinutes: 4320,
     recurrenceRule: 'FREQ=MONTHLY',
-    title: { ro: 'Plata rata banca', en: 'Loan payment' },
-    description: { ro: 'Lunar, in jurul scadentei.', en: 'Monthly, around the due date.' },
-    notes: { ro: 'Banca, suma, data scadenta, cont.', en: 'Bank, amount, due date, account.' },
-    tags: { ro: ['rata', 'banca', 'scadenta'], en: ['loan', 'bank', 'due date'] },
-    searchTerms: ['rata', 'banca', 'imprumut', 'loan', 'installment']
+    title: { ro: 'Plata rata banca', en: 'Loan payment', de: 'Kreditrate' },
+    description: { ro: 'Lunar, in jurul scadentei.', en: 'Monthly, around the due date.', de: 'Monatlich, rund um das Fälligkeitsdatum.' },
+    notes: { ro: 'Banca, suma, data scadenta, cont.', en: 'Bank, amount, due date, account.', de: 'Bank, Betrag, Fälligkeit, Konto.' },
+    tags: { ro: ['rata', 'banca', 'scadenta'], en: ['loan', 'bank', 'due date'], de: ['kredit', 'bank', 'fälligkeit'] },
+    searchTerms: ['rata', 'banca', 'imprumut', 'loan', 'installment', 'kredit', 'rate', 'fälligkeit']
   },
   {
     id: 'rent',
@@ -181,11 +181,11 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
     scheduleType: 'monthly',
     preReminderMinutes: 4320,
     recurrenceRule: 'FREQ=MONTHLY',
-    title: { ro: 'Plata chirie', en: 'Rent payment' },
-    description: { ro: 'Lunar, inainte de data scadenta.', en: 'Monthly, before the due date.' },
-    notes: { ro: 'Proprietar, suma, cont.', en: 'Landlord, amount, account.' },
-    tags: { ro: ['chirie', 'locuinta', 'plata'], en: ['rent', 'housing', 'payment'] },
-    searchTerms: ['chirie', 'rent', 'locuinta', 'housing']
+    title: { ro: 'Plata chirie', en: 'Rent payment', de: 'Mietzahlung' },
+    description: { ro: 'Lunar, inainte de data scadenta.', en: 'Monthly, before the due date.', de: 'Monatlich, vor dem Fälligkeitsdatum.' },
+    notes: { ro: 'Proprietar, suma, cont.', en: 'Landlord, amount, account.', de: 'Vermieter, Betrag, Konto.' },
+    tags: { ro: ['chirie', 'locuinta', 'plata'], en: ['rent', 'housing', 'payment'], de: ['miete', 'wohnung', 'zahlung'] },
+    searchTerms: ['chirie', 'rent', 'locuinta', 'housing', 'miete', 'mietzahlung']
   },
   {
     id: 'utilities',
@@ -193,11 +193,11 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
     scheduleType: 'monthly',
     preReminderMinutes: 2880,
     recurrenceRule: 'FREQ=MONTHLY',
-    title: { ro: 'Facturi utilitati', en: 'Utilities bills' },
-    description: { ro: 'Electricitate, gaz, apa, salubritate.', en: 'Electricity, gas, water, waste.' },
-    notes: { ro: 'Provider, perioada, link de plata.', en: 'Provider, period, payment link.' },
-    tags: { ro: ['facturi', 'utilitati', 'plata'], en: ['bills', 'utilities', 'payment'] },
-    searchTerms: ['utilitati', 'facturi', 'bills', 'utilities']
+    title: { ro: 'Facturi utilitati', en: 'Utilities bills', de: 'Nebenkosten' },
+    description: { ro: 'Electricitate, gaz, apa, salubritate.', en: 'Electricity, gas, water, waste.', de: 'Strom, Gas, Wasser, Müll.' },
+    notes: { ro: 'Provider, perioada, link de plata.', en: 'Provider, period, payment link.', de: 'Anbieter, Zeitraum, Zahlungslink.' },
+    tags: { ro: ['facturi', 'utilitati', 'plata'], en: ['bills', 'utilities', 'payment'], de: ['nebenkosten', 'rechnungen', 'zahlung'] },
+    searchTerms: ['utilitati', 'facturi', 'bills', 'utilities', 'nebenkosten', 'rechnung', 'strom', 'gas']
   },
   {
     id: 'credit-card',
@@ -205,11 +205,11 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
     scheduleType: 'monthly',
     preReminderMinutes: 4320,
     recurrenceRule: 'FREQ=MONTHLY',
-    title: { ro: 'Scadenta card credit', en: 'Credit card due' },
-    description: { ro: 'Plata minima sau integrala.', en: 'Minimum or full payment.' },
-    notes: { ro: 'Data scadenta, suma minima.', en: 'Due date, minimum amount.' },
-    tags: { ro: ['card', 'credit', 'scadenta'], en: ['card', 'credit', 'due date'] },
-    searchTerms: ['card', 'credit', 'scadenta', 'due']
+    title: { ro: 'Scadenta card credit', en: 'Credit card due', de: 'Kreditkartenfälligkeit' },
+    description: { ro: 'Plata minima sau integrala.', en: 'Minimum or full payment.', de: 'Mindest- oder Gesamtzahlung.' },
+    notes: { ro: 'Data scadenta, suma minima.', en: 'Due date, minimum amount.', de: 'Fälligkeit, Mindestbetrag.' },
+    tags: { ro: ['card', 'credit', 'scadenta'], en: ['card', 'credit', 'due date'], de: ['kreditkarte', 'fälligkeit', 'zahlung'] },
+    searchTerms: ['card', 'credit', 'scadenta', 'due', 'kreditkarte', 'fälligkeit']
   },
   {
     id: 'itp',
@@ -217,11 +217,11 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
     scheduleType: 'yearly',
     preReminderMinutes: 43200,
     recurrenceRule: 'FREQ=YEARLY',
-    title: { ro: 'ITP masina', en: 'Car inspection' },
-    description: { ro: 'Inspectie tehnica periodica.', en: 'Periodic technical inspection.' },
-    notes: { ro: 'Service, seria CIV, interval 1-2 ani.', en: 'Service, car ID, interval 1-2 years.' },
-    tags: { ro: ['auto', 'inspectie', 'itp'], en: ['car', 'inspection', 'itp'] },
-    searchTerms: ['itp', 'inspectie', 'car inspection', 'auto']
+    title: { ro: 'ITP masina', en: 'Car inspection', de: 'TÜV Auto' },
+    description: { ro: 'Inspectie tehnica periodica.', en: 'Periodic technical inspection.', de: 'Periodische technische Untersuchung.' },
+    notes: { ro: 'Service, seria CIV, interval 1-2 ani.', en: 'Service, car ID, interval 1-2 years.', de: 'Werkstatt, Fahrzeug-ID, Intervall 1–2 Jahre.' },
+    tags: { ro: ['auto', 'inspectie', 'itp'], en: ['car', 'inspection', 'itp'], de: ['auto', 'tüv', 'inspektion'] },
+    searchTerms: ['itp', 'inspectie', 'car inspection', 'auto', 'tüv', 'hu', 'inspektion']
   },
   {
     id: 'car-insurance',
@@ -229,11 +229,11 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
     scheduleType: 'yearly',
     preReminderMinutes: 43200,
     recurrenceRule: 'FREQ=YEARLY',
-    title: { ro: 'Asigurare auto (RCA/CASCO)', en: 'Car insurance (RCA/CASCO)' },
-    description: { ro: 'Reinnoire polita auto.', en: 'Renew your car policy.' },
-    notes: { ro: 'Asigurator, numar polita.', en: 'Insurer, policy number.' },
-    tags: { ro: ['asigurare', 'auto', 'rca'], en: ['insurance', 'car', 'rca'] },
-    searchTerms: ['asigurare', 'rca', 'casco', 'insurance', 'auto']
+    title: { ro: 'Asigurare auto (RCA/CASCO)', en: 'Car insurance (RCA/CASCO)', de: 'Kfz-Versicherung (Haftpflicht/Vollkasko)' },
+    description: { ro: 'Reinnoire polita auto.', en: 'Renew your car policy.', de: 'Autopolice erneuern.' },
+    notes: { ro: 'Asigurator, numar polita.', en: 'Insurer, policy number.', de: 'Versicherer, Policennummer.' },
+    tags: { ro: ['asigurare', 'auto', 'rca'], en: ['insurance', 'car', 'rca'], de: ['versicherung', 'auto', 'police'] },
+    searchTerms: ['asigurare', 'rca', 'casco', 'insurance', 'auto', 'kfz', 'versicherung']
   },
   {
     id: 'home-insurance',
@@ -241,11 +241,11 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
     scheduleType: 'yearly',
     preReminderMinutes: 43200,
     recurrenceRule: 'FREQ=YEARLY',
-    title: { ro: 'Asigurare locuinta', en: 'Home insurance' },
-    description: { ro: 'Reinnoire polita locuinta.', en: 'Renew your home policy.' },
-    notes: { ro: 'Asigurator, numar polita.', en: 'Insurer, policy number.' },
-    tags: { ro: ['asigurare', 'locuinta', 'polita'], en: ['insurance', 'home', 'policy'] },
-    searchTerms: ['asigurare', 'locuinta', 'home', 'insurance']
+    title: { ro: 'Asigurare locuinta', en: 'Home insurance', de: 'Hausratversicherung' },
+    description: { ro: 'Reinnoire polita locuinta.', en: 'Renew your home policy.', de: 'Wohnungsversicherung erneuern.' },
+    notes: { ro: 'Asigurator, numar polita.', en: 'Insurer, policy number.', de: 'Versicherer, Policennummer.' },
+    tags: { ro: ['asigurare', 'locuinta', 'polita'], en: ['insurance', 'home', 'policy'], de: ['versicherung', 'zuhause', 'police'] },
+    searchTerms: ['asigurare', 'locuinta', 'home', 'insurance', 'hausrat', 'versicherung']
   },
   {
     id: 'boiler-service',
@@ -253,11 +253,11 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
     scheduleType: 'yearly',
     preReminderMinutes: 43200,
     recurrenceRule: 'FREQ=YEARLY',
-    title: { ro: 'Revizie centrala', en: 'Boiler service' },
-    description: { ro: 'Verificare tehnica anuala.', en: 'Annual technical check.' },
-    notes: { ro: 'Firma service, contract, data.', en: 'Service company, contract, date.' },
-    tags: { ro: ['revizie', 'centrala', 'service'], en: ['service', 'boiler', 'maintenance'] },
-    searchTerms: ['centrala', 'revizie', 'service', 'boiler', 'maintenance']
+    title: { ro: 'Revizie centrala', en: 'Boiler service', de: 'Heizungswartung' },
+    description: { ro: 'Verificare tehnica anuala.', en: 'Annual technical check.', de: 'Jährliche technische Prüfung.' },
+    notes: { ro: 'Firma service, contract, data.', en: 'Service company, contract, date.', de: 'Servicefirma, Vertrag, Datum.' },
+    tags: { ro: ['revizie', 'centrala', 'service'], en: ['service', 'boiler', 'maintenance'], de: ['wartung', 'heizung', 'service'] },
+    searchTerms: ['centrala', 'revizie', 'service', 'boiler', 'maintenance', 'heizung', 'wartung']
   },
   {
     id: 'local-taxes',
@@ -265,11 +265,11 @@ const REMINDER_TEMPLATES: ReminderTemplate[] = [
     scheduleType: 'yearly',
     preReminderMinutes: 20160,
     recurrenceRule: 'FREQ=YEARLY',
-    title: { ro: 'Taxe locale', en: 'Local taxes' },
-    description: { ro: 'Impozit auto si locuinta.', en: 'Car and property taxes.' },
-    notes: { ro: 'Primarie, ghiseu, termene.', en: 'City hall, portal, deadlines.' },
-    tags: { ro: ['taxe', 'impozit', 'primarie'], en: ['taxes', 'property', 'city hall'] },
-    searchTerms: ['taxe', 'impozit', 'taxes', 'primarie']
+    title: { ro: 'Taxe locale', en: 'Local taxes', de: 'Kommunale Steuern' },
+    description: { ro: 'Impozit auto si locuinta.', en: 'Car and property taxes.', de: 'Kfz- und Grundsteuer.' },
+    notes: { ro: 'Primarie, ghiseu, termene.', en: 'City hall, portal, deadlines.', de: 'Rathaus, Portal, Fristen.' },
+    tags: { ro: ['taxe', 'impozit', 'primarie'], en: ['taxes', 'property', 'city hall'], de: ['steuern', 'grundsteuer', 'rathaus'] },
+    searchTerms: ['taxe', 'impozit', 'taxes', 'primarie', 'steuern', 'grundsteuer']
   }
 ];
 
@@ -313,6 +313,9 @@ function formatPreReminder(locale: TemplateLocale, minutes: number) {
     if (locale === 'ro') {
       return `cu ${days} ${days === 1 ? 'zi' : 'zile'} inainte`;
     }
+    if (locale === 'de') {
+      return `in ${days} ${days === 1 ? 'Tag' : 'Tagen'}`;
+    }
     return `${days} day${days === 1 ? '' : 's'} before`;
   }
   if (minutes % 60 === 0) {
@@ -320,10 +323,16 @@ function formatPreReminder(locale: TemplateLocale, minutes: number) {
     if (locale === 'ro') {
       return `cu ${hours} ${hours === 1 ? 'ora' : 'ore'} inainte`;
     }
+    if (locale === 'de') {
+      return `in ${hours} ${hours === 1 ? 'Stunde' : 'Stunden'}`;
+    }
     return `${hours} hour${hours === 1 ? '' : 's'} before`;
   }
   if (locale === 'ro') {
     return `cu ${minutes} min inainte`;
+  }
+  if (locale === 'de') {
+    return `in ${minutes} Min`;
   }
   return `${minutes} min before`;
 }
@@ -349,7 +358,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   autoVoice = false,
   onVoiceStateChange
 }, ref) {
-  const activeLocale: TemplateLocale = locale === 'en' ? 'en' : 'ro';
+  const activeLocale: TemplateLocale = locale === 'en' ? 'en' : locale === 'de' ? 'de' : 'ro';
   const [aiText, setAiText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -636,7 +645,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   }, [applyParsedReminder, copy.remindersNew.voiceMissingDate]);
 
   const voice = useSpeechToReminder<AiResult>({
-    lang: activeLocale === 'en' ? 'en-US' : 'ro-RO',
+    lang: activeLocale === 'en' ? 'en-US' : activeLocale === 'de' ? 'de-DE' : 'ro-RO',
     autoStart: autoVoice,
     useAi: voiceUseAi,
     parseText: (text) => parseReminderText(text, false),

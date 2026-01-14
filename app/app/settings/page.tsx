@@ -36,6 +36,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { u
             <select name="locale" className="input" defaultValue={locale}>
               <option value="ro">{copy.language.ro}</option>
               <option value="en">{copy.language.en}</option>
+              <option value="de">{copy.language.de}</option>
             </select>
             <ActionSubmitButton
               className="btn btn-primary"

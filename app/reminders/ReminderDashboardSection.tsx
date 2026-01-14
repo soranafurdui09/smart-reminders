@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from 'react';
-import { isThisWeek, isToday, isTomorrow } from 'date-fns';
+import { addDays, endOfDay, startOfDay } from 'date-fns';
 import SectionHeader from '@/components/SectionHeader';
 import OccurrenceCard from '@/components/OccurrenceCard';
 import ReminderFilterBar from './ReminderFilterBar';
@@ -66,10 +66,9 @@ type Props = {
 };
 
 const groupLabels = (copy: MessageBundle) => ({
-  today: copy.dashboard.groupToday,
   tomorrow: copy.dashboard.groupTomorrow,
-  week: copy.dashboard.groupWeek,
-  later: copy.dashboard.groupLater
+  nextWeek: copy.dashboard.groupNextWeek,
+  nextMonth: copy.dashboard.groupNextMonth
 });
 
 const CreatedOptions: CreatedByOption[] = ['all', 'me', 'others'];
@@ -93,6 +92,7 @@ export default function ReminderDashboardSection({
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [kindFilter, setKindFilter] = useState<'all' | 'tasks' | 'medications'>('all');
   const [doseState, setDoseState] = useState<MedicationDose[]>(medicationDoses);
+  const [visibleMonthGroups, setVisibleMonthGroups] = useState(2);
 
   const filteredOccurrences = useMemo(() => {
     const normalized = occurrences
@@ -123,32 +123,69 @@ export default function ReminderDashboardSection({
     return normalized;
   }, [occurrences, createdBy, assignment, membershipId, userId, kindFilter]);
 
-  const nextOccurrence = filteredOccurrences[0];
+  const nextOccurrence =
+    grouped.sections.tomorrow[0] ??
+    grouped.sections.nextWeek[0] ??
+    grouped.sections.nextMonth[0] ??
+    grouped.monthEntries[0]?.[1]?.[0];
   const nextOccurrenceTimeZone = nextOccurrence?.reminder?.tz ?? null;
 
-  const groups = useMemo(() => {
+  const grouped = useMemo(() => {
+    const now = new Date();
+    const startTomorrow = startOfDay(addDays(now, 1));
+    const endTomorrow = endOfDay(addDays(now, 1));
+    const endNextWeek = endOfDay(addDays(now, 7));
+    const endNextMonth = endOfDay(addDays(now, 30));
+
     const sections: Record<string, OccurrencePayload[]> = {
-      today: [],
       tomorrow: [],
-      week: [],
-      later: []
+      nextWeek: [],
+      nextMonth: []
     };
+    const monthBuckets = new Map<string, OccurrencePayload[]>();
+
     filteredOccurrences.forEach((occurrence) => {
       const compareDate = new Date(occurrence.effective_at ?? occurrence.occur_at);
-      if (isToday(compareDate)) {
-        sections.today.push(occurrence);
-      } else if (isTomorrow(compareDate)) {
-        sections.tomorrow.push(occurrence);
-      } else if (isThisWeek(compareDate, { weekStartsOn: 1 })) {
-        sections.week.push(occurrence);
-      } else {
-        sections.later.push(occurrence);
+      if (Number.isNaN(compareDate.getTime())) {
+        return;
       }
+      if (compareDate < startTomorrow) {
+        return;
+      }
+      if (compareDate >= startTomorrow && compareDate <= endTomorrow) {
+        sections.tomorrow.push(occurrence);
+        return;
+      }
+      if (compareDate > endTomorrow && compareDate <= endNextWeek) {
+        sections.nextWeek.push(occurrence);
+        return;
+      }
+      if (compareDate > endNextWeek && compareDate <= endNextMonth) {
+        sections.nextMonth.push(occurrence);
+        return;
+      }
+      const monthKey = `${compareDate.getFullYear()}-${String(compareDate.getMonth() + 1).padStart(2, '0')}`;
+      const existing = monthBuckets.get(monthKey) ?? [];
+      existing.push(occurrence);
+      monthBuckets.set(monthKey, existing);
     });
-    return sections;
+
+    const monthEntries = Array.from(monthBuckets.entries()).sort(([a], [b]) => a.localeCompare(b));
+    return { sections, monthEntries };
   }, [filteredOccurrences]);
 
   const labels = groupLabels(copy);
+  const hasMonthGroups = grouped.monthEntries.length > 0;
+  const visibleMonthEntries = grouped.monthEntries.slice(0, visibleMonthGroups);
+  const hasMoreMonths = grouped.monthEntries.length > visibleMonthGroups;
+  const hasGroupedItems = useMemo(() => {
+    const sectionHas = Object.values(grouped.sections).some((items) => items.length > 0);
+    return sectionHas || grouped.monthEntries.length > 0;
+  }, [grouped]);
+  const monthLabelFormatter = useMemo(
+    () => new Intl.DateTimeFormat(localeTag, { month: 'long', year: 'numeric' }),
+    [localeTag]
+  );
   const visibleDoses = useMemo(
     () => doseState.filter((dose) => dose.status === 'pending').slice(0, 5),
     [doseState]
@@ -310,9 +347,9 @@ export default function ReminderDashboardSection({
         </div>
       ) : null}
       {kindFilter !== 'medications' ? (
-        filteredOccurrences.length ? (
+        hasGroupedItems ? (
           <div className="space-y-6">
-            {Object.entries(groups).map(([key, items]) =>
+            {Object.entries(grouped.sections).map(([key, items]) =>
               items.length ? (
                 <div key={key} className="space-y-3">
                   <div className="flex items-center gap-3 text-xs font-semibold uppercase text-muted">
@@ -332,6 +369,43 @@ export default function ReminderDashboardSection({
                 </div>
               ) : null
             )}
+            {hasMonthGroups ? (
+              <div className="space-y-6">
+                {visibleMonthEntries.map(([monthKey, items]) => {
+                  const [year, month] = monthKey.split('-').map(Number);
+                  const labelDate = new Date(year, Math.max(0, month - 1), 1);
+                  return (
+                    <div key={monthKey} className="space-y-3">
+                      <div className="flex items-center gap-3 text-xs font-semibold uppercase text-muted">
+                        <span>{monthLabelFormatter.format(labelDate)}</span>
+                        <span className="h-px flex-1 bg-borderSubtle" />
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {items.map((occurrence) => (
+                          <OccurrenceCard
+                            key={occurrence.id}
+                            occurrence={occurrence}
+                            locale={locale}
+                            googleConnected={googleConnected}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+                {hasMoreMonths ? (
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setVisibleMonthGroups((prev) => prev + 2)}
+                    >
+                      {copy.dashboard.viewMoreMonths}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="card text-sm text-muted">{copy.dashboard.emptyFriendly}</div>
