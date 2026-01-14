@@ -15,9 +15,9 @@ type OccurrencePayload = {
   occur_at: string;
   snoozed_until?: string | null;
   status: string;
-  reminder: {
-    id: string;
-    title: string;
+  reminder?: {
+    id?: string;
+    title?: string;
     due_at?: string | null;
     created_by?: string | null;
     assigned_member_id?: string | null;
@@ -25,7 +25,7 @@ type OccurrencePayload = {
     notes?: string | null;
     google_event_id?: string | null;
     assigned_member_label?: string | null;
-  };
+  } | null;
   performed_by?: string | null;
   performed_by_label?: string | null;
   effective_at?: string;
