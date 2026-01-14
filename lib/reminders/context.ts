@@ -150,9 +150,12 @@ export function evaluateReminderContext(input: ContextEvaluationInput): ContextD
       return { type: 'skip_for_now', reason: 'outside_time_window' };
     }
   }
-  const calendar = settings.calendarBusy ?? defaults.calendarBusy;
-  if (calendar.enabled && isCalendarBusy) {
-    const snoozeMs = calendar.snoozeMinutes * 60000;
+  const calendarSettings = settings.calendarBusy ?? defaults.calendarBusy ?? {
+    enabled: false,
+    snoozeMinutes: 15
+  };
+  if (calendarSettings.enabled && isCalendarBusy) {
+    const snoozeMs = calendarSettings.snoozeMinutes * 60000;
     const newDate = new Date(now.getTime() + snoozeMs);
     return {
       type: 'auto_snooze',
