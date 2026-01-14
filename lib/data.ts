@@ -50,7 +50,7 @@ type DoneOccurrence = {
   status?: string;
   done_at?: string | null;
   performed_by?: string | null;
-  reminder?: Pick<ReminderPreview, 'id' | 'title' | 'household_id'> | null;
+  reminder?: Pick<ReminderPreview, 'id' | 'title' | 'household_id' | 'category'> | null;
 };
 
 type ActionOccurrence = {
