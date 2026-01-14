@@ -123,13 +123,6 @@ export default function ReminderDashboardSection({
     return normalized;
   }, [occurrences, createdBy, assignment, membershipId, userId, kindFilter]);
 
-  const nextOccurrence =
-    grouped.sections.tomorrow[0] ??
-    grouped.sections.nextWeek[0] ??
-    grouped.sections.nextMonth[0] ??
-    grouped.monthEntries[0]?.[1]?.[0];
-  const nextOccurrenceTimeZone = nextOccurrence?.reminder?.tz ?? null;
-
   const grouped = useMemo(() => {
     const now = new Date();
     const startTomorrow = startOfDay(addDays(now, 1));
@@ -173,6 +166,13 @@ export default function ReminderDashboardSection({
     const monthEntries = Array.from(monthBuckets.entries()).sort(([a], [b]) => a.localeCompare(b));
     return { sections, monthEntries };
   }, [filteredOccurrences]);
+
+  const nextOccurrence =
+    grouped.sections.tomorrow[0] ??
+    grouped.sections.nextWeek[0] ??
+    grouped.sections.nextMonth[0] ??
+    grouped.monthEntries[0]?.[1]?.[0];
+  const nextOccurrenceTimeZone = nextOccurrence?.reminder?.tz ?? null;
 
   const labels = groupLabels(copy);
   const hasMonthGroups = grouped.monthEntries.length > 0;
