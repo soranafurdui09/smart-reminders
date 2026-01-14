@@ -8,7 +8,7 @@ import { getHouseholdMembers, getOpenOccurrencesForHousehold, getUserHousehold, 
 import { getLocaleTag, messages } from '@/lib/i18n';
 import { createHousehold } from './household/actions';
 import { getUserGoogleConnection } from '@/lib/google/calendar';
-import ReminderDashboardSection from '@/app/reminders/ReminderDashboardSection';
+import ReminderDashboardSection from '@/reminders/ReminderDashboardSection';
 
 export default async function DashboardPage({
   searchParams
