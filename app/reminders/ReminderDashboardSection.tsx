@@ -5,7 +5,7 @@ import { isThisWeek, isToday, isTomorrow } from 'date-fns';
 import SectionHeader from '@/components/SectionHeader';
 import OccurrenceCard from '@/components/OccurrenceCard';
 import ReminderFilterBar from './ReminderFilterBar';
-import { messages } from '@/lib/i18n';
+import { messages, type Locale } from '@/lib/i18n';
 
 type CreatedByOption = 'all' | 'me' | 'others';
 type AssignmentOption = 'all' | 'assigned_to_me';
@@ -31,18 +31,20 @@ type OccurrencePayload = {
   effective_at?: string;
 };
 
+type MessageBundle = typeof messages[Locale];
+
 type Props = {
   occurrences: OccurrencePayload[];
-  copy: typeof messages['ro'];
+  copy: MessageBundle;
   membershipId: string;
   googleConnected: boolean;
   initialCreatedBy?: CreatedByOption;
   initialAssignment?: AssignmentOption;
-  locale: keyof typeof messages;
+  locale: Locale;
   localeTag: string;
 };
 
-const groupLabels = (copy: typeof messages['ro']) => ({
+const groupLabels = (copy: MessageBundle) => ({
   today: copy.dashboard.groupToday,
   tomorrow: copy.dashboard.groupTomorrow,
   week: copy.dashboard.groupWeek,
