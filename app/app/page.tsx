@@ -4,13 +4,13 @@ import AppShell from '@/components/AppShell';
 import SemanticSearch from '@/components/SemanticSearch';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { requireUser } from '@/lib/auth';
-import { getHouseholdMembers, getOpenOccurrencesForHousehold, getUserHousehold, getUserLocale } from '@/lib/data';
+import { getHouseholdMembers, getOpenOccurrencesForHousehold, getUserHousehold, getUserLocale, getUserTimeZone } from '@/lib/data';
 import { getLocaleTag, messages } from '@/lib/i18n';
 import { createHousehold } from './household/actions';
 import { getUserGoogleConnection } from '@/lib/google/calendar';
 import ReminderDashboardSection from '@/app/reminders/ReminderDashboardSection';
 import { getTodayMedicationDoses } from '@/lib/reminders/medication';
-import { formatDateTimeWithTimeZone } from '@/lib/dates';
+import { formatReminderDateTime } from '@/lib/dates';
 
 export default async function DashboardPage({
   searchParams
@@ -19,6 +19,7 @@ export default async function DashboardPage({
 }) {
   const user = await requireUser('/app');
   const locale = await getUserLocale(user.id);
+  const userTimeZone = await getUserTimeZone(user.id);
   const copy = messages[locale];
   const membership = await getUserHousehold(user.id);
   const googleConnection = await getUserGoogleConnection(user.id);
@@ -100,7 +101,9 @@ export default async function DashboardPage({
       : 'all';
   const initialAssignment = searchParams?.assigned === 'me' ? 'assigned_to_me' : 'all';
   const nextOccurrence = sortedOccurrences[0];
-  const nextOccurrenceTimeZone = nextOccurrence?.reminder?.tz ?? null;
+  const nextOccurrenceTimeZone = nextOccurrence?.reminder?.tz && nextOccurrence.reminder.tz !== 'UTC'
+    ? nextOccurrence.reminder.tz
+    : userTimeZone;
 
   return (
     <AppShell locale={locale} activePath="/app" userEmail={user.email}>
@@ -128,7 +131,7 @@ export default async function DashboardPage({
                       d="M8 7V5m8 2V5M4 11h16M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                     />
                   </svg>
-                  {formatDateTimeWithTimeZone(nextOccurrence.occur_at, nextOccurrenceTimeZone)}
+                  {formatReminderDateTime(nextOccurrence.occur_at, nextOccurrenceTimeZone, userTimeZone)}
                 </div>
               </div>
             ) : (
@@ -155,6 +158,7 @@ export default async function DashboardPage({
           initialAssignment={initialAssignment}
           locale={locale}
           localeTag={getLocaleTag(locale)}
+          userTimeZone={userTimeZone}
         />
       </div>
     </AppShell>

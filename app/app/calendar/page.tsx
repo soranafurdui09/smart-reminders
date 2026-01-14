@@ -3,9 +3,9 @@ import { addDays, addMonths, endOfMonth, endOfWeek, format, isToday, startOfMont
 import AppShell from '@/components/AppShell';
 import SectionHeader from '@/components/SectionHeader';
 import { requireUser } from '@/lib/auth';
-import { getOpenOccurrencesForHouseholdRange, getUserHousehold, getUserLocale } from '@/lib/data';
+import { getOpenOccurrencesForHouseholdRange, getUserHousehold, getUserLocale, getUserTimeZone } from '@/lib/data';
 import { getLocaleTag, messages } from '@/lib/i18n';
-import { formatDateTimeWithTimeZone } from '@/lib/dates';
+import { formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
 import { getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
 
 function parseMonth(monthParam?: string) {
@@ -31,6 +31,7 @@ export default async function CalendarPage({
 }) {
   const user = await requireUser('/app/calendar');
   const locale = await getUserLocale(user.id);
+  const userTimeZone = await getUserTimeZone(user.id);
   const copy = messages[locale];
   const membership = await getUserHousehold(user.id);
 
@@ -127,6 +128,10 @@ export default async function CalendarPage({
                       medicationDetails: occurrence.reminder?.medication_details
                     });
                     const category = getReminderCategory(categoryId);
+                    const displayTimeZone = resolveReminderTimeZone(occurrence.reminder?.tz ?? null, userTimeZone);
+                    const displayLabel = occurrence.snoozed_until
+                      ? formatDateTimeWithTimeZone(occurrence.effective_at, displayTimeZone)
+                      : formatReminderDateTime(occurrence.effective_at, displayTimeZone, userTimeZone);
                     return (
                       <Link
                         key={occurrence.id}
@@ -140,7 +145,7 @@ export default async function CalendarPage({
                           aria-hidden="true"
                         />
                         <div className="truncate font-semibold">
-                          {formatDateTimeWithTimeZone(occurrence.effective_at, occurrence.reminder?.tz ?? null).slice(-5)}{' '}
+                          {displayLabel.slice(-5)}{' '}
                           {occurrence.reminder?.title ?? copy.reminderDetail.title}
                         </div>
                       </Link>

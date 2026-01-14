@@ -308,6 +308,20 @@ export async function getUserLocale(userId: string) {
   return normalizeLocale(data?.locale);
 }
 
+export async function getUserTimeZone(userId: string) {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('time_zone')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) {
+    logDataError('getUserTimeZone', error);
+    return 'UTC';
+  }
+  return data?.time_zone || 'UTC';
+}
+
 export async function getReminderById(reminderId: string) {
   const supabase = createServerClient();
   const { data, error } = await supabase

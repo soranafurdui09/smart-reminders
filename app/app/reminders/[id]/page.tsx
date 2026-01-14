@@ -2,9 +2,9 @@ import Link from 'next/link';
 import AppShell from '@/components/AppShell';
 import SectionHeader from '@/components/SectionHeader';
 import { requireUser } from '@/lib/auth';
-import { getHouseholdMembers, getReminderById, getUserLocale } from '@/lib/data';
+import { getHouseholdMembers, getReminderById, getUserLocale, getUserTimeZone } from '@/lib/data';
 import { messages } from '@/lib/i18n';
-import { formatDateTimeWithTimeZone } from '@/lib/dates';
+import { formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
 import { cloneReminder } from './actions';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { getUserGoogleConnection } from '@/lib/google/calendar';
@@ -15,6 +15,7 @@ import GoogleCalendarDeleteDialog from '@/components/GoogleCalendarDeleteDialog'
 export default async function ReminderDetailPage({ params }: { params: { id: string } }) {
   const user = await requireUser(`/app/reminders/${params.id}`);
   const locale = await getUserLocale(user.id);
+  const userTimeZone = await getUserTimeZone(user.id);
   const copy = messages[locale];
   const reminder = await getReminderById(params.id);
   const googleConnection = await getUserGoogleConnection(user.id);
@@ -47,7 +48,7 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
   const assigneeLabel = reminder.assigned_member_id
     ? memberMap.get(reminder.assigned_member_id) || copy.common.assigneeUnassigned
     : copy.common.assigneeUnassigned;
-  const reminderTimeZone = reminder.tz ?? null;
+  const reminderTimeZone = resolveReminderTimeZone(reminder.tz ?? null, userTimeZone);
 
   return (
     <AppShell locale={locale} userEmail={user.email}>
@@ -129,7 +130,7 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
             </div>
             {reminder.due_at ? (
               <div className="text-sm text-muted">
-                {copy.reminderDetail.firstDate}: {formatDateTimeWithTimeZone(reminder.due_at, reminderTimeZone)}
+                {copy.reminderDetail.firstDate}: {formatReminderDateTime(reminder.due_at, reminderTimeZone, userTimeZone)}
               </div>
             ) : null}
             <div className="text-sm text-muted">
@@ -145,7 +146,7 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
             {(reminder.reminder_occurrences || []).map((occurrence: any) => (
               <div key={occurrence.id} className="card space-y-2">
                 <div className="text-sm text-muted">
-                  {formatDateTimeWithTimeZone(occurrence.occur_at, reminderTimeZone)}
+                  {formatReminderDateTime(occurrence.occur_at, reminderTimeZone, userTimeZone)}
                 </div>
                 <div className="text-sm font-semibold text-ink">
                   {occurrence.status === 'done'

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { addMinutes, format } from 'date-fns';
+import { addMinutes } from 'date-fns';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAppUrl, sendEmail } from '@/lib/notifications';
 import { sendPushNotification } from '@/lib/push';
@@ -9,6 +9,7 @@ import { evaluateReminderContext, parseContextSettings } from '@/lib/reminders/c
 import { getFreeBusyIntervalsForUser } from '@/lib/google/calendar';
 import { deferNotificationJob, rescheduleNotificationJob } from '@/lib/notifications/jobs';
 import { computePostponeUntil, findBusyIntervalAt, FREEBUSY_CACHE_WINDOW_MS } from '@/lib/google/freebusy-cache';
+import { formatDateTimeWithTimeZone, interpretAsTimeZone, resolveReminderTimeZone } from '@/lib/dates';
 
 export const runtime = 'nodejs';
 
@@ -34,19 +35,26 @@ type ReminderRecord = {
   context_settings?: any;
   kind?: string | null;
   medication_details?: any;
+  tz?: string | null;
 };
 
 export async function GET() {
   const admin = createAdminClient();
   const now = new Date();
   const nowIso = now.toISOString();
-  const windowStart = addMinutes(now, -15);
+  const windowMinutes = 15;
+  const tzPaddingMinutes = 14 * 60;
+  const windowStart = addMinutes(now, -windowMinutes);
   const windowStartIso = windowStart.toISOString();
   const windowEndIso = nowIso;
+  const fetchStartIso = addMinutes(now, -(windowMinutes + tzPaddingMinutes)).toISOString();
+  const fetchEndIso = addMinutes(now, tzPaddingMinutes).toISOString();
   const appUrl = getAppUrl();
   console.log('[cron] dispatch notifications', {
     windowStart: windowStartIso,
-    windowEnd: windowEndIso
+    windowEnd: windowEndIso,
+    fetchStart: fetchStartIso,
+    fetchEnd: fetchEndIso
   });
 
   const { data: existingJobs, error: existingError } = await admin
@@ -151,8 +159,8 @@ export async function GET() {
     .from('notification_jobs')
     .select('id, reminder_id, user_id, notify_at, channel, status, action_token, action_token_expires_at')
     .eq('status', 'pending')
-    .gte('notify_at', windowStartIso)
-    .lte('notify_at', windowEndIso)
+    .gte('notify_at', fetchStartIso)
+    .lte('notify_at', fetchEndIso)
     .order('notify_at', { ascending: true })
     .limit(1000);
 
@@ -174,7 +182,7 @@ export async function GET() {
 
   const { data: reminders, error: reminderError } = await admin
     .from('reminders')
-    .select('id, title, household_id, is_active, created_by, context_settings, kind, medication_details')
+    .select('id, title, household_id, is_active, created_by, context_settings, kind, medication_details, tz')
     .in('id', reminderIds);
 
   if (reminderError) {
@@ -319,8 +327,16 @@ export async function GET() {
       continue;
     }
 
-    const dueAt = new Date(job.notify_at);
-    const occurAtLabel = format(dueAt, 'dd MMM yyyy, HH:mm');
+    const profile = profileMap.get(job.user_id);
+    const userTimeZone = profile?.timeZone || 'UTC';
+    const displayTimeZone = resolveReminderTimeZone(reminder.tz ?? null, userTimeZone);
+    const dueAt = displayTimeZone && displayTimeZone !== 'UTC'
+      ? interpretAsTimeZone(job.notify_at, displayTimeZone)
+      : new Date(job.notify_at);
+    if (dueAt < windowStart || dueAt > now) {
+      continue;
+    }
+    const occurAtLabel = formatDateTimeWithTimeZone(dueAt, displayTimeZone);
     const settings = settingsMap.get(reminder.id) ?? parseContextSettings(reminder.context_settings ?? null);
     const busyInterval = settings.calendarBusy?.enabled
       ? busyIntervalMap.get(reminder.created_by) ?? null
@@ -383,7 +399,7 @@ export async function GET() {
     };
 
     if (channel === 'email' || channel === 'both') {
-      const email = profileMap.get(job.user_id)?.email;
+      const email = profile?.email;
       if (email) {
         let logRow: { id?: string } | null = null;
         let logError: unknown = null;

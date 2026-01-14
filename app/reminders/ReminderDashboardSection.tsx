@@ -1,12 +1,18 @@
 "use client";
 
 import { useMemo, useState } from 'react';
-import { addDays, endOfDay, startOfDay } from 'date-fns';
 import SectionHeader from '@/components/SectionHeader';
 import OccurrenceCard from '@/components/OccurrenceCard';
 import ReminderFilterBar from './ReminderFilterBar';
 import { messages, type Locale } from '@/lib/i18n';
-import { formatDateTimeWithTimeZone } from '@/lib/dates';
+import {
+  diffDaysInTimeZone,
+  formatDateTimeWithTimeZone,
+  formatReminderDateTime,
+  getMonthKeyInTimeZone,
+  interpretAsTimeZone,
+  resolveReminderTimeZone
+} from '@/lib/dates';
 import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId, type ReminderCategoryId } from '@/lib/categories';
 
 type CreatedByOption = 'all' | 'me' | 'others';
@@ -66,6 +72,7 @@ type Props = {
   initialAssignment?: AssignmentOption;
   locale: Locale;
   localeTag: string;
+  userTimeZone?: string;
 };
 
 const groupLabels = (copy: MessageBundle) => ({
@@ -88,7 +95,8 @@ export default function ReminderDashboardSection({
   initialCreatedBy = 'all',
   initialAssignment = 'all',
   locale,
-  localeTag
+  localeTag,
+  userTimeZone
 }: Props) {
   const [createdBy, setCreatedBy] = useState<CreatedByOption>(initialCreatedBy);
   const [assignment, setAssignment] = useState<AssignmentOption>(initialAssignment);
@@ -145,12 +153,10 @@ export default function ReminderDashboardSection({
     return normalized;
   }, [occurrences, createdBy, assignment, membershipId, userId, kindFilter, categoryFilter]);
 
+  const effectiveTimeZone = userTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
   const grouped = useMemo(() => {
     const now = new Date();
-    const startTomorrow = startOfDay(addDays(now, 1));
-    const endTomorrow = endOfDay(addDays(now, 1));
-    const endNextWeek = endOfDay(addDays(now, 7));
-    const endNextMonth = endOfDay(addDays(now, 30));
 
     const sections: Record<string, OccurrencePayload[]> = {
       tomorrow: [],
@@ -160,26 +166,33 @@ export default function ReminderDashboardSection({
     const monthBuckets = new Map<string, OccurrencePayload[]>();
 
     filteredOccurrences.forEach((occurrence) => {
-      const compareDate = new Date(occurrence.effective_at ?? occurrence.occur_at);
+      const rawDate = occurrence.effective_at ?? occurrence.occur_at;
+      const reminderTimeZone = resolveReminderTimeZone(occurrence.reminder?.tz ?? null, effectiveTimeZone);
+      const compareDate = occurrence.snoozed_until
+        ? new Date(rawDate)
+        : reminderTimeZone && reminderTimeZone !== 'UTC'
+          ? interpretAsTimeZone(rawDate, reminderTimeZone)
+          : new Date(rawDate);
       if (Number.isNaN(compareDate.getTime())) {
         return;
       }
-      if (compareDate < startTomorrow) {
+      const dayDiff = diffDaysInTimeZone(compareDate, now, effectiveTimeZone);
+      if (dayDiff < 1) {
         return;
       }
-      if (compareDate >= startTomorrow && compareDate <= endTomorrow) {
+      if (dayDiff === 1) {
         sections.tomorrow.push(occurrence);
         return;
       }
-      if (compareDate > endTomorrow && compareDate <= endNextWeek) {
+      if (dayDiff <= 7) {
         sections.nextWeek.push(occurrence);
         return;
       }
-      if (compareDate > endNextWeek && compareDate <= endNextMonth) {
+      if (dayDiff <= 30) {
         sections.nextMonth.push(occurrence);
         return;
       }
-      const monthKey = `${compareDate.getFullYear()}-${String(compareDate.getMonth() + 1).padStart(2, '0')}`;
+      const monthKey = getMonthKeyInTimeZone(compareDate, effectiveTimeZone);
       const existing = monthBuckets.get(monthKey) ?? [];
       existing.push(occurrence);
       monthBuckets.set(monthKey, existing);
@@ -187,14 +200,14 @@ export default function ReminderDashboardSection({
 
     const monthEntries = Array.from(monthBuckets.entries()).sort(([a], [b]) => a.localeCompare(b));
     return { sections, monthEntries };
-  }, [filteredOccurrences]);
+  }, [effectiveTimeZone, filteredOccurrences]);
 
   const nextOccurrence =
     grouped.sections.tomorrow[0] ??
     grouped.sections.nextWeek[0] ??
     grouped.sections.nextMonth[0] ??
     grouped.monthEntries[0]?.[1]?.[0];
-  const nextOccurrenceTimeZone = nextOccurrence?.reminder?.tz ?? null;
+  const nextOccurrenceTimeZone = resolveReminderTimeZone(nextOccurrence?.reminder?.tz ?? null, effectiveTimeZone);
   const nextCategoryId = nextOccurrence
     ? inferReminderCategoryId({
         title: nextOccurrence.reminder?.title,
@@ -314,7 +327,13 @@ export default function ReminderDashboardSection({
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.dashboard.nextTitle}</div>
             <div className="mt-2 text-base font-semibold text-slate-900">{nextOccurrence.reminder?.title}</div>
             <div className="text-sm text-slate-500">
-              {formatDateTimeWithTimeZone(nextOccurrence.effective_at ?? nextOccurrence.occur_at, nextOccurrenceTimeZone)}
+              {nextOccurrence?.snoozed_until
+                ? formatDateTimeWithTimeZone(nextOccurrence.effective_at ?? nextOccurrence.occur_at, nextOccurrenceTimeZone)
+                : formatReminderDateTime(
+                  nextOccurrence.effective_at ?? nextOccurrence.occur_at,
+                  nextOccurrenceTimeZone,
+                  effectiveTimeZone
+                )}
             </div>
             <div className="mt-2">
               <span className="chip" style={nextCategoryChipStyle}>
@@ -428,6 +447,7 @@ export default function ReminderDashboardSection({
                           occurrence={occurrence}
                           locale={locale}
                           googleConnected={googleConnected}
+                          userTimeZone={effectiveTimeZone}
                         />
                       ))}
                     </div>
@@ -473,6 +493,7 @@ export default function ReminderDashboardSection({
                               occurrence={occurrence}
                               locale={locale}
                               googleConnected={googleConnected}
+                              userTimeZone={effectiveTimeZone}
                             />
                           ))}
                         </div>

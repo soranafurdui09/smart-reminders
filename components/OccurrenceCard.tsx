@@ -5,7 +5,7 @@ import { useCallback } from 'react';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
-import { formatDateTimeWithTimeZone } from '@/lib/dates';
+import { formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
 import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import OccurrenceDateChip from '@/components/OccurrenceDateChip';
@@ -18,17 +18,23 @@ import GoogleCalendarAutoBlockButton from '@/components/GoogleCalendarAutoBlockB
 export default function OccurrenceCard({
   occurrence,
   locale = defaultLocale,
-  googleConnected = false
+  googleConnected = false,
+  userTimeZone
 }: {
   occurrence: any;
   locale?: Locale;
   googleConnected?: boolean;
+  userTimeZone?: string;
 }) {
   const copy = messages[locale];
   const reminder = occurrence.reminder;
   const reminderId = reminder?.id;
   // Next due time comes from the occurrence, with snoozed_until overriding it when present.
   const displayAt = occurrence.snoozed_until ?? occurrence.occur_at;
+  const resolvedTimeZone = resolveReminderTimeZone(reminder?.tz ?? null, userTimeZone ?? null);
+  const displayLabel = occurrence.snoozed_until
+    ? formatDateTimeWithTimeZone(displayAt, resolvedTimeZone)
+    : formatReminderDateTime(displayAt, reminder?.tz ?? null, userTimeZone ?? null);
   const statusLabel = occurrence.status === 'done'
     ? copy.common.done
     : occurrence.status === 'snoozed'
@@ -44,7 +50,6 @@ export default function OccurrenceCard({
   const performedByLabel = occurrence.performed_by_label;
   const snoozedByLabel = occurrence.status === 'snoozed' ? performedByLabel : null;
   const hasDueDate = Boolean(reminder?.due_at);
-  const timeZone = reminder?.tz ?? null;
   const categoryId = inferReminderCategoryId({
     title: reminder?.title,
     notes: reminder?.notes,
@@ -66,7 +71,7 @@ export default function OccurrenceCard({
           <div className="flex flex-wrap items-center gap-2">
             <OccurrenceDateChip
               occurrenceId={occurrence.id}
-              label={formatDateTimeWithTimeZone(displayAt, timeZone)}
+              label={displayLabel}
               highlightKey={displayAt}
             />
             <span className="chip" style={categoryChipStyle}>
