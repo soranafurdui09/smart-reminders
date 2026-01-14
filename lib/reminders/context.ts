@@ -134,16 +134,19 @@ function getDayOfWeek(date: Date): DayOfWeek {
 export function evaluateReminderContext(input: ContextEvaluationInput): ContextDecision {
   const { now, settings, isCalendarBusy } = input;
   const defaults = getDefaultContextSettings();
-  const window = settings.timeWindow ?? defaults.timeWindow;
+  const timeWindowSettings = settings.timeWindow ?? defaults.timeWindow;
   const day = getDayOfWeek(now);
-  if (window.enabled) {
+  if (timeWindowSettings?.enabled) {
     const withinDay =
-      window.daysOfWeek.length === 0 || window.daysOfWeek.includes(day);
+      timeWindowSettings.daysOfWeek.length === 0 || timeWindowSettings.daysOfWeek.includes(day);
     if (!withinDay) {
       return { type: 'skip_for_now', reason: 'outside_day_window' };
     }
     const currentHour = now.getHours();
-    if (currentHour < window.startHour || currentHour >= window.endHour) {
+    if (
+      currentHour < (timeWindowSettings?.startHour ?? 0) ||
+      currentHour >= (timeWindowSettings?.endHour ?? 24)
+    ) {
       return { type: 'skip_for_now', reason: 'outside_time_window' };
     }
   }
