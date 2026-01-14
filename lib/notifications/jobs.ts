@@ -11,12 +11,8 @@ function uniqueIsoTimes(times: Date[]) {
   return Array.from(unique.values()).sort((a, b) => a.getTime() - b.getTime());
 }
 
-export function buildNotificationTimes(dueAt: Date, preReminderMinutes?: number | null) {
-  const times: Date[] = [new Date(dueAt)];
-  if (preReminderMinutes && Number.isFinite(preReminderMinutes) && preReminderMinutes > 0) {
-    times.push(new Date(dueAt.getTime() - preReminderMinutes * 60000));
-  }
-  return uniqueIsoTimes(times);
+export function buildNotificationTimes(dueAt: Date) {
+  return uniqueIsoTimes([new Date(dueAt)]);
 }
 
 export async function clearNotificationJobsForReminder(reminderId: string) {
@@ -41,7 +37,7 @@ export async function scheduleNotificationJobsForReminder(options: {
     now = new Date()
   } = options;
 
-  const times = buildNotificationTimes(dueAt, preReminderMinutes).filter((time) => time.getTime() >= now.getTime());
+  const times = buildNotificationTimes(dueAt).filter((time) => time.getTime() >= now.getTime());
   await clearNotificationJobsForReminder(reminderId);
   if (!times.length) return;
 
