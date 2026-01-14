@@ -83,9 +83,9 @@ export function parseContextSettings(raw: any | null | undefined): ContextSettin
     startHour: sanitizeHour(timeWindow.startHour ?? defaultTimeWindow.startHour),
     endHour: sanitizeHour(timeWindow.endHour ?? defaultTimeWindow.endHour),
     daysOfWeek: Array.isArray(timeWindow.daysOfWeek)
-      ? timeWindow.daysOfWeek
-        .map((item) => sanitizeDay(item))
-        .filter(Boolean) as DayOfWeek[]
+      ? (timeWindow.daysOfWeek
+        .map((item: string | undefined) => sanitizeDay(item))
+        .filter(Boolean) as DayOfWeek[])
       : []
   };
   const parsedCalendarBusy: CalendarBusyContext = {
