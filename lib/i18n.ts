@@ -1,5 +1,3 @@
-import { cookies } from 'next/headers';
-
 export type Locale = 'ro' | 'en';
 
 export const defaultLocale: Locale = 'ro';
@@ -719,11 +717,6 @@ export const messages = {
 
 export function normalizeLocale(value?: string | null): Locale {
   return value === 'en' ? 'en' : 'ro';
-}
-
-export function getLocaleFromCookie(): Locale {
-  const value = cookies().get('locale')?.value;
-  return normalizeLocale(value);
 }
 
 export function getLocaleTag(locale: Locale) {

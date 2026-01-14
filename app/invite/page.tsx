@@ -2,7 +2,8 @@ import Link from 'next/link';
 import SectionHeader from '@/components/SectionHeader';
 import { createServerClient } from '@/lib/supabase/server';
 import { getUserLocale } from '@/lib/data';
-import { getLocaleFromCookie, messages } from '@/lib/i18n';
+import { messages } from '@/lib/i18n';
+import { getLocaleFromCookie } from '@/lib/i18n/server';
 import { acceptInvite } from '@/app/app/household/actions';
 
 export default async function InvitePage({ searchParams }: { searchParams: { token?: string } }) {

@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import AuthRedirect from '@/components/AuthRedirect';
 import MagicLinkForm from '@/components/MagicLinkForm';
-import { getLocaleFromCookie, messages } from '@/lib/i18n';
+import { messages } from '@/lib/i18n';
+import { getLocaleFromCookie } from '@/lib/i18n/server';
 import GoogleOAuthButton from '@/components/GoogleOAuthButton';
 
 export const dynamic = 'force-dynamic';

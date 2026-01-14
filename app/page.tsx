@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { getLocaleFromCookie, messages } from '@/lib/i18n';
+import { messages } from '@/lib/i18n';
+import { getLocaleFromCookie } from '@/lib/i18n/server';
 
 export default function LandingPage() {
   const locale = getLocaleFromCookie();

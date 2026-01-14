@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import ConfigError from '@/components/ConfigError';
 import { getEnvStatus } from '@/lib/env';
-import { getLocaleFromCookie } from '@/lib/i18n';
+import { getLocaleFromCookie } from '@/lib/i18n/server';
 
 export default function ConfigGate({ children }: { children: ReactNode }) {
   const envStatus = getEnvStatus();
