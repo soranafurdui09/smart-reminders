@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import ReminderForm, { type ReminderFormVoiceHandle } from './ReminderForm';
 import type { SpeechStatus } from '@/hooks/useSpeechToReminder';
 
@@ -32,6 +32,7 @@ export default function ReminderNewClient({
   autoVoice = false
 }: Props) {
   const formRef = useRef<ReminderFormVoiceHandle | null>(null);
+  const pendingStartRef = useRef(false);
   const [voiceStatus, setVoiceStatus] = useState<{ status: SpeechStatus; supported: boolean }>({
     status: 'idle',
     supported: false
@@ -51,8 +52,20 @@ export default function ReminderNewClient({
       formRef.current?.stopVoice();
       return;
     }
-    formRef.current?.startVoice();
+    if (!formRef.current) {
+      pendingStartRef.current = true;
+      return;
+    }
+    formRef.current.startVoice();
   };
+
+  const handleFormRef = useCallback((node: ReminderFormVoiceHandle | null) => {
+    formRef.current = node;
+    if (node && pendingStartRef.current) {
+      pendingStartRef.current = false;
+      node.startVoice();
+    }
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -94,7 +107,7 @@ export default function ReminderNewClient({
       ) : null}
 
       <ReminderForm
-        ref={formRef}
+        ref={handleFormRef}
         action={action}
         copy={copy}
         householdId={householdId}

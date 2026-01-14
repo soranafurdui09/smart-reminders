@@ -79,6 +79,9 @@ export function useSpeechToReminder<TParsed>({
     if (speechError) return;
     const finalTranscript = transcript.trim();
     if (!finalTranscript || finalTranscript === lastTranscriptRef.current) {
+      if (status === 'listening' || status === 'transcribing' || status === 'processing') {
+        setStatus('idle');
+      }
       return;
     }
     lastTranscriptRef.current = finalTranscript;
@@ -120,6 +123,7 @@ export function useSpeechToReminder<TParsed>({
     onParsed,
     parseText,
     speechError,
+    status,
     transcript,
     useAi
   ]);
