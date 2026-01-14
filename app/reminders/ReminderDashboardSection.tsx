@@ -37,6 +37,7 @@ type Props = {
   occurrences: OccurrencePayload[];
   copy: MessageBundle;
   membershipId: string;
+  userId: string;
   googleConnected: boolean;
   initialCreatedBy?: CreatedByOption;
   initialAssignment?: AssignmentOption;
@@ -58,6 +59,7 @@ export default function ReminderDashboardSection({
   occurrences,
   copy,
   membershipId,
+  userId,
   googleConnected,
   initialCreatedBy = 'all',
   initialAssignment = 'all',
@@ -66,15 +68,16 @@ export default function ReminderDashboardSection({
 }: Props) {
   const [createdBy, setCreatedBy] = useState<CreatedByOption>(initialCreatedBy);
   const [assignment, setAssignment] = useState<AssignmentOption>(initialAssignment);
+  const [filtersOpen, setFiltersOpen] = useState(true);
 
   const filteredOccurrences = useMemo(() => {
     const normalized = occurrences
       .filter((occurrence) => occurrence.reminder?.is_active ?? true)
       .filter((occurrence) => {
-        if (createdBy === 'me' && occurrence.reminder?.created_by !== membershipId) {
+        if (createdBy === 'me' && occurrence.reminder?.created_by !== userId) {
           return false;
         }
-        if (createdBy === 'others' && occurrence.reminder?.created_by === membershipId) {
+        if (createdBy === 'others' && occurrence.reminder?.created_by === userId) {
           return false;
         }
         if (assignment === 'assigned_to_me' && occurrence.reminder?.assigned_member_id !== membershipId) {
@@ -119,20 +122,32 @@ export default function ReminderDashboardSection({
   return (
     <section className="space-y-4">
       <SectionHeader title={copy.dashboard.sectionTitle} description={copy.dashboard.sectionSubtitle} />
-      <ReminderFilterBar
-        createdBy={createdBy}
-        assignment={assignment}
-        onChangeCreatedBy={(value) => {
-          if (CreatedOptions.includes(value)) {
-            setCreatedBy(value);
-          }
-        }}
-        onChangeAssignment={(value) => {
-          if (AssignmentOptions.includes(value)) {
-            setAssignment(value);
-          }
-        }}
-      />
+      <div className="flex items-center justify-between">
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted">{copy.dashboard.filtersTitle}</div>
+        <button
+          type="button"
+          className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+          onClick={() => setFiltersOpen((prev) => !prev)}
+        >
+          {filtersOpen ? copy.common.hide : copy.common.show}
+        </button>
+      </div>
+      {filtersOpen ? (
+        <ReminderFilterBar
+          createdBy={createdBy}
+          assignment={assignment}
+          onChangeCreatedBy={(value) => {
+            if (CreatedOptions.includes(value)) {
+              setCreatedBy(value);
+            }
+          }}
+          onChangeAssignment={(value) => {
+            if (AssignmentOptions.includes(value)) {
+              setAssignment(value);
+            }
+          }}
+        />
+      ) : null}
       {nextOccurrence ? (
         <div className="rounded-2xl border border-slate-100 bg-surface p-4 text-sm text-slate-600">
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.dashboard.nextTitle}</div>

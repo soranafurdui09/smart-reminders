@@ -139,6 +139,7 @@ export default async function DashboardPage({
           occurrences={occurrences}
           copy={copy}
           membershipId={membership.id}
+          userId={user.id}
           googleConnected={Boolean(googleConnection)}
           initialCreatedBy={initialCreatedBy}
           initialAssignment={initialAssignment}
