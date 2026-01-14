@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { Locale, normalizeLocale, defaultLocale } from './i18n';
+import { Locale, normalizeLocale, defaultLocale } from '@/lib/i18n';
 
 export function getLocaleFromCookie(): Locale {
   const value = cookies().get('locale')?.value;
