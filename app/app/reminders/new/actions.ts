@@ -7,6 +7,12 @@ import { getUserHousehold } from '@/lib/data';
 import { generateReminderEmbedding } from '@/lib/ai/embeddings';
 import { setReminderAssignment } from '@/lib/reminderAssignments';
 import { getDefaultContextSettings, isDefaultContextSettings, type DayOfWeek } from '@/lib/reminders/context';
+import {
+  ensureMedicationDoses,
+  getFirstMedicationDose,
+  type MedicationDetails
+} from '@/lib/reminders/medication';
+import { createCalendarEventForMedication, getUserGoogleConnection } from '@/lib/google/calendar';
 
 const DAYS: DayOfWeek[] = [
   'monday',
@@ -68,6 +74,8 @@ export async function createReminder(formData: FormData) {
     redirect('/app');
   }
 
+  const kindRaw = String(formData.get('kind') || 'generic');
+  const kind = kindRaw === 'medication' ? 'medication' : 'generic';
   const title = String(formData.get('title') || '').trim();
   const notes = String(formData.get('notes') || '').trim();
   const scheduleTypeRaw = String(formData.get('schedule_type') || 'once');
@@ -80,15 +88,49 @@ export async function createReminder(formData: FormData) {
   const assignedMemberRaw = String(formData.get('assigned_member_id') || '').trim();
   const voiceAuto = String(formData.get('voice_auto') || '') === '1';
   const contextSettings = buildContextSettings(formData);
+  const medicationDetailsRaw = String(formData.get('medication_details') || '').trim();
+  const medicationAddCalendar = String(formData.get('medication_add_to_calendar') || '') === '1';
 
-  if (!title) {
+  let medicationDetails: MedicationDetails | null = null;
+  if (kind === 'medication' && medicationDetailsRaw) {
+    try {
+      medicationDetails = JSON.parse(medicationDetailsRaw) as MedicationDetails;
+    } catch (error) {
+      console.error('[medication] invalid details', error);
+    }
+  }
+
+  if (kind === 'medication' && (!medicationDetails || !medicationDetails.name || !medicationDetails.startDate)) {
+    redirect('/app/reminders/new?error=missing-medication');
+  }
+
+  if (!title && kind !== 'medication') {
     redirect('/app/reminders/new?error=missing-title');
   }
 
-  const dueAt = dueAtRaw ? new Date(dueAtRaw) : new Date();
+  const medicationName = medicationDetails?.name?.trim() || '';
+  const medicationDose = medicationDetails?.dose?.trim() || '';
+  const resolvedTitle = kind === 'medication'
+    ? medicationName || 'Medicament'
+    : title;
+  const resolvedNotes = kind === 'medication'
+    ? medicationDose
+      ? `Doza: ${medicationDose}`
+      : notes
+    : notes;
+  const dueAt = kind === 'medication'
+    ? medicationDetails
+      ? new Date(getFirstMedicationDose(medicationDetails) || new Date().toISOString())
+      : new Date()
+    : dueAtRaw
+      ? new Date(dueAtRaw)
+      : new Date();
 
   const supabase = createServerClient();
   let assignedMemberId: string | null = assignedMemberRaw || null;
+  if (kind === 'medication' && medicationDetails?.personId) {
+    assignedMemberId = medicationDetails.personId;
+  }
   let assignedUserId: string | null = null;
   if (assignedMemberId) {
     const { data: member } = await supabase
@@ -110,8 +152,8 @@ export async function createReminder(formData: FormData) {
     .insert({
       household_id: membership.households.id,
       created_by: user.id,
-      title,
-      notes: notes || null,
+      title: resolvedTitle,
+      notes: resolvedNotes || null,
       schedule_type: scheduleType,
       due_at: dueAt.toISOString(),
       tz: 'UTC',
@@ -119,7 +161,9 @@ export async function createReminder(formData: FormData) {
       recurrence_rule: recurrenceRuleRaw || null,
       pre_reminder_minutes: preReminderValue,
       assigned_member_id: assignedMemberId,
-      context_settings: contextSettings
+      context_settings: contextSettings,
+      kind,
+      medication_details: medicationDetails ? medicationDetails : null
     })
     .select('id')
     .single();
@@ -136,8 +180,26 @@ export async function createReminder(formData: FormData) {
     }
   }
 
+  if (kind === 'medication' && medicationDetails) {
+    await ensureMedicationDoses(reminder.id, medicationDetails);
+    if (medicationAddCalendar) {
+      try {
+        const googleConnection = await getUserGoogleConnection(user.id);
+        if (googleConnection) {
+          await createCalendarEventForMedication({
+            userId: user.id,
+            reminderId: reminder.id,
+            details: medicationDetails
+          });
+        }
+      } catch (error) {
+        console.error('[google] medication calendar create failed', error);
+      }
+    }
+  }
+
   try {
-    const embedding = await generateReminderEmbedding(title, notes || null);
+    const embedding = await generateReminderEmbedding(resolvedTitle, resolvedNotes || null);
     if (embedding) {
       await supabase.from('reminders').update({ embedding }).eq('id', reminder.id);
     }
@@ -145,13 +207,15 @@ export async function createReminder(formData: FormData) {
     console.error('[embeddings] create reminder failed', error);
   }
 
-  const { error: occurrenceError } = await supabase.from('reminder_occurrences').insert({
-    reminder_id: reminder.id,
-    occur_at: dueAt.toISOString(),
-    status: 'open'
-  });
-  if (occurrenceError) {
-    console.error('[reminders] create occurrence failed', occurrenceError);
+  if (kind !== 'medication') {
+    const { error: occurrenceError } = await supabase.from('reminder_occurrences').insert({
+      reminder_id: reminder.id,
+      occur_at: dueAt.toISOString(),
+      status: 'open'
+    });
+    if (occurrenceError) {
+      console.error('[reminders] create occurrence failed', occurrenceError);
+    }
   }
 
   if (voiceAuto) {

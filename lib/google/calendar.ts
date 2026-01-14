@@ -1,6 +1,8 @@
 import { createServerClient } from '@/lib/supabase/server';
 import { getGoogleCalendarRedirectUrl, getGoogleClientId, getGoogleClientSecret } from '@/lib/env';
 import type { CalendarEventInput } from './types';
+import type { MedicationDetails } from '@/lib/reminders/medication';
+import { getFirstMedicationDose } from '@/lib/reminders/medication';
 
 export interface GoogleTokens {
   accessToken: string;
@@ -341,6 +343,91 @@ export async function createOrUpdateCalendarEventForReminder(options: {
     throw new Error('Calendar event creation failed.');
   }
 
+  return { eventId: String(payload.id || '') };
+}
+
+function buildMedicationRecurrence(details: MedicationDetails) {
+  const times = Array.isArray(details.timesOfDay) ? details.timesOfDay.filter(Boolean) : [];
+  if (details.frequencyType === 'every_n_hours') {
+    const interval = Math.max(1, Number(details.everyNHours || 8));
+    return `RRULE:FREQ=HOURLY;INTERVAL=${interval}`;
+  }
+  const hours: number[] = [];
+  const minutes: number[] = [];
+  const normalized = times.length ? times : ['08:00'];
+  normalized.forEach((time) => {
+    const [h, m] = time.split(':').map((value) => Number(value));
+    if (Number.isFinite(h) && Number.isFinite(m)) {
+      hours.push(Math.min(23, Math.max(0, Math.floor(h))));
+      minutes.push(Math.min(59, Math.max(0, Math.floor(m))));
+    }
+  });
+  if (!hours.length) {
+    hours.push(8);
+    minutes.push(0);
+  }
+  const hourList = Array.from(new Set(hours)).sort((a, b) => a - b).join(',');
+  const minuteList = Array.from(new Set(minutes)).sort((a, b) => a - b).join(',');
+  return `RRULE:FREQ=DAILY;BYHOUR=${hourList};BYMINUTE=${minuteList}`;
+}
+
+export async function createCalendarEventForMedication(options: {
+  userId: string;
+  reminderId: string;
+  details: MedicationDetails;
+}): Promise<{ eventId: string } | null> {
+  const supabase = createServerClient();
+  const { data: reminder, error } = await supabase
+    .from('reminders')
+    .select('id, title, notes, tz')
+    .eq('id', options.reminderId)
+    .maybeSingle();
+  if (error) {
+    console.error('[google] medication reminder lookup failed', error);
+    return null;
+  }
+  if (!reminder) {
+    return null;
+  }
+  const firstDose = getFirstMedicationDose(options.details);
+  if (!firstDose) {
+    return null;
+  }
+  const timeZone = reminder.tz || 'UTC';
+  const start = new Date(firstDose);
+  const end = new Date(start.getTime() + 30 * 60000);
+  const recurrence = buildMedicationRecurrence(options.details);
+  const { client } = await getGoogleOAuthClient(options.userId);
+  const event: CalendarEventInput = {
+    summary: reminder.title,
+    description: reminder.notes
+      ? `${reminder.notes}\n\nMedication schedule created via Reminder inteligent.`
+      : 'Medication schedule created via Reminder inteligent.',
+    start: { dateTime: start.toISOString(), timeZone },
+    end: { dateTime: end.toISOString(), timeZone },
+    recurrence: [recurrence]
+  };
+
+  const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${client.accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(event)
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    console.error('[google] medication event create failed', payload);
+    return null;
+  }
+  await supabase
+    .from('reminders')
+    .update({
+      google_event_id: String(payload.id || null),
+      google_calendar_id: 'primary'
+    })
+    .eq('id', reminder.id);
   return { eventId: String(payload.id || '') };
 }
 

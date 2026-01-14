@@ -5,6 +5,7 @@ import { getHouseholdMembers, getUserHousehold, getUserLocale } from '@/lib/data
 import { messages } from '@/lib/i18n';
 import { createReminder } from './actions';
 import ReminderNewClient from './ReminderNewClient';
+import { getUserGoogleConnection } from '@/lib/google/calendar';
 
 export default async function NewReminderPage({
   searchParams
@@ -15,6 +16,7 @@ export default async function NewReminderPage({
   const locale = await getUserLocale(user.id);
   const copy = messages[locale];
   const membership = await getUserHousehold(user.id);
+  const googleConnection = await getUserGoogleConnection(user.id);
 
   if (!membership?.households) {
     return (
@@ -42,6 +44,7 @@ export default async function NewReminderPage({
         householdId={membership.households.id}
         members={members}
         locale={locale}
+        googleConnected={Boolean(googleConnection)}
         error={searchParams.error}
         autoVoice={searchParams.voice === '1' || searchParams.voice === 'true'}
       />

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { format } from 'date-fns';
+import { addMinutes, format } from 'date-fns';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAppUrl, sendEmail } from '@/lib/notifications';
 import { sendPushNotification } from '@/lib/push';
@@ -15,6 +15,7 @@ export async function GET() {
   const admin = createAdminClient();
   const now = new Date();
   const nowIso = now.toISOString();
+  const windowEnd = addMinutes(now, 15).toISOString();
   const appUrl = getAppUrl();
 
   const { data: occurrences, error } = await admin
@@ -137,5 +138,115 @@ export async function GET() {
     }
   }
 
-  return NextResponse.json({ ok: true, processed: occurrences?.length ?? 0 });
+  const { data: medicationDoses, error: medicationError } = await admin
+    .from('medication_doses')
+    .select('id, scheduled_at, status, reminder:reminders(id, title, household_id, is_active, created_by, context_settings, medication_details)')
+    .eq('status', 'pending')
+    .gte('scheduled_at', nowIso)
+    .lte('scheduled_at', windowEnd);
+
+  if (medicationError) {
+    console.error('[notifications] fetch medication doses failed', medicationError);
+    return NextResponse.json({ error: 'failed' }, { status: 500 });
+  }
+
+  const updateMedicationLogStatus = async (logId: string, status: NotificationStatus) => {
+    await admin
+      .from('medication_notification_log')
+      .update({ status })
+      .eq('id', logId);
+  };
+
+  for (const dose of medicationDoses ?? []) {
+    const reminder = Array.isArray(dose.reminder) ? dose.reminder[0] : dose.reminder;
+    if (!reminder?.household_id || !reminder?.is_active || !reminder.created_by) {
+      continue;
+    }
+    const details = reminder.medication_details || {};
+    const medicationLabel = details.name ? `💊 ${details.name}` : `💊 ${reminder.title}`;
+    const doseLabel = details.dose ? ` – ${details.dose}` : '';
+    const occurAtLabel = format(new Date(dose.scheduled_at), 'dd MMM yyyy, HH:mm');
+    const settings = parseContextSettings(reminder.context_settings ?? null);
+    let isBusy = false;
+    if (settings.calendarBusy?.enabled) {
+      isBusy = await isUserBusyInCalendarAt({ userId: reminder.created_by, at: now });
+    }
+    const decision = evaluateReminderContext({
+      now,
+      reminderDueAt: new Date(dose.scheduled_at),
+      settings,
+      isCalendarBusy: isBusy
+    });
+    if (decision.type !== 'send_now') {
+      continue;
+    }
+
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('email')
+      .eq('user_id', reminder.created_by)
+      .maybeSingle();
+
+    if (profile?.email) {
+      const { data: emailLog, error: emailLogError } = await admin
+        .from('medication_notification_log')
+        .insert({
+          medication_dose_id: dose.id,
+          channel: 'email',
+          status: 'sent',
+          sent_at: nowIso
+        })
+        .select('id')
+        .single();
+
+      if (!emailLogError && emailLog) {
+        const emailResult = await sendEmail({
+          to: profile.email,
+          subject: `${medicationLabel}${doseLabel}`,
+          html: reminderEmailTemplate({ title: `${medicationLabel}${doseLabel}`, occurAt: occurAtLabel })
+        });
+        if (emailResult.status !== 'sent') {
+          await updateMedicationLogStatus(emailLog.id, emailResult.status);
+        }
+      }
+    }
+
+    const { data: subscriptions } = await admin
+      .from('push_subscriptions')
+      .select('endpoint, p256dh, auth')
+      .eq('user_id', reminder.created_by);
+
+    const { data: pushLog, error: pushLogError } = await admin
+      .from('medication_notification_log')
+      .insert({
+        medication_dose_id: dose.id,
+        channel: 'push',
+        status: 'sent',
+        sent_at: nowIso
+      })
+      .select('id')
+      .single();
+
+    if (!pushLogError && pushLog) {
+      const pushResult = await sendPushNotification(subscriptions ?? [], {
+        title: `${medicationLabel}${doseLabel}`,
+        body: `Este timpul pentru medicament • ${occurAtLabel}`,
+        url: `${appUrl}/app`
+      });
+      if (pushResult.status !== 'sent') {
+        await updateMedicationLogStatus(pushLog.id, pushResult.status);
+      }
+      if (pushResult.staleEndpoints.length) {
+        await admin
+          .from('push_subscriptions')
+          .delete()
+          .in('endpoint', pushResult.staleEndpoints);
+      }
+    }
+  }
+
+  return NextResponse.json({
+    ok: true,
+    processed: (occurrences?.length ?? 0) + (medicationDoses?.length ?? 0)
+  });
 }

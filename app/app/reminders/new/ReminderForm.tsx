@@ -4,6 +4,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { useSpeechToReminder, type SpeechStatus } from '@/hooks/useSpeechToReminder';
 import { getDefaultContextSettings, type DayOfWeek } from '@/lib/reminders/context';
+import type { MedicationDetails, MedicationFrequencyType } from '@/lib/reminders/medication';
 
 type MemberOption = {
   id: string;
@@ -333,6 +334,7 @@ type ReminderFormProps = {
   householdId: string | null;
   members: MemberOption[];
   locale: string;
+  googleConnected: boolean;
   autoVoice?: boolean;
   onVoiceStateChange?: (payload: { status: SpeechStatus; supported: boolean }) => void;
 };
@@ -343,6 +345,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   householdId,
   members,
   locale,
+  googleConnected,
   autoVoice = false,
   onVoiceStateChange
 }, ref) {
@@ -359,6 +362,17 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const [recurrenceRule, setRecurrenceRule] = useState('');
   const [preReminderMinutes, setPreReminderMinutes] = useState('');
   const [assignedMemberId, setAssignedMemberId] = useState('');
+  const [kind, setKind] = useState<'generic' | 'medication'>('generic');
+  const [medName, setMedName] = useState('');
+  const [medDose, setMedDose] = useState('');
+  const [medFrequencyType, setMedFrequencyType] = useState<MedicationFrequencyType>('once_per_day');
+  const [medTimesPerDay, setMedTimesPerDay] = useState(2);
+  const [medTimesOfDay, setMedTimesOfDay] = useState<string[]>(['08:00']);
+  const [medEveryNHours, setMedEveryNHours] = useState(8);
+  const [medStartDate, setMedStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [medEndDate, setMedEndDate] = useState('');
+  const [medPersonId, setMedPersonId] = useState('');
+  const [medAddToCalendar, setMedAddToCalendar] = useState(false);
   const [aiHighlight, setAiHighlight] = useState(false);
   const [pendingAutoCreate, setPendingAutoCreate] = useState(false);
   const [autoCreateSource, setAutoCreateSource] = useState<'voice' | 'manual' | null>(null);
@@ -378,6 +392,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const formRef = useRef<HTMLFormElement | null>(null);
   const highlightTimer = useRef<number | null>(null);
   const detailsRef = useRef<HTMLElement>(null);
+  const medicationRef = useRef<HTMLElement>(null);
   const titleRef = useRef<HTMLInputElement | null>(null);
   const dueAtRef = useRef<HTMLInputElement | null>(null);
   const aiCharCount = aiText.length;
@@ -414,6 +429,67 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     monthly: copy.remindersNew.monthly,
     yearly: copy.remindersNew.yearly
   };
+
+  useEffect(() => {
+    if (medFrequencyType !== 'times_per_day') return;
+    const count = Math.min(4, Math.max(1, medTimesPerDay));
+    setMedTimesOfDay((prev) => {
+      const next = prev.slice(0, count);
+      while (next.length < count) {
+        next.push(['08:00', '12:00', '18:00', '22:00'][next.length] || '08:00');
+      }
+      return next;
+    });
+  }, [medFrequencyType, medTimesPerDay]);
+
+  useEffect(() => {
+    if (medFrequencyType === 'once_per_day' || medFrequencyType === 'every_n_hours') {
+      setMedTimesOfDay((prev) => [prev[0] || '08:00']);
+    }
+  }, [medFrequencyType]);
+
+  useEffect(() => {
+    if (!googleConnected) {
+      setMedAddToCalendar(false);
+    }
+  }, [googleConnected]);
+
+  const medicationDetails = useMemo<MedicationDetails | null>(() => {
+    if (kind !== 'medication') return null;
+    const times =
+      medFrequencyType === 'times_per_day'
+        ? medTimesOfDay.slice(0, Math.min(4, Math.max(1, medTimesPerDay)))
+        : medTimesOfDay.slice(0, 1);
+    return {
+      name: medName.trim(),
+      dose: medDose.trim(),
+      personId: medPersonId || null,
+      frequencyType: medFrequencyType,
+      timesPerDay: medFrequencyType === 'times_per_day' ? medTimesPerDay : undefined,
+      everyNHours: medFrequencyType === 'every_n_hours' ? medEveryNHours : undefined,
+      timesOfDay: times,
+      startDate: medStartDate,
+      endDate: medEndDate ? medEndDate : null,
+      addToCalendar: medAddToCalendar
+    };
+  }, [
+    kind,
+    medAddToCalendar,
+    medDose,
+    medEveryNHours,
+    medFrequencyType,
+    medName,
+    medPersonId,
+    medStartDate,
+    medEndDate,
+    medTimesOfDay,
+    medTimesPerDay
+  ]);
+
+  const medicationDetailsJson = useMemo(
+    () => (medicationDetails ? JSON.stringify(medicationDetails) : ''),
+    [medicationDetails]
+  );
   const filteredTemplates = useMemo(() => {
     const terms = templateQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
     if (!terms.length) {
@@ -685,7 +761,48 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   return (
     <form ref={formRef} action={action} className="space-y-8">
       <input type="hidden" name="voice_auto" value={autoCreateSource === 'voice' ? '1' : ''} />
+      <input type="hidden" name="kind" value={kind} />
+      <input type="hidden" name="medication_details" value={medicationDetailsJson} />
+      <input type="hidden" name="medication_add_to_calendar" value={medAddToCalendar ? '1' : ''} />
+
       <section className="card space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold text-ink">{copy.remindersNew.typeTitle}</h2>
+          <p className="text-sm text-muted">{copy.remindersNew.typeSubtitle}</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            className={`rounded-2xl border px-4 py-3 text-left transition ${
+              kind === 'generic'
+                ? 'border-sky-300 bg-sky-50 text-slate-900 shadow-sm'
+                : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+            }`}
+            onClick={() => setKind('generic')}
+          >
+            <div className="text-sm font-semibold">{copy.remindersNew.typeGeneric}</div>
+            <div className="text-xs text-muted">{copy.remindersNew.typeGenericSubtitle}</div>
+          </button>
+          <button
+            type="button"
+            className={`rounded-2xl border px-4 py-3 text-left transition ${
+              kind === 'medication'
+                ? 'border-sky-300 bg-sky-50 text-slate-900 shadow-sm'
+                : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+            }`}
+            onClick={() => {
+              setKind('medication');
+              setTimeout(() => medicationRef.current?.scrollIntoView({ behavior: 'smooth' }), 150);
+            }}
+          >
+            <div className="text-sm font-semibold">{copy.remindersNew.typeMedication}</div>
+            <div className="text-xs text-muted">{copy.remindersNew.typeMedicationSubtitle}</div>
+          </button>
+        </div>
+      </section>
+
+      {kind === 'generic' ? (
+        <section className="card space-y-4">
         <div className="space-y-1">
           <div className="text-lg font-semibold text-ink">{copy.remindersNew.aiTitle}</div>
           <p className="text-sm text-muted">{copy.remindersNew.aiSubtitle}</p>
@@ -783,9 +900,11 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
             </button>
           </div>
         </div>
-      </section>
+        </section>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        {kind === 'generic' ? (
         <section className="space-y-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
@@ -818,6 +937,25 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
           </div>
           {filteredTemplates.length ? (
             <div className="grid gap-4 sm:grid-cols-2">
+              <button
+                type="button"
+                className="card flex flex-col gap-3 border-dashed border-slate-200 text-left transition hover:border-sky-300 hover:bg-sky-50"
+                onClick={() => {
+                  setKind('medication');
+                  setTimeout(() => medicationRef.current?.scrollIntoView({ behavior: 'smooth' }), 150);
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
+                    💊
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-ink">{copy.remindersNew.typeMedication}</div>
+                    <div className="text-xs text-muted">{copy.remindersNew.typeMedicationSubtitle}</div>
+                  </div>
+                </div>
+                <div className="text-xs text-muted">{copy.remindersNew.typeMedicationHint}</div>
+              </button>
               {filteredTemplates.map((template) => {
                 const preReminder = template.preReminderMinutes
                   ? formatPreReminder(activeLocale, template.preReminderMinutes)
@@ -873,7 +1011,184 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
             <div className="text-sm text-muted">{copy.remindersNew.templatesEmpty}</div>
           )}
         </section>
+        ) : null}
 
+        {kind === 'medication' ? (
+          <section ref={medicationRef} className="card space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-ink">{copy.remindersNew.medicationTitle}</h3>
+              <p className="text-sm text-muted">{copy.remindersNew.medicationSubtitle}</p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="text-sm font-semibold">{copy.remindersNew.medicationNameLabel}</label>
+                <input
+                  className="input"
+                  required={kind === 'medication'}
+                  value={medName}
+                  onChange={(event) => setMedName(event.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-semibold">{copy.remindersNew.medicationDoseLabel}</label>
+                <input
+                  className="input"
+                  required={kind === 'medication'}
+                  value={medDose}
+                  onChange={(event) => setMedDose(event.target.value)}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-semibold">{copy.remindersNew.medicationPersonLabel}</label>
+              <select
+                className="input"
+                value={medPersonId}
+                onChange={(event) => setMedPersonId(event.target.value)}
+              >
+                <option value="">{copy.remindersNew.medicationPersonSelf}</option>
+                {members.map((member) => (
+                  <option key={member.id} value={member.id}>{member.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold">{copy.remindersNew.medicationFrequencyLabel}</label>
+              <div className="grid gap-2 md:grid-cols-3">
+                {(['once_per_day', 'times_per_day', 'every_n_hours'] as MedicationFrequencyType[]).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`rounded-full border px-3 py-2 text-sm font-semibold transition ${
+                      medFrequencyType === value
+                        ? 'border-sky-400 bg-sky-50 text-sky-700'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                    }`}
+                    onClick={() => setMedFrequencyType(value)}
+                  >
+                    {value === 'once_per_day'
+                      ? copy.remindersNew.medicationFrequencyOnce
+                      : value === 'times_per_day'
+                        ? copy.remindersNew.medicationFrequencyTimes
+                        : copy.remindersNew.medicationFrequencyEvery}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {medFrequencyType === 'once_per_day' ? (
+              <div>
+                <label className="text-sm font-semibold">{copy.remindersNew.medicationTimeLabel}</label>
+                <input
+                  type="time"
+                  className="input"
+                  value={medTimesOfDay[0] || '08:00'}
+                  onChange={(event) => setMedTimesOfDay([event.target.value])}
+                />
+              </div>
+            ) : null}
+            {medFrequencyType === 'times_per_day' ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-semibold">{copy.remindersNew.medicationTimesPerDayLabel}</label>
+                  <input
+                    type="range"
+                    min={1}
+                    max={4}
+                    value={medTimesPerDay}
+                    onChange={(event) => setMedTimesPerDay(Number(event.target.value))}
+                    className="w-full"
+                  />
+                  <div className="text-xs text-muted">{medTimesPerDay} {copy.remindersNew.medicationTimesPerDayHint}</div>
+                </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {Array.from({ length: medTimesPerDay }).map((_, index) => (
+                    <div key={`time-${index}`}>
+                      <label className="text-xs font-semibold text-muted">{copy.remindersNew.medicationTimeSlotLabel} {index + 1}</label>
+                      <input
+                        type="time"
+                        className="input"
+                        value={medTimesOfDay[index] || '08:00'}
+                        onChange={(event) => {
+                          const next = [...medTimesOfDay];
+                          next[index] = event.target.value;
+                          setMedTimesOfDay(next);
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {medFrequencyType === 'every_n_hours' ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="text-sm font-semibold">{copy.remindersNew.medicationEveryHoursLabel}</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={24}
+                    className="input"
+                    value={medEveryNHours}
+                    onChange={(event) => setMedEveryNHours(Number(event.target.value))}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold">{copy.remindersNew.medicationFirstDoseLabel}</label>
+                  <input
+                    type="time"
+                    className="input"
+                    value={medTimesOfDay[0] || '08:00'}
+                    onChange={(event) => setMedTimesOfDay([event.target.value])}
+                  />
+                </div>
+              </div>
+            ) : null}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="text-sm font-semibold">{copy.remindersNew.medicationStartLabel}</label>
+                  <input
+                    type="date"
+                    className="input"
+                    required={kind === 'medication'}
+                    value={medStartDate}
+                    onChange={(event) => setMedStartDate(event.target.value)}
+                  />
+              </div>
+              <div>
+                <label className="text-sm font-semibold">{copy.remindersNew.medicationEndLabel}</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={medEndDate}
+                  onChange={(event) => setMedEndDate(event.target.value)}
+                />
+              </div>
+            </div>
+            {googleConnected ? (
+              <label className="flex items-center gap-2 text-sm text-muted">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                  checked={medAddToCalendar}
+                  onChange={(event) => setMedAddToCalendar(event.target.checked)}
+                />
+                {copy.remindersNew.medicationAddCalendar}
+              </label>
+            ) : (
+              <div className="text-xs text-muted">{copy.remindersNew.medicationCalendarHint}</div>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className="btn btn-secondary" onClick={() => setKind('generic')}>
+                {copy.remindersNew.medicationBack}
+              </button>
+              <button type="submit" className="btn btn-primary">
+                {copy.remindersNew.medicationSave}
+              </button>
+            </div>
+          </section>
+        ) : null}
+
+        {kind === 'generic' ? (
         <section
           ref={detailsRef}
           className={`card space-y-4 ${aiHighlight ? 'flash-outline flash-bg' : ''}`}
@@ -1088,6 +1403,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
             {copy.remindersNew.create}
           </ActionSubmitButton>
         </section>
+        ) : null}
       </div>
     </form>
   );

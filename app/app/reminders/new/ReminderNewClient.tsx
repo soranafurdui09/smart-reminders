@@ -16,6 +16,7 @@ type Props = {
   householdId: string;
   members: MemberOption[];
   locale: string;
+  googleConnected: boolean;
   error?: string;
   autoVoice?: boolean;
 };
@@ -26,6 +27,7 @@ export default function ReminderNewClient({
   householdId,
   members,
   locale,
+  googleConnected,
   error,
   autoVoice = false
 }: Props) {
@@ -93,6 +95,7 @@ export default function ReminderNewClient({
         members={members}
         locale={locale}
         autoVoice={autoVoice}
+        googleConnected={googleConnected}
         onVoiceStateChange={setVoiceStatus}
       />
 

@@ -9,6 +9,7 @@ import { getLocaleTag, messages } from '@/lib/i18n';
 import { createHousehold } from './household/actions';
 import { getUserGoogleConnection } from '@/lib/google/calendar';
 import ReminderDashboardSection from '@/app/reminders/ReminderDashboardSection';
+import { getTodayMedicationDoses } from '@/lib/reminders/medication';
 
 export default async function DashboardPage({
   searchParams
@@ -46,12 +47,17 @@ export default async function DashboardPage({
 
   const occurrencesAll = await getOpenOccurrencesForHousehold(membership.households.id);
   const members = await getHouseholdMembers(membership.households.id);
+  const medicationDoses = await getTodayMedicationDoses(membership.households.id);
   const memberMap = new Map(
     members.map((member: any) => [
       member.id,
       member.profiles?.name || member.profiles?.email || member.user_id
     ])
   );
+  const memberLabels = members.reduce<Record<string, string>>((acc, member: any) => {
+    acc[member.id] = member.profiles?.name || member.profiles?.email || member.user_id;
+    return acc;
+  }, {});
   const memberUserMap = new Map(
     members.map((member: any) => [
       member.user_id,
@@ -141,6 +147,8 @@ export default async function DashboardPage({
           membershipId={membership.id}
           userId={user.id}
           googleConnected={Boolean(googleConnection)}
+          medicationDoses={medicationDoses}
+          memberLabels={memberLabels}
           initialCreatedBy={initialCreatedBy}
           initialAssignment={initialAssignment}
           locale={locale}

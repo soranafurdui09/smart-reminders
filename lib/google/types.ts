@@ -1,6 +1,7 @@
 export type CalendarEventInput = {
   summary: string;
   description?: string | null;
+  recurrence?: string[];
   start: {
     dateTime: string;
     timeZone?: string;
