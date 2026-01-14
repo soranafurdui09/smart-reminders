@@ -9,6 +9,7 @@ import { requireUser } from '@/lib/auth';
 import { getHouseholdMembers, getOpenOccurrencesForHousehold, getUserHousehold, getUserLocale } from '@/lib/data';
 import { getLocaleTag, messages } from '@/lib/i18n';
 import { createHousehold } from './household/actions';
+import { getUserGoogleConnection } from '@/lib/google/calendar';
 
 export default async function DashboardPage({
   searchParams
@@ -19,6 +20,7 @@ export default async function DashboardPage({
   const locale = await getUserLocale(user.id);
   const copy = messages[locale];
   const membership = await getUserHousehold(user.id);
+  const googleConnection = await getUserGoogleConnection(user.id);
 
   if (!membership?.households) {
     return (
@@ -238,7 +240,12 @@ export default async function DashboardPage({
                     </div>
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                       {items.map((occurrence) => (
-                        <OccurrenceCard key={occurrence.id} occurrence={occurrence} locale={locale} />
+                        <OccurrenceCard
+                          key={occurrence.id}
+                          occurrence={occurrence}
+                          locale={locale}
+                          googleConnected={Boolean(googleConnection)}
+                        />
                       ))}
                     </div>
                   </div>

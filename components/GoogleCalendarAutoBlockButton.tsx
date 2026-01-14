@@ -11,6 +11,7 @@ type Copy = {
   connectHint: string;
   missingDueDate: string;
   connectLink: string;
+  confirmIfBusy?: string;
 };
 
 type Props = {
@@ -18,9 +19,16 @@ type Props = {
   connected: boolean;
   hasDueDate: boolean;
   copy: Copy;
+  variant?: 'button' | 'menu';
 };
 
-export default function GoogleCalendarAutoBlockButton({ reminderId, connected, hasDueDate, copy }: Props) {
+export default function GoogleCalendarAutoBlockButton({
+  reminderId,
+  connected,
+  hasDueDate,
+  copy,
+  variant = 'button'
+}: Props) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState<string | null>(null);
 
@@ -37,6 +45,25 @@ export default function GoogleCalendarAutoBlockButton({ reminderId, connected, h
     setStatus('loading');
     setMessage(null);
     try {
+      let shouldProceed = true;
+      try {
+        const busyResponse = await fetch('/api/integrations/google/calendar/check-busy-reminder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reminderId })
+        });
+        const busyPayload = await busyResponse.json().catch(() => null);
+        if (busyResponse.ok && busyPayload?.ok && busyPayload.busy) {
+          shouldProceed = window.confirm(copy.confirmIfBusy || 'Calendar is busy. Continue?');
+        }
+      } catch {
+        // Ignore busy check failures and proceed with auto-block.
+      }
+      if (!shouldProceed) {
+        setStatus('idle');
+        return;
+      }
+
       const response = await fetch('/api/integrations/google/calendar/auto-block-reminder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -71,10 +98,14 @@ export default function GoogleCalendarAutoBlockButton({ reminderId, connected, h
     return <div className="text-xs text-muted">{copy.missingDueDate}</div>;
   }
 
+  const buttonClass = variant === 'menu'
+    ? 'w-full rounded-md px-2 py-1 text-left text-sm text-slate-700 hover:bg-slate-100'
+    : 'btn btn-secondary';
+
   return (
-    <div className="flex flex-col gap-1">
+    <div className={variant === 'menu' ? 'space-y-1' : 'flex flex-col gap-1'}>
       <button
-        className="btn btn-secondary"
+        className={buttonClass}
         type="button"
         onClick={handleAutoBlock}
         disabled={status === 'loading'}

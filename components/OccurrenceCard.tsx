@@ -1,4 +1,4 @@
- 'use client';
+'use client';
 
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -11,8 +11,18 @@ import OccurrenceDateChip from '@/components/OccurrenceDateChip';
 import OccurrenceHighlightCard from '@/components/OccurrenceHighlightCard';
 import SmartSnoozeMenu from '@/components/SmartSnoozeMenu';
 import GoogleCalendarDeleteDialog from '@/components/GoogleCalendarDeleteDialog';
+import GoogleCalendarSyncButton from '@/components/GoogleCalendarSyncButton';
+import GoogleCalendarAutoBlockButton from '@/components/GoogleCalendarAutoBlockButton';
 
-export default function OccurrenceCard({ occurrence, locale = defaultLocale }: { occurrence: any; locale?: Locale }) {
+export default function OccurrenceCard({
+  occurrence,
+  locale = defaultLocale,
+  googleConnected = false
+}: {
+  occurrence: any;
+  locale?: Locale;
+  googleConnected?: boolean;
+}) {
   const copy = messages[locale];
   const reminder = occurrence.reminder;
   const reminderId = reminder?.id;
@@ -32,34 +42,7 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
   const assigneeLabel = reminder?.assigned_member_label;
   const performedByLabel = occurrence.performed_by_label;
   const snoozedByLabel = occurrence.status === 'snoozed' ? performedByLabel : null;
-  const formatGoogleDate = useCallback((isoString: string, offsetHours = 0) => {
-    const date = new Date(isoString);
-    date.setHours(date.getHours() + offsetHours);
-    const clean = date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    return clean;
-  }, []);
-  const handleCalendarAction = useCallback((mode: 'send' | 'schedule') => {
-    if (!reminderId || !occurrence?.occur_at || typeof window === 'undefined') {
-      return;
-    }
-    const start = formatGoogleDate(occurrence.occur_at);
-    const end = formatGoogleDate(occurrence.occur_at, 1);
-    const title = reminder?.title ?? '';
-    const details = reminder?.notes ?? '';
-    const url = new URL('https://calendar.google.com/calendar/render');
-    url.searchParams.set('action', 'TEMPLATE');
-    url.searchParams.set('text', title);
-    url.searchParams.set('details', details);
-    url.searchParams.set('dates', `${start}/${end}`);
-    const message =
-      mode === 'send'
-        ? copy.actions.confirmSend
-        : copy.actions.confirmSchedule;
-    if (!window.confirm(message)) {
-      return;
-    }
-    window.open(url.toString(), '_blank');
-  }, [copy.actions.confirmSchedule, copy.actions.confirmSend, formatGoogleDate, occurrence?.occur_at, reminder?.notes, reminder?.title, reminderId]);
+  const hasDueDate = Boolean(reminder?.due_at);
   return (
     <OccurrenceHighlightCard
       className="card space-y-4"
@@ -140,25 +123,42 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
                       {copy.reminderDetail.clone}
                     </ActionSubmitButton>
                   </form>
-                  <div className="mt-2 rounded-lg border border-dashed border-slate-200 p-2 text-xs font-semibold text-slate-700">
-                    <div className="text-[11px] uppercase tracking-wider text-slate-400">
+                  <details className="mt-2 rounded-lg border border-dashed border-slate-200 p-2 text-xs font-semibold text-slate-700">
+                    <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-slate-400">
                       {copy.actions.calendar}
+                    </summary>
+                    <div className="mt-2 space-y-1">
+                      <GoogleCalendarSyncButton
+                        reminderId={reminderId}
+                        connected={googleConnected}
+                        variant="menu"
+                        copy={{
+                          syncLabel: copy.actions.sendDirect,
+                          syncLoading: copy.reminderDetail.googleCalendarSyncing,
+                          syncSuccess: copy.reminderDetail.googleCalendarSyncSuccess,
+                          syncError: copy.reminderDetail.googleCalendarSyncError,
+                          connectFirst: copy.reminderDetail.googleCalendarConnectFirst,
+                          connectLink: copy.reminderDetail.googleCalendarConnectLink
+                        }}
+                      />
+                      <GoogleCalendarAutoBlockButton
+                        reminderId={reminderId}
+                        connected={googleConnected}
+                        hasDueDate={hasDueDate}
+                        variant="menu"
+                        copy={{
+                          label: copy.actions.schedule,
+                          loading: copy.reminderDetail.googleCalendarAutoBlocking,
+                          success: copy.reminderDetail.googleCalendarAutoBlockSuccess,
+                          error: copy.reminderDetail.googleCalendarAutoBlockError,
+                          connectHint: copy.reminderDetail.googleCalendarConnectFirst,
+                          connectLink: copy.reminderDetail.googleCalendarConnectLink,
+                          missingDueDate: copy.reminderDetail.googleCalendarAutoBlockMissingDueDate,
+                          confirmIfBusy: copy.reminderDetail.googleCalendarAutoBlockConfirmBusy
+                        }}
+                      />
                     </div>
-                    <button
-                      type="button"
-                      className="mt-1 w-full rounded-md px-2 py-1 text-left text-sm text-slate-700 hover:bg-slate-100"
-                      onClick={() => handleCalendarAction('send')}
-                    >
-                      {copy.actions.sendDirect}
-                    </button>
-                    <button
-                      type="button"
-                      className="mt-1 w-full rounded-md px-2 py-1 text-left text-sm text-slate-700 hover:bg-slate-100"
-                      onClick={() => handleCalendarAction('schedule')}
-                    >
-                      {copy.actions.schedule}
-                    </button>
-                  </div>
+                  </details>
                   <GoogleCalendarDeleteDialog
                     reminderId={reminderId}
                     hasGoogleEvent={Boolean(reminder?.google_event_id)}

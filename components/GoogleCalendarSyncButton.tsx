@@ -16,9 +16,10 @@ type Props = {
   reminderId: string;
   connected: boolean;
   copy: Copy;
+  variant?: 'button' | 'menu';
 };
 
-export default function GoogleCalendarSyncButton({ reminderId, connected, copy }: Props) {
+export default function GoogleCalendarSyncButton({ reminderId, connected, copy, variant = 'button' }: Props) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
   const handleSync = async () => {
@@ -51,7 +52,24 @@ export default function GoogleCalendarSyncButton({ reminderId, connected, copy }
     );
   }
 
-  return (
+  return variant === 'menu' ? (
+    <div className="space-y-1">
+      <button
+        className="w-full rounded-md px-2 py-1 text-left text-sm text-slate-700 hover:bg-slate-100"
+        type="button"
+        onClick={handleSync}
+        disabled={status === 'loading'}
+      >
+        {status === 'loading' ? copy.syncLoading : copy.syncLabel}
+      </button>
+      {status === 'success' ? (
+        <span className="text-xs text-emerald-700">{copy.syncSuccess}</span>
+      ) : null}
+      {status === 'error' ? (
+        <span className="text-xs text-rose-600">{copy.syncError}</span>
+      ) : null}
+    </div>
+  ) : (
     <div className="flex flex-wrap items-center gap-2">
       <button
         className="btn btn-secondary"

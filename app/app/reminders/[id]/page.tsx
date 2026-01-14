@@ -101,7 +101,8 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
                 error: copy.reminderDetail.googleCalendarAutoBlockError,
                 connectHint: copy.reminderDetail.googleCalendarConnectFirst,
                 connectLink: copy.reminderDetail.googleCalendarConnectLink,
-                missingDueDate: copy.reminderDetail.googleCalendarAutoBlockMissingDueDate
+                missingDueDate: copy.reminderDetail.googleCalendarAutoBlockMissingDueDate,
+                confirmIfBusy: copy.reminderDetail.googleCalendarAutoBlockConfirmBusy
               }}
             />
             <Link href="/app" className="btn btn-secondary">{copy.common.back}</Link>
