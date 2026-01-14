@@ -6,6 +6,7 @@ import { requireUser } from '@/lib/auth';
 import { getOpenOccurrencesForHouseholdRange, getUserHousehold, getUserLocale } from '@/lib/data';
 import { getLocaleTag, messages } from '@/lib/i18n';
 import { formatDateTimeWithTimeZone } from '@/lib/dates';
+import { getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
 
 function parseMonth(monthParam?: string) {
   if (!monthParam) {
@@ -117,19 +118,34 @@ export default async function CalendarPage({
                   </span>
                 </div>
                 <div className="mt-2 space-y-1">
-                  {visibleItems.map((occurrence) => (
-                    <Link
-                      key={occurrence.id}
-                      href={`/app/reminders/${occurrence.reminder?.id ?? ''}`}
-                      title={occurrence.reminder?.title ?? copy.reminderDetail.title}
-                      className="block rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-1 text-xs text-ink transition hover:border-primary/30 hover:bg-white"
-                    >
-                      <div className="truncate font-semibold">
-                        {formatDateTimeWithTimeZone(occurrence.effective_at, occurrence.reminder?.tz ?? null).slice(-5)}{' '}
-                        {occurrence.reminder?.title ?? copy.reminderDetail.title}
-                      </div>
-                    </Link>
-                  ))}
+                  {visibleItems.map((occurrence) => {
+                    const categoryId = inferReminderCategoryId({
+                      title: occurrence.reminder?.title,
+                      notes: occurrence.reminder?.notes,
+                      kind: occurrence.reminder?.kind,
+                      category: occurrence.reminder?.category,
+                      medicationDetails: occurrence.reminder?.medication_details
+                    });
+                    const category = getReminderCategory(categoryId);
+                    return (
+                      <Link
+                        key={occurrence.id}
+                        href={`/app/reminders/${occurrence.reminder?.id ?? ''}`}
+                        title={occurrence.reminder?.title ?? copy.reminderDetail.title}
+                        className="flex items-center gap-2 rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-1 text-xs text-ink transition hover:border-primary/30 hover:bg-white"
+                      >
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: category.color }}
+                          aria-hidden="true"
+                        />
+                        <div className="truncate font-semibold">
+                          {formatDateTimeWithTimeZone(occurrence.effective_at, occurrence.reminder?.tz ?? null).slice(-5)}{' '}
+                          {occurrence.reminder?.title ?? copy.reminderDetail.title}
+                        </div>
+                      </Link>
+                    );
+                  })}
                   {extraCount > 0 ? (
                     <div className="text-xs text-muted">+{extraCount} {copy.calendar.more}</div>
                   ) : null}
