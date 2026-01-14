@@ -8,6 +8,7 @@ import { generateReminderEmbedding } from '@/lib/ai/embeddings';
 import { clearReminderAssignment, setReminderAssignment } from '@/lib/reminderAssignments';
 import { createCalendarEventForMedication, deleteCalendarEventForReminder, getUserGoogleConnection } from '@/lib/google/calendar';
 import { getDefaultContextSettings, isDefaultContextSettings, type DayOfWeek } from '@/lib/reminders/context';
+import { isReminderCategoryId } from '@/lib/categories';
 import { ensureMedicationDoses, getFirstMedicationDose, type MedicationDetails, type MedicationFrequencyType } from '@/lib/reminders/medication';
 import { scheduleNotificationJobsForMedication, scheduleNotificationJobsForReminder } from '@/lib/notifications/jobs';
 
@@ -47,6 +48,8 @@ function buildContextSettings(formData: FormData) {
     formData.get('context_calendar_snooze_minutes'),
     defaults.calendarBusy?.snoozeMinutes ?? 15
   );
+  const categoryRaw = String(formData.get('context_category') || '').trim();
+  const categoryId = categoryRaw && isReminderCategoryId(categoryRaw) ? categoryRaw : null;
 
   const settings = {
     timeWindow: {
@@ -61,7 +64,11 @@ function buildContextSettings(formData: FormData) {
     }
   };
 
-  return isDefaultContextSettings(settings) ? null : settings;
+  const baseIsDefault = isDefaultContextSettings(settings);
+  if (categoryId) {
+    return baseIsDefault ? { category: categoryId } : { ...settings, category: categoryId };
+  }
+  return baseIsDefault ? null : settings;
 }
 
 export async function updateReminder(formData: FormData) {

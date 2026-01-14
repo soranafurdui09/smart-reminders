@@ -22,6 +22,7 @@ export interface CalendarBusyContext {
 export interface ContextSettings {
   timeWindow?: TimeWindowContext;
   calendarBusy?: CalendarBusyContext;
+  category?: string | null;
 }
 
 export function getDefaultContextSettings(): ContextSettings {
@@ -65,6 +66,7 @@ export function parseContextSettings(raw: any | null | undefined): ContextSettin
   if (typeof raw !== 'object' || raw === null) {
     return defaults;
   }
+  const category = typeof raw.category === 'string' ? raw.category : null;
   const timeWindow = typeof raw.timeWindow === 'object' && raw.timeWindow ? raw.timeWindow : {};
   const calendarBusy = typeof raw.calendarBusy === 'object' && raw.calendarBusy ? raw.calendarBusy : {};
   const defaultTimeWindow = defaults.timeWindow ?? {
@@ -94,7 +96,8 @@ export function parseContextSettings(raw: any | null | undefined): ContextSettin
   };
   return {
     timeWindow: parsedTimeWindow,
-    calendarBusy: parsedCalendarBusy
+    calendarBusy: parsedCalendarBusy,
+    category
   };
 }
 

@@ -21,6 +21,7 @@ type HouseholdMembership = {
 type ReminderPreview = {
   id: string;
   title?: string;
+  notes?: string | null;
   household_id?: string;
   schedule_type?: string;
   created_by?: string;
@@ -29,6 +30,8 @@ type ReminderPreview = {
   tz?: string | null;
   kind?: string;
   medication_details?: any;
+  context_settings?: any;
+  category?: string | null;
 };
 
 type OccurrenceWithReminder = {
@@ -56,6 +59,17 @@ type ActionOccurrence = {
   performed_at?: string | null;
   performed_by?: string | null;
 };
+
+function attachCategory<T extends ReminderPreview | null | undefined>(reminder: T): T {
+  if (!reminder || typeof reminder !== 'object') {
+    return reminder;
+  }
+  const contextCategory = (reminder as ReminderPreview).context_settings?.category ?? null;
+  if (!contextCategory || (reminder as ReminderPreview).category) {
+    return reminder;
+  }
+  return { ...(reminder as ReminderPreview), category: contextCategory } as T;
+}
 export async function getUserHousehold(userId: string) {
   const supabase = createServerClient();
   const { data, error } = await supabase
@@ -126,7 +140,7 @@ export async function getOpenOccurrencesForHousehold(householdId: string): Promi
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('reminder_occurrences')
-    .select('id, occur_at, status, snoozed_until, performed_by, performed_at, reminder:reminders!inner(id, title, notes, due_at, schedule_type, created_by, household_id, is_active, assigned_member_id, google_event_id, google_calendar_id, kind, medication_details, tz)')
+    .select('id, occur_at, status, snoozed_until, performed_by, performed_at, reminder:reminders!inner(id, title, notes, due_at, schedule_type, created_by, household_id, is_active, assigned_member_id, google_event_id, google_calendar_id, kind, medication_details, tz, context_settings)')
     .eq('reminders.household_id', householdId)
     .in('status', ['open', 'snoozed'])
     .order('occur_at');
@@ -136,9 +150,11 @@ export async function getOpenOccurrencesForHousehold(householdId: string): Promi
   }
   return (data ?? []).map((occurrence: any) => ({
     ...occurrence,
-    reminder: Array.isArray(occurrence.reminder)
-      ? occurrence.reminder[0] ?? null
-      : occurrence.reminder ?? null
+    reminder: attachCategory(
+      Array.isArray(occurrence.reminder)
+        ? occurrence.reminder[0] ?? null
+        : occurrence.reminder ?? null
+    )
   }));
 }
 
@@ -150,7 +166,7 @@ export async function getOpenOccurrencesForHouseholdRange(
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('reminder_occurrences')
-    .select('id, occur_at, status, snoozed_until, performed_by, performed_at, reminder:reminders!inner(id, title, notes, due_at, schedule_type, created_by, household_id, is_active, assigned_member_id, google_event_id, google_calendar_id, kind, medication_details, tz)')
+    .select('id, occur_at, status, snoozed_until, performed_by, performed_at, reminder:reminders!inner(id, title, notes, due_at, schedule_type, created_by, household_id, is_active, assigned_member_id, google_event_id, google_calendar_id, kind, medication_details, tz, context_settings)')
     .eq('reminders.household_id', householdId)
     .in('status', ['open', 'snoozed'])
     .or(
@@ -163,9 +179,11 @@ export async function getOpenOccurrencesForHouseholdRange(
   }
   return (data ?? []).map((occurrence: any) => ({
     ...occurrence,
-    reminder: Array.isArray(occurrence.reminder)
-      ? occurrence.reminder[0] ?? null
-      : occurrence.reminder ?? null
+    reminder: attachCategory(
+      Array.isArray(occurrence.reminder)
+        ? occurrence.reminder[0] ?? null
+        : occurrence.reminder ?? null
+    )
   }));
 }
 
@@ -177,7 +195,7 @@ export async function getDoneOccurrencesForHousehold(
   const supabase = createServerClient();
   let query = supabase
     .from('reminder_occurrences')
-    .select('id, occur_at, status, done_at, performed_by, reminder:reminders!inner(id, title, household_id)')
+    .select('id, occur_at, status, done_at, performed_by, reminder:reminders!inner(id, title, household_id, context_settings)')
     .eq('reminders.household_id', householdId)
     .eq('status', 'done')
     .order('done_at', { ascending: false })
@@ -192,9 +210,11 @@ export async function getDoneOccurrencesForHousehold(
   }
   return (data ?? []).map((occurrence: any) => ({
     ...occurrence,
-    reminder: Array.isArray(occurrence.reminder)
-      ? occurrence.reminder[0] ?? null
-      : occurrence.reminder ?? null
+    reminder: attachCategory(
+      Array.isArray(occurrence.reminder)
+        ? occurrence.reminder[0] ?? null
+        : occurrence.reminder ?? null
+    )
   }));
 }
 
@@ -217,7 +237,7 @@ export async function getDoneOccurrencesForHouseholdPaged(options: {
   const rangeEnd = rangeStart + limit;
   let query = supabase
     .from('reminder_occurrences')
-    .select('id, occur_at, status, done_at, performed_by, reminder:reminders!inner(id, title, household_id)')
+    .select('id, occur_at, status, done_at, performed_by, reminder:reminders!inner(id, title, household_id, context_settings)')
     .eq('reminders.household_id', householdId)
     .eq('status', 'done')
     .order('done_at', { ascending: false })
@@ -238,9 +258,11 @@ export async function getDoneOccurrencesForHouseholdPaged(options: {
   const sliced = hasMore ? rows.slice(0, limit) : rows;
   const items = sliced.map((occurrence: any) => ({
     ...occurrence,
-    reminder: Array.isArray(occurrence.reminder)
-      ? occurrence.reminder[0] ?? null
-      : occurrence.reminder ?? null
+    reminder: attachCategory(
+      Array.isArray(occurrence.reminder)
+        ? occurrence.reminder[0] ?? null
+        : occurrence.reminder ?? null
+    )
   }));
   return { items, hasMore };
 }

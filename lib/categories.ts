@@ -26,6 +26,7 @@ export const reminderCategories: ReminderCategory[] = [
 ];
 
 const categoryMap = new Map(reminderCategories.map((category) => [category.id, category]));
+const categoryIds = new Set(reminderCategories.map((category) => category.id));
 
 const CATEGORY_KEYWORDS: Record<ReminderCategoryId, string[]> = {
   health: ['med', 'medic', 'pill', 'doctor', 'dentist', 'sanat', 'health'],
@@ -47,6 +48,10 @@ export function getReminderCategory(id?: ReminderCategoryId | null): ReminderCat
     return categoryMap.get(id) as ReminderCategory;
   }
   return categoryMap.get('default') as ReminderCategory;
+}
+
+export function isReminderCategoryId(value: string): value is ReminderCategoryId {
+  return categoryIds.has(value as ReminderCategoryId);
 }
 
 export function inferReminderCategoryId(input: {
@@ -105,4 +110,3 @@ export function getCategoryChipStyle(color: string, active: boolean) {
     color: '#1f2937'
   };
 }
-

@@ -205,7 +205,7 @@ export default async function HistoryPage({
                     title: occurrence.reminder?.title,
                     notes: null,
                     kind: null,
-                    category: null,
+                    category: occurrence.reminder?.category ?? null,
                     medicationDetails: null
                   });
                   const category = getReminderCategory(categoryId);

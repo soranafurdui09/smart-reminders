@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createRouteClient } from '@/lib/supabase/route';
 import { getOptionalEnv } from '@/lib/env';
+import { isReminderCategoryId, reminderCategories } from '@/lib/categories';
 
 export const runtime = 'nodejs';
 
@@ -21,6 +22,7 @@ function buildSystemPrompt() {
     'Use RFC5545 RRULE for recurrenceRule if recurring, otherwise null.',
     'preReminderMinutes is the minutes before dueAt (integer) or null.',
     'assignedMemberId must be one of the provided member ids or null.',
+    'categoryId must be one of the allowed category ids or null.',
     'If a field is unknown, set it to null.'
   ].join(' ');
 }
@@ -43,6 +45,12 @@ function normalizeParsed(payload: any, memberIds: Set<string>) {
     typeof payload?.assignedMemberId === 'string' && memberIds.has(payload.assignedMemberId)
       ? payload.assignedMemberId
       : null;
+  const rawCategory = typeof payload?.categoryId === 'string'
+    ? payload.categoryId
+    : typeof payload?.category === 'string'
+      ? payload.category
+      : '';
+  const categoryId = rawCategory && isReminderCategoryId(rawCategory) ? rawCategory : null;
 
   return {
     title,
@@ -50,7 +58,8 @@ function normalizeParsed(payload: any, memberIds: Set<string>) {
     dueAt,
     recurrenceRule,
     preReminderMinutes: Number.isFinite(preReminderMinutes) ? preReminderMinutes : null,
-    assignedMemberId
+    assignedMemberId,
+    categoryId
   };
 }
 
@@ -107,6 +116,10 @@ export async function POST(request: Request) {
   const memberIds = new Set(memberList.map((member) => member.id));
 
   const model = getOptionalEnv('OPENAI_MODEL') || 'gpt-4o-mini';
+  const categoryList = reminderCategories.map((category) => ({
+    id: category.id,
+    label: category.label
+  }));
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -127,6 +140,7 @@ export async function POST(request: Request) {
             timezone,
             currentTime: clientNow || new Date().toISOString(),
             householdMembers: memberList,
+            categories: categoryList,
             examples: EXAMPLE_INPUTS,
             schema: {
               title: 'string',
@@ -134,7 +148,8 @@ export async function POST(request: Request) {
               dueAt: 'string (ISO 8601)',
               recurrenceRule: 'string | null',
               preReminderMinutes: 'number | null',
-              assignedMemberId: 'string | null'
+              assignedMemberId: 'string | null',
+              categoryId: 'string | null (one of categories)'
             }
           })
         }

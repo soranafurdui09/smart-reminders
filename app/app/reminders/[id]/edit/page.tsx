@@ -77,6 +77,7 @@ export default async function EditReminderPage({ params }: { params: { id: strin
         {reminder.kind === 'medication' ? (
           <form action={updateReminder} className="card space-y-4 max-w-2xl">
             <input type="hidden" name="reminderId" value={reminder.id} />
+            <input type="hidden" name="context_category" value={contextSettings?.category ?? ''} />
             <div>
               <label className="text-sm font-semibold">{copy.remindersNew.medicationNameLabel}</label>
               <input
@@ -202,6 +203,7 @@ export default async function EditReminderPage({ params }: { params: { id: strin
         ) : (
           <form action={updateReminder} className="card space-y-4 max-w-2xl">
             <input type="hidden" name="reminderId" value={reminder.id} />
+            <input type="hidden" name="context_category" value={contextSettings?.category ?? ''} />
             <div>
               <label className="text-sm font-semibold">{copy.remindersNew.titleLabel}</label>
               <input

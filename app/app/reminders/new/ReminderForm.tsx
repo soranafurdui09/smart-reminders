@@ -5,6 +5,7 @@ import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { useSpeechToReminder, type SpeechStatus } from '@/hooks/useSpeechToReminder';
 import { getDefaultContextSettings, type DayOfWeek } from '@/lib/reminders/context';
 import type { MedicationDetails, MedicationFrequencyType } from '@/lib/reminders/medication';
+import type { ReminderCategoryId } from '@/lib/categories';
 
 type MemberOption = {
   id: string;
@@ -18,6 +19,7 @@ type AiResult = {
   recurrenceRule: string | null;
   preReminderMinutes: number | null;
   assignedMemberId: string | null;
+  categoryId?: ReminderCategoryId | null;
 };
 
 export type ReminderFormVoiceHandle = {
@@ -362,6 +364,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const [aiText, setAiText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState<ReminderCategoryId | ''>('');
 
   const [templateQuery, setTemplateQuery] = useState('');
   const [title, setTitle] = useState('');
@@ -604,6 +607,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     );
     setAssignedMemberId(data.assignedMemberId || '');
     setScheduleType(deriveScheduleType(data.recurrenceRule));
+    setCategoryId(data.categoryId || '');
   }, []);
 
   const getCompleteness = useCallback((data: AiResult) => {
@@ -783,6 +787,11 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="medication_details" value={medicationDetailsJson} />
       <input type="hidden" name="medication_add_to_calendar" value={medAddToCalendar ? '1' : ''} />
+      <input
+        type="hidden"
+        name="context_category"
+        value={categoryId && categoryId !== 'default' ? categoryId : ''}
+      />
 
       <section className="card space-y-4">
         <div>
