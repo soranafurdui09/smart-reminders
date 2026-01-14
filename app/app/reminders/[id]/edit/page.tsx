@@ -127,7 +127,7 @@ export default async function EditReminderPage({ params }: { params: { id: strin
                   min={1}
                   max={4}
                   className="input"
-                  defaultValue={medicationDetails?.timesPerDay ?? medTimes.length || 1}
+                  defaultValue={medicationDetails?.timesPerDay ?? (medTimes.length || 1)}
                 />
               </div>
               <div>
