@@ -1,10 +1,10 @@
 import Link from 'next/link';
-import { format } from 'date-fns';
 import AppShell from '@/components/AppShell';
 import SectionHeader from '@/components/SectionHeader';
 import { requireUser } from '@/lib/auth';
 import { getHouseholdMembers, getReminderById, getUserLocale } from '@/lib/data';
 import { messages } from '@/lib/i18n';
+import { formatDateTimeWithTimeZone } from '@/lib/dates';
 import { cloneReminder } from './actions';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { getUserGoogleConnection } from '@/lib/google/calendar';
@@ -47,6 +47,7 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
   const assigneeLabel = reminder.assigned_member_id
     ? memberMap.get(reminder.assigned_member_id) || copy.common.assigneeUnassigned
     : copy.common.assigneeUnassigned;
+  const reminderTimeZone = reminder.tz ?? null;
 
   return (
     <AppShell locale={locale} userEmail={user.email}>
@@ -128,7 +129,7 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
             </div>
             {reminder.due_at ? (
               <div className="text-sm text-muted">
-                {copy.reminderDetail.firstDate}: {format(new Date(reminder.due_at), 'dd MMM yyyy HH:mm')}
+                {copy.reminderDetail.firstDate}: {formatDateTimeWithTimeZone(reminder.due_at, reminderTimeZone)}
               </div>
             ) : null}
             <div className="text-sm text-muted">
@@ -143,7 +144,9 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
           <div className="grid gap-3 md:grid-cols-2">
             {(reminder.reminder_occurrences || []).map((occurrence: any) => (
               <div key={occurrence.id} className="card space-y-2">
-                <div className="text-sm text-muted">{format(new Date(occurrence.occur_at), 'dd MMM yyyy HH:mm')}</div>
+                <div className="text-sm text-muted">
+                  {formatDateTimeWithTimeZone(occurrence.occur_at, reminderTimeZone)}
+                </div>
                 <div className="text-sm font-semibold text-ink">
                   {occurrence.status === 'done'
                     ? copy.common.done

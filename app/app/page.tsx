@@ -10,6 +10,7 @@ import { createHousehold } from './household/actions';
 import { getUserGoogleConnection } from '@/lib/google/calendar';
 import ReminderDashboardSection from '@/app/reminders/ReminderDashboardSection';
 import { getTodayMedicationDoses } from '@/lib/reminders/medication';
+import { formatDateTimeWithTimeZone } from '@/lib/dates';
 
 export default async function DashboardPage({
   searchParams
@@ -99,6 +100,7 @@ export default async function DashboardPage({
       : 'all';
   const initialAssignment = searchParams?.assigned === 'me' ? 'assigned_to_me' : 'all';
   const nextOccurrence = sortedOccurrences[0];
+  const nextOccurrenceTimeZone = nextOccurrence?.reminder?.tz ?? null;
 
   return (
     <AppShell locale={locale} activePath="/app" userEmail={user.email}>
@@ -126,7 +128,7 @@ export default async function DashboardPage({
                       d="M8 7V5m8 2V5M4 11h16M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                     />
                   </svg>
-                  {new Date(nextOccurrence.occur_at).toLocaleString(getLocaleTag(locale))}
+                  {formatDateTimeWithTimeZone(nextOccurrence.occur_at, nextOccurrenceTimeZone)}
                 </div>
               </div>
             ) : (

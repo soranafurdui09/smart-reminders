@@ -5,6 +5,7 @@ import SectionHeader from '@/components/SectionHeader';
 import { requireUser } from '@/lib/auth';
 import { getOpenOccurrencesForHouseholdRange, getUserHousehold, getUserLocale } from '@/lib/data';
 import { getLocaleTag, messages } from '@/lib/i18n';
+import { formatDateTimeWithTimeZone } from '@/lib/dates';
 
 function parseMonth(monthParam?: string) {
   if (!monthParam) {
@@ -124,7 +125,8 @@ export default async function CalendarPage({
                       className="block rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-1 text-xs text-ink transition hover:border-primary/30 hover:bg-white"
                     >
                       <div className="truncate font-semibold">
-                        {format(new Date(occurrence.effective_at), 'HH:mm')} {occurrence.reminder?.title ?? copy.reminderDetail.title}
+                        {formatDateTimeWithTimeZone(occurrence.effective_at, occurrence.reminder?.tz ?? null).slice(-5)}{' '}
+                        {occurrence.reminder?.title ?? copy.reminderDetail.title}
                       </div>
                     </Link>
                   ))}

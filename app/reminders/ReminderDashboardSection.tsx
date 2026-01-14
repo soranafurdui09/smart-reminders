@@ -6,6 +6,7 @@ import SectionHeader from '@/components/SectionHeader';
 import OccurrenceCard from '@/components/OccurrenceCard';
 import ReminderFilterBar from './ReminderFilterBar';
 import { messages, type Locale } from '@/lib/i18n';
+import { formatDateTimeWithTimeZone } from '@/lib/dates';
 
 type CreatedByOption = 'all' | 'me' | 'others';
 type AssignmentOption = 'all' | 'assigned_to_me';
@@ -27,6 +28,7 @@ type OccurrencePayload = {
     assigned_member_label?: string | null;
     kind?: string | null;
     medication_details?: any;
+    tz?: string | null;
   } | null;
   performed_by?: string | null;
   performed_by_label?: string | null;
@@ -122,6 +124,7 @@ export default function ReminderDashboardSection({
   }, [occurrences, createdBy, assignment, membershipId, userId, kindFilter]);
 
   const nextOccurrence = filteredOccurrences[0];
+  const nextOccurrenceTimeZone = nextOccurrence?.reminder?.tz ?? null;
 
   const groups = useMemo(() => {
     const sections: Record<string, OccurrencePayload[]> = {
@@ -232,7 +235,7 @@ export default function ReminderDashboardSection({
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.dashboard.nextTitle}</div>
             <div className="mt-2 text-base font-semibold text-slate-900">{nextOccurrence.reminder?.title}</div>
             <div className="text-sm text-slate-500">
-              {new Date(nextOccurrence.effective_at ?? nextOccurrence.occur_at).toLocaleString(localeTag)}
+              {formatDateTimeWithTimeZone(nextOccurrence.effective_at ?? nextOccurrence.occur_at, nextOccurrenceTimeZone)}
             </div>
           </div>
         ) : (

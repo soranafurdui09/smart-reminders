@@ -153,6 +153,12 @@ curl http://localhost:3000/api/cron/dispatch-notifications
 Cron este configurat in `vercel.json`:
 - `/api/cron/dispatch-notifications` ruleaza la 15 minute.
 
+## Google Calendar busy cache
+Pentru optiunea "Evita notificarile in timpul intalnirilor":
+- Cache TTL: 10 minute
+- Fereastra cache: acum → urmatoarele 24h
+- Constantele sunt definite in `lib/google/freebusy-cache.ts`.
+
 ## Supabase Edge Function (Backfill embeddings)
 Functia edge pentru a genera embeddings direct in Supabase Cloud.
 

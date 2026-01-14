@@ -5,8 +5,9 @@ import { getAppUrl, sendEmail } from '@/lib/notifications';
 import { sendPushNotification } from '@/lib/push';
 import { reminderEmailTemplate } from '@/lib/templates';
 import { evaluateReminderContext, parseContextSettings } from '@/lib/reminders/context';
-import { isUserBusyInCalendarAt } from '@/lib/google/calendar';
+import { getFreeBusyIntervalsForUser } from '@/lib/google/calendar';
 import { deferNotificationJob, rescheduleNotificationJob } from '@/lib/notifications/jobs';
+import { computePostponeUntil, findBusyIntervalAt, FREEBUSY_CACHE_WINDOW_MS } from '@/lib/google/freebusy-cache';
 
 export const runtime = 'nodejs';
 
@@ -167,9 +168,14 @@ export async function GET() {
 
   const { data: profiles } = await admin
     .from('profiles')
-    .select('user_id, email')
+    .select('user_id, email, time_zone')
     .in('user_id', userIds);
-  const profileMap = new Map((profiles ?? []).map((profile: any) => [profile.user_id, profile.email]));
+  const profileMap = new Map(
+    (profiles ?? []).map((profile: any) => [
+      profile.user_id,
+      { email: profile.email, timeZone: profile.time_zone }
+    ])
+  );
 
   const { data: subscriptions } = await admin
     .from('push_subscriptions')
@@ -232,6 +238,38 @@ export async function GET() {
       .eq('id', logId);
   };
 
+  const settingsMap = new Map<string, ReturnType<typeof parseContextSettings>>();
+  const calendarBusyUsers = new Set<string>();
+  (reminders ?? []).forEach((reminder: ReminderRecord) => {
+    const settings = parseContextSettings(reminder.context_settings ?? null);
+    settingsMap.set(reminder.id, settings);
+    if (settings.calendarBusy?.enabled && reminder.created_by) {
+      calendarBusyUsers.add(reminder.created_by);
+    }
+  });
+
+  const busyIntervalMap = new Map<string, ReturnType<typeof findBusyIntervalAt> | null>();
+  if (calendarBusyUsers.size) {
+    const freeBusyWindowEnd = new Date(now.getTime() + FREEBUSY_CACHE_WINDOW_MS);
+    for (const userId of calendarBusyUsers) {
+      try {
+        const profile = profileMap.get(userId);
+        const timeZone = profile?.timeZone || 'UTC';
+        const busyIntervals = await getFreeBusyIntervalsForUser({
+          userId,
+          timeMin: now,
+          timeMax: freeBusyWindowEnd,
+          timeZone,
+          supabase: admin
+        });
+        busyIntervalMap.set(userId, findBusyIntervalAt(busyIntervals, now));
+      } catch (error) {
+        console.error('[google] freeBusy cache failed', error);
+        busyIntervalMap.set(userId, null);
+      }
+    }
+  }
+
   for (const job of jobs as NotificationJob[]) {
     if (job.status !== 'pending') continue;
     const reminder = reminderMap.get(job.reminder_id);
@@ -242,11 +280,11 @@ export async function GET() {
 
     const dueAt = new Date(job.notify_at);
     const occurAtLabel = format(dueAt, 'dd MMM yyyy, HH:mm');
-    const settings = parseContextSettings(reminder.context_settings ?? null);
-    let isBusy = false;
-    if (settings.calendarBusy?.enabled) {
-      isBusy = await isUserBusyInCalendarAt({ userId: reminder.created_by, at: now });
-    }
+    const settings = settingsMap.get(reminder.id) ?? parseContextSettings(reminder.context_settings ?? null);
+    const busyInterval = settings.calendarBusy?.enabled
+      ? busyIntervalMap.get(reminder.created_by) ?? null
+      : null;
+    const isBusy = Boolean(busyInterval);
     const decision = evaluateReminderContext({
       now,
       reminderDueAt: dueAt,
@@ -255,16 +293,19 @@ export async function GET() {
     });
 
     if (decision.type === 'auto_snooze' && decision.newScheduledAt) {
+      const snoozeMinutes = settings.calendarBusy?.snoozeMinutes ?? 15;
+      const adjusted = computePostponeUntil(now, snoozeMinutes, busyInterval);
+      const nextScheduledAt = adjusted.toISOString();
       if (reminder.kind !== 'medication') {
         const occurrence = occurrenceMap.get(reminder.id);
         if (occurrence) {
           await admin
             .from('reminder_occurrences')
-            .update({ snoozed_until: decision.newScheduledAt, status: 'snoozed' })
+            .update({ snoozed_until: nextScheduledAt, status: 'snoozed' })
             .eq('id', occurrence.id);
         }
       }
-      await rescheduleNotificationJob({ jobId: job.id, notifyAt: new Date(decision.newScheduledAt) });
+      await rescheduleNotificationJob({ jobId: job.id, notifyAt: new Date(nextScheduledAt) });
       continue;
     }
 
@@ -289,7 +330,7 @@ export async function GET() {
     const url = isMedication ? `${appUrl}/app` : `${appUrl}/app/reminders/${reminder.id}`;
 
     if (channel === 'email' || channel === 'both') {
-      const email = profileMap.get(job.user_id);
+      const email = profileMap.get(job.user_id)?.email;
       if (email) {
         let logRow: { id?: string } | null = null;
         let logError: unknown = null;

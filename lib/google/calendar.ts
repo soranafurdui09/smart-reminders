@@ -1,8 +1,17 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createServerClient } from '@/lib/supabase/server';
 import { getGoogleCalendarRedirectUrl, getGoogleClientId, getGoogleClientSecret } from '@/lib/env';
 import type { CalendarEventInput } from './types';
 import type { MedicationDetails } from '@/lib/reminders/medication';
 import { getFirstMedicationDose } from '@/lib/reminders/medication';
+import {
+  FREEBUSY_CACHE_WINDOW_MS,
+  FreeBusyCacheState,
+  FreeBusyInterval,
+  findBusyIntervalAt,
+  isCacheFresh,
+  normalizeBusyIntervals
+} from './freebusy-cache';
 
 export interface GoogleTokens {
   accessToken: string;
@@ -101,6 +110,10 @@ function findFreeSlot(
   return null;
 }
 
+function getSupabaseClient(client?: SupabaseClient<any>) {
+  return client ?? createServerClient();
+}
+
 async function queryBusySlots(
   accessToken: string,
   timeMin: Date,
@@ -128,6 +141,22 @@ async function queryBusySlots(
   const busy = payload?.calendars?.primary?.busy ?? [];
   return normalizeBusySlots(busy);
 }
+
+export async function fetchFreeBusy(
+  accessToken: string,
+  timeMin: Date,
+  timeMax: Date,
+  timeZone: string
+) {
+  return queryBusySlots(accessToken, timeMin, timeMax, timeZone);
+}
+
+type FreeBusyCacheRow = {
+  freebusy_cache_json: FreeBusyInterval[] | null;
+  freebusy_cache_time_min: string | null;
+  freebusy_cache_time_max: string | null;
+  freebusy_cache_fetched_at: string | null;
+};
 type GoogleConnectionRow = {
   access_token: string;
   refresh_token: string;
@@ -159,8 +188,8 @@ function buildOAuthParams(params: Record<string, string>) {
   return search.toString();
 }
 
-export async function getUserGoogleConnection(userId: string) {
-  const supabase = createServerClient();
+export async function getUserGoogleConnection(userId: string, client?: SupabaseClient<any>) {
+  const supabase = getSupabaseClient(client);
   const { data, error } = await supabase
     .from('user_google_connections')
     .select('access_token, refresh_token, expires_at, scope')
@@ -174,8 +203,12 @@ export async function getUserGoogleConnection(userId: string) {
   return data as GoogleConnectionRow | null;
 }
 
-export async function upsertTokensForUser(userId: string, tokens: GoogleTokens & { scope?: string }) {
-  const supabase = createServerClient();
+export async function upsertTokensForUser(
+  userId: string,
+  tokens: GoogleTokens & { scope?: string },
+  client?: SupabaseClient<any>
+) {
+  const supabase = getSupabaseClient(client);
   const { error } = await supabase
     .from('user_google_connections')
     .upsert(
@@ -196,8 +229,9 @@ export async function upsertTokensForUser(userId: string, tokens: GoogleTokens &
   }
 }
 
-export async function ensureValidTokens(userId: string): Promise<GoogleTokens> {
-  const connection = await getUserGoogleConnection(userId);
+export async function ensureValidTokens(userId: string, client?: SupabaseClient<any>): Promise<GoogleTokens> {
+  const supabase = getSupabaseClient(client);
+  const connection = await getUserGoogleConnection(userId, supabase);
   if (!connection) {
     throw new Error('Google Calendar not connected.');
   }
@@ -220,12 +254,15 @@ export async function ensureValidTokens(userId: string): Promise<GoogleTokens> {
     expiresAt: refreshed.expiresAt,
     scope: refreshed.scope ?? connection.scope ?? undefined
   };
-  await upsertTokensForUser(userId, nextTokens);
+  await upsertTokensForUser(userId, nextTokens, supabase);
   return nextTokens;
 }
 
-export async function getGoogleOAuthClient(userId: string): Promise<{ client: { accessToken: string }; tokens: GoogleTokens }> {
-  const tokens = await ensureValidTokens(userId);
+export async function getGoogleOAuthClient(
+  userId: string,
+  client?: SupabaseClient<any>
+): Promise<{ client: { accessToken: string }; tokens: GoogleTokens }> {
+  const tokens = await ensureValidTokens(userId, client);
   return { client: { accessToken: tokens.accessToken }, tokens };
 }
 
@@ -597,20 +634,136 @@ async function refreshAccessToken(refreshToken: string) {
   };
 }
 
+async function loadFreeBusyCache(
+  client: SupabaseClient<any>,
+  userId: string
+): Promise<FreeBusyCacheState | null> {
+  const { data, error } = await client
+    .from('user_google_connections')
+    .select('freebusy_cache_json, freebusy_cache_time_min, freebusy_cache_time_max, freebusy_cache_fetched_at')
+    .eq('user_id', userId)
+    .eq('provider', 'google_calendar')
+    .maybeSingle();
+  if (error) {
+    console.error('[google] freeBusy cache load failed', error);
+    return null;
+  }
+  if (!data?.freebusy_cache_time_min || !data.freebusy_cache_time_max || !data.freebusy_cache_fetched_at) {
+    return null;
+  }
+  const busy = Array.isArray(data.freebusy_cache_json) ? data.freebusy_cache_json : [];
+  return {
+    busy,
+    timeMin: data.freebusy_cache_time_min,
+    timeMax: data.freebusy_cache_time_max,
+    fetchedAt: data.freebusy_cache_fetched_at
+  };
+}
+
+async function storeFreeBusyCache(
+  client: SupabaseClient<any>,
+  userId: string,
+  cache: FreeBusyCacheState
+) {
+  const { error } = await client
+    .from('user_google_connections')
+    .update({
+      freebusy_cache_json: cache.busy,
+      freebusy_cache_time_min: cache.timeMin,
+      freebusy_cache_time_max: cache.timeMax,
+      freebusy_cache_fetched_at: cache.fetchedAt,
+      updated_at: new Date().toISOString()
+    })
+    .eq('user_id', userId)
+    .eq('provider', 'google_calendar');
+  if (error) {
+    console.error('[google] freeBusy cache update failed', error);
+  }
+}
+
+async function getUserTimeZone(userId: string, client: SupabaseClient<any>) {
+  const { data, error } = await client
+    .from('profiles')
+    .select('time_zone')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) {
+    console.error('[google] time zone lookup failed', error);
+    return 'UTC';
+  }
+  return data?.time_zone || 'UTC';
+}
+
+export async function getFreeBusyIntervalsForUser(options: {
+  userId: string;
+  timeMin?: Date;
+  timeMax?: Date;
+  now?: Date;
+  timeZone?: string;
+  supabase?: SupabaseClient<any>;
+}) {
+  const now = options.now ?? new Date();
+  const windowStart = options.timeMin ?? now;
+  const windowEnd =
+    options.timeMax ?? new Date(windowStart.getTime() + FREEBUSY_CACHE_WINDOW_MS);
+  const client = getSupabaseClient(options.supabase);
+  const cache = await loadFreeBusyCache(client, options.userId);
+  if (cache && isCacheFresh(cache, windowStart, windowEnd, now)) {
+    return normalizeBusyIntervals(cache.busy);
+  }
+
+  const timeZone = options.timeZone ?? (await getUserTimeZone(options.userId, client));
+  const tokens = await ensureValidTokens(options.userId, client);
+  const busySlots = await fetchFreeBusy(tokens.accessToken, windowStart, windowEnd, timeZone);
+  const intervals = normalizeBusyIntervals(
+    busySlots.map((slot) => ({
+      start: slot.start.toISOString(),
+      end: slot.end.toISOString()
+    }))
+  );
+  await storeFreeBusyCache(client, options.userId, {
+    busy: intervals,
+    timeMin: windowStart.toISOString(),
+    timeMax: windowEnd.toISOString(),
+    fetchedAt: now.toISOString()
+  });
+  return intervals;
+}
+
+export async function getUserBusyIntervalAt(options: {
+  userId: string;
+  at: Date;
+  timeMin?: Date;
+  timeMax?: Date;
+  timeZone?: string;
+  supabase?: SupabaseClient<any>;
+}) {
+  const intervals = await getFreeBusyIntervalsForUser({
+    userId: options.userId,
+    timeMin: options.timeMin,
+    timeMax: options.timeMax,
+    now: new Date(),
+    timeZone: options.timeZone,
+    supabase: options.supabase
+  });
+  return findBusyIntervalAt(intervals, options.at);
+}
+
 export async function isUserBusyInCalendarAt(options: {
   userId: string;
   at: Date;
 }): Promise<boolean> {
   try {
-    const tokens = await ensureValidTokens(options.userId);
     const windowMs = 5 * 60000;
-    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
     const timeMin = new Date(options.at.getTime() - windowMs);
     const timeMax = new Date(options.at.getTime() + windowMs);
-    const busySlots = await queryBusySlots(tokens.accessToken, timeMin, timeMax, timeZone);
-    return busySlots.some(
-      (slot) => slot.start.getTime() <= options.at.getTime() && options.at.getTime() < slot.end.getTime()
-    );
+    const busyInterval = await getUserBusyIntervalAt({
+      userId: options.userId,
+      at: options.at,
+      timeMin,
+      timeMax
+    });
+    return Boolean(busyInterval);
   } catch (error) {
     console.error('[google] is user busy failed', error);
     return false;

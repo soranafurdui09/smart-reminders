@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { format } from 'date-fns';
 import { useCallback } from 'react';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
+import { formatDateTimeWithTimeZone } from '@/lib/dates';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import OccurrenceDateChip from '@/components/OccurrenceDateChip';
 import OccurrenceHighlightCard from '@/components/OccurrenceHighlightCard';
@@ -43,6 +43,7 @@ export default function OccurrenceCard({
   const performedByLabel = occurrence.performed_by_label;
   const snoozedByLabel = occurrence.status === 'snoozed' ? performedByLabel : null;
   const hasDueDate = Boolean(reminder?.due_at);
+  const timeZone = reminder?.tz ?? null;
   return (
     <OccurrenceHighlightCard
       className="card space-y-4"
@@ -53,7 +54,7 @@ export default function OccurrenceCard({
         <div className="space-y-2">
           <OccurrenceDateChip
             occurrenceId={occurrence.id}
-            label={format(new Date(displayAt), 'dd MMM yyyy HH:mm')}
+            label={formatDateTimeWithTimeZone(displayAt, timeZone)}
             highlightKey={displayAt}
           />
           <div className="text-lg font-semibold text-ink">{reminder?.title}</div>
