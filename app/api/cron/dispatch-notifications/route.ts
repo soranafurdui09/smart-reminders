@@ -37,19 +37,26 @@ export async function GET() {
   const admin = createAdminClient();
   const now = new Date();
   const nowIso = now.toISOString();
-  const windowEnd = addMinutes(now, 15).toISOString();
+  const windowStart = addMinutes(now, -15);
+  const windowStartIso = windowStart.toISOString();
+  const windowEndIso = nowIso;
   const appUrl = getAppUrl();
+  console.log('[cron] dispatch notifications', {
+    windowStart: windowStartIso,
+    windowEnd: windowEndIso
+  });
 
   const { data: existingJobs, error: existingError } = await admin
     .from('notification_jobs')
     .select('reminder_id, notify_at')
-    .gte('notify_at', nowIso)
-    .lt('notify_at', windowEnd);
+    .gte('notify_at', windowStartIso)
+    .lte('notify_at', windowEndIso);
 
   if (existingError) {
     console.error('[notifications] fetch existing jobs failed', existingError);
     return NextResponse.json({ error: 'failed' }, { status: 500 });
   }
+  console.log('[cron] existing jobs in window', { count: existingJobs?.length ?? 0 });
 
   const jobKeySet = new Set(
     (existingJobs ?? []).map((job: any) => `${job.reminder_id}:${job.notify_at}`)
@@ -60,7 +67,7 @@ export async function GET() {
     .select('id, occur_at, snoozed_until, reminder:reminders!inner(id, created_by, is_active)')
     .in('status', ['open', 'snoozed'])
     .or(
-      `and(snoozed_until.gte.${nowIso},snoozed_until.lt.${windowEnd}),and(snoozed_until.is.null,occur_at.gte.${nowIso},occur_at.lt.${windowEnd})`
+      `and(snoozed_until.gte.${windowStartIso},snoozed_until.lte.${windowEndIso}),and(snoozed_until.is.null,occur_at.gte.${windowStartIso},occur_at.lte.${windowEndIso})`
     );
 
   const occurrenceInserts = (occurrenceSeeds ?? [])
@@ -95,8 +102,8 @@ export async function GET() {
     .from('medication_doses')
     .select('scheduled_at, reminder:reminders!inner(id, created_by, is_active)')
     .eq('status', 'pending')
-    .gte('scheduled_at', nowIso)
-    .lt('scheduled_at', windowEnd);
+    .gte('scheduled_at', windowStartIso)
+    .lte('scheduled_at', windowEndIso);
 
   const medicationInserts = (medicationSeeds ?? [])
     .map((dose: any) => {
@@ -126,6 +133,10 @@ export async function GET() {
     }[];
 
   const seedInserts = [...occurrenceInserts, ...medicationInserts];
+  console.log('[cron] seed candidates', {
+    occurrences: occurrenceInserts.length,
+    medications: medicationInserts.length
+  });
   if (seedInserts.length) {
     const { error: seedError } = await admin.from('notification_jobs').insert(seedInserts);
     if (seedError) {
@@ -137,8 +148,8 @@ export async function GET() {
     .from('notification_jobs')
     .select('id, reminder_id, user_id, notify_at, channel, status')
     .eq('status', 'pending')
-    .gte('notify_at', nowIso)
-    .lt('notify_at', windowEnd)
+    .gte('notify_at', windowStartIso)
+    .lte('notify_at', windowEndIso)
     .order('notify_at', { ascending: true })
     .limit(1000);
 
@@ -146,6 +157,10 @@ export async function GET() {
     console.error('[notifications] fetch jobs failed', error);
     return NextResponse.json({ error: 'failed' }, { status: 500 });
   }
+  console.log('[cron] pending jobs', {
+    count: jobs?.length ?? 0,
+    sample: (jobs ?? []).slice(0, 3).map((job: any) => job.id)
+  });
 
   if (!jobs?.length) {
     return NextResponse.json({ ok: true, processed: 0 });
@@ -165,6 +180,7 @@ export async function GET() {
   }
 
   const reminderMap = new Map((reminders ?? []).map((reminder: ReminderRecord) => [reminder.id, reminder]));
+  console.log('[cron] loaded reminders', { count: reminderMap.size });
 
   const { data: profiles } = await admin
     .from('profiles')
@@ -210,8 +226,8 @@ export async function GET() {
     .select('id, reminder_id, scheduled_at, status')
     .in('reminder_id', reminderIds)
     .eq('status', 'pending')
-    .gte('scheduled_at', nowIso)
-    .lt('scheduled_at', windowEnd);
+    .gte('scheduled_at', windowStartIso)
+    .lte('scheduled_at', windowEndIso);
   const medicationDoseMap = new Map<string, { id: string; scheduled_at: string }>();
   (medicationDoses ?? []).forEach((dose: any) => {
     medicationDoseMap.set(`${dose.reminder_id}:${dose.scheduled_at}`, dose);
@@ -272,6 +288,13 @@ export async function GET() {
 
   for (const job of jobs as NotificationJob[]) {
     if (job.status !== 'pending') continue;
+    console.log('[cron] processing job', {
+      jobId: job.id,
+      reminderId: job.reminder_id,
+      userId: job.user_id,
+      channel: job.channel,
+      notifyAt: job.notify_at
+    });
     const reminder = reminderMap.get(job.reminder_id);
     if (!reminder?.household_id || !reminder?.is_active || !reminder.created_by) {
       await updateJobStatus(job.id, 'failed', 'reminder_inactive');
@@ -296,6 +319,10 @@ export async function GET() {
       const snoozeMinutes = settings.calendarBusy?.snoozeMinutes ?? 15;
       const adjusted = computePostponeUntil(now, snoozeMinutes, busyInterval);
       const nextScheduledAt = adjusted.toISOString();
+      console.log('[cron] auto-snooze job', {
+        jobId: job.id,
+        nextScheduledAt
+      });
       if (reminder.kind !== 'medication') {
         const occurrence = occurrenceMap.get(reminder.id);
         if (occurrence) {
@@ -310,6 +337,7 @@ export async function GET() {
     }
 
     if (decision.type === 'skip_for_now') {
+      console.log('[cron] skip for now', { jobId: job.id });
       await deferNotificationJob({ jobId: job.id, minutes: 15 });
       continue;
     }
@@ -377,6 +405,7 @@ export async function GET() {
         if (emailResult.status === 'failed') {
           errorMessage = emailResult.error || 'email_failed';
         }
+        console.log('[cron] email result', { jobId: job.id, status: emailResult.status });
         if (!logError && logRow?.id) {
           if (isMedication) {
             await updateMedicationLogStatus(logRow.id, emailResult.status);
@@ -394,6 +423,7 @@ export async function GET() {
       if (pushResult.status === 'failed') {
         errorMessage = errorMessage || 'push_failed';
       }
+      console.log('[cron] push result', { jobId: job.id, status: pushResult.status });
       if (pushResult.staleEndpoints.length) {
         await admin
           .from('push_subscriptions')
@@ -446,6 +476,7 @@ export async function GET() {
     }
 
     const failed = emailStatus === 'failed' || pushStatus === 'failed';
+    console.log('[cron] job final status', { jobId: job.id, status: failed ? 'failed' : 'sent' });
     await updateJobStatus(job.id, failed ? 'failed' : 'sent', failed ? errorMessage : null);
   }
 

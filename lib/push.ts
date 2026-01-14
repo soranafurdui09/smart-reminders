@@ -30,12 +30,15 @@ export function isPushConfigured() {
 export async function sendPushNotification(subscriptions: PushRecord[], payload: Record<string, unknown>): Promise<SendPushResult> {
   const config = getVapidConfig();
   if (!config) {
+    console.log('[notifications] push skipped (VAPID not configured)');
     return { status: 'skipped', staleEndpoints: [] };
   }
   if (!subscriptions.length) {
+    console.log('[notifications] push skipped (no subscriptions)');
     return { status: 'skipped', staleEndpoints: [] };
   }
 
+  console.log('[notifications] sending push', { count: subscriptions.length });
   webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
   const staleEndpoints: string[] = [];
   let failed = false;
@@ -58,6 +61,7 @@ export async function sendPushNotification(subscriptions: PushRecord[], payload:
         staleEndpoints.push(subscription.endpoint);
       } else {
         failed = true;
+        console.error('[notifications] push failed', error);
       }
     }
   }

@@ -38,6 +38,12 @@ export async function scheduleNotificationJobsForReminder(options: {
   } = options;
 
   const times = buildNotificationTimes(dueAt).filter((time) => time.getTime() >= now.getTime());
+  console.log('[notifications] schedule reminder jobs', {
+    reminderId,
+    userId,
+    count: times.length,
+    sample: times.slice(0, 3).map((time) => time.toISOString())
+  });
   await clearNotificationJobsForReminder(reminderId);
   if (!times.length) return;
 
@@ -77,6 +83,12 @@ export async function scheduleNotificationJobsForMedication(options: {
     console.error('[notifications] load medication doses failed', error);
     return;
   }
+  console.log('[notifications] schedule medication jobs', {
+    reminderId,
+    userId,
+    count: doses?.length ?? 0,
+    sample: (doses ?? []).slice(0, 3).map((dose: any) => dose.scheduled_at)
+  });
 
   const inserts = (doses ?? []).map((dose) => ({
     reminder_id: reminderId,
