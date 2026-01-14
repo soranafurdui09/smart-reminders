@@ -5,7 +5,7 @@ export type MedicationFrequencyType = 'once_per_day' | 'times_per_day' | 'every_
 
 export type MedicationDetails = {
   name: string;
-  dose: string;
+  dose?: string | null;
   personId: string | null;
   frequencyType: MedicationFrequencyType;
   timesPerDay?: number;

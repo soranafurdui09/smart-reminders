@@ -6,8 +6,9 @@ import { createServerClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth';
 import { generateReminderEmbedding } from '@/lib/ai/embeddings';
 import { clearReminderAssignment, setReminderAssignment } from '@/lib/reminderAssignments';
-import { deleteCalendarEventForReminder } from '@/lib/google/calendar';
+import { createCalendarEventForMedication, deleteCalendarEventForReminder, getUserGoogleConnection } from '@/lib/google/calendar';
 import { getDefaultContextSettings, isDefaultContextSettings, type DayOfWeek } from '@/lib/reminders/context';
+import { ensureMedicationDoses, getFirstMedicationDose, type MedicationDetails, type MedicationFrequencyType } from '@/lib/reminders/medication';
 
 const DAYS: DayOfWeek[] = [
   'monday',
@@ -66,33 +67,10 @@ export async function updateReminder(formData: FormData) {
   const reminderId = String(formData.get('reminderId'));
   const user = await requireUser(`/app/reminders/${reminderId}`);
 
-  const title = String(formData.get('title') || '').trim();
-  const notes = String(formData.get('notes') || '').trim();
-  const dueAtRaw = String(formData.get('due_at') || '').trim();
-  const scheduleTypeRaw = String(formData.get('schedule_type') || 'once');
-  const scheduleType = ['once', 'daily', 'weekly', 'monthly', 'yearly'].includes(scheduleTypeRaw)
-    ? scheduleTypeRaw
-    : 'once';
-  const recurrenceRuleRaw = String(formData.get('recurrence_rule') || '').trim();
-  const preReminderRaw = String(formData.get('pre_reminder_minutes') || '').trim();
-  const assignedMemberRaw = String(formData.get('assigned_member_id') || '').trim();
-  const contextSettings = buildContextSettings(formData);
-
-  if (!title) {
-    redirect(`/app/reminders/${reminderId}/edit?error=missing-title`);
-  }
-
-  const payload: Record<string, string | number | null | object> = {
-    title,
-    notes: notes || null,
-    schedule_type: scheduleType,
-    recurrence_rule: recurrenceRuleRaw || null
-  };
-
   const supabase = createServerClient();
   const { data: reminderRecord } = await supabase
     .from('reminders')
-    .select('id, household_id')
+    .select('id, household_id, kind, google_event_id')
     .eq('id', reminderId)
     .maybeSingle();
 
@@ -100,15 +78,97 @@ export async function updateReminder(formData: FormData) {
     redirect(`/app/reminders/${reminderId}?error=1`);
   }
 
-  if (dueAtRaw) {
-    payload.due_at = new Date(dueAtRaw).toISOString();
+  const contextSettings = buildContextSettings(formData);
+  const payload: Record<string, string | number | null | object> = {
+    context_settings: contextSettings
+  };
+
+  let assignedMemberId: string | null = null;
+  let assignedUserId: string | null = null;
+  let resolvedTitle = '';
+  let resolvedNotes: string | null = null;
+  let regenerateDoses = false;
+  let medicationDetails: MedicationDetails | null = null;
+  let medicationAddCalendar = false;
+
+  if (reminderRecord.kind === 'medication') {
+    const name = String(formData.get('med_name') || '').trim();
+    const dose = String(formData.get('med_dose') || '').trim();
+    const frequencyRaw = String(formData.get('med_frequency_type') || 'once_per_day');
+    const frequencyType: MedicationFrequencyType = ['once_per_day', 'times_per_day', 'every_n_hours']
+      .includes(frequencyRaw)
+      ? (frequencyRaw as MedicationFrequencyType)
+      : 'once_per_day';
+    const timesPerDay = Number(formData.get('med_times_per_day') || 1);
+    const everyNHours = Number(formData.get('med_every_n_hours') || 8);
+    const startDate = String(formData.get('med_start_date') || '').trim();
+    const endDate = String(formData.get('med_end_date') || '').trim();
+    const personId = String(formData.get('med_person_id') || '').trim() || null;
+    medicationAddCalendar = String(formData.get('med_add_to_calendar') || '') === '1';
+
+    const timeInputs = ['med_time_1', 'med_time_2', 'med_time_3', 'med_time_4']
+      .map((key) => String(formData.get(key) || '').trim())
+      .filter(Boolean);
+
+    if (!name || !startDate) {
+      redirect(`/app/reminders/${reminderId}/edit?error=missing-medication`);
+    }
+
+    medicationDetails = {
+      name,
+      dose: dose || null,
+      personId,
+      frequencyType,
+      timesPerDay: frequencyType === 'times_per_day' ? Math.min(4, Math.max(1, timesPerDay)) : undefined,
+      everyNHours: frequencyType === 'every_n_hours' ? Math.max(1, Math.min(24, everyNHours)) : undefined,
+      timesOfDay: timeInputs.length ? timeInputs : undefined,
+      startDate,
+      endDate: endDate || null,
+      addToCalendar: medicationAddCalendar
+    };
+
+    resolvedTitle = name || 'Medicament';
+    resolvedNotes = dose ? `Doza: ${dose}` : null;
+    const firstDose = medicationDetails ? getFirstMedicationDose(medicationDetails) : null;
+    payload.title = resolvedTitle;
+    payload.notes = resolvedNotes;
+    payload.schedule_type = 'once';
+    payload.recurrence_rule = null;
+    payload.pre_reminder_minutes = null;
+    payload.due_at = firstDose ? new Date(firstDose).toISOString() : new Date().toISOString();
+    payload.medication_details = medicationDetails;
+    assignedMemberId = personId;
+    regenerateDoses = Boolean(medicationDetails);
+  } else {
+    const title = String(formData.get('title') || '').trim();
+    const notes = String(formData.get('notes') || '').trim();
+    const dueAtRaw = String(formData.get('due_at') || '').trim();
+    const scheduleTypeRaw = String(formData.get('schedule_type') || 'once');
+    const scheduleType = ['once', 'daily', 'weekly', 'monthly', 'yearly'].includes(scheduleTypeRaw)
+      ? scheduleTypeRaw
+      : 'once';
+    const recurrenceRuleRaw = String(formData.get('recurrence_rule') || '').trim();
+    const preReminderRaw = String(formData.get('pre_reminder_minutes') || '').trim();
+    const assignedMemberRaw = String(formData.get('assigned_member_id') || '').trim();
+
+    if (!title) {
+      redirect(`/app/reminders/${reminderId}/edit?error=missing-title`);
+    }
+
+    resolvedTitle = title;
+    resolvedNotes = notes || null;
+    payload.title = title;
+    payload.notes = notes || null;
+    payload.schedule_type = scheduleType;
+    payload.recurrence_rule = recurrenceRuleRaw || null;
+    if (dueAtRaw) {
+      payload.due_at = new Date(dueAtRaw).toISOString();
+    }
+    const preReminderMinutes = preReminderRaw ? Number(preReminderRaw) : null;
+    payload.pre_reminder_minutes = Number.isFinite(preReminderMinutes) ? preReminderMinutes : null;
+    assignedMemberId = assignedMemberRaw || null;
   }
 
-  const preReminderMinutes = preReminderRaw ? Number(preReminderRaw) : null;
-  payload.pre_reminder_minutes = Number.isFinite(preReminderMinutes) ? preReminderMinutes : null;
-
-  let assignedMemberId: string | null = assignedMemberRaw || null;
-  let assignedUserId: string | null = null;
   if (assignedMemberId) {
     const { data: member } = await supabase
       .from('household_members')
@@ -123,7 +183,6 @@ export async function updateReminder(formData: FormData) {
     }
   }
   payload.assigned_member_id = assignedMemberId;
-  payload.context_settings = contextSettings;
 
   const { error } = await supabase.from('reminders').update(payload).eq('id', reminderId);
   if (error) {
@@ -142,8 +201,29 @@ export async function updateReminder(formData: FormData) {
     }
   }
 
+  if (regenerateDoses && medicationDetails) {
+    await supabase.from('medication_doses').delete().eq('reminder_id', reminderId);
+    await ensureMedicationDoses(reminderId, medicationDetails);
+    try {
+      if (!medicationAddCalendar && reminderRecord.google_event_id) {
+        await deleteCalendarEventForReminder({ userId: user.id, reminderId });
+      }
+      if (medicationAddCalendar) {
+        const googleConnection = await getUserGoogleConnection(user.id);
+        if (googleConnection) {
+          if (reminderRecord.google_event_id) {
+            await deleteCalendarEventForReminder({ userId: user.id, reminderId });
+          }
+          await createCalendarEventForMedication({ userId: user.id, reminderId, details: medicationDetails });
+        }
+      }
+    } catch (error) {
+      console.error('[google] medication calendar update failed', error);
+    }
+  }
+
   try {
-    const embedding = await generateReminderEmbedding(title, notes || null);
+    const embedding = await generateReminderEmbedding(resolvedTitle, resolvedNotes || null);
     if (embedding) {
       await supabase.from('reminders').update({ embedding }).eq('id', reminderId);
     }

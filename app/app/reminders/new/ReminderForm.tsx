@@ -1058,7 +1058,6 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                 <label className="text-sm font-semibold">{copy.remindersNew.medicationDoseLabel}</label>
                 <input
                   className="input"
-                  required={kind === 'medication'}
                   value={medDose}
                   onChange={(event) => setMedDose(event.target.value)}
                 />
