@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { isThisWeek, isToday, isTomorrow } from 'date-fns';
 import SectionHeader from '@/components/SectionHeader';
 import OccurrenceCard from '@/components/OccurrenceCard';
-import ReminderFilterBar from '@/reminders/ReminderFilterBar';
+import ReminderFilterBar from './ReminderFilterBar';
 import { messages } from '@/lib/i18n';
 
 type CreatedByOption = 'all' | 'me' | 'others';
