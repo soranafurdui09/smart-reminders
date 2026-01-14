@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import { addDays } from 'date-fns';
+import { addDays, subMonths } from 'date-fns';
 import AppShell from '@/components/AppShell';
 import SectionHeader from '@/components/SectionHeader';
 import { requireUser } from '@/lib/auth';
 import {
   getActionOccurrencesForHousehold,
-  getDoneOccurrencesForHousehold,
+  getDoneOccurrencesForHouseholdPaged,
   getHouseholdMembers,
   getUserHousehold,
   getUserLocale
@@ -15,7 +15,7 @@ import { getLocaleTag, messages } from '@/lib/i18n';
 export default async function HistoryPage({
   searchParams
 }: {
-  searchParams: { range?: string; performer?: string };
+  searchParams: { range?: string; performer?: string; page?: string };
 }) {
   const user = await requireUser('/app/history');
   const locale = await getUserLocale(user.id);
@@ -50,16 +50,19 @@ export default async function HistoryPage({
   );
   const performerParam = searchParams.performer;
   const performerFilter = performerParam && memberLabelMap.has(performerParam) ? performerParam : 'all';
-  const allDone = await getDoneOccurrencesForHousehold(
-    membership.households.id,
-    200,
-    performerFilter === 'all' ? undefined : performerFilter
-  );
-  const cutoff = range === 'all' ? null : addDays(new Date(), -Number(range));
-  const cutoffIso = cutoff ? cutoff.toISOString() : null;
-  const filtered = cutoff
-    ? allDone.filter((occurrence) => occurrence.done_at && new Date(occurrence.done_at) >= cutoff)
-    : allDone;
+  const pageSize = 40;
+  const pageParam = Number(searchParams.page || '1');
+  const page = Number.isFinite(pageParam) && pageParam > 0 ? Math.floor(pageParam) : 1;
+  const offset = (page - 1) * pageSize;
+  const cutoff = range === 'all' ? subMonths(new Date(), 6) : addDays(new Date(), -Number(range));
+  const cutoffIso = cutoff.toISOString();
+  const { items: filtered, hasMore } = await getDoneOccurrencesForHouseholdPaged({
+    householdId: membership.households.id,
+    limit: pageSize,
+    offset,
+    performedBy: performerFilter === 'all' ? undefined : performerFilter,
+    startIso: cutoffIso
+  });
   const actionOccurrences = await getActionOccurrencesForHousehold(
     membership.households.id,
     ['done', 'snoozed'],
@@ -87,13 +90,16 @@ export default async function HistoryPage({
   });
   const hasStats = statsRows.some((row) => row.counts.done > 0 || row.counts.snoozed > 0);
 
-  const buildHistoryUrl = (nextRange: RangeKey) => {
+  const buildHistoryUrl = (nextRange: RangeKey, nextPage?: number) => {
     const params = new URLSearchParams();
     if (nextRange !== '7') {
       params.set('range', nextRange);
     }
     if (performerFilter !== 'all') {
       params.set('performer', performerFilter);
+    }
+    if (nextPage && nextPage > 1) {
+      params.set('page', String(nextPage));
     }
     const query = params.toString();
     return query ? `/app/history?${query}` : '/app/history';
@@ -215,6 +221,13 @@ export default async function HistoryPage({
                   );
                 })}
               </div>
+              {hasMore ? (
+                <div className="flex justify-center">
+                  <Link className="btn btn-secondary" href={buildHistoryUrl(range, page + 1)}>
+                    {copy.history.loadMore}
+                  </Link>
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="card text-sm text-muted">{copy.history.emptyFriendly}</div>

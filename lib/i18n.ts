@@ -158,7 +158,8 @@ export const messages = {
       statsSubtitle: 'In intervalul selectat.',
       statsDoneLabel: 'finalizate',
       statsSnoozedLabel: 'amanate',
-      statsEmpty: 'Nu exista actiuni recente pentru acest interval.'
+      statsEmpty: 'Nu exista actiuni recente pentru acest interval.',
+      loadMore: 'Incarca mai mult'
     },
     calendar: {
       title: 'Calendar',
@@ -560,7 +561,8 @@ export const messages = {
       statsSubtitle: 'For the selected range.',
       statsDoneLabel: 'completed',
       statsSnoozedLabel: 'snoozed',
-      statsEmpty: 'No recent actions for this range.'
+      statsEmpty: 'No recent actions for this range.',
+      loadMore: 'Load more'
     },
     calendar: {
       title: 'Calendar',

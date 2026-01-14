@@ -13,6 +13,7 @@ import {
   type MedicationDetails
 } from '@/lib/reminders/medication';
 import { createCalendarEventForMedication, getUserGoogleConnection } from '@/lib/google/calendar';
+import { scheduleNotificationJobsForMedication, scheduleNotificationJobsForReminder } from '@/lib/notifications/jobs';
 
 const DAYS: DayOfWeek[] = [
   'monday',
@@ -182,6 +183,10 @@ export async function createReminder(formData: FormData) {
 
   if (kind === 'medication' && medicationDetails) {
     await ensureMedicationDoses(reminder.id, medicationDetails);
+    await scheduleNotificationJobsForMedication({
+      reminderId: reminder.id,
+      userId: user.id
+    });
     if (medicationAddCalendar) {
       try {
         const googleConnection = await getUserGoogleConnection(user.id);
@@ -216,6 +221,13 @@ export async function createReminder(formData: FormData) {
     if (occurrenceError) {
       console.error('[reminders] create occurrence failed', occurrenceError);
     }
+    await scheduleNotificationJobsForReminder({
+      reminderId: reminder.id,
+      userId: user.id,
+      dueAt,
+      preReminderMinutes: preReminderValue ?? undefined,
+      channel: 'both'
+    });
   }
 
   if (voiceAuto) {

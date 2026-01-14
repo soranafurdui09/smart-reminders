@@ -5,6 +5,7 @@ import { createServerClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth';
 import { getNextOccurrence, type ScheduleType } from '@/lib/reminders';
 import { getSmartSnoozeOptions, inferReminderCategory, type SnoozeOptionId } from '@/lib/reminders/snooze';
+import { clearNotificationJobsForReminder, scheduleNotificationJobsForReminder } from '@/lib/notifications/jobs';
 
 function parseDateTimeLocal(value: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value);
@@ -31,6 +32,20 @@ async function createNextOccurrence(reminderId: string, occurAt: Date, scheduleT
     occur_at: next.toISOString(),
     status: 'open'
   });
+  const { data: reminder } = await supabase
+    .from('reminders')
+    .select('created_by, pre_reminder_minutes')
+    .eq('id', reminderId)
+    .maybeSingle();
+  if (reminder?.created_by) {
+    await scheduleNotificationJobsForReminder({
+      reminderId,
+      userId: reminder.created_by,
+      dueAt: next,
+      preReminderMinutes: reminder.pre_reminder_minutes ?? undefined,
+      channel: 'both'
+    });
+  }
 }
 
 export async function markDone(formData: FormData) {
@@ -61,10 +76,10 @@ export async function markDone(formData: FormData) {
     .eq('id', reminderId)
     .single();
 
+  await clearNotificationJobsForReminder(reminderId);
   if (reminder?.schedule_type) {
     await createNextOccurrence(reminderId, new Date(occurAt), reminder.schedule_type);
   }
-
   revalidatePath('/app');
 }
 
@@ -80,7 +95,7 @@ export async function snoozeOccurrence(formData: FormData) {
   const supabase = createServerClient();
   const { data: occurrence } = await supabase
     .from('reminder_occurrences')
-    .select('id, occur_at, reminder:reminders(id, title, notes, due_at, household_id, is_active)')
+    .select('id, occur_at, reminder:reminders(id, title, notes, due_at, household_id, is_active, created_by, pre_reminder_minutes)')
     .eq('id', occurrenceId)
     .maybeSingle();
 
@@ -140,6 +155,16 @@ export async function snoozeOccurrence(formData: FormData) {
       performed_at: new Date().toISOString()
     })
     .eq('id', occurrenceId);
+
+  if (reminder?.created_by) {
+    await scheduleNotificationJobsForReminder({
+      reminderId,
+      userId: reminder.created_by,
+      dueAt: target,
+      preReminderMinutes: reminder.pre_reminder_minutes ?? undefined,
+      channel: 'both'
+    });
+  }
 
   revalidatePath('/app');
   revalidatePath('/app/calendar');

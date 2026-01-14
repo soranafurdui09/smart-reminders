@@ -197,6 +197,53 @@ export async function getDoneOccurrencesForHousehold(
   }));
 }
 
+export async function getDoneOccurrencesForHouseholdPaged(options: {
+  householdId: string;
+  limit?: number;
+  offset?: number;
+  performedBy?: string | null;
+  startIso?: string | null;
+}): Promise<{ items: DoneOccurrence[]; hasMore: boolean }> {
+  const {
+    householdId,
+    limit = 50,
+    offset = 0,
+    performedBy,
+    startIso
+  } = options;
+  const supabase = createServerClient();
+  const rangeStart = Math.max(0, offset);
+  const rangeEnd = rangeStart + limit;
+  let query = supabase
+    .from('reminder_occurrences')
+    .select('id, occur_at, status, done_at, performed_by, reminder:reminders!inner(id, title, household_id)')
+    .eq('reminders.household_id', householdId)
+    .eq('status', 'done')
+    .order('done_at', { ascending: false })
+    .range(rangeStart, rangeEnd);
+  if (performedBy) {
+    query = query.eq('performed_by', performedBy);
+  }
+  if (startIso) {
+    query = query.gte('done_at', startIso);
+  }
+  const { data, error } = await query;
+  if (error) {
+    logDataError('getDoneOccurrencesForHouseholdPaged', error);
+    return { items: [], hasMore: false };
+  }
+  const rows = data ?? [];
+  const hasMore = rows.length > limit;
+  const sliced = hasMore ? rows.slice(0, limit) : rows;
+  const items = sliced.map((occurrence: any) => ({
+    ...occurrence,
+    reminder: Array.isArray(occurrence.reminder)
+      ? occurrence.reminder[0] ?? null
+      : occurrence.reminder ?? null
+  }));
+  return { items, hasMore };
+}
+
 export async function getActionOccurrencesForHousehold(
   householdId: string,
   statuses: string[],

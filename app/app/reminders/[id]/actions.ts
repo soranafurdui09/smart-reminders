@@ -9,6 +9,7 @@ import { clearReminderAssignment, setReminderAssignment } from '@/lib/reminderAs
 import { createCalendarEventForMedication, deleteCalendarEventForReminder, getUserGoogleConnection } from '@/lib/google/calendar';
 import { getDefaultContextSettings, isDefaultContextSettings, type DayOfWeek } from '@/lib/reminders/context';
 import { ensureMedicationDoses, getFirstMedicationDose, type MedicationDetails, type MedicationFrequencyType } from '@/lib/reminders/medication';
+import { scheduleNotificationJobsForMedication, scheduleNotificationJobsForReminder } from '@/lib/notifications/jobs';
 
 const DAYS: DayOfWeek[] = [
   'monday',
@@ -70,7 +71,7 @@ export async function updateReminder(formData: FormData) {
   const supabase = createServerClient();
   const { data: reminderRecord } = await supabase
     .from('reminders')
-    .select('id, household_id, kind, google_event_id')
+    .select('id, household_id, kind, created_by, due_at, pre_reminder_minutes, google_event_id')
     .eq('id', reminderId)
     .maybeSingle();
 
@@ -90,6 +91,8 @@ export async function updateReminder(formData: FormData) {
   let regenerateDoses = false;
   let medicationDetails: MedicationDetails | null = null;
   let medicationAddCalendar = false;
+  let effectiveDueAt: Date | null = null;
+  let effectivePreReminder: number | null = null;
 
   if (reminderRecord.kind === 'medication') {
     const name = String(formData.get('med_name') || '').trim();
@@ -139,6 +142,8 @@ export async function updateReminder(formData: FormData) {
     payload.medication_details = medicationDetails;
     assignedMemberId = personId;
     regenerateDoses = Boolean(medicationDetails);
+    effectiveDueAt = firstDose ? new Date(firstDose) : new Date();
+    effectivePreReminder = null;
   } else {
     const title = String(formData.get('title') || '').trim();
     const notes = String(formData.get('notes') || '').trim();
@@ -167,6 +172,14 @@ export async function updateReminder(formData: FormData) {
     const preReminderMinutes = preReminderRaw ? Number(preReminderRaw) : null;
     payload.pre_reminder_minutes = Number.isFinite(preReminderMinutes) ? preReminderMinutes : null;
     assignedMemberId = assignedMemberRaw || null;
+    effectiveDueAt = dueAtRaw
+      ? new Date(dueAtRaw)
+      : reminderRecord.due_at
+        ? new Date(reminderRecord.due_at)
+        : null;
+    effectivePreReminder = Number.isFinite(preReminderMinutes)
+      ? preReminderMinutes
+      : reminderRecord.pre_reminder_minutes ?? null;
   }
 
   if (assignedMemberId) {
@@ -204,6 +217,10 @@ export async function updateReminder(formData: FormData) {
   if (regenerateDoses && medicationDetails) {
     await supabase.from('medication_doses').delete().eq('reminder_id', reminderId);
     await ensureMedicationDoses(reminderId, medicationDetails);
+    await scheduleNotificationJobsForMedication({
+      reminderId,
+      userId: reminderRecord.created_by || user.id
+    });
     try {
       if (!medicationAddCalendar && reminderRecord.google_event_id) {
         await deleteCalendarEventForReminder({ userId: user.id, reminderId });
@@ -231,6 +248,16 @@ export async function updateReminder(formData: FormData) {
     console.error('[embeddings] update reminder failed', error);
   }
 
+  if (reminderRecord.kind !== 'medication' && effectiveDueAt) {
+    await scheduleNotificationJobsForReminder({
+      reminderId,
+      userId: reminderRecord.created_by || user.id,
+      dueAt: effectiveDueAt,
+      preReminderMinutes: effectivePreReminder ?? undefined,
+      channel: 'both'
+    });
+  }
+
   revalidatePath(`/app/reminders/${reminderId}`);
   revalidatePath('/app');
   revalidatePath('/app/calendar');
@@ -244,7 +271,7 @@ export async function cloneReminder(formData: FormData) {
   const supabase = createServerClient();
   const { data: reminder, error } = await supabase
     .from('reminders')
-    .select('household_id, title, notes, schedule_type, due_at, tz, is_active')
+    .select('household_id, title, notes, schedule_type, due_at, tz, is_active, pre_reminder_minutes')
     .eq('id', reminderId)
     .single();
 
@@ -285,6 +312,13 @@ export async function cloneReminder(formData: FormData) {
     reminder_id: cloned.id,
     occur_at: dueAt.toISOString(),
     status: 'open'
+  });
+  await scheduleNotificationJobsForReminder({
+    reminderId: cloned.id,
+    userId: user.id,
+    dueAt,
+    preReminderMinutes: reminder.pre_reminder_minutes ?? undefined,
+    channel: 'both'
   });
 
   redirect(`/app/reminders/${cloned.id}`);
