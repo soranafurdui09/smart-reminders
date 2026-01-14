@@ -1,15 +1,19 @@
 "use client";
 
 import { useMemo, useState } from 'react';
+import { getCategoryChipStyle, reminderCategories, type ReminderCategoryId } from '@/lib/categories';
 
 type CreatedByOption = 'all' | 'me' | 'others';
 type AssignmentOption = 'all' | 'assigned_to_me';
+type CategoryOption = 'all' | ReminderCategoryId;
 
 type Props = {
   createdBy: CreatedByOption;
   assignment: AssignmentOption;
+  category: CategoryOption;
   onChangeCreatedBy: (value: CreatedByOption) => void;
   onChangeAssignment: (value: AssignmentOption) => void;
+  onChangeCategory: (value: CategoryOption) => void;
   className?: string;
 };
 
@@ -22,6 +26,14 @@ const assignmentOptions: { value: AssignmentOption; label: string }[] = [
   { value: 'all', label: 'Toate' },
   { value: 'assigned_to_me', label: 'Asignate mie' }
 ];
+const categoryOptions: { value: CategoryOption; label: string; color?: string }[] = [
+  { value: 'all', label: 'Toate' },
+  ...reminderCategories.map((category) => ({
+    value: category.id,
+    label: category.label,
+    color: category.color
+  }))
+];
 
 const chipBase =
   'inline-flex items-center rounded-full border px-3 py-1 text-sm font-semibold transition focus:outline-none focus-visible:ring focus-visible:ring-sky-300';
@@ -29,8 +41,10 @@ const chipBase =
 export default function ReminderFilterBar({
   createdBy,
   assignment,
+  category,
   onChangeCreatedBy,
   onChangeAssignment,
+  onChangeCategory,
   className
 }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -38,8 +52,9 @@ export default function ReminderFilterBar({
     let count = 0;
     if (createdBy !== 'all') count += 1;
     if (assignment !== 'all') count += 1;
+    if (category !== 'all') count += 1;
     return count;
-  }, [createdBy, assignment]);
+  }, [createdBy, assignment, category]);
   const isDefault = activeFilters === 0;
 
   const renderChip = (
@@ -57,6 +72,24 @@ export default function ReminderFilterBar({
       {label}
     </button>
   );
+  const renderCategoryChip = (option: typeof categoryOptions[number]) => {
+    const active = category === option.value;
+    if (option.value === 'all' || !option.color) {
+      return renderChip(option.value, option.label, active, () => onChangeCategory(option.value));
+    }
+    const style = getCategoryChipStyle(option.color, active);
+    return (
+      <button
+        key={option.value}
+        type="button"
+        className={`${chipBase} ${active ? 'shadow-sm' : 'bg-white text-slate-700 hover:bg-slate-50'}`}
+        style={style}
+        onClick={() => onChangeCategory(option.value)}
+      >
+        {option.label}
+      </button>
+    );
+  };
 
   const filterSection = (
     <div className="space-y-3">
@@ -72,6 +105,12 @@ export default function ReminderFilterBar({
           {assignmentOptions.map((option) =>
             renderChip(option.value, option.label, assignment === option.value, () => onChangeAssignment(option.value))
           )}
+        </div>
+      </div>
+      <div>
+        <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Categorie</div>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {categoryOptions.map((option) => renderCategoryChip(option))}
         </div>
       </div>
     </div>
@@ -104,6 +143,7 @@ export default function ReminderFilterBar({
             onClick={() => {
               onChangeCreatedBy('all');
               onChangeAssignment('all');
+              onChangeCategory('all');
             }}
           >
             <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 20 20" fill="none">
@@ -146,6 +186,7 @@ export default function ReminderFilterBar({
                 onClick={() => {
                   onChangeCreatedBy('all');
                   onChangeAssignment('all');
+                  onChangeCategory('all');
                 }}
               >
                 Clear filters

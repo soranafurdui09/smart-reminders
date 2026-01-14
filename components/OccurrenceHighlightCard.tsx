@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
 
 type HighlightPayload = {
   id: string;
@@ -26,12 +27,14 @@ export default function OccurrenceHighlightCard({
   occurrenceId,
   className,
   children,
-  highlightKey
+  highlightKey,
+  style
 }: {
   occurrenceId: string;
   className?: string;
   children: ReactNode;
   highlightKey?: string;
+  style?: CSSProperties;
 }) {
   const [flash, setFlash] = useState(false);
 
@@ -50,7 +53,10 @@ export default function OccurrenceHighlightCard({
   }, [occurrenceId, highlightKey]);
 
   return (
-    <div className={`${className ?? ''} ${flash ? 'flash-outline flash-bg' : ''}`.trim()}>
+    <div
+      className={`${className ?? ''} ${flash ? 'flash-outline flash-bg' : ''}`.trim()}
+      style={style}
+    >
       {children}
     </div>
   );

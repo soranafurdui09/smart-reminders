@@ -7,9 +7,11 @@ import OccurrenceCard from '@/components/OccurrenceCard';
 import ReminderFilterBar from './ReminderFilterBar';
 import { messages, type Locale } from '@/lib/i18n';
 import { formatDateTimeWithTimeZone } from '@/lib/dates';
+import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId, type ReminderCategoryId } from '@/lib/categories';
 
 type CreatedByOption = 'all' | 'me' | 'others';
 type AssignmentOption = 'all' | 'assigned_to_me';
+type CategoryOption = 'all' | ReminderCategoryId;
 
 type OccurrencePayload = {
   id: string;
@@ -27,6 +29,7 @@ type OccurrencePayload = {
     google_event_id?: string | null;
     assigned_member_label?: string | null;
     kind?: string | null;
+    category?: string | null;
     medication_details?: any;
     tz?: string | null;
   } | null;
@@ -91,6 +94,7 @@ export default function ReminderDashboardSection({
   const [assignment, setAssignment] = useState<AssignmentOption>(initialAssignment);
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [kindFilter, setKindFilter] = useState<'all' | 'tasks' | 'medications'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<CategoryOption>('all');
   const [doseState, setDoseState] = useState<MedicationDose[]>(medicationDoses);
   const [visibleMonthGroups, setVisibleMonthGroups] = useState(2);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -103,6 +107,7 @@ export default function ReminderDashboardSection({
     const normalized = occurrences
       .filter((occurrence) => occurrence.reminder?.is_active ?? true)
       .filter((occurrence) => {
+        const reminder = occurrence.reminder ?? null;
         if (kindFilter === 'tasks' && occurrence.reminder?.kind === 'medication') {
           return false;
         }
@@ -118,6 +123,18 @@ export default function ReminderDashboardSection({
         if (assignment === 'assigned_to_me' && occurrence.reminder?.assigned_member_id !== membershipId) {
           return false;
         }
+        if (categoryFilter !== 'all') {
+          const categoryId = inferReminderCategoryId({
+            title: reminder?.title,
+            notes: reminder?.notes,
+            kind: reminder?.kind,
+            category: reminder?.category,
+            medicationDetails: reminder?.medication_details
+          });
+          if (categoryId !== categoryFilter) {
+            return false;
+          }
+        }
         return true;
       })
       .map((occurrence) => ({
@@ -126,7 +143,7 @@ export default function ReminderDashboardSection({
       }))
       .sort((a, b) => new Date(a.effective_at ?? a.occur_at).getTime() - new Date(b.effective_at ?? b.occur_at).getTime());
     return normalized;
-  }, [occurrences, createdBy, assignment, membershipId, userId, kindFilter]);
+  }, [occurrences, createdBy, assignment, membershipId, userId, kindFilter, categoryFilter]);
 
   const grouped = useMemo(() => {
     const now = new Date();
@@ -178,6 +195,17 @@ export default function ReminderDashboardSection({
     grouped.sections.nextMonth[0] ??
     grouped.monthEntries[0]?.[1]?.[0];
   const nextOccurrenceTimeZone = nextOccurrence?.reminder?.tz ?? null;
+  const nextCategoryId = nextOccurrence
+    ? inferReminderCategoryId({
+        title: nextOccurrence.reminder?.title,
+        notes: nextOccurrence.reminder?.notes,
+        kind: nextOccurrence.reminder?.kind,
+        category: nextOccurrence.reminder?.category,
+        medicationDetails: nextOccurrence.reminder?.medication_details
+      })
+    : 'default';
+  const nextCategory = getReminderCategory(nextCategoryId);
+  const nextCategoryChipStyle = getCategoryChipStyle(nextCategory.color, true);
 
   const labels = groupLabels(copy);
   const hasMonthGroups = grouped.monthEntries.length > 0;
@@ -263,6 +291,7 @@ export default function ReminderDashboardSection({
         <ReminderFilterBar
           createdBy={createdBy}
           assignment={assignment}
+          category={categoryFilter}
           onChangeCreatedBy={(value) => {
             if (CreatedOptions.includes(value)) {
               setCreatedBy(value);
@@ -273,15 +302,24 @@ export default function ReminderDashboardSection({
               setAssignment(value);
             }
           }}
+          onChangeCategory={(value) => setCategoryFilter(value)}
         />
       ) : null}
       {kindFilter !== 'medications' ? (
         nextOccurrence ? (
-          <div className="rounded-2xl border border-slate-100 bg-surface p-4 text-sm text-slate-600">
+          <div
+            className="rounded-2xl border border-slate-100 bg-surface p-4 text-sm text-slate-600 border-l-4"
+            style={{ borderLeftColor: nextCategory.color }}
+          >
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.dashboard.nextTitle}</div>
             <div className="mt-2 text-base font-semibold text-slate-900">{nextOccurrence.reminder?.title}</div>
             <div className="text-sm text-slate-500">
               {formatDateTimeWithTimeZone(nextOccurrence.effective_at ?? nextOccurrence.occur_at, nextOccurrenceTimeZone)}
+            </div>
+            <div className="mt-2">
+              <span className="chip" style={nextCategoryChipStyle}>
+                {nextCategory.label}
+              </span>
             </div>
           </div>
         ) : (

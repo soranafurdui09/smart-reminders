@@ -6,6 +6,7 @@ import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
 import { formatDateTimeWithTimeZone } from '@/lib/dates';
+import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import OccurrenceDateChip from '@/components/OccurrenceDateChip';
 import OccurrenceHighlightCard from '@/components/OccurrenceHighlightCard';
@@ -44,19 +45,34 @@ export default function OccurrenceCard({
   const snoozedByLabel = occurrence.status === 'snoozed' ? performedByLabel : null;
   const hasDueDate = Boolean(reminder?.due_at);
   const timeZone = reminder?.tz ?? null;
+  const categoryId = inferReminderCategoryId({
+    title: reminder?.title,
+    notes: reminder?.notes,
+    kind: reminder?.kind,
+    category: reminder?.category,
+    medicationDetails: reminder?.medication_details
+  });
+  const category = getReminderCategory(categoryId);
+  const categoryChipStyle = getCategoryChipStyle(category.color, true);
   return (
     <OccurrenceHighlightCard
-      className="card space-y-4"
+      className="card space-y-4 border-l-4"
       occurrenceId={occurrence.id}
       highlightKey={displayAt}
+      style={{ borderLeftColor: category.color }}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
-          <OccurrenceDateChip
-            occurrenceId={occurrence.id}
-            label={formatDateTimeWithTimeZone(displayAt, timeZone)}
-            highlightKey={displayAt}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <OccurrenceDateChip
+              occurrenceId={occurrence.id}
+              label={formatDateTimeWithTimeZone(displayAt, timeZone)}
+              highlightKey={displayAt}
+            />
+            <span className="chip" style={categoryChipStyle}>
+              {category.label}
+            </span>
+          </div>
           <div className="text-lg font-semibold text-ink">{reminder?.title}</div>
           {commentText ? (
             <div className="text-sm text-muted">{commentText}</div>
