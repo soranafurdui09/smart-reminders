@@ -263,6 +263,14 @@ export const messages = {
       googleCalendarConnectFirst: 'Conecteaza intai Google Calendar.',
       googleCalendarConnectLink: 'Setari'
     },
+    actions: {
+      label: 'Actiuni',
+      calendar: 'Planifica in calendar',
+      sendDirect: 'Trimite direct',
+      schedule: 'Planifica',
+      confirmSend: 'Trimiti acum evenimentul?',
+      confirmSchedule: 'Confirmi planificarea evenimentului?'
+    },
     household: {
       title: 'Household',
       subtitleCreate: 'Creeaza un household pentru familie.',
@@ -610,6 +618,14 @@ export const messages = {
       googleCalendarConnectFirst: 'Connect Google Calendar first.',
       googleCalendarConnectLink: 'Settings'
     },
+    actions: {
+      label: 'Actions',
+      calendar: 'Calendar planning',
+      sendDirect: 'Send directly',
+      schedule: 'Schedule',
+      confirmSend: 'Send this event now?',
+      confirmSchedule: 'Confirm scheduling?'
+    },
     household: {
       title: 'Household',
       subtitleCreate: 'Create a household for your family.',
@@ -713,19 +729,3 @@ export function getLocaleFromCookie(): Locale {
 export function getLocaleTag(locale: Locale) {
   return locale === 'en' ? 'en-US' : 'ro-RO';
 }
-    actions: {
-      label: 'Actiuni',
-      calendar: 'Planifica in calendar',
-      sendDirect: 'Trimite direct',
-      schedule: 'Planifica',
-      confirmSend: 'Trimiti acum evenimentul?',
-      confirmSchedule: 'Confirmi planificarea evenimentului?'
-    },
-    actions: {
-      label: 'Actions',
-      calendar: 'Calendar planning',
-      sendDirect: 'Send directly',
-      schedule: 'Schedule',
-      confirmSend: 'Send this event now?',
-      confirmSchedule: 'Confirm scheduling?'
-    },
