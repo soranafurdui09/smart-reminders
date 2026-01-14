@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { addMinutes, format } from 'date-fns';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAppUrl, sendEmail } from '@/lib/notifications';
@@ -20,6 +21,8 @@ type NotificationJob = {
   notify_at: string;
   channel: 'email' | 'push' | 'both';
   status: string;
+  action_token?: string | null;
+  action_token_expires_at?: string | null;
 };
 
 type ReminderRecord = {
@@ -146,7 +149,7 @@ export async function GET() {
 
   const { data: jobs, error } = await admin
     .from('notification_jobs')
-    .select('id, reminder_id, user_id, notify_at, channel, status')
+    .select('id, reminder_id, user_id, notify_at, channel, status, action_token, action_token_expires_at')
     .eq('status', 'pending')
     .gte('notify_at', windowStartIso)
     .lte('notify_at', windowEndIso)
@@ -254,6 +257,21 @@ export async function GET() {
       .eq('id', logId);
   };
 
+  const ensureActionToken = async (job: NotificationJob) => {
+    const nowTs = Date.now();
+    const expiresAt = job.action_token_expires_at ? new Date(job.action_token_expires_at).getTime() : 0;
+    if (job.action_token && expiresAt > nowTs) {
+      return { token: job.action_token, expiresAt: job.action_token_expires_at as string };
+    }
+    const token = crypto.randomBytes(20).toString('hex');
+    const nextExpires = new Date(nowTs + 7 * 24 * 60 * 60 * 1000).toISOString();
+    await admin
+      .from('notification_jobs')
+      .update({ action_token: token, action_token_expires_at: nextExpires, updated_at: new Date().toISOString() })
+      .eq('id', job.id);
+    return { token, expiresAt: nextExpires };
+  };
+
   const settingsMap = new Map<string, ReturnType<typeof parseContextSettings>>();
   const calendarBusyUsers = new Set<string>();
   (reminders ?? []).forEach((reminder: ReminderRecord) => {
@@ -357,6 +375,13 @@ export async function GET() {
       : `Scadenta: ${occurAtLabel}`;
     const url = isMedication ? `${appUrl}/app` : `${appUrl}/app/reminders/${reminder.id}`;
 
+    const { token } = await ensureActionToken(job);
+    const actionBase = `${appUrl}/api/notifications/action?jobId=${job.id}&token=${token}`;
+    const actionUrls = {
+      done: `${actionBase}&action=done`,
+      snooze: `${actionBase}&action=snooze`
+    };
+
     if (channel === 'email' || channel === 'both') {
       const email = profileMap.get(job.user_id)?.email;
       if (email) {
@@ -399,7 +424,7 @@ export async function GET() {
         const emailResult = await sendEmail({
           to: email,
           subject: isMedication ? title : `Reminder: ${title}`,
-          html: reminderEmailTemplate({ title, occurAt: occurAtLabel })
+          html: reminderEmailTemplate({ title, occurAt: occurAtLabel, actionUrls })
         });
         emailStatus = emailResult.status;
         if (emailResult.status === 'failed') {
@@ -418,7 +443,7 @@ export async function GET() {
 
     if (channel === 'push' || channel === 'both') {
       const subs = pushMap.get(job.user_id) ?? [];
-      const pushResult = await sendPushNotification(subs, { title, body, url });
+      const pushResult = await sendPushNotification(subs, { title, body, url, jobId: job.id, token });
       pushStatus = pushResult.status;
       if (pushResult.status === 'failed') {
         errorMessage = errorMessage || 'push_failed';
