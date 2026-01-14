@@ -713,3 +713,19 @@ export function getLocaleFromCookie(): Locale {
 export function getLocaleTag(locale: Locale) {
   return locale === 'en' ? 'en-US' : 'ro-RO';
 }
+    actions: {
+      label: 'Actiuni',
+      calendar: 'Planifica in calendar',
+      sendDirect: 'Trimite direct',
+      schedule: 'Planifica',
+      confirmSend: 'Trimiti acum evenimentul?',
+      confirmSchedule: 'Confirmi planificarea evenimentului?'
+    },
+    actions: {
+      label: 'Actions',
+      calendar: 'Calendar planning',
+      sendDirect: 'Send directly',
+      schedule: 'Schedule',
+      confirmSend: 'Send this event now?',
+      confirmSchedule: 'Confirm scheduling?'
+    },

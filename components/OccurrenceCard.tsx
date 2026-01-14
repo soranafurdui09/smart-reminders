@@ -1,5 +1,8 @@
+ 'use client';
+
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { useCallback } from 'react';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
@@ -29,6 +32,34 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
   const assigneeLabel = reminder?.assigned_member_label;
   const performedByLabel = occurrence.performed_by_label;
   const snoozedByLabel = occurrence.status === 'snoozed' ? performedByLabel : null;
+  const formatGoogleDate = useCallback((isoString: string, offsetHours = 0) => {
+    const date = new Date(isoString);
+    date.setHours(date.getHours() + offsetHours);
+    const clean = date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    return clean;
+  }, []);
+  const handleCalendarAction = useCallback((mode: 'send' | 'schedule') => {
+    if (!reminderId || !occurrence?.occur_at || typeof window === 'undefined') {
+      return;
+    }
+    const start = formatGoogleDate(occurrence.occur_at);
+    const end = formatGoogleDate(occurrence.occur_at, 1);
+    const title = reminder?.title ?? '';
+    const details = reminder?.notes ?? '';
+    const url = new URL('https://calendar.google.com/calendar/render');
+    url.searchParams.set('action', 'TEMPLATE');
+    url.searchParams.set('text', title);
+    url.searchParams.set('details', details);
+    url.searchParams.set('dates', `${start}/${end}`);
+    const message =
+      mode === 'send'
+        ? copy.actions.confirmSend
+        : copy.actions.confirmSchedule;
+    if (!window.confirm(message)) {
+      return;
+    }
+    window.open(url.toString(), '_blank');
+  }, [copy.actions.confirmSchedule, copy.actions.confirmSend, formatGoogleDate, occurrence?.occur_at, reminder?.notes, reminder?.title, reminderId]);
   return (
     <OccurrenceHighlightCard
       className="card space-y-4"
@@ -99,32 +130,51 @@ export default function OccurrenceCard({ occurrence, locale = defaultLocale }: {
                   >
                     {copy.common.edit}
                   </Link>
-                <form action={cloneReminder}>
-                  <input type="hidden" name="reminderId" value={reminderId} />
-                  <ActionSubmitButton
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
-                    type="submit"
-                    data-action-feedback={copy.common.actionCloned}
-                  >
-                    {copy.reminderDetail.clone}
-                  </ActionSubmitButton>
-                </form>
-                <GoogleCalendarDeleteDialog
-                  reminderId={reminderId}
-                  hasGoogleEvent={Boolean(reminder?.google_event_id)}
-                  copy={{
-                    label: copy.common.delete,
-                    dialogTitle: copy.reminderDetail.googleCalendarDeleteTitle,
-                    dialogHint: copy.reminderDetail.googleCalendarDeleteHint,
-                    justReminder: copy.reminderDetail.googleCalendarDeleteOnly,
-                    reminderAndCalendar: copy.reminderDetail.googleCalendarDeleteBoth,
-                    cancel: copy.reminderDetail.googleCalendarDeleteCancel
-                  }}
-                />
-              </div>
-            ) : null}
-          </div>
-        </details>
+                  <form action={cloneReminder}>
+                    <input type="hidden" name="reminderId" value={reminderId} />
+                    <ActionSubmitButton
+                      className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
+                      type="submit"
+                      data-action-feedback={copy.common.actionCloned}
+                    >
+                      {copy.reminderDetail.clone}
+                    </ActionSubmitButton>
+                  </form>
+                  <div className="mt-2 rounded-lg border border-dashed border-slate-200 p-2 text-xs font-semibold text-slate-700">
+                    <div className="text-[11px] uppercase tracking-wider text-slate-400">
+                      {copy.actions.calendar}
+                    </div>
+                    <button
+                      type="button"
+                      className="mt-1 w-full rounded-md px-2 py-1 text-left text-sm text-slate-700 hover:bg-slate-100"
+                      onClick={() => handleCalendarAction('send')}
+                    >
+                      {copy.actions.sendDirect}
+                    </button>
+                    <button
+                      type="button"
+                      className="mt-1 w-full rounded-md px-2 py-1 text-left text-sm text-slate-700 hover:bg-slate-100"
+                      onClick={() => handleCalendarAction('schedule')}
+                    >
+                      {copy.actions.schedule}
+                    </button>
+                  </div>
+                  <GoogleCalendarDeleteDialog
+                    reminderId={reminderId}
+                    hasGoogleEvent={Boolean(reminder?.google_event_id)}
+                    copy={{
+                      label: copy.common.delete,
+                      dialogTitle: copy.reminderDetail.googleCalendarDeleteTitle,
+                      dialogHint: copy.reminderDetail.googleCalendarDeleteHint,
+                      justReminder: copy.reminderDetail.googleCalendarDeleteOnly,
+                      reminderAndCalendar: copy.reminderDetail.googleCalendarDeleteBoth,
+                      cancel: copy.reminderDetail.googleCalendarDeleteCancel
+                    }}
+                  />
+                </div>
+              ) : null}
+            </div>
+          </details>
 
           <SmartSnoozeMenu
             occurrenceId={occurrence.id}
