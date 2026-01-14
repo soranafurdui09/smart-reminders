@@ -443,14 +443,14 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     triggerHighlight();
   };
 
-  const triggerHighlight = () => {
+  const triggerHighlight = useCallback(() => {
     setAiHighlight(true);
     if (highlightTimer.current) {
       window.clearTimeout(highlightTimer.current);
     }
     highlightTimer.current = window.setTimeout(() => setAiHighlight(false), 2200);
     detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  };
+  }, []);
 
   const parseReminderText = useCallback(async (textToParse: string, showErrors: boolean) => {
     const normalizedText = textToParse.trim();
