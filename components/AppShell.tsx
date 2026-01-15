@@ -92,20 +92,6 @@ export default function AppShell({
                 );
               })}
             </nav>
-            <span
-              className="hidden items-center gap-1 text-xs text-muted md:flex"
-              title={copy.common.calendarDelayHint}
-              aria-label={copy.common.calendarDelayHint}
-            >
-              <svg aria-hidden="true" className="h-4 w-4 text-primaryStrong/70" fill="none" viewBox="0 0 24 24">
-                <path
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  d="M12 8h.01M11 11h1v5m-7 0h14a2 2 0 002-2V7a2 2 0 00-2-2h-3V3m-8 2V3H5a2 2 0 00-2 2v7a2 2 0 002 2z"
-                />
-              </svg>
-              {copy.common.calendarDelayNote}
-            </span>
             <details className="relative">
               <summary className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-surfaceMuted text-sm font-semibold text-ink shadow-sm transition hover:bg-surface">
                 {userInitial}

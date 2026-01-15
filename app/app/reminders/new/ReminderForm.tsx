@@ -1391,6 +1391,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
               </span>
             </button>
             <div className={`space-y-4 pt-4 ${contextOpen ? '' : 'hidden'}`}>
+              <p className="text-xs text-muted">{copy.remindersNew.contextOverrideHint}</p>
               <div className="space-y-3">
                 <label className="flex items-center gap-2 text-sm">
                   <input

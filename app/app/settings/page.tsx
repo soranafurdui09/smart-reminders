@@ -75,6 +75,7 @@ export default async function SettingsPage({
             </div>
           ) : null}
           <form action={updateContextDefaults} className="space-y-4">
+            <p className="text-xs text-muted">{copy.settings.contextOverrideHint}</p>
             <div className="space-y-3">
               <label className="flex items-center gap-2 text-sm">
                 <input
