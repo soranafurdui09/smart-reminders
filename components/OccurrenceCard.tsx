@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback } from 'react';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
@@ -15,16 +14,23 @@ import GoogleCalendarDeleteDialog from '@/components/GoogleCalendarDeleteDialog'
 import GoogleCalendarSyncButton from '@/components/GoogleCalendarSyncButton';
 import GoogleCalendarAutoBlockButton from '@/components/GoogleCalendarAutoBlockButton';
 
+type UrgencyBadge = {
+  label: string;
+  className: string;
+};
+
 export default function OccurrenceCard({
   occurrence,
   locale = defaultLocale,
   googleConnected = false,
-  userTimeZone
+  userTimeZone,
+  urgency
 }: {
   occurrence: any;
   locale?: Locale;
   googleConnected?: boolean;
   userTimeZone?: string;
+  urgency?: UrgencyBadge | null;
 }) {
   const copy = messages[locale];
   const reminder = occurrence.reminder;
@@ -59,61 +65,70 @@ export default function OccurrenceCard({
   });
   const category = getReminderCategory(categoryId);
   const categoryChipStyle = getCategoryChipStyle(category.color, true);
+
   return (
     <OccurrenceHighlightCard
-      className="card space-y-4 border-l-4"
+      className="rounded-2xl border border-borderSubtle bg-white/90 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md border-l-4"
       occurrenceId={occurrence.id}
       highlightKey={displayAt}
       style={{ borderLeftColor: category.color }}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <OccurrenceDateChip
-              occurrenceId={occurrence.id}
-              label={displayLabel}
-              highlightKey={displayAt}
-            />
-            <span className="chip" style={categoryChipStyle}>
-              {category.label}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="chip" style={categoryChipStyle}>
+            {category.label}
+          </span>
+          {urgency ? (
+            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${urgency.className}`}>
+              <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+              {urgency.label}
             </span>
-          </div>
-          <div className="text-lg font-semibold text-ink">{reminder?.title}</div>
-          {commentText ? (
-            <div className="text-sm text-muted">{commentText}</div>
           ) : null}
-          {snoozedByLabel ? (
-            <div className="text-xs text-muted">
-              {copy.common.snoozedBy} {snoozedByLabel}
+        </div>
+        {assigneeLabel ? (
+          <details className="relative">
+            <summary className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-borderSubtle bg-surfaceMuted text-ink shadow-sm transition hover:bg-surface dropdown-summary">
+              <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+                <path
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5z"
+                />
+              </svg>
+            </summary>
+            <div className="absolute right-0 z-20 mt-2 w-max rounded-xl border border-borderSubtle bg-surface px-3 py-2 text-xs font-semibold text-ink shadow-soft">
+              {assigneeLabel}
             </div>
-          ) : null}
-        </div>
-        <div className="flex items-center gap-2">
-          {assigneeLabel ? (
-            <details className="relative">
-              <summary className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-borderSubtle bg-surfaceMuted text-ink shadow-sm transition hover:bg-surface dropdown-summary">
-                <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <path
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5z"
-                  />
-                </svg>
-              </summary>
-              <div className="absolute right-0 z-20 mt-2 w-max rounded-xl border border-borderSubtle bg-surface px-3 py-2 text-xs font-semibold text-ink shadow-soft">
-                {assigneeLabel}
-              </div>
-            </details>
-          ) : null}
-          <span className={`pill border ${statusClass}`}>{statusLabel}</span>
-        </div>
+          </details>
+        ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="mt-3 space-y-2">
+        <div className="text-base font-semibold text-ink line-clamp-2">{reminder?.title}</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <OccurrenceDateChip
+            occurrenceId={occurrence.id}
+            label={displayLabel}
+            highlightKey={displayAt}
+            className="text-[11px]"
+          />
+          <span className={`pill border ${statusClass}`}>{statusLabel}</span>
+        </div>
+        {commentText ? (
+          <div className="text-xs text-muted line-clamp-2">{commentText}</div>
+        ) : null}
+        {snoozedByLabel ? (
+          <div className="text-xs text-muted">
+            {copy.common.snoozedBy} {snoozedByLabel}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <details className="relative">
             <summary
-              className="btn btn-secondary dropdown-summary h-10 w-10 p-0 text-lg leading-none"
+              className="btn btn-secondary dropdown-summary h-9 w-9 p-0 text-lg leading-none"
               aria-label={copy.common.moreActions}
             >
               <span aria-hidden="true">...</span>
@@ -210,7 +225,7 @@ export default function OccurrenceCard({
         </div>
 
         <details className="group w-full sm:w-auto">
-          <summary className="btn btn-primary dropdown-summary w-full sm:w-auto">
+          <summary className="btn btn-primary dropdown-summary h-9 w-full sm:w-auto">
             <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
               <path
                 stroke="currentColor"

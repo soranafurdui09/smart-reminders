@@ -17,6 +17,7 @@ type Props = {
   onChangeAssignment: (value: AssignmentOption) => void;
   onChangeCategory: (value: CategoryOption) => void;
   className?: string;
+  showHeader?: boolean;
 };
 
 const createdOptions: { value: CreatedByOption; label: string }[] = [
@@ -44,7 +45,8 @@ export default function ReminderFilterBar({
   onChangeCreatedBy,
   onChangeAssignment,
   onChangeCategory,
-  className
+  className,
+  showHeader = true
 }: Props) {
   const activeFilters = useMemo(() => {
     let count = 0;
@@ -62,37 +64,39 @@ export default function ReminderFilterBar({
 
   return (
     <div className={`rounded-2xl border border-slate-100 bg-white/70 px-4 py-4 shadow-sm ${className ?? ''}`}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="h-8 w-8 rounded-lg border border-slate-200 bg-white/80 p-2 text-slate-700">
-            <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M4 6h16M6 12h11M9 18h6"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-          </span>
-          <div className="text-sm font-semibold text-slate-900">Filtre</div>
-          {activeFilters > 0 ? (
-            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
-              {activeFilters}
+      {showHeader ? (
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="h-8 w-8 rounded-lg border border-slate-200 bg-white/80 p-2 text-slate-700">
+              <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M4 6h16M6 12h11M9 18h6"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
             </span>
+            <div className="text-sm font-semibold text-slate-900">Filtre</div>
+            {activeFilters > 0 ? (
+              <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
+                {activeFilters}
+              </span>
+            ) : null}
+          </div>
+          {!isDefault ? (
+            <button
+              type="button"
+              className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+              onClick={handleReset}
+            >
+              Șterge filtrele
+            </button>
           ) : null}
         </div>
-        {!isDefault ? (
-          <button
-            type="button"
-            className="text-xs font-semibold text-slate-500 hover:text-slate-700"
-            onClick={handleReset}
-          >
-            Șterge filtrele
-          </button>
-        ) : null}
-      </div>
+      ) : null}
 
-      <div className="mt-4 space-y-5">
+      <div className={`${showHeader ? 'mt-4' : ''} space-y-5`}>
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Creat de</div>
           <SegmentedControl

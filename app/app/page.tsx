@@ -1,6 +1,5 @@
 import SectionHeader from '@/components/SectionHeader';
 import AppShell from '@/components/AppShell';
-import SemanticSearch from '@/components/SemanticSearch';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import DashboardHero from '@/components/dashboard/DashboardHero';
 import { requireUser } from '@/lib/auth';
@@ -150,31 +149,21 @@ export default async function DashboardPage({
           }
         />
 
-        <div className="grid gap-8 lg:grid-cols-[1.35fr,0.9fr]">
-          <div className="space-y-8">
-            <ReminderDashboardSection
-              occurrences={occurrences}
-              copy={copy}
-              membershipId={membership.id}
-              userId={user.id}
-              googleConnected={Boolean(googleConnection)}
-              medicationDoses={medicationDoses}
-              memberLabels={memberLabels}
-              initialCreatedBy={initialCreatedBy}
-              initialAssignment={initialAssignment}
-              locale={locale}
-              localeTag={getLocaleTag(locale)}
-              userTimeZone={userTimeZone}
-            />
-          </div>
-          <div className="space-y-6">
-            <SemanticSearch
-              householdId={membership.households.id}
-              localeTag={getLocaleTag(locale)}
-              copy={copy.search}
-            />
-          </div>
-        </div>
+        <ReminderDashboardSection
+          occurrences={occurrences}
+          copy={copy}
+          membershipId={membership.id}
+          householdId={membership.households.id}
+          userId={user.id}
+          googleConnected={Boolean(googleConnection)}
+          medicationDoses={medicationDoses}
+          memberLabels={memberLabels}
+          initialCreatedBy={initialCreatedBy}
+          initialAssignment={initialAssignment}
+          locale={locale}
+          localeTag={getLocaleTag(locale)}
+          userTimeZone={userTimeZone}
+        />
       </div>
     </AppShell>
   );
