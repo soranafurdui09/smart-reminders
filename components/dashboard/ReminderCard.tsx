@@ -159,7 +159,7 @@ export default function ReminderCard({
           >
             <span aria-hidden="true">...</span>
           </summary>
-          <div className="absolute right-0 z-20 mt-3 w-56 rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft">
+          <div className="absolute right-0 z-50 mt-3 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
             {reminderId ? (
               <div className="space-y-1">
                 <Link
