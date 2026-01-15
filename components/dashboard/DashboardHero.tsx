@@ -12,6 +12,7 @@ type NextReminder = {
 type Props = {
   title: string;
   subtitle: string;
+  hintExample: string;
   voiceLabel: string;
   voiceAriaLabel: string;
   voiceTitle: string;
@@ -26,6 +27,7 @@ type Props = {
 export default function DashboardHero({
   title,
   subtitle,
+  hintExample,
   voiceLabel,
   voiceAriaLabel,
   voiceTitle,
@@ -44,6 +46,7 @@ export default function DashboardHero({
           <div className="space-y-2">
             <h1 className="text-2xl font-semibold text-ink md:text-3xl">{title}</h1>
             <p className="text-sm text-muted">{subtitle}</p>
+            <p className="text-xs text-slate-500">{hintExample}</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <VoiceNavButton

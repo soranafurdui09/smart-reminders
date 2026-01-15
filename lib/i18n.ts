@@ -95,8 +95,9 @@ export const messages = {
     dashboard: {
       title: 'Dashboard',
       subtitle: 'Reminder-ele household-ului tau.',
-      heroTitle: 'Hai sa-ti golim capul de griji 👇',
+      heroTitle: 'Hai sa-ti golim capul de griji',
       heroSubtitle: 'Apasa pe microfon si spune-mi primul lucru de care vrei sa-ti amintesti.',
+      heroHintExample: 'Ex: „Plata chiriei pe 1 ale lunii la 9”',
       heroVoiceCta: 'Creeaza cu voce',
       heroManualCta: 'Creeaza manual',
       newReminder: 'Reminder nou',
@@ -526,8 +527,9 @@ export const messages = {
     dashboard: {
       title: 'Dashboard',
       subtitle: 'Your household reminders.',
-      heroTitle: "Let's clear your head of worries 👇",
+      heroTitle: "Let's clear your head of worries",
       heroSubtitle: 'Press the mic and tell me the first thing you want to remember.',
+      heroHintExample: 'Example: “Pay rent on the 1st at 9”',
       heroVoiceCta: 'Create with voice',
       heroManualCta: 'Create manually',
       newReminder: 'New reminder',
@@ -957,8 +959,9 @@ export const messages = {
     dashboard: {
       title: 'Dashboard',
       subtitle: 'Deine Haushaltserinnerungen.',
-      heroTitle: 'Lass uns den Kopf frei bekommen 👇',
+      heroTitle: 'Lass uns den Kopf frei bekommen',
       heroSubtitle: 'Drücke auf das Mikrofon und sag mir das Erste, woran du erinnert werden möchtest.',
+      heroHintExample: 'Beispiel: „Miete am 1. um 9 bezahlen“',
       heroVoiceCta: 'Per Sprache erstellen',
       heroManualCta: 'Manuell erstellen',
       newReminder: 'Neue Erinnerung',

@@ -129,6 +129,7 @@ export default async function DashboardPage({
         <DashboardHero
           title={copy.dashboard.heroTitle}
           subtitle={copy.dashboard.heroSubtitle}
+          hintExample={copy.dashboard.heroHintExample}
           voiceLabel={copy.dashboard.heroVoiceCta}
           voiceAriaLabel={copy.remindersNew.voiceNavLabel}
           voiceTitle={copy.remindersNew.voiceNavLabel}
