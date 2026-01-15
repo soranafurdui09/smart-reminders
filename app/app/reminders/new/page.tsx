@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import AppShell from '@/components/AppShell';
 import { requireUser } from '@/lib/auth';
-import { getHouseholdMembers, getUserHousehold, getUserLocale } from '@/lib/data';
+import { getHouseholdMembers, getUserContextDefaults, getUserHousehold, getUserLocale } from '@/lib/data';
 import { messages } from '@/lib/i18n';
 import { createReminder } from './actions';
 import ReminderNewClient from './ReminderNewClient';
@@ -17,6 +17,7 @@ export default async function NewReminderPage({
   const copy = messages[locale];
   const membership = await getUserHousehold(user.id);
   const googleConnection = await getUserGoogleConnection(user.id);
+  const contextDefaults = await getUserContextDefaults(user.id);
 
   if (!membership?.households) {
     return (
@@ -47,6 +48,7 @@ export default async function NewReminderPage({
         googleConnected={Boolean(googleConnection)}
         error={searchParams.error}
         autoVoice={searchParams.voice === '1' || searchParams.voice === 'true'}
+        contextDefaults={contextDefaults}
       />
     </AppShell>
   );

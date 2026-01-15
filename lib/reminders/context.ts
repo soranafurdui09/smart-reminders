@@ -61,21 +61,21 @@ function sanitizeDay(day?: string): DayOfWeek | null {
   return allowed.includes(normalized as DayOfWeek) ? (normalized as DayOfWeek) : null;
 }
 
-export function parseContextSettings(raw: any | null | undefined): ContextSettings {
-  const defaults = getDefaultContextSettings();
+export function parseContextSettings(raw: any | null | undefined, defaults?: ContextSettings): ContextSettings {
+  const resolvedDefaults = defaults ?? getDefaultContextSettings();
   if (typeof raw !== 'object' || raw === null) {
-    return defaults;
+    return resolvedDefaults;
   }
   const category = typeof raw.category === 'string' ? raw.category : null;
   const timeWindow = typeof raw.timeWindow === 'object' && raw.timeWindow ? raw.timeWindow : {};
   const calendarBusy = typeof raw.calendarBusy === 'object' && raw.calendarBusy ? raw.calendarBusy : {};
-  const defaultTimeWindow = defaults.timeWindow ?? {
+  const defaultTimeWindow = resolvedDefaults.timeWindow ?? {
     enabled: false,
     startHour: 9,
     endHour: 20,
     daysOfWeek: []
   };
-  const defaultCalendarBusy = defaults.calendarBusy ?? {
+  const defaultCalendarBusy = resolvedDefaults.calendarBusy ?? {
     enabled: false,
     snoozeMinutes: 15
   };
@@ -101,8 +101,25 @@ export function parseContextSettings(raw: any | null | undefined): ContextSettin
   };
 }
 
-export function isDefaultContextSettings(settings: ContextSettings): boolean {
-  return !settings.timeWindow?.enabled && !settings.calendarBusy?.enabled;
+function normalizeDays(days?: DayOfWeek[]) {
+  if (!Array.isArray(days)) return [];
+  return Array.from(new Set(days)).sort();
+}
+
+export function isDefaultContextSettings(settings: ContextSettings, defaults?: ContextSettings): boolean {
+  const baseDefaults = defaults ?? getDefaultContextSettings();
+  const normalized = parseContextSettings(settings, baseDefaults);
+  const base = parseContextSettings(baseDefaults, baseDefaults);
+  const timeWindowEqual =
+    normalized.timeWindow?.enabled === base.timeWindow?.enabled &&
+    normalized.timeWindow?.startHour === base.timeWindow?.startHour &&
+    normalized.timeWindow?.endHour === base.timeWindow?.endHour &&
+    JSON.stringify(normalizeDays(normalized.timeWindow?.daysOfWeek)) ===
+      JSON.stringify(normalizeDays(base.timeWindow?.daysOfWeek));
+  const calendarEqual =
+    normalized.calendarBusy?.enabled === base.calendarBusy?.enabled &&
+    normalized.calendarBusy?.snoozeMinutes === base.calendarBusy?.snoozeMinutes;
+  return Boolean(timeWindowEqual && calendarEqual);
 }
 
 export type ContextDecisionType = 'send_now' | 'skip_for_now' | 'auto_snooze';

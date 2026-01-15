@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import ReminderForm, { type ReminderFormVoiceHandle } from './ReminderForm';
 import type { SpeechStatus } from '@/hooks/useSpeechToReminder';
+import type { ContextSettings } from '@/lib/reminders/context';
 
 type MemberOption = {
   id: string;
@@ -19,6 +20,7 @@ type Props = {
   googleConnected: boolean;
   error?: string;
   autoVoice?: boolean;
+  contextDefaults?: ContextSettings;
 };
 
 export default function ReminderNewClient({
@@ -29,7 +31,8 @@ export default function ReminderNewClient({
   locale,
   googleConnected,
   error,
-  autoVoice = false
+  autoVoice = false,
+  contextDefaults
 }: Props) {
   const formRef = useRef<ReminderFormVoiceHandle | null>(null);
   const pendingStartRef = useRef(false);
@@ -122,6 +125,7 @@ export default function ReminderNewClient({
         locale={locale}
         autoVoice={autoVoice}
         googleConnected={googleConnected}
+        contextDefaults={contextDefaults}
         onVoiceStateChange={setVoiceStatus}
       />
 

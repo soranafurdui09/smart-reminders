@@ -4,7 +4,7 @@ import SectionHeader from '@/components/SectionHeader';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import DateTimeLocalField from '@/components/DateTimeLocalField';
 import { requireUser } from '@/lib/auth';
-import { getHouseholdMembers, getReminderById, getUserLocale } from '@/lib/data';
+import { getHouseholdMembers, getReminderById, getUserContextDefaults, getUserLocale } from '@/lib/data';
 import { messages } from '@/lib/i18n';
 import { parseContextSettings, type DayOfWeek } from '@/lib/reminders/context';
 import type { MedicationDetails, MedicationFrequencyType } from '@/lib/reminders/medication';
@@ -28,6 +28,7 @@ export default async function EditReminderPage({ params }: { params: { id: strin
   const copy = messages[locale];
   const reminder = await getReminderById(params.id);
   const googleConnection = await getUserGoogleConnection(user.id);
+  const contextDefaults = await getUserContextDefaults(user.id);
 
   if (!reminder) {
     return (
@@ -47,7 +48,7 @@ export default async function EditReminderPage({ params }: { params: { id: strin
     id: member.id,
     label: member.profiles?.name || member.profiles?.email || member.user_id
   }));
-  const contextSettings = parseContextSettings(reminder.context_settings ?? null);
+  const contextSettings = parseContextSettings(reminder.context_settings ?? null, contextDefaults);
   const timeWindow = contextSettings.timeWindow ?? { enabled: false, startHour: 9, endHour: 20, daysOfWeek: [] };
   const calendarBusy = contextSettings.calendarBusy ?? { enabled: false, snoozeMinutes: 15 };
   const hourOptions = Array.from({ length: 24 }, (_, index) => index);

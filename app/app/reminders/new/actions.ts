@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth';
-import { getUserHousehold } from '@/lib/data';
+import { getUserContextDefaults, getUserHousehold } from '@/lib/data';
 import { generateReminderEmbedding } from '@/lib/ai/embeddings';
 import { setReminderAssignment } from '@/lib/reminderAssignments';
 import { getDefaultContextSettings, isDefaultContextSettings, type DayOfWeek } from '@/lib/reminders/context';
@@ -38,11 +38,11 @@ function normalizeMinutes(value: FormDataEntryValue | null, fallback: number) {
   return Math.min(1440, Math.floor(num));
 }
 
-function buildContextSettings(formData: FormData) {
-  const defaults = getDefaultContextSettings();
+function buildContextSettings(formData: FormData, defaults?: ReturnType<typeof getDefaultContextSettings>) {
+  const baseDefaults = defaults ?? getDefaultContextSettings();
   const timeWindowEnabled = String(formData.get('context_time_window_enabled') || '') === '1';
-  const startHour = normalizeHour(formData.get('context_time_start_hour'), defaults.timeWindow?.startHour ?? 9);
-  const endHour = normalizeHour(formData.get('context_time_end_hour'), defaults.timeWindow?.endHour ?? 20);
+  const startHour = normalizeHour(formData.get('context_time_start_hour'), baseDefaults.timeWindow?.startHour ?? 9);
+  const endHour = normalizeHour(formData.get('context_time_end_hour'), baseDefaults.timeWindow?.endHour ?? 20);
   const daysOfWeek = formData
     .getAll('context_time_days')
     .map((day) => String(day))
@@ -50,7 +50,7 @@ function buildContextSettings(formData: FormData) {
   const calendarEnabled = String(formData.get('context_calendar_busy_enabled') || '') === '1';
   const snoozeMinutes = normalizeMinutes(
     formData.get('context_calendar_snooze_minutes'),
-    defaults.calendarBusy?.snoozeMinutes ?? 15
+    baseDefaults.calendarBusy?.snoozeMinutes ?? 15
   );
   const categoryRaw = String(formData.get('context_category') || '').trim();
   const categoryId = categoryRaw && isReminderCategoryId(categoryRaw) ? categoryRaw : null;
@@ -68,7 +68,7 @@ function buildContextSettings(formData: FormData) {
     }
   };
 
-  const baseIsDefault = isDefaultContextSettings(settings);
+  const baseIsDefault = isDefaultContextSettings(settings, baseDefaults);
   if (categoryId) {
     return baseIsDefault ? { category: categoryId } : { ...settings, category: categoryId };
   }
@@ -81,6 +81,7 @@ export async function createReminder(formData: FormData) {
   if (!membership?.households) {
     redirect('/app');
   }
+  const contextDefaults = await getUserContextDefaults(user.id);
 
   const kindRaw = String(formData.get('kind') || 'generic');
   const kind = kindRaw === 'medication' ? 'medication' : 'generic';
@@ -97,7 +98,7 @@ export async function createReminder(formData: FormData) {
   const assignedMemberRaw = String(formData.get('assigned_member_id') || '').trim();
   const voiceAuto = String(formData.get('voice_auto') || '') === '1';
   const tz = String(formData.get('tz') || '').trim() || 'UTC';
-  const contextSettings = buildContextSettings(formData);
+  const contextSettings = buildContextSettings(formData, contextDefaults);
   const medicationDetailsRaw = String(formData.get('medication_details') || '').trim();
   const medicationAddCalendar = String(formData.get('medication_add_to_calendar') || '') === '1';
 

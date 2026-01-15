@@ -195,12 +195,16 @@ export async function GET() {
 
   const { data: profiles } = await admin
     .from('profiles')
-    .select('user_id, email, time_zone')
+    .select('user_id, email, time_zone, context_defaults')
     .in('user_id', userIds);
   const profileMap = new Map(
     (profiles ?? []).map((profile: any) => [
       profile.user_id,
-      { email: profile.email, timeZone: profile.time_zone }
+      {
+        email: profile.email,
+        timeZone: profile.time_zone,
+        contextDefaults: parseContextSettings(profile.context_defaults ?? null)
+      }
     ])
   );
 
@@ -283,7 +287,8 @@ export async function GET() {
   const settingsMap = new Map<string, ReturnType<typeof parseContextSettings>>();
   const calendarBusyUsers = new Set<string>();
   (reminders ?? []).forEach((reminder: ReminderRecord) => {
-    const settings = parseContextSettings(reminder.context_settings ?? null);
+    const profileDefaults = reminder.created_by ? profileMap.get(reminder.created_by)?.contextDefaults : null;
+    const settings = parseContextSettings(reminder.context_settings ?? null, profileDefaults ?? undefined);
     settingsMap.set(reminder.id, settings);
     if (settings.calendarBusy?.enabled && reminder.created_by) {
       calendarBusyUsers.add(reminder.created_by);
@@ -337,7 +342,11 @@ export async function GET() {
       continue;
     }
     const occurAtLabel = formatDateTimeWithTimeZone(dueAt, displayTimeZone);
-    const settings = settingsMap.get(reminder.id) ?? parseContextSettings(reminder.context_settings ?? null);
+    const settings = settingsMap.get(reminder.id)
+      ?? parseContextSettings(
+        reminder.context_settings ?? null,
+        profileMap.get(reminder.created_by)?.contextDefaults ?? undefined
+      );
     const busyInterval = settings.calendarBusy?.enabled
       ? busyIntervalMap.get(reminder.created_by) ?? null
       : null;

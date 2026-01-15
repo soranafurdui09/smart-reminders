@@ -3,7 +3,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { useSpeechToReminder, type SpeechStatus } from '@/hooks/useSpeechToReminder';
-import { getDefaultContextSettings, type DayOfWeek } from '@/lib/reminders/context';
+import { getDefaultContextSettings, type ContextSettings, type DayOfWeek } from '@/lib/reminders/context';
 import type { MedicationDetails, MedicationFrequencyType } from '@/lib/reminders/medication';
 import type { ReminderCategoryId } from '@/lib/categories';
 
@@ -354,6 +354,7 @@ type ReminderFormProps = {
   locale: string;
   googleConnected: boolean;
   autoVoice?: boolean;
+  contextDefaults?: ContextSettings;
   onVoiceStateChange?: (payload: { status: SpeechStatus; supported: boolean }) => void;
 };
 
@@ -365,6 +366,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   locale,
   googleConnected,
   autoVoice = false,
+  contextDefaults,
   onVoiceStateChange
 }, ref) {
   const activeLocale: TemplateLocale = locale === 'en' ? 'en' : locale === 'de' ? 'de' : 'ro';
@@ -392,6 +394,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const [medEndDate, setMedEndDate] = useState('');
   const [medPersonId, setMedPersonId] = useState('');
   const [medAddToCalendar, setMedAddToCalendar] = useState(false);
+  const [contextOpen, setContextOpen] = useState(false);
   const [aiHighlight, setAiHighlight] = useState(false);
   const [pendingAutoCreate, setPendingAutoCreate] = useState(false);
   const [autoCreateSource, setAutoCreateSource] = useState<'voice' | 'manual' | null>(null);
@@ -399,7 +402,10 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const [voiceUseAi, setVoiceUseAi] = useState(true);
   const [voiceMissingMessage, setVoiceMissingMessage] = useState<string | null>(null);
   const [voiceErrorCode, setVoiceErrorCode] = useState<string | null>(null);
-  const defaultContext = useMemo(() => getDefaultContextSettings(), []);
+  const defaultContext = useMemo(
+    () => (contextDefaults ? contextDefaults : getDefaultContextSettings()),
+    [contextDefaults]
+  );
   const [timeWindowEnabled, setTimeWindowEnabled] = useState(defaultContext.timeWindow?.enabled ?? false);
   const [timeWindowStartHour, setTimeWindowStartHour] = useState(defaultContext.timeWindow?.startHour ?? 9);
   const [timeWindowEndHour, setTimeWindowEndHour] = useState(defaultContext.timeWindow?.endHour ?? 20);
@@ -1355,17 +1361,31 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
               onChange={(event) => setRecurrenceRule(event.target.value)}
             />
           </div>
-          <div className="rounded-2xl border border-borderSubtle bg-surfaceMuted/60 p-4 space-y-4">
-            <div>
-              <div className="text-sm font-semibold text-ink">{copy.remindersNew.contextTitle}</div>
-              <p className="text-xs text-muted">{copy.remindersNew.contextSubtitle}</p>
-            </div>
-            <div className="space-y-3">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="context_time_window_enabled"
-                  value="1"
+          <div className="rounded-2xl border border-borderSubtle bg-surfaceMuted/60 p-4">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between gap-4 text-left"
+              onClick={() => setContextOpen((prev) => !prev)}
+              aria-expanded={contextOpen}
+            >
+              <div>
+                <div className="text-sm font-semibold text-ink">{copy.remindersNew.contextTitle}</div>
+                <p className="text-xs text-muted">{copy.remindersNew.contextSubtitle}</p>
+              </div>
+              <span
+                aria-hidden="true"
+                className={`flex h-7 w-7 items-center justify-center rounded-full border border-borderSubtle bg-surface text-muted transition ${contextOpen ? 'rotate-90' : ''}`}
+              >
+                ›
+              </span>
+            </button>
+            <div className={`space-y-4 pt-4 ${contextOpen ? '' : 'hidden'}`}>
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="context_time_window_enabled"
+                    value="1"
                   className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
                   checked={timeWindowEnabled}
                   onChange={(event) => setTimeWindowEnabled(event.target.checked)}
@@ -1432,31 +1452,32 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                   ))}
                 </div>
               </div>
-            </div>
-            <div className="space-y-3">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="context_calendar_busy_enabled"
-                  value="1"
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
-                  checked={calendarBusyEnabled}
-                  onChange={(event) => setCalendarBusyEnabled(event.target.checked)}
-                />
-                {copy.remindersNew.contextCalendarLabel}
-              </label>
-              <div className="max-w-xs">
-                <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextSnoozeLabel}</label>
-                <input
-                  type="number"
-                  name="context_calendar_snooze_minutes"
-                  className="input"
-                  min={5}
-                  max={240}
-                  value={calendarSnoozeMinutes}
-                  onChange={(event) => setCalendarSnoozeMinutes(Number(event.target.value))}
-                  disabled={!calendarBusyEnabled}
-                />
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="context_calendar_busy_enabled"
+                    value="1"
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                    checked={calendarBusyEnabled}
+                    onChange={(event) => setCalendarBusyEnabled(event.target.checked)}
+                  />
+                  {copy.remindersNew.contextCalendarLabel}
+                </label>
+                <p className="text-xs text-muted">{copy.remindersNew.contextCalendarHint}</p>
+                <div className="max-w-xs">
+                  <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextSnoozeLabel}</label>
+                  <input
+                    type="number"
+                    name="context_calendar_snooze_minutes"
+                    className="input"
+                    min={5}
+                    max={240}
+                    value={calendarSnoozeMinutes}
+                    onChange={(event) => setCalendarSnoozeMinutes(Number(event.target.value))}
+                    disabled={!calendarBusyEnabled}
+                  />
+                </div>
               </div>
             </div>
           </div>

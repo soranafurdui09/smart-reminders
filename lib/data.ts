@@ -1,5 +1,6 @@
 import { createServerClient } from './supabase/server';
 import { defaultLocale, normalizeLocale } from './i18n';
+import { parseContextSettings } from './reminders/context';
 
 function logDataError(scope: string, error: unknown) {
   console.error(`[data] ${scope} failed`, error);
@@ -320,6 +321,20 @@ export async function getUserTimeZone(userId: string) {
     return 'UTC';
   }
   return data?.time_zone || 'UTC';
+}
+
+export async function getUserContextDefaults(userId: string) {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('context_defaults')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) {
+    logDataError('getUserContextDefaults', error);
+    return parseContextSettings(null);
+  }
+  return parseContextSettings(data?.context_defaults ?? null);
 }
 
 export async function getReminderById(reminderId: string) {

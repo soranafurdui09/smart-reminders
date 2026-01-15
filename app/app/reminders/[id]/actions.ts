@@ -8,6 +8,7 @@ import { generateReminderEmbedding } from '@/lib/ai/embeddings';
 import { clearReminderAssignment, setReminderAssignment } from '@/lib/reminderAssignments';
 import { createCalendarEventForMedication, deleteCalendarEventForReminder, getUserGoogleConnection } from '@/lib/google/calendar';
 import { getDefaultContextSettings, isDefaultContextSettings, type DayOfWeek } from '@/lib/reminders/context';
+import { getUserContextDefaults } from '@/lib/data';
 import { isReminderCategoryId } from '@/lib/categories';
 import { ensureMedicationDoses, getFirstMedicationDose, type MedicationDetails, type MedicationFrequencyType } from '@/lib/reminders/medication';
 import { scheduleNotificationJobsForMedication, scheduleNotificationJobsForReminder } from '@/lib/notifications/jobs';
@@ -34,11 +35,11 @@ function normalizeMinutes(value: FormDataEntryValue | null, fallback: number) {
   return Math.min(1440, Math.floor(num));
 }
 
-function buildContextSettings(formData: FormData) {
-  const defaults = getDefaultContextSettings();
+function buildContextSettings(formData: FormData, defaults?: ReturnType<typeof getDefaultContextSettings>) {
+  const baseDefaults = defaults ?? getDefaultContextSettings();
   const timeWindowEnabled = String(formData.get('context_time_window_enabled') || '') === '1';
-  const startHour = normalizeHour(formData.get('context_time_start_hour'), defaults.timeWindow?.startHour ?? 9);
-  const endHour = normalizeHour(formData.get('context_time_end_hour'), defaults.timeWindow?.endHour ?? 20);
+  const startHour = normalizeHour(formData.get('context_time_start_hour'), baseDefaults.timeWindow?.startHour ?? 9);
+  const endHour = normalizeHour(formData.get('context_time_end_hour'), baseDefaults.timeWindow?.endHour ?? 20);
   const daysOfWeek = formData
     .getAll('context_time_days')
     .map((day) => String(day))
@@ -46,7 +47,7 @@ function buildContextSettings(formData: FormData) {
   const calendarEnabled = String(formData.get('context_calendar_busy_enabled') || '') === '1';
   const snoozeMinutes = normalizeMinutes(
     formData.get('context_calendar_snooze_minutes'),
-    defaults.calendarBusy?.snoozeMinutes ?? 15
+    baseDefaults.calendarBusy?.snoozeMinutes ?? 15
   );
   const categoryRaw = String(formData.get('context_category') || '').trim();
   const categoryId = categoryRaw && isReminderCategoryId(categoryRaw) ? categoryRaw : null;
@@ -64,7 +65,7 @@ function buildContextSettings(formData: FormData) {
     }
   };
 
-  const baseIsDefault = isDefaultContextSettings(settings);
+  const baseIsDefault = isDefaultContextSettings(settings, baseDefaults);
   if (categoryId) {
     return baseIsDefault ? { category: categoryId } : { ...settings, category: categoryId };
   }
@@ -74,6 +75,7 @@ function buildContextSettings(formData: FormData) {
 export async function updateReminder(formData: FormData) {
   const reminderId = String(formData.get('reminderId'));
   const user = await requireUser(`/app/reminders/${reminderId}`);
+  const contextDefaults = await getUserContextDefaults(user.id);
 
   const supabase = createServerClient();
   const { data: reminderRecord } = await supabase
@@ -86,7 +88,7 @@ export async function updateReminder(formData: FormData) {
     redirect(`/app/reminders/${reminderId}?error=1`);
   }
 
-  const contextSettings = buildContextSettings(formData);
+  const contextSettings = buildContextSettings(formData, contextDefaults);
   const payload: Record<string, string | number | null | object> = {
     context_settings: contextSettings
   };
