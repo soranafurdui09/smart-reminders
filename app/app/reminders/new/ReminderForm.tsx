@@ -912,6 +912,9 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
             {voiceIsReady ? (
               <div className="text-xs text-muted">{copy.remindersNew.voicePrompt}</div>
             ) : null}
+            {voice.supported ? (
+              <div className="text-xs text-muted">{copy.remindersNew.voiceReadyHint}</div>
+            ) : null}
             {voiceStatusLabel ? (
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
                 <span>{voiceStatusLabel}</span>

@@ -215,13 +215,23 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
   const warmUpMicrophone = useCallback(async () => {
     if (warmupRef.current) return;
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return;
+    const permissions = (navigator as Navigator & { permissions?: Permissions }).permissions;
+    if (permissions?.query) {
+      try {
+        const status = await permissions.query({ name: 'microphone' as PermissionName });
+        if (status.state !== 'granted') return;
+      } catch {
+        return;
+      }
+    } else {
+      return;
+    }
     try {
       warmupRef.current = true;
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((track) => track.stop());
     } catch (err) {
       warmupRef.current = false;
-      throw err;
     }
   }, []);
 
@@ -242,24 +252,22 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
     finalTranscriptRef.current = '';
     interimTranscriptRef.current = '';
     manualStopRef.current = false;
-    const run = async () => {
-      try {
-        await warmUpMicrophone();
-        recognition.start();
-      } catch (err) {
-        const errorName =
-          err && typeof err === 'object' && 'name' in err
-            ? String((err as { name?: string }).name)
-            : '';
-        if (errorName === 'NotAllowedError' || errorName === 'SecurityError') {
-          setError('not-allowed');
-        } else {
-          setError('start-failed');
-        }
-        setListening(false);
+    try {
+      recognition.start();
+    } catch (err) {
+      const errorName =
+        err && typeof err === 'object' && 'name' in err
+          ? String((err as { name?: string }).name)
+          : '';
+      if (errorName === 'NotAllowedError' || errorName === 'SecurityError') {
+        setError('not-allowed');
+      } else {
+        setError('start-failed');
       }
-    };
-    void run();
+      setListening(false);
+      return;
+    }
+    void warmUpMicrophone();
   }, [listening, supported, warmUpMicrophone]);
 
   const stop = useCallback(() => {
