@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from 'react';
-import { getCategoryChipStyle, reminderCategories, type ReminderCategoryId } from '@/lib/categories';
+import { useMemo } from 'react';
+import { reminderCategories, type ReminderCategoryId } from '@/lib/categories';
+import SegmentedControl from '@/components/filters/SegmentedControl';
+import FilterChip from '@/components/filters/FilterChip';
 
 type CreatedByOption = 'all' | 'me' | 'others';
 type AssignmentOption = 'all' | 'assigned_to_me';
@@ -35,9 +37,6 @@ const categoryOptions: { value: CategoryOption; label: string; color?: string }[
   }))
 ];
 
-const chipBase =
-  'inline-flex items-center rounded-full border px-3 py-1 text-sm font-semibold transition focus:outline-none focus-visible:ring focus-visible:ring-sky-300';
-
 export default function ReminderFilterBar({
   createdBy,
   assignment,
@@ -47,7 +46,6 @@ export default function ReminderFilterBar({
   onChangeCategory,
   className
 }: Props) {
-  const [mobileOpen, setMobileOpen] = useState(false);
   const activeFilters = useMemo(() => {
     let count = 0;
     if (createdBy !== 'all') count += 1;
@@ -56,72 +54,15 @@ export default function ReminderFilterBar({
     return count;
   }, [createdBy, assignment, category]);
   const isDefault = activeFilters === 0;
-
-  const renderChip = (
-    value: string,
-    label: string,
-    active: boolean,
-    onClick: () => void
-  ) => (
-    <button
-      key={value}
-      type="button"
-      className={`${chipBase} ${active ? 'bg-sky-500 border-sky-500 text-white shadow-sm' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
-      onClick={onClick}
-    >
-      {label}
-    </button>
-  );
-  const renderCategoryChip = (option: typeof categoryOptions[number]) => {
-    const active = category === option.value;
-    if (option.value === 'all' || !option.color) {
-      return renderChip(option.value, option.label, active, () => onChangeCategory(option.value));
-    }
-    const style = getCategoryChipStyle(option.color, active);
-    return (
-      <button
-        key={option.value}
-        type="button"
-        className={`${chipBase} ${active ? 'shadow-sm' : 'bg-white text-slate-700 hover:bg-slate-50'}`}
-        style={style}
-        onClick={() => onChangeCategory(option.value)}
-      >
-        {option.label}
-      </button>
-    );
+  const handleReset = () => {
+    onChangeCreatedBy('all');
+    onChangeAssignment('all');
+    onChangeCategory('all');
   };
 
-  const filterSection = (
-    <div className="space-y-3">
-      <div>
-        <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Creat de</div>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          {createdOptions.map((option) => renderChip(option.value, option.label, createdBy === option.value, () => onChangeCreatedBy(option.value)))}
-        </div>
-      </div>
-      <div>
-        <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Asignare</div>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          {assignmentOptions.map((option) =>
-            renderChip(option.value, option.label, assignment === option.value, () => onChangeAssignment(option.value))
-          )}
-        </div>
-      </div>
-      <div>
-        <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Categorie</div>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          {categoryOptions.map((option) => renderCategoryChip(option))}
-        </div>
-      </div>
-    </div>
-  );
-
   return (
-    <>
-      <div
-        className={`rounded-2xl bg-white/60 border border-slate-100 px-4 py-3 shadow-sm md:flex md:items-center md:justify-between md:gap-4 ${className ||
-          ''}`}
-      >
+    <div className={`rounded-2xl border border-slate-100 bg-white/70 px-4 py-4 shadow-sm ${className ?? ''}`}>
+      <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="h-8 w-8 rounded-lg border border-slate-200 bg-white/80 p-2 text-slate-700">
             <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none">
@@ -134,74 +75,57 @@ export default function ReminderFilterBar({
             </svg>
           </span>
           <div className="text-sm font-semibold text-slate-900">Filtre</div>
+          {activeFilters > 0 ? (
+            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
+              {activeFilters}
+            </span>
+          ) : null}
         </div>
-        <div className="hidden md:flex md:flex-1 md:flex-col md:gap-4">{filterSection}</div>
-        {!isDefault && (
+        {!isDefault ? (
           <button
             type="button"
-            className="flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-700"
-            onClick={() => {
-              onChangeCreatedBy('all');
-              onChangeAssignment('all');
-              onChangeCategory('all');
-            }}
+            className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+            onClick={handleReset}
           >
-            <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 20 20" fill="none">
-              <path
-                d="M5 5l10 10M15 5L5 15"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            Clear filters
+            Șterge filtrele
           </button>
-        )}
-        <button
-          type="button"
-          className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-700 md:hidden"
-          onClick={() => setMobileOpen(true)}
-        >
-          Filtre
-          {activeFilters > 0 ? ` (${activeFilters} active${activeFilters > 1 ? 's' : ''})` : ''}
-        </button>
+        ) : null}
       </div>
 
-      {mobileOpen && (
-        <div className="fixed inset-0 z-40 flex items-end bg-black/40 md:hidden">
-          <div className="w-full rounded-t-3xl bg-white p-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold text-slate-900">Filtre</div>
-              <button type="button" className="text-xs font-semibold text-slate-500" onClick={() => setMobileOpen(false)}>
-                Închide
-              </button>
-            </div>
-            <div className="mt-4 space-y-4">{filterSection}</div>
-            <div className="mt-4 flex items-center justify-between">
-              <button
-                type="button"
-                disabled={isDefault}
-                className="text-xs font-semibold text-slate-500 disabled:text-slate-300"
-                onClick={() => {
-                  onChangeCreatedBy('all');
-                  onChangeAssignment('all');
-                  onChangeCategory('all');
-                }}
-              >
-                Clear filters
-              </button>
-              <button
-                type="button"
-                className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                onClick={() => setMobileOpen(false)}
-              >
-                Închide
-              </button>
-            </div>
+      <div className="mt-4 space-y-5">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Creat de</div>
+          <SegmentedControl
+            options={createdOptions}
+            value={createdBy}
+            onChange={(value) => onChangeCreatedBy(value as CreatedByOption)}
+            className="mt-2"
+          />
+        </div>
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Asignare</div>
+          <SegmentedControl
+            options={assignmentOptions}
+            value={assignment}
+            onChange={(value) => onChangeAssignment(value as AssignmentOption)}
+            className="mt-2"
+          />
+        </div>
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Categorie</div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {categoryOptions.map((option) => (
+              <FilterChip
+                key={option.value}
+                label={option.label}
+                selected={category === option.value}
+                color={option.color}
+                onToggle={() => onChangeCategory(option.value)}
+              />
+            ))}
           </div>
         </div>
-      )}
-    </>
+      </div>
+    </div>
   );
 }

@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import SectionHeader from '@/components/SectionHeader';
 import OccurrenceCard from '@/components/OccurrenceCard';
 import ReminderFilterBar from './ReminderFilterBar';
+import SegmentedControl from '@/components/filters/SegmentedControl';
 import { messages, type Locale } from '@/lib/i18n';
 import {
   diffDaysInTimeZone,
@@ -99,7 +100,7 @@ export default function ReminderDashboardSection({
 }: Props) {
   const [createdBy, setCreatedBy] = useState<CreatedByOption>(initialCreatedBy);
   const [assignment, setAssignment] = useState<AssignmentOption>(initialAssignment);
-  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [kindFilter, setKindFilter] = useState<'all' | 'tasks' | 'medications'>('all');
   const [categoryFilter, setCategoryFilter] = useState<CategoryOption>('all');
   const [doseState, setDoseState] = useState<MedicationDose[]>(medicationDoses);
@@ -151,6 +152,13 @@ export default function ReminderDashboardSection({
       .sort((a, b) => new Date(a.effective_at ?? a.occur_at).getTime() - new Date(b.effective_at ?? b.occur_at).getTime());
     return normalized;
   }, [occurrences, createdBy, assignment, membershipId, userId, kindFilter, categoryFilter]);
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (createdBy !== 'all') count += 1;
+    if (assignment !== 'all') count += 1;
+    if (categoryFilter !== 'all') count += 1;
+    return count;
+  }, [assignment, categoryFilter, createdBy]);
 
   const effectiveTimeZone = userTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
@@ -269,31 +277,33 @@ export default function ReminderDashboardSection({
     }
   };
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+      setFiltersOpen(true);
+    }
+  }, []);
+
   return (
     <section className="space-y-8">
       <SectionHeader title={copy.dashboard.sectionTitle} description={copy.dashboard.sectionSubtitle} />
-      <div className="flex flex-wrap items-center gap-2 rounded-full border border-slate-200 bg-white/60 p-2 text-sm font-semibold text-slate-700">
-        {[
+      <SegmentedControl
+        options={[
           { value: 'all', label: copy.dashboard.filtersKindAll },
           { value: 'tasks', label: copy.dashboard.filtersKindTasks },
           { value: 'medications', label: copy.dashboard.filtersKindMeds }
-        ].map((item) => (
-          <button
-            key={item.value}
-            type="button"
-            className={`rounded-full px-3 py-1 transition ${
-              kindFilter === item.value
-                ? 'bg-sky-500 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-            onClick={() => setKindFilter(item.value as typeof kindFilter)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+        ]}
+        value={kindFilter}
+        onChange={(value) => setKindFilter(value as typeof kindFilter)}
+      />
       <div className="flex items-center justify-between">
-        <div className="text-xs font-semibold uppercase tracking-wide text-muted">{copy.dashboard.filtersTitle}</div>
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted">
+          {copy.dashboard.filtersTitle}
+          {activeFilterCount > 0 ? (
+            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
+              {activeFilterCount}
+            </span>
+          ) : null}
+        </div>
         <button
           type="button"
           className="text-xs font-semibold text-slate-500 hover:text-slate-700"
