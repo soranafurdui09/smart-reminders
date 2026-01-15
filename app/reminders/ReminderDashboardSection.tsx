@@ -76,6 +76,7 @@ type Props = {
 };
 
 const groupLabels = (copy: MessageBundle) => ({
+  today: copy.dashboard.groupToday,
   tomorrow: copy.dashboard.groupTomorrow,
   nextWeek: copy.dashboard.groupNextWeek,
   nextMonth: copy.dashboard.groupNextMonth
@@ -106,6 +107,7 @@ export default function ReminderDashboardSection({
   const [doseState, setDoseState] = useState<MedicationDose[]>(medicationDoses);
   const [visibleMonthGroups, setVisibleMonthGroups] = useState(2);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    today: true,
     tomorrow: true,
     nextWeek: false,
     nextMonth: false
@@ -159,6 +161,7 @@ export default function ReminderDashboardSection({
     const now = new Date();
 
     const sections: Record<string, OccurrencePayload[]> = {
+      today: [],
       tomorrow: [],
       nextWeek: [],
       nextMonth: []
@@ -177,7 +180,11 @@ export default function ReminderDashboardSection({
         return;
       }
       const dayDiff = diffDaysInTimeZone(compareDate, now, effectiveTimeZone);
-      if (dayDiff < 1) {
+      if (dayDiff < 0) {
+        return;
+      }
+      if (dayDiff === 0) {
+        sections.today.push(occurrence);
         return;
       }
       if (dayDiff === 1) {
@@ -203,6 +210,7 @@ export default function ReminderDashboardSection({
   }, [effectiveTimeZone, filteredOccurrences]);
 
   const nextOccurrence =
+    grouped.sections.today[0] ??
     grouped.sections.tomorrow[0] ??
     grouped.sections.nextWeek[0] ??
     grouped.sections.nextMonth[0] ??
