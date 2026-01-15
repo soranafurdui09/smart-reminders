@@ -673,8 +673,8 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     onError: (message) => setVoiceErrorCode(message)
   });
 
-  const voiceIsListening =
-    voice.status === 'starting' || voice.status === 'listening' || voice.status === 'transcribing';
+  const voiceIsReady = voice.status === 'listening' || voice.status === 'transcribing';
+  const voiceIsActive = voiceIsReady || voice.status === 'starting';
   const voiceIsProcessing =
     voice.status === 'starting' ||
     voice.status === 'processing' ||
@@ -869,7 +869,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
             />
             <button
               className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-borderSubtle bg-surface text-ink transition hover:border-primary/30 hover:bg-white relative ${
-                voiceIsListening ? 'border-primary/40 text-primaryStrong' : ''
+                voiceIsActive ? 'border-primary/40 text-primaryStrong' : ''
               }`}
               type="button"
               onClick={() => {
@@ -878,11 +878,11 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
               }}
               disabled={!voice.supported || voiceIsProcessing}
               aria-label={copy.remindersNew.voiceNavLabel}
-              aria-pressed={voiceIsListening}
+              aria-pressed={voiceIsActive}
               aria-busy={voiceIsProcessing}
               title={!voice.supported ? copy.remindersNew.voiceNotSupported : copy.remindersNew.voiceNavLabel}
             >
-              {voiceIsListening ? (
+              {voiceIsReady ? (
                 <span className="absolute -inset-1 rounded-full bg-sky-300/30 animate-ping" aria-hidden="true" />
               ) : null}
               <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
@@ -909,7 +909,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
               <span>{aiCharCount} {copy.remindersNew.aiCounterLabel}</span>
             </div>
           </div>
-          {voiceIsListening ? (
+          {voiceIsReady ? (
             <div className="text-xs text-muted">{copy.remindersNew.voicePrompt}</div>
           ) : null}
           {voiceStatusLabel ? (
@@ -926,7 +926,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                   {voiceTranscript}
                 </span>
               ) : null}
-              {voiceIsListening ? (
+              {voiceIsReady ? (
                 <button className="btn btn-secondary h-7 px-3 text-xs" type="button" onClick={voice.stop}>
                   {copy.remindersNew.voiceStop}
                 </button>

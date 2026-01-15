@@ -40,6 +40,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
   const silenceTimerRef = useRef<number | null>(null);
   const noSpeechTimerRef = useRef<number | null>(null);
   const warmupRef = useRef(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const manualStopRef = useRef(false);
   const finalTranscriptRef = useRef('');
   const interimTranscriptRef = useRef('');
@@ -61,6 +62,60 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
     }, silenceMs);
   }, [silenceMs]);
 
+  const playReadyTone = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextCtor) return;
+    let ctx = audioContextRef.current;
+    if (!ctx) {
+      ctx = new AudioContextCtor();
+      audioContextRef.current = ctx;
+    }
+    if (ctx.state === 'suspended') {
+      void ctx.resume().catch(() => undefined);
+    }
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = 880;
+    gain.gain.value = 0.0001;
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    const now = ctx.currentTime;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.1, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+    oscillator.start(now);
+    oscillator.stop(now + 0.16);
+  }, []);
+
+  const playStopTone = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextCtor) return;
+    let ctx = audioContextRef.current;
+    if (!ctx) {
+      ctx = new AudioContextCtor();
+      audioContextRef.current = ctx;
+    }
+    if (ctx.state === 'suspended') {
+      void ctx.resume().catch(() => undefined);
+    }
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = 620;
+    gain.gain.value = 0.0001;
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    const now = ctx.currentTime;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+    oscillator.start(now);
+    oscillator.stop(now + 0.2);
+  }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const SpeechRecognitionCtor = (window as unknown as { SpeechRecognition?: SpeechRecognitionConstructor }).SpeechRecognition
@@ -78,6 +133,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
     recognition.continuous = true;
     recognition.onstart = () => {
       setListening(true);
+      playReadyTone();
       if (noSpeechTimerRef.current) {
         window.clearTimeout(noSpeechTimerRef.current);
       }
@@ -96,6 +152,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
         noSpeechTimerRef.current = null;
       }
       setListening(false);
+      playStopTone();
       const combined = `${finalTranscriptRef.current} ${interimTranscriptRef.current}`.trim();
       const wordCount = combined.split(/\s+/).filter(Boolean).length;
       if (!manualStopRef.current && wordCount > 0 && wordCount < minWords) {
@@ -153,7 +210,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
       recognition.stop();
       recognitionRef.current = null;
     };
-  }, [lang, resetSilenceTimer]);
+  }, [lang, playReadyTone, playStopTone, resetSilenceTimer]);
 
   const warmUpMicrophone = useCallback(async () => {
     if (warmupRef.current) return;
