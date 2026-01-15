@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useRef } from 'react';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
@@ -29,6 +30,31 @@ type Props = {
   variant?: 'card' | 'row';
 };
 
+const useCloseOnOutside = (ref: React.RefObject<HTMLDetailsElement>) => {
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const details = ref.current;
+      if (!details || !details.open) return;
+      const target = event.target as Node | null;
+      if (target && details.contains(target)) return;
+      details.open = false;
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && ref.current?.open) {
+        ref.current.open = false;
+      }
+    };
+    document.addEventListener('mousedown', handlePointerDown, true);
+    document.addEventListener('touchstart', handlePointerDown, true);
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown, true);
+      document.removeEventListener('touchstart', handlePointerDown, true);
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [ref]);
+};
+
 export default function ReminderCard({
   occurrence,
   locale = defaultLocale,
@@ -37,6 +63,8 @@ export default function ReminderCard({
   urgency,
   variant = 'card'
 }: Props) {
+  const actionMenuRef = useRef<HTMLDetailsElement | null>(null);
+  const doneMenuRef = useRef<HTMLDetailsElement | null>(null);
   const copy = messages[locale];
   const reminder = occurrence.reminder;
   const reminderId = reminder?.id;
@@ -69,6 +97,9 @@ export default function ReminderCard({
   const categoryChipStyle = getCategoryChipStyle(category.color, true);
   const tintColor = category?.color ? hexToRgba(category.color, 0.08) : undefined;
   const isRow = variant === 'row';
+
+  useCloseOnOutside(actionMenuRef);
+  useCloseOnOutside(doneMenuRef);
 
   return (
     <OccurrenceHighlightCard
@@ -121,7 +152,7 @@ export default function ReminderCard({
       </div>
 
       <div className={`flex flex-wrap items-center gap-2 ${isRow ? 'md:ml-auto' : ''}`}>
-        <details className="relative">
+        <details ref={actionMenuRef} className="relative">
           <summary
             className="btn btn-secondary dropdown-summary h-9 w-9 p-0 text-lg leading-none"
             aria-label={copy.common.moreActions}
@@ -218,7 +249,7 @@ export default function ReminderCard({
           snoozeAction={snoozeOccurrence}
         />
 
-        <details className="group">
+        <details ref={doneMenuRef} className="group">
           <summary className="btn btn-primary dropdown-summary h-9">
             <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
               <path
