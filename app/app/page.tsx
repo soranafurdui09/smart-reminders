@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import SectionHeader from '@/components/SectionHeader';
 import AppShell from '@/components/AppShell';
 import SemanticSearch from '@/components/SemanticSearch';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
+import DashboardHero from '@/components/dashboard/DashboardHero';
 import { requireUser } from '@/lib/auth';
 import { getHouseholdMembers, getOpenOccurrencesForHousehold, getUserHousehold, getUserLocale, getUserTimeZone } from '@/lib/data';
 import { getLocaleTag, messages } from '@/lib/i18n';
@@ -10,7 +10,8 @@ import { createHousehold } from './household/actions';
 import { getUserGoogleConnection } from '@/lib/google/calendar';
 import ReminderDashboardSection from '@/app/reminders/ReminderDashboardSection';
 import { getTodayMedicationDoses } from '@/lib/reminders/medication';
-import { formatReminderDateTime } from '@/lib/dates';
+import { formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
+import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
 
 export default async function DashboardPage({
   searchParams
@@ -101,65 +102,78 @@ export default async function DashboardPage({
       : 'all';
   const initialAssignment = searchParams?.assigned === 'me' ? 'assigned_to_me' : 'all';
   const nextOccurrence = sortedOccurrences[0];
-  const nextOccurrenceTimeZone = nextOccurrence?.reminder?.tz && nextOccurrence.reminder.tz !== 'UTC'
-    ? nextOccurrence.reminder.tz
-    : userTimeZone;
+  const nextOccurrenceTimeZone = resolveReminderTimeZone(nextOccurrence?.reminder?.tz ?? null, userTimeZone);
+  const nextOccurrenceAt = nextOccurrence
+    ? nextOccurrence.snoozed_until ?? nextOccurrence.effective_at ?? nextOccurrence.occur_at
+    : null;
+  const nextOccurrenceLabel = nextOccurrence && nextOccurrenceAt
+    ? nextOccurrence.snoozed_until
+      ? formatDateTimeWithTimeZone(nextOccurrenceAt, nextOccurrenceTimeZone)
+      : formatReminderDateTime(nextOccurrenceAt, nextOccurrenceTimeZone, userTimeZone)
+    : null;
+  const nextCategoryId = nextOccurrence
+    ? inferReminderCategoryId({
+        title: nextOccurrence.reminder?.title,
+        notes: nextOccurrence.reminder?.notes,
+        kind: nextOccurrence.reminder?.kind,
+        category: nextOccurrence.reminder?.category,
+        medicationDetails: nextOccurrence.reminder?.medication_details
+      })
+    : 'default';
+  const nextCategory = getReminderCategory(nextCategoryId);
+  const nextCategoryStyle = getCategoryChipStyle(nextCategory.color, true);
 
   return (
     <AppShell locale={locale} activePath="/app" userEmail={user.email}>
       <div className="space-y-10">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1>{copy.dashboard.title}</h1>
-            <p className="text-sm text-muted">{copy.dashboard.subtitle}</p>
+        <DashboardHero
+          title={copy.dashboard.heroTitle}
+          subtitle={copy.dashboard.heroSubtitle}
+          voiceLabel={copy.dashboard.heroVoiceCta}
+          voiceAriaLabel={copy.remindersNew.voiceNavLabel}
+          voiceTitle={copy.remindersNew.voiceNavLabel}
+          voiceHref="/app/reminders/new?voice=1"
+          manualLabel={copy.dashboard.heroManualCta}
+          manualHref="/app/reminders/new"
+          nextTitle={copy.dashboard.nextTitle}
+          nextEmpty={copy.dashboard.nextEmptyRelaxed}
+          nextReminder={
+            nextOccurrence && nextOccurrenceLabel
+              ? {
+                  title: nextOccurrence.reminder?.title ?? copy.dashboard.nextTitle,
+                  timeLabel: nextOccurrenceLabel,
+                  categoryLabel: nextCategory.label,
+                  categoryStyle: nextCategoryStyle
+                }
+              : null
+          }
+        />
+
+        <div className="grid gap-8 lg:grid-cols-[1.35fr,0.9fr]">
+          <div className="space-y-8">
+            <ReminderDashboardSection
+              occurrences={occurrences}
+              copy={copy}
+              membershipId={membership.id}
+              userId={user.id}
+              googleConnected={Boolean(googleConnection)}
+              medicationDoses={medicationDoses}
+              memberLabels={memberLabels}
+              initialCreatedBy={initialCreatedBy}
+              initialAssignment={initialAssignment}
+              locale={locale}
+              localeTag={getLocaleTag(locale)}
+              userTimeZone={userTimeZone}
+            />
           </div>
-          <Link className="btn btn-primary" href="/app/reminders/new">{copy.dashboard.newReminder}</Link>
+          <div className="space-y-6">
+            <SemanticSearch
+              householdId={membership.households.id}
+              localeTag={getLocaleTag(locale)}
+              copy={copy.search}
+            />
+          </div>
         </div>
-
-        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primaryStrong via-primary to-accent p-6 text-white shadow-soft">
-          <div className="absolute -right-24 -top-24 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
-          <div className="relative space-y-3">
-            <span className="pill border border-white/30 bg-white/10 text-white">{copy.dashboard.nextTitle}</span>
-            {nextOccurrence ? (
-              <div className="space-y-2">
-                <div className="text-2xl font-semibold">{nextOccurrence.reminder?.title}</div>
-                <div className="flex items-center gap-2 text-sm text-white/80">
-                  <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <path
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      d="M8 7V5m8 2V5M4 11h16M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
-                  {formatReminderDateTime(nextOccurrence.occur_at, nextOccurrenceTimeZone, userTimeZone)}
-                </div>
-              </div>
-            ) : (
-              <div className="text-lg font-semibold">{copy.dashboard.nextEmptyRelaxed}</div>
-            )}
-          </div>
-        </section>
-
-        <SemanticSearch
-          householdId={membership.households.id}
-          localeTag={getLocaleTag(locale)}
-          copy={copy.search}
-        />
-
-        <ReminderDashboardSection
-          occurrences={occurrences}
-          copy={copy}
-          membershipId={membership.id}
-          userId={user.id}
-          googleConnected={Boolean(googleConnection)}
-          medicationDoses={medicationDoses}
-          memberLabels={memberLabels}
-          initialCreatedBy={initialCreatedBy}
-          initialAssignment={initialAssignment}
-          locale={locale}
-          localeTag={getLocaleTag(locale)}
-          userTimeZone={userTimeZone}
-        />
       </div>
     </AppShell>
   );

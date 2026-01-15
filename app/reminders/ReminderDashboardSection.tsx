@@ -7,13 +7,11 @@ import ReminderFilterBar from './ReminderFilterBar';
 import { messages, type Locale } from '@/lib/i18n';
 import {
   diffDaysInTimeZone,
-  formatDateTimeWithTimeZone,
-  formatReminderDateTime,
   getMonthKeyInTimeZone,
   interpretAsTimeZone,
   resolveReminderTimeZone
 } from '@/lib/dates';
-import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId, type ReminderCategoryId } from '@/lib/categories';
+import { inferReminderCategoryId, type ReminderCategoryId } from '@/lib/categories';
 
 type CreatedByOption = 'all' | 'me' | 'others';
 type AssignmentOption = 'all' | 'assigned_to_me';
@@ -107,7 +105,6 @@ export default function ReminderDashboardSection({
   const [doseState, setDoseState] = useState<MedicationDose[]>(medicationDoses);
   const [visibleMonthGroups, setVisibleMonthGroups] = useState(2);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    today: true,
     tomorrow: true,
     nextWeek: false,
     nextMonth: false
@@ -209,36 +206,33 @@ export default function ReminderDashboardSection({
     return { sections, monthEntries };
   }, [effectiveTimeZone, filteredOccurrences]);
 
-  const nextOccurrence =
-    grouped.sections.today[0] ??
-    grouped.sections.tomorrow[0] ??
-    grouped.sections.nextWeek[0] ??
-    grouped.sections.nextMonth[0] ??
-    grouped.monthEntries[0]?.[1]?.[0];
-  const nextOccurrenceTimeZone = resolveReminderTimeZone(nextOccurrence?.reminder?.tz ?? null, effectiveTimeZone);
-  const nextCategoryId = nextOccurrence
-    ? inferReminderCategoryId({
-        title: nextOccurrence.reminder?.title,
-        notes: nextOccurrence.reminder?.notes,
-        kind: nextOccurrence.reminder?.kind,
-        category: nextOccurrence.reminder?.category,
-        medicationDetails: nextOccurrence.reminder?.medication_details
-      })
-    : 'default';
-  const nextCategory = getReminderCategory(nextCategoryId);
-  const nextCategoryChipStyle = getCategoryChipStyle(nextCategory.color, true);
-
   const labels = groupLabels(copy);
+  const todayItems = grouped.sections.today;
+  const upcomingSections = [
+    { key: 'tomorrow', label: labels.tomorrow, items: grouped.sections.tomorrow },
+    { key: 'nextWeek', label: labels.nextWeek, items: grouped.sections.nextWeek },
+    { key: 'nextMonth', label: labels.nextMonth, items: grouped.sections.nextMonth }
+  ];
+  const upcomingCount = upcomingSections.reduce((sum, section) => sum + section.items.length, 0) +
+    grouped.monthEntries.reduce((sum, [, items]) => sum + items.length, 0);
+  const hasUpcoming = upcomingCount > 0;
   const hasMonthGroups = grouped.monthEntries.length > 0;
   const visibleMonthEntries = grouped.monthEntries.slice(0, visibleMonthGroups);
   const hasMoreMonths = grouped.monthEntries.length > visibleMonthGroups;
-  const hasGroupedItems = useMemo(() => {
-    const sectionHas = Object.values(grouped.sections).some((items) => items.length > 0);
-    return sectionHas || grouped.monthEntries.length > 0;
-  }, [grouped]);
   const monthLabelFormatter = useMemo(
     () => new Intl.DateTimeFormat(localeTag, { month: 'long', year: 'numeric' }),
     [localeTag]
+  );
+  const householdItems = useMemo(
+    () =>
+      filteredOccurrences.filter((occurrence) => {
+        const reminder = occurrence.reminder;
+        if (!reminder) return false;
+        const assignedId = reminder.assigned_member_id;
+        const createdBy = reminder.created_by;
+        return (createdBy && createdBy !== userId) || (assignedId && assignedId !== membershipId);
+      }),
+    [filteredOccurrences, membershipId, userId]
   );
 
   const toggleSection = (key: string) => {
@@ -276,7 +270,7 @@ export default function ReminderDashboardSection({
   };
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-8">
       <SectionHeader title={copy.dashboard.sectionTitle} description={copy.dashboard.sectionSubtitle} />
       <div className="flex flex-wrap items-center gap-2 rounded-full border border-slate-200 bg-white/60 p-2 text-sm font-semibold text-slate-700">
         {[
@@ -327,33 +321,24 @@ export default function ReminderDashboardSection({
         />
       ) : null}
       {kindFilter !== 'medications' ? (
-        nextOccurrence ? (
-          <div
-            className="rounded-2xl border border-slate-100 bg-surface p-4 text-sm text-slate-600 border-l-4"
-            style={{ borderLeftColor: nextCategory.color }}
-          >
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.dashboard.nextTitle}</div>
-            <div className="mt-2 text-base font-semibold text-slate-900">{nextOccurrence.reminder?.title}</div>
-            <div className="text-sm text-slate-500">
-              {nextOccurrence?.snoozed_until
-                ? formatDateTimeWithTimeZone(nextOccurrence.effective_at ?? nextOccurrence.occur_at, nextOccurrenceTimeZone)
-                : formatReminderDateTime(
-                  nextOccurrence.effective_at ?? nextOccurrence.occur_at,
-                  nextOccurrenceTimeZone,
-                  effectiveTimeZone
-                )}
+        <div className="space-y-4">
+          <SectionHeader title={copy.dashboard.todayTitle} description={copy.dashboard.todaySubtitle} />
+          {todayItems.length ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {todayItems.map((occurrence) => (
+                <OccurrenceCard
+                  key={occurrence.id}
+                  occurrence={occurrence}
+                  locale={locale}
+                  googleConnected={googleConnected}
+                  userTimeZone={effectiveTimeZone}
+                />
+              ))}
             </div>
-            <div className="mt-2">
-              <span className="chip" style={nextCategoryChipStyle}>
-                {nextCategory.label}
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-slate-100 bg-surface p-4 text-sm text-slate-500">
-            {copy.dashboard.nextEmptyRelaxed}
-          </div>
-        )
+          ) : (
+            <div className="card text-sm text-muted">{copy.dashboard.todayEmpty}</div>
+          )}
+        </div>
       ) : null}
 
       {kindFilter !== 'tasks' ? (
@@ -421,111 +406,134 @@ export default function ReminderDashboardSection({
         </div>
       ) : null}
       {kindFilter !== 'medications' ? (
-        hasGroupedItems ? (
-          <div className="space-y-6">
-            {Object.entries(grouped.sections).map(([key, items]) =>
-              items.length ? (
-                <div key={key} className="space-y-3">
-                  <div className="flex items-center gap-3 text-xs font-semibold uppercase text-muted">
-                    <button
-                      type="button"
-                      onClick={() => toggleSection(key)}
-                      className="inline-flex items-center gap-2 text-xs font-semibold uppercase text-muted hover:text-slate-700"
-                      aria-expanded={expandedSections[key] ?? false}
-                      aria-label={expandedSections[key] ? copy.common.hide : copy.common.show}
-                    >
-                      <svg
-                        aria-hidden="true"
-                        className={`h-3.5 w-3.5 transition ${expandedSections[key] ? 'rotate-90' : ''}`}
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
+        <div className="space-y-4">
+          <SectionHeader title={copy.dashboard.upcomingTitle} description={copy.dashboard.upcomingSubtitle} />
+          {hasUpcoming ? (
+            <div className="space-y-6">
+              {upcomingSections.map((section) =>
+                section.items.length ? (
+                  <div key={section.key} className="space-y-3">
+                    <div className="flex items-center gap-3 text-xs font-semibold uppercase text-muted">
+                      <button
+                        type="button"
+                        onClick={() => toggleSection(section.key)}
+                        className="inline-flex items-center gap-2 text-xs font-semibold uppercase text-muted hover:text-slate-700"
+                        aria-expanded={expandedSections[section.key] ?? false}
+                        aria-label={expandedSections[section.key] ? copy.common.hide : copy.common.show}
                       >
-                        <path d="M7 5l6 5-6 5V5z" />
-                      </svg>
-                      <span>{labels[key as keyof typeof labels]}</span>
-                      <span className="text-[10px] font-semibold text-slate-400">({items.length})</span>
-                    </button>
-                    <span className="h-px flex-1 bg-borderSubtle" />
+                        <svg
+                          aria-hidden="true"
+                          className={`h-3.5 w-3.5 transition ${expandedSections[section.key] ? 'rotate-90' : ''}`}
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path d="M7 5l6 5-6 5V5z" />
+                        </svg>
+                        <span>{section.label}</span>
+                        <span className="text-[10px] font-semibold text-slate-400">({section.items.length})</span>
+                      </button>
+                      <span className="h-px flex-1 bg-borderSubtle" />
+                    </div>
+                    {expandedSections[section.key] ? (
+                      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {section.items.map((occurrence) => (
+                          <OccurrenceCard
+                            key={occurrence.id}
+                            occurrence={occurrence}
+                            locale={locale}
+                            googleConnected={googleConnected}
+                            userTimeZone={effectiveTimeZone}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
-                  {expandedSections[key] ? (
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                      {items.map((occurrence) => (
-                        <OccurrenceCard
-                          key={occurrence.id}
-                          occurrence={occurrence}
-                          locale={locale}
-                          googleConnected={googleConnected}
-                          userTimeZone={effectiveTimeZone}
-                        />
-                      ))}
+                ) : null
+              )}
+              {hasMonthGroups ? (
+                <div className="space-y-6">
+                  {visibleMonthEntries.map(([monthKey, items]) => {
+                    const [year, month] = monthKey.split('-').map(Number);
+                    const labelDate = new Date(year, Math.max(0, month - 1), 1);
+                    const sectionKey = `month:${monthKey}`;
+                    const isExpanded = expandedSections[sectionKey] ?? false;
+                    return (
+                      <div key={monthKey} className="space-y-3">
+                        <div className="flex items-center gap-3 text-xs font-semibold uppercase text-muted">
+                          <button
+                            type="button"
+                            onClick={() => toggleSection(sectionKey)}
+                            className="inline-flex items-center gap-2 text-xs font-semibold uppercase text-muted hover:text-slate-700"
+                            aria-expanded={isExpanded}
+                            aria-label={isExpanded ? copy.common.hide : copy.common.show}
+                          >
+                            <svg
+                              aria-hidden="true"
+                              className={`h-3.5 w-3.5 transition ${isExpanded ? 'rotate-90' : ''}`}
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path d="M7 5l6 5-6 5V5z" />
+                            </svg>
+                            <span>{monthLabelFormatter.format(labelDate)}</span>
+                            <span className="text-[10px] font-semibold text-slate-400">({items.length})</span>
+                          </button>
+                          <span className="h-px flex-1 bg-borderSubtle" />
+                        </div>
+                        {isExpanded ? (
+                          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                            {items.map((occurrence) => (
+                              <OccurrenceCard
+                                key={occurrence.id}
+                                occurrence={occurrence}
+                                locale={locale}
+                                googleConnected={googleConnected}
+                                userTimeZone={effectiveTimeZone}
+                              />
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                  {hasMoreMonths ? (
+                    <div className="flex justify-center">
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setVisibleMonthGroups((prev) => prev + 2)}
+                      >
+                        {copy.dashboard.viewMoreMonths}
+                      </button>
                     </div>
                   ) : null}
                 </div>
-              ) : null
-            )}
-            {hasMonthGroups ? (
-              <div className="space-y-6">
-                {visibleMonthEntries.map(([monthKey, items]) => {
-                  const [year, month] = monthKey.split('-').map(Number);
-                  const labelDate = new Date(year, Math.max(0, month - 1), 1);
-                  const sectionKey = `month:${monthKey}`;
-                  const isExpanded = expandedSections[sectionKey] ?? false;
-                  return (
-                    <div key={monthKey} className="space-y-3">
-                      <div className="flex items-center gap-3 text-xs font-semibold uppercase text-muted">
-                        <button
-                          type="button"
-                          onClick={() => toggleSection(sectionKey)}
-                          className="inline-flex items-center gap-2 text-xs font-semibold uppercase text-muted hover:text-slate-700"
-                          aria-expanded={isExpanded}
-                          aria-label={isExpanded ? copy.common.hide : copy.common.show}
-                        >
-                          <svg
-                            aria-hidden="true"
-                            className={`h-3.5 w-3.5 transition ${isExpanded ? 'rotate-90' : ''}`}
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path d="M7 5l6 5-6 5V5z" />
-                          </svg>
-                          <span>{monthLabelFormatter.format(labelDate)}</span>
-                          <span className="text-[10px] font-semibold text-slate-400">({items.length})</span>
-                        </button>
-                        <span className="h-px flex-1 bg-borderSubtle" />
-                      </div>
-                      {isExpanded ? (
-                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                          {items.map((occurrence) => (
-                            <OccurrenceCard
-                              key={occurrence.id}
-                              occurrence={occurrence}
-                              locale={locale}
-                              googleConnected={googleConnected}
-                              userTimeZone={effectiveTimeZone}
-                            />
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-                {hasMoreMonths ? (
-                  <div className="flex justify-center">
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => setVisibleMonthGroups((prev) => prev + 2)}
-                    >
-                      {copy.dashboard.viewMoreMonths}
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <div className="card text-sm text-muted">{copy.dashboard.emptyFriendly}</div>
-        )
+              ) : null}
+            </div>
+          ) : (
+            <div className="card text-sm text-muted">{copy.dashboard.upcomingEmpty}</div>
+          )}
+        </div>
+      ) : null}
+      {kindFilter !== 'medications' ? (
+        <div className="space-y-4">
+          <SectionHeader title={copy.dashboard.householdTitle} description={copy.dashboard.householdSubtitle} />
+          {householdItems.length ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {householdItems.map((occurrence) => (
+                <OccurrenceCard
+                  key={occurrence.id}
+                  occurrence={occurrence}
+                  locale={locale}
+                  googleConnected={googleConnected}
+                  userTimeZone={effectiveTimeZone}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="card text-sm text-muted">{copy.dashboard.householdEmpty}</div>
+          )}
+        </div>
       ) : null}
     </section>
   );
