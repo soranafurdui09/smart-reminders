@@ -395,7 +395,11 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const [medPersonId, setMedPersonId] = useState('');
   const [medAddToCalendar, setMedAddToCalendar] = useState(false);
   const [aiHighlight, setAiHighlight] = useState(false);
+  const [pendingAutoCreate, setPendingAutoCreate] = useState(false);
+  const [autoCreateSource, setAutoCreateSource] = useState<'voice' | null>(null);
+  const [autoCreateSummary, setAutoCreateSummary] = useState<{ title: string; dueAt: string | null } | null>(null);
   const [voiceUseAi, setVoiceUseAi] = useState(true);
+  const [voiceCreateMode, setVoiceCreateMode] = useState<'review' | 'auto'>('review');
   const [voiceMissingMessage, setVoiceMissingMessage] = useState<string | null>(null);
   const [voiceErrorCode, setVoiceErrorCode] = useState<string | null>(null);
   const defaultContext = useMemo(
@@ -634,6 +638,12 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     return { complete: missing.length === 0, missing };
   }, []);
 
+  const queueAutoCreate = useCallback((source: 'voice', data: AiResult) => {
+    setAutoCreateSource(source);
+    setAutoCreateSummary({ title: data.title, dueAt: data.dueAt || null });
+    setPendingAutoCreate(true);
+  }, []);
+
   const handleVoiceFallback = useCallback((text: string) => {
     setTitle(text);
     setAiText(text);
@@ -669,10 +679,9 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     },
     onIncomplete: handleVoiceIncomplete,
     onCreate: (data) => {
-      applyParsedReminder(data);
-      triggerHighlight();
-      setVoiceMissingMessage(null);
-      setVoiceErrorCode(null);
+      if (voiceCreateMode === 'auto') {
+        queueAutoCreate('voice', data);
+      }
     },
     onFallback: handleVoiceFallback,
     onError: (message) => setVoiceErrorCode(message)
@@ -711,6 +720,21 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!pendingAutoCreate || !autoCreateSummary) return;
+    if (autoCreateSource === 'voice' && typeof window !== 'undefined') {
+      window.sessionStorage.setItem(
+        'voice-create-summary',
+        JSON.stringify({ ...autoCreateSummary, source: autoCreateSource, ts: Date.now() })
+      );
+    }
+    const frame = window.requestAnimationFrame(() => {
+      formRef.current?.requestSubmit();
+      setPendingAutoCreate(false);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [autoCreateSource, autoCreateSummary, pendingAutoCreate]);
 
   const handleParse = useCallback(async () => {
     const data = await parseReminderText(aiText, true);
@@ -777,6 +801,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
 
   return (
     <form ref={formRef} action={action} className="space-y-8">
+      <input type="hidden" name="voice_auto" value={autoCreateSource === 'voice' ? '1' : ''} />
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="medication_details" value={medicationDetailsJson} />
       <input type="hidden" name="medication_add_to_calendar" value={medAddToCalendar ? '1' : ''} />
@@ -860,6 +885,30 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
               />
               {copy.remindersNew.voiceUseAi}
             </label>
+            <div className="space-y-2">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted">
+                {copy.remindersNew.voiceModeLabel}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(['review', 'auto'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                      voiceCreateMode === mode
+                        ? 'border-sky-400 bg-sky-50 text-sky-700'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    }`}
+                    onClick={() => setVoiceCreateMode(mode)}
+                  >
+                    {mode === 'review'
+                      ? copy.remindersNew.voiceModeReview
+                      : copy.remindersNew.voiceModeAuto}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted">{copy.remindersNew.voiceModeHint}</p>
+            </div>
             {voiceIsReady ? (
               <div className="text-xs text-muted">{copy.remindersNew.voicePrompt}</div>
             ) : null}
