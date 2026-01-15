@@ -3,7 +3,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { useSpeechToReminder, type SpeechStatus } from '@/hooks/useSpeechToReminder';
-import { getDefaultContextSettings, type ContextSettings, type DayOfWeek } from '@/lib/reminders/context';
+import { getDefaultContextSettings, isDefaultContextSettings, type ContextSettings, type DayOfWeek } from '@/lib/reminders/context';
 import type { MedicationDetails, MedicationFrequencyType } from '@/lib/reminders/medication';
 import type { ReminderCategoryId } from '@/lib/categories';
 
@@ -404,6 +404,10 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const [voiceErrorCode, setVoiceErrorCode] = useState<string | null>(null);
   const defaultContext = useMemo(
     () => (contextDefaults ? contextDefaults : getDefaultContextSettings()),
+    [contextDefaults]
+  );
+  const contextDefaultsActive = useMemo(
+    () => (contextDefaults ? !isDefaultContextSettings(contextDefaults) : false),
     [contextDefaults]
   );
   const [timeWindowEnabled, setTimeWindowEnabled] = useState(defaultContext.timeWindow?.enabled ?? false);
@@ -1369,7 +1373,14 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
               aria-expanded={contextOpen}
             >
               <div>
-                <div className="text-sm font-semibold text-ink">{copy.remindersNew.contextTitle}</div>
+                <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink">
+                  <span>{copy.remindersNew.contextTitle}</span>
+                  {contextDefaultsActive ? (
+                    <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-700">
+                      {copy.remindersNew.contextDefaultsActive}
+                    </span>
+                  ) : null}
+                </div>
                 <p className="text-xs text-muted">{copy.remindersNew.contextSubtitle}</p>
               </div>
               <span
@@ -1386,13 +1397,13 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                     type="checkbox"
                     name="context_time_window_enabled"
                     value="1"
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
-                  checked={timeWindowEnabled}
-                  onChange={(event) => setTimeWindowEnabled(event.target.checked)}
-                />
-                {copy.remindersNew.contextTimeWindowLabel}
-              </label>
-              <div className="grid gap-3 md:grid-cols-2">
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                    checked={timeWindowEnabled}
+                    onChange={(event) => setTimeWindowEnabled(event.target.checked)}
+                  />
+                  {copy.remindersNew.contextTimeWindowLabel}
+                </label>
+                <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextStartLabel}</label>
                   <select

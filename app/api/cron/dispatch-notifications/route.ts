@@ -9,7 +9,7 @@ import { evaluateReminderContext, parseContextSettings } from '@/lib/reminders/c
 import { getFreeBusyIntervalsForUser } from '@/lib/google/calendar';
 import { deferNotificationJob, rescheduleNotificationJob } from '@/lib/notifications/jobs';
 import { computePostponeUntil, findBusyIntervalAt, FREEBUSY_CACHE_WINDOW_MS } from '@/lib/google/freebusy-cache';
-import { formatDateTimeWithTimeZone, interpretAsTimeZone, resolveReminderTimeZone } from '@/lib/dates';
+import { formatDateTimeWithTimeZone, resolveReminderTimeZone } from '@/lib/dates';
 
 export const runtime = 'nodejs';
 
@@ -269,6 +269,31 @@ export async function GET() {
       .eq('id', logId);
   };
 
+  const toWallClockDate = (date: Date, timeZone: string) => {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    const parts = formatter.formatToParts(date);
+    const lookup: Record<string, string> = {};
+    parts.forEach((part) => {
+      if (part.type !== 'literal') {
+        lookup[part.type] = part.value;
+      }
+    });
+    const year = Number(lookup.year);
+    const month = Number(lookup.month);
+    const day = Number(lookup.day);
+    const hour = Number(lookup.hour);
+    const minute = Number(lookup.minute);
+    return new Date(Date.UTC(year, month - 1, day, hour, minute));
+  };
+
   const ensureActionToken = async (job: NotificationJob) => {
     const nowTs = Date.now();
     const expiresAt = job.action_token_expires_at ? new Date(job.action_token_expires_at).getTime() : 0;
@@ -335,13 +360,11 @@ export async function GET() {
     const profile = profileMap.get(job.user_id);
     const userTimeZone = profile?.timeZone || 'UTC';
     const displayTimeZone = resolveReminderTimeZone(reminder.tz ?? null, userTimeZone);
-    const dueAt = displayTimeZone && displayTimeZone !== 'UTC'
-      ? interpretAsTimeZone(job.notify_at, displayTimeZone)
-      : new Date(job.notify_at);
-    if (dueAt < windowStart || dueAt > now) {
+    const notifyAt = new Date(job.notify_at);
+    if (notifyAt < windowStart || notifyAt > now) {
       continue;
     }
-    const occurAtLabel = formatDateTimeWithTimeZone(dueAt, displayTimeZone);
+    const occurAtLabel = formatDateTimeWithTimeZone(notifyAt, displayTimeZone);
     const settings = settingsMap.get(reminder.id)
       ?? parseContextSettings(
         reminder.context_settings ?? null,
@@ -351,9 +374,11 @@ export async function GET() {
       ? busyIntervalMap.get(reminder.created_by) ?? null
       : null;
     const isBusy = Boolean(busyInterval);
+    const contextNow = displayTimeZone ? toWallClockDate(now, displayTimeZone) : now;
+    const contextDueAt = displayTimeZone ? toWallClockDate(notifyAt, displayTimeZone) : notifyAt;
     const decision = evaluateReminderContext({
-      now,
-      reminderDueAt: dueAt,
+      now: contextNow,
+      reminderDueAt: contextDueAt,
       settings,
       isCalendarBusy: isBusy
     });

@@ -56,7 +56,9 @@ export const messages = {
       statusAccepted: 'acceptat',
       statusPending: 'pending',
       statusOpen: 'Deschis',
-      statusSnoozed: 'Amanat'
+      statusSnoozed: 'Amanat',
+      calendarDelayHint: 'Google Calendar poate amana reminderul daca esti ocupat.',
+      calendarDelayNote: 'Calendar poate amana'
     },
     landing: {
       login: 'Login',
@@ -266,6 +268,7 @@ export const messages = {
       medicationSave: 'Salveaza medicamentul',
       contextTitle: 'Context',
       contextSubtitle: 'Controleaza cand se trimit notificarile.',
+      contextDefaultsActive: 'Context implicit activ',
       contextTimeWindowLabel: 'Trimite notificari doar intr-un interval orar',
       contextStartLabel: 'De la',
       contextEndLabel: 'Pana la',
@@ -469,7 +472,9 @@ export const messages = {
       statusAccepted: 'accepted',
       statusPending: 'pending',
       statusOpen: 'Open',
-      statusSnoozed: 'Snoozed'
+      statusSnoozed: 'Snoozed',
+      calendarDelayHint: 'Google Calendar may postpone the reminder if you are busy.',
+      calendarDelayNote: 'Calendar may postpone'
     },
     landing: {
       login: 'Login',
@@ -684,6 +689,7 @@ export const messages = {
       contextEndLabel: 'Until',
       contextDaysLabel: 'Days',
       contextCalendarLabel: 'Avoid notifications during meetings (Google Calendar)',
+      contextDefaultsActive: 'Default context active',
       contextCalendarHint: 'If you are busy in your calendar, the reminder may be postponed automatically.',
       contextSnoozeLabel: 'Auto-snooze by (minutes)',
       contextDayMonday: 'Monday',
@@ -882,7 +888,9 @@ export const messages = {
       statusAccepted: 'akzeptiert',
       statusPending: 'ausstehend',
       statusOpen: 'Offen',
-      statusSnoozed: 'Verschoben'
+      statusSnoozed: 'Verschoben',
+      calendarDelayHint: 'Google Kalender kann die Erinnerung verschieben, wenn du beschäftigt bist.',
+      calendarDelayNote: 'Kalender kann verschieben'
     },
     landing: {
       login: 'Anmelden',
@@ -1097,6 +1105,7 @@ export const messages = {
       contextEndLabel: 'Bis',
       contextDaysLabel: 'Tage',
       contextCalendarLabel: 'Benachrichtigungen während Meetings vermeiden (Google Kalender)',
+      contextDefaultsActive: 'Standardkontext aktiv',
       contextCalendarHint: 'Wenn du im Kalender beschäftigt bist, kann die Erinnerung automatisch verschoben werden.',
       contextSnoozeLabel: 'Automatisch verschieben um (Minuten)',
       contextDayMonday: 'Montag',
