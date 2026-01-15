@@ -1437,30 +1437,31 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                     </select>
                   </div>
                 </div>
-              <div>
-                <div className="text-xs font-semibold text-muted">{copy.remindersNew.contextDaysLabel}</div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {dayOptions.map((day) => (
-                    <label key={day.value} className="flex items-center gap-2 text-xs text-muted">
-                      <input
-                        type="checkbox"
-                        name="context_time_days"
-                        value={day.value}
-                        className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
-                        checked={timeWindowDays.includes(day.value)}
-                        onChange={(event) => {
-                          setTimeWindowDays((prev) => {
-                            if (event.target.checked) {
-                              return [...prev, day.value];
-                            }
-                            return prev.filter((item) => item !== day.value);
-                          });
-                        }}
-                        disabled={!timeWindowEnabled}
-                      />
-                      {day.label}
-                    </label>
-                  ))}
+                <div>
+                  <div className="text-xs font-semibold text-muted">{copy.remindersNew.contextDaysLabel}</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {dayOptions.map((day) => (
+                      <label key={day.value} className="flex items-center gap-2 text-xs text-muted">
+                        <input
+                          type="checkbox"
+                          name="context_time_days"
+                          value={day.value}
+                          className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                          checked={timeWindowDays.includes(day.value)}
+                          onChange={(event) => {
+                            setTimeWindowDays((prev) => {
+                              if (event.target.checked) {
+                                return [...prev, day.value];
+                              }
+                              return prev.filter((item) => item !== day.value);
+                            });
+                          }}
+                          disabled={!timeWindowEnabled}
+                        />
+                        {day.label}
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
               <div className="space-y-3">
