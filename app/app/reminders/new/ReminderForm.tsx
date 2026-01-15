@@ -937,7 +937,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         {kind === 'generic' ? (
-          <details className="card space-y-4" defaultOpen={false}>
+          <details className="card space-y-4">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
               <div>
                 <div className="text-lg font-semibold text-ink">{copy.remindersNew.templatesTitle}</div>
@@ -1294,7 +1294,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
             </div>
 
             <div className="grid gap-4">
-              <details className="rounded-2xl border border-borderSubtle bg-surface p-4" defaultOpen={false}>
+              <details className="rounded-2xl border border-borderSubtle bg-surface p-4">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
                   <div>
                     <div className="text-sm font-semibold text-ink">{copy.remindersNew.recurrenceTitle}</div>
@@ -1331,7 +1331,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                 </div>
               </details>
 
-              <details className="rounded-2xl border border-borderSubtle bg-surface p-4" defaultOpen={false}>
+              <details className="rounded-2xl border border-borderSubtle bg-surface p-4">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
                   <div>
                     <div className="text-sm font-semibold text-ink">{copy.remindersNew.notificationsTitle}</div>
@@ -1435,7 +1435,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                 </div>
               </details>
 
-              <details className="rounded-2xl border border-borderSubtle bg-surface p-4" defaultOpen={false}>
+              <details className="rounded-2xl border border-borderSubtle bg-surface p-4">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
                   <div>
                     <div className="text-sm font-semibold text-ink">{copy.remindersNew.householdTitle}</div>
@@ -1461,7 +1461,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                 </div>
               </details>
 
-              <details className="rounded-2xl border border-borderSubtle bg-surface p-4" defaultOpen={false}>
+              <details className="rounded-2xl border border-borderSubtle bg-surface p-4">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
                   <div>
                     <div className="text-sm font-semibold text-ink">{copy.remindersNew.calendarTitle}</div>
