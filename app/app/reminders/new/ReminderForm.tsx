@@ -1404,39 +1404,39 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                   {copy.remindersNew.contextTimeWindowLabel}
                 </label>
                 <div className="grid gap-3 md:grid-cols-2">
-                <div>
-                  <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextStartLabel}</label>
-                  <select
-                    name="context_time_start_hour"
-                    className="input"
-                    value={timeWindowStartHour}
-                    onChange={(event) => setTimeWindowStartHour(Number(event.target.value))}
-                    disabled={!timeWindowEnabled}
-                  >
-                    {hourOptions.map((hour) => (
-                      <option key={`start-${hour}`} value={hour}>
-                        {String(hour).padStart(2, '0')}:00
-                      </option>
-                    ))}
-                  </select>
+                  <div>
+                    <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextStartLabel}</label>
+                    <select
+                      name="context_time_start_hour"
+                      className="input"
+                      value={timeWindowStartHour}
+                      onChange={(event) => setTimeWindowStartHour(Number(event.target.value))}
+                      disabled={!timeWindowEnabled}
+                    >
+                      {hourOptions.map((hour) => (
+                        <option key={`start-${hour}`} value={hour}>
+                          {String(hour).padStart(2, '0')}:00
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextEndLabel}</label>
+                    <select
+                      name="context_time_end_hour"
+                      className="input"
+                      value={timeWindowEndHour}
+                      onChange={(event) => setTimeWindowEndHour(Number(event.target.value))}
+                      disabled={!timeWindowEnabled}
+                    >
+                      {hourOptions.map((hour) => (
+                        <option key={`end-${hour}`} value={hour}>
+                          {String(hour).padStart(2, '0')}:00
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextEndLabel}</label>
-                  <select
-                    name="context_time_end_hour"
-                    className="input"
-                    value={timeWindowEndHour}
-                    onChange={(event) => setTimeWindowEndHour(Number(event.target.value))}
-                    disabled={!timeWindowEnabled}
-                  >
-                    {hourOptions.map((hour) => (
-                      <option key={`end-${hour}`} value={hour}>
-                        {String(hour).padStart(2, '0')}:00
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
               <div>
                 <div className="text-xs font-semibold text-muted">{copy.remindersNew.contextDaysLabel}</div>
                 <div className="mt-2 flex flex-wrap gap-2">
