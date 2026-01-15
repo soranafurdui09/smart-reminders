@@ -67,7 +67,24 @@ export function useSpeechToReminder<TParsed>({
       typeof navigator !== 'undefined'
       && 'userActivation' in navigator
       && (navigator as Navigator & { userActivation?: { isActive: boolean } }).userActivation?.isActive;
-    if (!hasActivation && typeof window !== 'undefined') {
+    const hasRecentHandoff = () => {
+      if (typeof window === 'undefined') return false;
+      try {
+        const raw = window.sessionStorage.getItem('voice_handoff_ts');
+        if (!raw) return false;
+        const ts = Number(raw);
+        if (!Number.isFinite(ts)) return false;
+        const recent = Date.now() - ts < 8000;
+        if (recent) {
+          window.sessionStorage.removeItem('voice_handoff_ts');
+          return true;
+        }
+      } catch {
+        return false;
+      }
+      return false;
+    };
+    if (!hasActivation && !hasRecentHandoff() && typeof window !== 'undefined') {
       const handle = () => startNow();
       window.addEventListener('pointerdown', handle, { once: true });
       window.addEventListener('keydown', handle, { once: true });

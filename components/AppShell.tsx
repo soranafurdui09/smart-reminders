@@ -4,6 +4,7 @@ import { defaultLocale, messages, type Locale } from '@/lib/i18n';
 import ActionFeedback from '@/components/ActionFeedback';
 import VoiceCreateToast from '@/components/VoiceCreateToast';
 import { deleteReminder } from '@/app/app/reminders/[id]/actions';
+import VoiceNavButton from '@/components/VoiceNavButton';
 
 export default function AppShell({
   children,
@@ -59,10 +60,10 @@ export default function AppShell({
                       >
                         {link.label}
                       </Link>
-                      <Link
+                      <VoiceNavButton
                         href="/app/reminders/new?voice=1"
                         className="flex h-9 w-9 items-center justify-center rounded-full border border-borderSubtle bg-surface text-ink transition hover:border-primary/30 hover:bg-white"
-                        aria-label={copy.remindersNew.voiceNavLabel}
+                        label={copy.remindersNew.voiceNavLabel}
                         title={copy.remindersNew.voiceNavLabel}
                       >
                         <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
@@ -72,7 +73,7 @@ export default function AppShell({
                             d="M12 3a3 3 0 013 3v6a3 3 0 11-6 0V6a3 3 0 013-3zm0 14a7 7 0 007-7h-2a5 5 0 01-10 0H5a7 7 0 007 7zm0 0v4"
                           />
                         </svg>
-                      </Link>
+                      </VoiceNavButton>
                     </div>
                   );
                 }
@@ -135,10 +136,10 @@ export default function AppShell({
                     >
                       {link.label}
                     </Link>
-                    <Link
+                    <VoiceNavButton
                       href="/app/reminders/new?voice=1"
                       className="flex h-8 w-8 items-center justify-center rounded-full border border-borderSubtle bg-surface text-ink transition hover:border-primary/30 hover:bg-white"
-                      aria-label={copy.remindersNew.voiceNavLabel}
+                      label={copy.remindersNew.voiceNavLabel}
                       title={copy.remindersNew.voiceNavLabel}
                     >
                       <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
@@ -148,7 +149,7 @@ export default function AppShell({
                           d="M12 3a3 3 0 013 3v6a3 3 0 11-6 0V6a3 3 0 013-3zm0 14a7 7 0 007-7h-2a5 5 0 01-10 0H5a7 7 0 007 7zm0 0v4"
                         />
                       </svg>
-                    </Link>
+                    </VoiceNavButton>
                   </div>
                 );
               }
