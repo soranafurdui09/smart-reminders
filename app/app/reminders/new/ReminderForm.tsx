@@ -5,7 +5,7 @@ import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { useSpeechToReminder, type SpeechStatus } from '@/hooks/useSpeechToReminder';
 import { getDefaultContextSettings, isDefaultContextSettings, type ContextSettings, type DayOfWeek } from '@/lib/reminders/context';
 import type { MedicationDetails, MedicationFrequencyType } from '@/lib/reminders/medication';
-import type { ReminderCategoryId } from '@/lib/categories';
+import { reminderCategories, type ReminderCategoryId } from '@/lib/categories';
 
 type MemberOption = {
   id: string;
@@ -394,11 +394,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const [medEndDate, setMedEndDate] = useState('');
   const [medPersonId, setMedPersonId] = useState('');
   const [medAddToCalendar, setMedAddToCalendar] = useState(false);
-  const [contextOpen, setContextOpen] = useState(false);
   const [aiHighlight, setAiHighlight] = useState(false);
-  const [pendingAutoCreate, setPendingAutoCreate] = useState(false);
-  const [autoCreateSource, setAutoCreateSource] = useState<'voice' | 'manual' | null>(null);
-  const [autoCreateSummary, setAutoCreateSummary] = useState<{ title: string; dueAt: string | null } | null>(null);
   const [voiceUseAi, setVoiceUseAi] = useState(true);
   const [voiceMissingMessage, setVoiceMissingMessage] = useState<string | null>(null);
   const [voiceErrorCode, setVoiceErrorCode] = useState<string | null>(null);
@@ -638,12 +634,6 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     return { complete: missing.length === 0, missing };
   }, []);
 
-  const queueAutoCreate = useCallback((source: 'voice' | 'manual', data: AiResult) => {
-    setAutoCreateSource(source);
-    setAutoCreateSummary({ title: data.title, dueAt: data.dueAt || null });
-    setPendingAutoCreate(true);
-  }, []);
-
   const handleVoiceFallback = useCallback((text: string) => {
     setTitle(text);
     setAiText(text);
@@ -678,7 +668,12 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
       setVoiceErrorCode(null);
     },
     onIncomplete: handleVoiceIncomplete,
-    onCreate: (data) => queueAutoCreate('voice', data),
+    onCreate: (data) => {
+      applyParsedReminder(data);
+      triggerHighlight();
+      setVoiceMissingMessage(null);
+      setVoiceErrorCode(null);
+    },
     onFallback: handleVoiceFallback,
     onError: (message) => setVoiceErrorCode(message)
   });
@@ -704,6 +699,12 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   }, [onVoiceStateChange, voice.status, voice.supported]);
 
   useEffect(() => {
+    if (voice.status === 'creating') {
+      voice.reset();
+    }
+  }, [voice.reset, voice.status]);
+
+  useEffect(() => {
     return () => {
       if (highlightTimer.current) {
         window.clearTimeout(highlightTimer.current);
@@ -711,22 +712,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     };
   }, []);
 
-  useEffect(() => {
-    if (!pendingAutoCreate || !autoCreateSummary) return;
-    if (autoCreateSource === 'voice' && typeof window !== 'undefined') {
-      window.sessionStorage.setItem(
-        'voice-create-summary',
-        JSON.stringify({ ...autoCreateSummary, source: autoCreateSource, ts: Date.now() })
-      );
-    }
-    const frame = window.requestAnimationFrame(() => {
-      formRef.current?.requestSubmit();
-      setPendingAutoCreate(false);
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [autoCreateSource, autoCreateSummary, pendingAutoCreate]);
-
-  const handleParse = useCallback(async (autoCreate: boolean) => {
+  const handleParse = useCallback(async () => {
     const data = await parseReminderText(aiText, true);
     if (!data) {
       return;
@@ -735,24 +721,10 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     triggerHighlight();
     setVoiceMissingMessage(null);
     setVoiceErrorCode(null);
-    if (!autoCreate) {
-      return;
-    }
-    const completeness = getCompleteness(data);
-    if (!completeness.complete) {
-      setVoiceMissingMessage(copy.remindersNew.voiceMissingDate);
-      dueAtRef.current?.focus();
-      detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      return;
-    }
-    queueAutoCreate('manual', data);
   }, [
     aiText,
     applyParsedReminder,
-    copy.remindersNew.voiceMissingDate,
-    getCompleteness,
     parseReminderText,
-    queueAutoCreate,
     triggerHighlight
   ]);
 
@@ -760,12 +732,11 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     if (voice.status === 'starting') return copy.remindersNew.voiceStarting;
     if (voice.status === 'processing') return copy.remindersNew.voiceProcessing;
     if (voice.status === 'parsing') return copy.remindersNew.voiceParsing;
-    if (voice.status === 'creating') return copy.remindersNew.voiceCreating;
+    if (voice.status === 'creating') return copy.remindersNew.voiceProcessing;
     if (voice.status === 'transcribing') return copy.remindersNew.voiceTranscribing;
     if (voice.status === 'listening') return copy.remindersNew.voiceListening;
     return '';
   }, [
-    copy.remindersNew.voiceCreating,
     copy.remindersNew.voiceListening,
     copy.remindersNew.voiceParsing,
     copy.remindersNew.voiceProcessing,
@@ -806,7 +777,6 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
 
   return (
     <form ref={formRef} action={action} className="space-y-8">
-      <input type="hidden" name="voice_auto" value={autoCreateSource === 'voice' ? '1' : ''} />
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="medication_details" value={medicationDetailsJson} />
       <input type="hidden" name="medication_add_to_calendar" value={medAddToCalendar ? '1' : ''} />
@@ -825,6 +795,109 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
         name="tz"
         value={Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'}
       />
+
+      {kind === 'generic' ? (
+        <section className="card space-y-4">
+          <div className="space-y-1">
+            <div className="text-lg font-semibold text-ink">{copy.remindersNew.aiTitle}</div>
+            <p className="text-sm text-muted">{copy.remindersNew.aiSubtitle}</p>
+          </div>
+          <div className="space-y-3">
+            <input
+              className="input"
+              placeholder={copy.remindersNew.aiPlaceholder}
+              value={aiText}
+              onChange={(event) => setAiText(event.target.value)}
+            />
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={handleParse}
+                disabled={aiLoading}
+              >
+                {aiLoading ? copy.remindersNew.aiLoading : copy.remindersNew.aiButton}
+              </button>
+              <button
+                className={`btn btn-secondary relative inline-flex items-center gap-2 ${
+                  voiceIsActive ? 'border-primary/40 text-primaryStrong' : ''
+                }`}
+                type="button"
+                onClick={() => {
+                  if (voiceIsProcessing) return;
+                  voice.toggle();
+                }}
+                disabled={!voice.supported || voiceIsProcessing}
+                aria-label={copy.remindersNew.voiceNavLabel}
+                aria-pressed={voiceIsActive}
+                aria-busy={voiceIsProcessing}
+                title={!voice.supported ? copy.remindersNew.voiceNotSupported : copy.remindersNew.voiceNavLabel}
+              >
+                {voiceIsReady ? (
+                  <span className="absolute -inset-1 rounded-full bg-sky-300/30 animate-ping" aria-hidden="true" />
+                ) : null}
+                <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <path
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    d="M12 3a3 3 0 013 3v6a3 3 0 11-6 0V6a3 3 0 013-3zm0 14a7 7 0 007-7h-2a5 5 0 01-10 0H5a7 7 0 007 7zm0 0v4"
+                  />
+                </svg>
+                {copy.remindersNew.voiceQuickCta}
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+              <span>{copy.remindersNew.aiHint}</span>
+              <span>{aiCharCount} {copy.remindersNew.aiCounterLabel}</span>
+            </div>
+            <p className="text-xs text-muted">{copy.remindersNew.aiExample}</p>
+            <label className="flex items-center gap-2 text-xs text-muted">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                checked={voiceUseAi}
+                onChange={(event) => setVoiceUseAi(event.target.checked)}
+              />
+              {copy.remindersNew.voiceUseAi}
+            </label>
+            {voiceIsReady ? (
+              <div className="text-xs text-muted">{copy.remindersNew.voicePrompt}</div>
+            ) : null}
+            {voiceStatusLabel ? (
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                <span>{voiceStatusLabel}</span>
+                {voiceIsProcessing ? (
+                  <span className="inline-flex items-center gap-2 rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-0.5 text-[11px]">
+                    <span className="h-3 w-3 animate-spin rounded-full border border-slate-300 border-t-slate-600" />
+                    <span className="sr-only">{copy.remindersNew.voiceProcessing}</span>
+                  </span>
+                ) : null}
+                {voice.status === 'transcribing' && voiceTranscript ? (
+                  <span className="rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-0.5 text-[11px]">
+                    {voiceTranscript}
+                  </span>
+                ) : null}
+                {voiceIsReady ? (
+                  <button className="btn btn-secondary h-7 px-3 text-xs" type="button" onClick={voice.stop}>
+                    {copy.remindersNew.voiceStop}
+                  </button>
+                ) : null}
+              </div>
+            ) : autoVoice ? (
+              <div className="text-xs text-muted">{copy.remindersNew.voiceAutoActive}</div>
+            ) : null}
+            {!voice.supported ? (
+              <div className="text-xs text-muted">{copy.remindersNew.voiceNotSupported}</div>
+            ) : null}
+            {voiceErrorMessage ? (
+              <div className="text-xs text-rose-600">{voiceErrorMessage}</div>
+            ) : null}
+          </div>
+          {aiError ? (
+            <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{aiError}</div>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="card space-y-4">
         <div>
@@ -862,231 +935,117 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
         </div>
       </section>
 
-      {kind === 'generic' ? (
-        <section className="card space-y-4">
-        <div className="space-y-1">
-          <div className="text-lg font-semibold text-ink">{copy.remindersNew.aiTitle}</div>
-          <p className="text-sm text-muted">{copy.remindersNew.aiSubtitle}</p>
-        </div>
-        <div className="space-y-2">
-          <div className="relative">
-            <textarea
-              className="input min-h-[120px] resize-y pr-12"
-              rows={4}
-              placeholder={copy.remindersNew.aiPlaceholder}
-              value={aiText}
-              onChange={(event) => setAiText(event.target.value)}
-            />
-            <button
-              className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-borderSubtle bg-surface text-ink transition hover:border-primary/30 hover:bg-white relative ${
-                voiceIsActive ? 'border-primary/40 text-primaryStrong' : ''
-              }`}
-              type="button"
-              onClick={() => {
-                if (voiceIsProcessing) return;
-                voice.toggle();
-              }}
-              disabled={!voice.supported || voiceIsProcessing}
-              aria-label={copy.remindersNew.voiceNavLabel}
-              aria-pressed={voiceIsActive}
-              aria-busy={voiceIsProcessing}
-              title={!voice.supported ? copy.remindersNew.voiceNotSupported : copy.remindersNew.voiceNavLabel}
-            >
-              {voiceIsReady ? (
-                <span className="absolute -inset-1 rounded-full bg-sky-300/30 animate-ping" aria-hidden="true" />
-              ) : null}
-              <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
-                <path
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  d="M12 3a3 3 0 013 3v6a3 3 0 11-6 0V6a3 3 0 013-3zm0 14a7 7 0 007-7h-2a5 5 0 01-10 0H5a7 7 0 007 7zm0 0v4"
-                />
-              </svg>
-            </button>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
-            <span>{copy.remindersNew.aiHint}</span>
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
-                  checked={voiceUseAi}
-                  onChange={(event) => setVoiceUseAi(event.target.checked)}
-                />
-                {copy.remindersNew.voiceUseAi}
-              </label>
-              <span>{aiCharCount} {copy.remindersNew.aiCounterLabel}</span>
-            </div>
-          </div>
-          {voiceIsReady ? (
-            <div className="text-xs text-muted">{copy.remindersNew.voicePrompt}</div>
-          ) : null}
-          {voiceStatusLabel ? (
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-              <span>{voiceStatusLabel}</span>
-              {voiceIsProcessing ? (
-                <span className="inline-flex items-center gap-2 rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-0.5 text-[11px]">
-                  <span className="h-3 w-3 animate-spin rounded-full border border-slate-300 border-t-slate-600" />
-                  <span className="sr-only">{copy.remindersNew.voiceProcessing}</span>
-                </span>
-              ) : null}
-              {voice.status === 'transcribing' && voiceTranscript ? (
-                <span className="rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-0.5 text-[11px]">
-                  {voiceTranscript}
-                </span>
-              ) : null}
-              {voiceIsReady ? (
-                <button className="btn btn-secondary h-7 px-3 text-xs" type="button" onClick={voice.stop}>
-                  {copy.remindersNew.voiceStop}
-                </button>
-              ) : null}
-            </div>
-          ) : autoVoice ? (
-            <div className="text-xs text-muted">{copy.remindersNew.voiceAutoActive}</div>
-          ) : null}
-          {!voice.supported ? (
-            <div className="text-xs text-muted">{copy.remindersNew.voiceNotSupported}</div>
-          ) : null}
-          {voiceErrorMessage ? (
-            <div className="text-xs text-rose-600">{voiceErrorMessage}</div>
-          ) : null}
-        </div>
-        {aiError ? (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{aiError}</div>
-        ) : null}
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <p className="text-xs text-muted">{copy.remindersNew.aiExample}</p>
-          <div className="flex flex-col gap-2 md:flex-row">
-            <button
-              className="btn btn-secondary w-full md:w-auto"
-              type="button"
-              onClick={() => handleParse(true)}
-              disabled={aiLoading}
-            >
-              {copy.remindersNew.aiButtonCreate}
-            </button>
-            <button
-              className="btn btn-primary w-full md:w-auto"
-              type="button"
-              onClick={() => handleParse(false)}
-              disabled={aiLoading}
-            >
-              {aiLoading ? copy.remindersNew.aiLoading : copy.remindersNew.aiButton}
-            </button>
-          </div>
-        </div>
-        </section>
-      ) : null}
-
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         {kind === 'generic' ? (
-        <section className="space-y-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-ink">{copy.remindersNew.templatesTitle}</h2>
-              <p className="text-sm text-muted">{copy.remindersNew.templatesSubtitle}</p>
-            </div>
-            <div className="relative w-full md:w-64">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
-                <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <path
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-              </span>
-              <input
-                className="input pl-9"
-                aria-label={copy.remindersNew.templatesSearchPlaceholder}
-                placeholder={copy.remindersNew.templatesSearchPlaceholder}
-                value={templateQuery}
-                onChange={(event) => setTemplateQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault();
-                  }
-                }}
-              />
-            </div>
-          </div>
-          {filteredTemplates.length ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <button
-                type="button"
-                className="card flex flex-col gap-3 border-dashed border-slate-200 text-left transition hover:border-sky-300 hover:bg-sky-50"
-                onClick={() => {
-                  setKind('medication');
-                  setTimeout(() => medicationRef.current?.scrollIntoView({ behavior: 'smooth' }), 150);
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
-                    💊
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-ink">{copy.remindersNew.typeMedication}</div>
-                    <div className="text-xs text-muted">{copy.remindersNew.typeMedicationSubtitle}</div>
-                  </div>
-                </div>
-                <div className="text-xs text-muted">{copy.remindersNew.typeMedicationHint}</div>
-              </button>
-              {filteredTemplates.map((template) => {
-                const preReminder = template.preReminderMinutes
-                  ? formatPreReminder(activeLocale, template.preReminderMinutes)
-                  : '';
-                return (
-                  <div
-                    key={template.id}
-                    className="flex flex-col gap-3 rounded-2xl border border-borderSubtle bg-surface p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+          <details className="card space-y-4" defaultOpen={false}>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+              <div>
+                <div className="text-lg font-semibold text-ink">{copy.remindersNew.templatesTitle}</div>
+                <p className="text-sm text-muted">{copy.remindersNew.templatesSubtitle}</p>
+              </div>
+              <span className="text-muted">⌄</span>
+            </summary>
+            <div className="space-y-4 pt-2">
+              <div className="relative w-full md:w-64">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
+                  <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <path
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                </span>
+                <input
+                  className="input pl-9"
+                  aria-label={copy.remindersNew.templatesSearchPlaceholder}
+                  placeholder={copy.remindersNew.templatesSearchPlaceholder}
+                  value={templateQuery}
+                  onChange={(event) => setTemplateQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                    }
+                  }}
+                />
+              </div>
+              {filteredTemplates.length ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    className="card flex flex-col gap-3 border-dashed border-slate-200 text-left transition hover:border-sky-300 hover:bg-sky-50"
+                    onClick={() => {
+                      setKind('medication');
+                      setTimeout(() => medicationRef.current?.scrollIntoView({ behavior: 'smooth' }), 150);
+                    }}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primarySoft text-primaryStrong">
-                        {TEMPLATE_ICONS[template.icon]}
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
+                        💊
                       </div>
-                      <div className="min-w-0 space-y-1">
-                        <div className="text-sm font-semibold text-ink">{template.title[activeLocale]}</div>
-                        <div className="text-xs text-muted">{template.description[activeLocale]}</div>
+                      <div>
+                        <div className="text-sm font-semibold text-ink">{copy.remindersNew.typeMedication}</div>
+                        <div className="text-xs text-muted">{copy.remindersNew.typeMedicationSubtitle}</div>
                       </div>
                     </div>
-                    {template.tags[activeLocale].length ? (
-                      <div className="flex flex-wrap gap-2">
-                        {template.tags[activeLocale].map((tag) => (
-                          <span key={tag} className="chip">
-                            {tag}
+                    <div className="text-xs text-muted">{copy.remindersNew.typeMedicationHint}</div>
+                  </button>
+                  {filteredTemplates.map((template) => {
+                    const preReminder = template.preReminderMinutes
+                      ? formatPreReminder(activeLocale, template.preReminderMinutes)
+                      : '';
+                    return (
+                      <div
+                        key={template.id}
+                        className="flex flex-col gap-3 rounded-2xl border border-borderSubtle bg-surface p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primarySoft text-primaryStrong">
+                            {TEMPLATE_ICONS[template.icon]}
+                          </div>
+                          <div className="min-w-0 space-y-1">
+                            <div className="text-sm font-semibold text-ink">{template.title[activeLocale]}</div>
+                            <div className="text-xs text-muted">{template.description[activeLocale]}</div>
+                          </div>
+                        </div>
+                        {template.tags[activeLocale].length ? (
+                          <div className="flex flex-wrap gap-2">
+                            {template.tags[activeLocale].map((tag) => (
+                              <span key={tag} className="chip">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                        <div className="flex flex-wrap gap-2 text-xs text-muted">
+                          <span className="chip">
+                            {copy.remindersNew.repeatLabel}: {scheduleLabels[template.scheduleType]}
                           </span>
-                        ))}
+                          {preReminder ? (
+                            <span className="chip">
+                              {copy.remindersNew.templatesPreReminderLabel}: {preReminder}
+                            </span>
+                          ) : null}
+                        </div>
+                        {template.notes?.[activeLocale] ? (
+                          <div className="text-xs text-muted">{template.notes[activeLocale]}</div>
+                        ) : null}
+                        <button
+                          className="btn btn-secondary mt-1 w-full"
+                          type="button"
+                          onClick={() => applyTemplate(template)}
+                        >
+                          {copy.remindersNew.templatesApply}
+                        </button>
                       </div>
-                    ) : null}
-                    <div className="flex flex-wrap gap-2 text-xs text-muted">
-                      <span className="chip">
-                        {copy.remindersNew.repeatLabel}: {scheduleLabels[template.scheduleType]}
-                      </span>
-                      {preReminder ? (
-                        <span className="chip">
-                          {copy.remindersNew.templatesPreReminderLabel}: {preReminder}
-                        </span>
-                      ) : null}
-                    </div>
-                    {template.notes?.[activeLocale] ? (
-                      <div className="text-xs text-muted">{template.notes[activeLocale]}</div>
-                    ) : null}
-                    <button
-                      className="btn btn-secondary mt-1 w-full"
-                      type="button"
-                      onClick={() => applyTemplate(template)}
-                    >
-                      {copy.remindersNew.templatesApply}
-                    </button>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-sm text-muted">{copy.remindersNew.templatesEmpty}</div>
+              )}
             </div>
-          ) : (
-            <div className="text-sm text-muted">{copy.remindersNew.templatesEmpty}</div>
-          )}
-        </section>
+          </details>
         ) : null}
 
         {kind === 'medication' ? (
@@ -1264,244 +1223,290 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
         ) : null}
 
         {kind === 'generic' ? (
-        <section
-          ref={detailsRef}
-          className={`card space-y-4 ${aiHighlight ? 'flash-outline flash-bg' : ''}`}
-        >
-          <div>
-            <h3 className="text-lg font-semibold text-ink">{copy.remindersNew.details}</h3>
-            <p className="text-sm text-muted">{copy.remindersNew.detailsSubtitle}</p>
-          </div>
-          {voiceMissingMessage ? (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-              {voiceMissingMessage}
-            </div>
-          ) : null}
-          <div>
-            <label className="text-sm font-semibold">{copy.remindersNew.titleLabel}</label>
-            <input
-              name="title"
-              className="input"
-              placeholder={copy.remindersNew.titlePlaceholder}
-              required
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              ref={titleRef}
-            />
-          </div>
-          <div>
-            <label className="text-sm font-semibold">{copy.remindersNew.notesLabel}</label>
-            <textarea
-              name="notes"
-              className="input"
-              rows={3}
-              placeholder={copy.remindersNew.notesPlaceholder}
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-            />
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
+          <section
+            ref={detailsRef}
+            className={`card space-y-6 ${aiHighlight ? 'flash-outline flash-bg' : ''}`}
+          >
             <div>
-              <label className="text-sm font-semibold">{copy.remindersNew.dateLabel}</label>
-              <input
-                name="due_at"
-                type="datetime-local"
-                className="input"
-                value={dueAt}
-                onChange={(event) => setDueAt(event.target.value)}
-                ref={dueAtRef}
-              />
+              <h3 className="text-lg font-semibold text-ink">{copy.remindersNew.details}</h3>
+              <p className="text-sm text-muted">{copy.remindersNew.detailsSubtitle}</p>
             </div>
-            <div>
-              <label className="text-sm font-semibold">{copy.remindersNew.repeatLabel}</label>
-              <select
-                name="schedule_type"
-                className="input"
-                value={scheduleType}
-                onChange={(event) => setScheduleType(event.target.value)}
-              >
-                <option value="once">{copy.remindersNew.once}</option>
-                <option value="daily">{copy.remindersNew.daily}</option>
-                <option value="weekly">{copy.remindersNew.weekly}</option>
-                <option value="monthly">{copy.remindersNew.monthly}</option>
-                <option value="yearly">{copy.remindersNew.yearly}</option>
-              </select>
-            </div>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-sm font-semibold">{copy.remindersNew.preReminderLabel}</label>
-              <input
-                name="pre_reminder_minutes"
-                type="number"
-                className="input"
-                value={preReminderMinutes}
-                onChange={(event) => setPreReminderMinutes(event.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-semibold">{copy.remindersNew.assigneeLabel}</label>
-              <select
-                name="assigned_member_id"
-                className="input"
-                value={assignedMemberId}
-                onChange={(event) => setAssignedMemberId(event.target.value)}
-              >
-                {memberOptions.map((member) => (
-                  <option key={member.id || 'none'} value={member.id}>
-                    {member.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="text-sm font-semibold">{copy.remindersNew.recurrenceRuleLabel}</label>
-            <input
-              name="recurrence_rule"
-              className="input"
-              placeholder={copy.remindersNew.recurrenceRulePlaceholder}
-              value={recurrenceRule}
-              onChange={(event) => setRecurrenceRule(event.target.value)}
-            />
-          </div>
-          <div className="rounded-2xl border border-borderSubtle bg-surfaceMuted/60 p-4">
-            <button
-              type="button"
-              className="flex w-full items-center justify-between gap-4 text-left"
-              onClick={() => setContextOpen((prev) => !prev)}
-              aria-expanded={contextOpen}
-            >
-              <div>
-                <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink">
-                  <span>{copy.remindersNew.contextTitle}</span>
-                  {contextDefaultsActive ? (
-                    <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-700">
-                      {copy.remindersNew.contextDefaultsActive}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-xs text-muted">{copy.remindersNew.contextSubtitle}</p>
+            {voiceMissingMessage ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                {voiceMissingMessage}
               </div>
-              <span
-                aria-hidden="true"
-                className={`flex h-7 w-7 items-center justify-center rounded-full border border-borderSubtle bg-surface text-muted transition ${contextOpen ? 'rotate-90' : ''}`}
-              >
-                ›
-              </span>
-            </button>
-            <div className={`space-y-4 pt-4 ${contextOpen ? '' : 'hidden'}`}>
-              <p className="text-xs text-muted">{copy.remindersNew.contextOverrideHint}</p>
-              <div className="space-y-3">
-                <label className="flex items-center gap-2 text-sm">
+            ) : null}
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-semibold">{copy.remindersNew.titleLabel}</label>
+                <input
+                  name="title"
+                  className="input"
+                  placeholder={copy.remindersNew.titlePlaceholder}
+                  required
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  ref={titleRef}
+                />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="text-sm font-semibold">{copy.remindersNew.dateLabel}</label>
                   <input
-                    type="checkbox"
-                    name="context_time_window_enabled"
-                    value="1"
-                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
-                    checked={timeWindowEnabled}
-                    onChange={(event) => setTimeWindowEnabled(event.target.checked)}
+                    name="due_at"
+                    type="datetime-local"
+                    className="input"
+                    value={dueAt}
+                    onChange={(event) => setDueAt(event.target.value)}
+                    ref={dueAtRef}
                   />
-                  {copy.remindersNew.contextTimeWindowLabel}
-                </label>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextStartLabel}</label>
-                    <select
-                      name="context_time_start_hour"
-                      className="input"
-                      value={timeWindowStartHour}
-                      onChange={(event) => setTimeWindowStartHour(Number(event.target.value))}
-                      disabled={!timeWindowEnabled}
-                    >
-                      {hourOptions.map((hour) => (
-                        <option key={`start-${hour}`} value={hour}>
-                          {String(hour).padStart(2, '0')}:00
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextEndLabel}</label>
-                    <select
-                      name="context_time_end_hour"
-                      className="input"
-                      value={timeWindowEndHour}
-                      onChange={(event) => setTimeWindowEndHour(Number(event.target.value))}
-                      disabled={!timeWindowEnabled}
-                    >
-                      {hourOptions.map((hour) => (
-                        <option key={`end-${hour}`} value={hour}>
-                          {String(hour).padStart(2, '0')}:00
-                        </option>
-                      ))}
-                    </select>
-                  </div>
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-muted">{copy.remindersNew.contextDaysLabel}</div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {dayOptions.map((day) => (
-                      <label key={day.value} className="flex items-center gap-2 text-xs text-muted">
-                        <input
-                          type="checkbox"
-                          name="context_time_days"
-                          value={day.value}
-                          className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
-                          checked={timeWindowDays.includes(day.value)}
-                          onChange={(event) => {
-                            setTimeWindowDays((prev) => {
-                              if (event.target.checked) {
-                                return [...prev, day.value];
-                              }
-                              return prev.filter((item) => item !== day.value);
-                            });
-                          }}
-                          disabled={!timeWindowEnabled}
-                        />
-                        {day.label}
-                      </label>
+                  <label className="text-sm font-semibold">{copy.remindersNew.categoryLabel}</label>
+                  <select
+                    className="input"
+                    value={categoryId}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setCategoryId(value ? (value as ReminderCategoryId) : '');
+                    }}
+                  >
+                    <option value="">{copy.remindersNew.categoryDefault}</option>
+                    {reminderCategories.filter((category) => category.id !== 'default').map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.label}
+                      </option>
                     ))}
-                  </div>
+                  </select>
                 </div>
               </div>
-              <div className="space-y-3">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    name="context_calendar_busy_enabled"
-                    value="1"
-                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
-                    checked={calendarBusyEnabled}
-                    onChange={(event) => setCalendarBusyEnabled(event.target.checked)}
-                  />
-                  {copy.remindersNew.contextCalendarLabel}
-                </label>
-                <p className="text-xs text-muted">{copy.remindersNew.contextCalendarHint}</p>
-                <div className="max-w-xs">
-                  <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextSnoozeLabel}</label>
-                  <input
-                    type="number"
-                    name="context_calendar_snooze_minutes"
-                    className="input"
-                    min={5}
-                    max={240}
-                    value={calendarSnoozeMinutes}
-                    onChange={(event) => setCalendarSnoozeMinutes(Number(event.target.value))}
-                    disabled={!calendarBusyEnabled}
-                  />
-                </div>
+              <div>
+                <label className="text-sm font-semibold">{copy.remindersNew.notesLabel}</label>
+                <textarea
+                  name="notes"
+                  className="input"
+                  rows={3}
+                  placeholder={copy.remindersNew.notesPlaceholder}
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                />
               </div>
             </div>
-          </div>
-          <ActionSubmitButton
-            className="btn btn-primary"
-            type="submit"
-            data-action-feedback={copy.common.actionCreated}
-          >
-            {copy.remindersNew.create}
-          </ActionSubmitButton>
-        </section>
+
+            <div className="grid gap-4">
+              <details className="rounded-2xl border border-borderSubtle bg-surface p-4" defaultOpen={false}>
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+                  <div>
+                    <div className="text-sm font-semibold text-ink">{copy.remindersNew.recurrenceTitle}</div>
+                    <p className="text-xs text-muted">{copy.remindersNew.recurrenceSubtitle}</p>
+                  </div>
+                  <span className="text-muted">⌄</span>
+                </summary>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-semibold">{copy.remindersNew.repeatLabel}</label>
+                    <select
+                      name="schedule_type"
+                      className="input"
+                      value={scheduleType}
+                      onChange={(event) => setScheduleType(event.target.value)}
+                    >
+                      <option value="once">{copy.remindersNew.once}</option>
+                      <option value="daily">{copy.remindersNew.daily}</option>
+                      <option value="weekly">{copy.remindersNew.weekly}</option>
+                      <option value="monthly">{copy.remindersNew.monthly}</option>
+                      <option value="yearly">{copy.remindersNew.yearly}</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-semibold">{copy.remindersNew.recurrenceRuleLabel}</label>
+                    <input
+                      name="recurrence_rule"
+                      className="input"
+                      placeholder={copy.remindersNew.recurrenceRulePlaceholder}
+                      value={recurrenceRule}
+                      onChange={(event) => setRecurrenceRule(event.target.value)}
+                    />
+                  </div>
+                </div>
+              </details>
+
+              <details className="rounded-2xl border border-borderSubtle bg-surface p-4" defaultOpen={false}>
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+                  <div>
+                    <div className="text-sm font-semibold text-ink">{copy.remindersNew.notificationsTitle}</div>
+                    <p className="text-xs text-muted">{copy.remindersNew.notificationsSubtitle}</p>
+                  </div>
+                  <span className="text-muted">⌄</span>
+                </summary>
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="text-sm font-semibold">{copy.remindersNew.preReminderLabel}</label>
+                    <input
+                      name="pre_reminder_minutes"
+                      type="number"
+                      className="input"
+                      value={preReminderMinutes}
+                      onChange={(event) => setPreReminderMinutes(event.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink">
+                      <span>{copy.remindersNew.contextTitle}</span>
+                      {contextDefaultsActive ? (
+                        <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-700">
+                          {copy.remindersNew.contextDefaultsActive}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="text-xs text-muted">{copy.remindersNew.contextOverrideHint}</p>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        name="context_time_window_enabled"
+                        value="1"
+                        className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                        checked={timeWindowEnabled}
+                        onChange={(event) => setTimeWindowEnabled(event.target.checked)}
+                      />
+                      {copy.remindersNew.contextTimeWindowLabel}
+                    </label>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div>
+                        <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextStartLabel}</label>
+                        <select
+                          name="context_time_start_hour"
+                          className="input"
+                          value={timeWindowStartHour}
+                          onChange={(event) => setTimeWindowStartHour(Number(event.target.value))}
+                          disabled={!timeWindowEnabled}
+                        >
+                          {hourOptions.map((hour) => (
+                            <option key={`start-${hour}`} value={hour}>
+                              {String(hour).padStart(2, '0')}:00
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextEndLabel}</label>
+                        <select
+                          name="context_time_end_hour"
+                          className="input"
+                          value={timeWindowEndHour}
+                          onChange={(event) => setTimeWindowEndHour(Number(event.target.value))}
+                          disabled={!timeWindowEnabled}
+                        >
+                          {hourOptions.map((hour) => (
+                            <option key={`end-${hour}`} value={hour}>
+                              {String(hour).padStart(2, '0')}:00
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-muted">{copy.remindersNew.contextDaysLabel}</div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {dayOptions.map((day) => (
+                          <label key={day.value} className="flex items-center gap-2 text-xs text-muted">
+                            <input
+                              type="checkbox"
+                              name="context_time_days"
+                              value={day.value}
+                              className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                              checked={timeWindowDays.includes(day.value)}
+                              onChange={(event) => {
+                                setTimeWindowDays((prev) => {
+                                  if (event.target.checked) {
+                                    return [...prev, day.value];
+                                  }
+                                  return prev.filter((item) => item !== day.value);
+                                });
+                              }}
+                              disabled={!timeWindowEnabled}
+                            />
+                            {day.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </details>
+
+              <details className="rounded-2xl border border-borderSubtle bg-surface p-4" defaultOpen={false}>
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+                  <div>
+                    <div className="text-sm font-semibold text-ink">{copy.remindersNew.householdTitle}</div>
+                    <p className="text-xs text-muted">{copy.remindersNew.householdSubtitle}</p>
+                  </div>
+                  <span className="text-muted">⌄</span>
+                </summary>
+                <div className="mt-4">
+                  <label className="text-sm font-semibold">{copy.remindersNew.assigneeLabel}</label>
+                  <select
+                    name="assigned_member_id"
+                    className="input"
+                    value={assignedMemberId}
+                    onChange={(event) => setAssignedMemberId(event.target.value)}
+                  >
+                    {memberOptions.map((member) => (
+                      <option key={member.id || 'none'} value={member.id}>
+                        {member.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-2 text-xs text-muted">{copy.remindersNew.householdHint}</p>
+                </div>
+              </details>
+
+              <details className="rounded-2xl border border-borderSubtle bg-surface p-4" defaultOpen={false}>
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+                  <div>
+                    <div className="text-sm font-semibold text-ink">{copy.remindersNew.calendarTitle}</div>
+                    <p className="text-xs text-muted">{copy.remindersNew.calendarSubtitle}</p>
+                  </div>
+                  <span className="text-muted">⌄</span>
+                </summary>
+                <div className="mt-4 space-y-3">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      name="context_calendar_busy_enabled"
+                      value="1"
+                      className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                      checked={calendarBusyEnabled}
+                      onChange={(event) => setCalendarBusyEnabled(event.target.checked)}
+                    />
+                    {copy.remindersNew.contextCalendarLabel}
+                  </label>
+                  <p className="text-xs text-muted">{copy.remindersNew.contextCalendarHint}</p>
+                  <div className="max-w-xs">
+                    <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextSnoozeLabel}</label>
+                    <input
+                      type="number"
+                      name="context_calendar_snooze_minutes"
+                      className="input"
+                      min={5}
+                      max={240}
+                      value={calendarSnoozeMinutes}
+                      onChange={(event) => setCalendarSnoozeMinutes(Number(event.target.value))}
+                      disabled={!calendarBusyEnabled}
+                    />
+                  </div>
+                </div>
+              </details>
+            </div>
+
+            <ActionSubmitButton
+              className="btn btn-primary"
+              type="submit"
+              data-action-feedback={copy.common.actionCreated}
+            >
+              {copy.remindersNew.create}
+            </ActionSubmitButton>
+          </section>
         ) : null}
       </div>
     </form>
