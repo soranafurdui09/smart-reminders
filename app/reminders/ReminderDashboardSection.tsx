@@ -1,13 +1,10 @@
 "use client";
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import SectionHeader from '@/components/SectionHeader';
-import OccurrenceCard from '@/components/OccurrenceCard';
+import SemanticSearch from '@/components/SemanticSearch';
 import ReminderFilterBar from './ReminderFilterBar';
 import SegmentedControl from '@/components/filters/SegmentedControl';
-import SemanticSearch from '@/components/SemanticSearch';
-import ActionSubmitButton from '@/components/ActionSubmitButton';
+import ReminderCard from '@/components/dashboard/ReminderCard';
 import { messages, type Locale } from '@/lib/i18n';
 import {
   diffDaysInTimeZone,
@@ -16,12 +13,6 @@ import {
   resolveReminderTimeZone
 } from '@/lib/dates';
 import { inferReminderCategoryId, type ReminderCategoryId } from '@/lib/categories';
-import { markDone, snoozeOccurrence } from '@/app/app/actions';
-import { cloneReminder } from '@/app/app/reminders/[id]/actions';
-import SmartSnoozeMenu from '@/components/SmartSnoozeMenu';
-import GoogleCalendarDeleteDialog from '@/components/GoogleCalendarDeleteDialog';
-import GoogleCalendarSyncButton from '@/components/GoogleCalendarSyncButton';
-import GoogleCalendarAutoBlockButton from '@/components/GoogleCalendarAutoBlockButton';
 
 type CreatedByOption = 'all' | 'me' | 'others';
 type AssignmentOption = 'all' | 'assigned_to_me';
@@ -50,7 +41,6 @@ type OccurrencePayload = {
   performed_by?: string | null;
   performed_by_label?: string | null;
   effective_at?: string;
-  done_comment?: string | null;
 };
 
 type MedicationDose = {
@@ -110,29 +100,31 @@ const getCompareDate = (occurrence: OccurrencePayload, timeZone: string) => {
   return new Date(rawDate);
 };
 
-const formatTimeOnly = (
-  value: string,
-  reminderTimeZone: string | null | undefined,
-  userTimeZone: string | null | undefined,
-  localeTag: string
-) => {
-  const resolved = resolveReminderTimeZone(reminderTimeZone ?? null, userTimeZone ?? null);
-  const date = resolved && resolved !== 'UTC' ? interpretAsTimeZone(value, resolved) : new Date(value);
-  return new Intl.DateTimeFormat(localeTag, { hour: '2-digit', minute: '2-digit' }).format(date);
-};
-
 const getUrgencyStyles = (copy: MessageBundle) => ({
   overdue: {
     label: copy.dashboard.todayOverdue,
-    className: 'border-amber-200 bg-amber-50 text-amber-700'
+    stripClass: 'bg-red-500',
+    badgeClass: 'border-red-200 bg-red-50 text-red-700'
   },
   soon: {
     label: copy.dashboard.todaySoon,
-    className: 'border-yellow-200 bg-yellow-50 text-yellow-700'
+    stripClass: 'bg-amber-500',
+    badgeClass: 'border-amber-200 bg-amber-50 text-amber-700'
   },
   today: {
     label: copy.dashboard.todayRest,
-    className: 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    stripClass: 'bg-emerald-500',
+    badgeClass: 'border-emerald-200 bg-emerald-50 text-emerald-700'
+  },
+  upcoming: {
+    label: copy.dashboard.upcomingTitle,
+    stripClass: 'bg-sky-500',
+    badgeClass: 'border-sky-200 bg-sky-50 text-sky-700'
+  },
+  scheduled: {
+    label: copy.common.statusOpen,
+    stripClass: 'bg-slate-300',
+    badgeClass: 'border-slate-200 bg-slate-50 text-slate-600'
   }
 });
 
@@ -158,9 +150,6 @@ export default function ReminderDashboardSection({
   const [categoryFilter, setCategoryFilter] = useState<CategoryOption>('all');
   const [doseState, setDoseState] = useState<MedicationDose[]>(medicationDoses);
   const [visibleMonthGroups, setVisibleMonthGroups] = useState(2);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    later: false
-  });
 
   const filteredOccurrences = useMemo(() => {
     const normalized = occurrences
@@ -295,10 +284,6 @@ export default function ReminderDashboardSection({
     [doseState]
   );
 
-  const toggleSection = (key: string) => {
-    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
   const handleDoseStatus = async (doseId: string, status: 'taken' | 'skipped', skippedReason?: string) => {
     try {
       const response = await fetch(`/api/medications/dose/${doseId}/status`, {
@@ -332,23 +317,103 @@ export default function ReminderDashboardSection({
   }, []);
 
   return (
-    <section className="space-y-8">
-      <div className="grid gap-8 lg:grid-cols-[1.35fr_0.9fr]">
-        <div className="space-y-8 lg:col-start-1">
-          <div className="space-y-4">
-            <SectionHeader title={copy.dashboard.todayTitle} description={copy.dashboard.todaySubtitle} />
-            {kindFilter !== 'medications' ? (
-              hasToday ? (
-                <div className="space-y-6">
+    <section className="space-y-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)] md:gap-8">
+        <aside className="order-1 space-y-4 lg:order-2">
+          <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm md:p-5">
+            <SemanticSearch householdId={householdId} localeTag={localeTag} copy={copy.search} />
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.dashboard.filtersTitle}</div>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 md:hidden"
+                  onClick={() => setFiltersOpen((prev) => !prev)}
+                >
+                  <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M4 6h16M7 12h10M10 18h4"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  {copy.dashboard.filtersTitle}{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+                </button>
+              </div>
+              <div className={`${filtersOpen ? 'block' : 'hidden md:block'} space-y-4`}>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.dashboard.filtersKindLabel}</div>
+                  <SegmentedControl
+                    options={[
+                      { value: 'all', label: copy.dashboard.filtersKindAll },
+                      { value: 'tasks', label: copy.dashboard.filtersKindTasks },
+                      { value: 'medications', label: copy.dashboard.filtersKindMeds }
+                    ]}
+                    value={kindFilter}
+                    onChange={(value) => setKindFilter(value as typeof kindFilter)}
+                    className="mt-2"
+                  />
+                </div>
+                <ReminderFilterBar
+                  createdBy={createdBy}
+                  assignment={assignment}
+                  category={categoryFilter}
+                  onChangeCreatedBy={(value) => {
+                    if (CreatedOptions.includes(value)) {
+                      setCreatedBy(value);
+                    }
+                  }}
+                  onChangeAssignment={(value) => {
+                    if (AssignmentOptions.includes(value)) {
+                      setAssignment(value);
+                    }
+                  }}
+                  onChangeCategory={(value) => setCategoryFilter(value)}
+                  showHeader={false}
+                  className="border-0 bg-transparent px-0 py-0 shadow-none"
+                />
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <div className="order-2 space-y-6 lg:order-1">
+          {kindFilter !== 'medications' ? (
+            <section className="space-y-3">
+              <header className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <svg aria-hidden="true" className="h-4 w-4 text-amber-500" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-900">{copy.dashboard.todayTitle}</h2>
+                </div>
+              </header>
+              {hasToday ? (
+                <div className="space-y-5">
                   {todayBuckets.overdue.length ? (
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase text-amber-700">
-                        <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
-                        {copy.dashboard.todayOverdue}
-                      </div>
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <header className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-700">
+                          <svg aria-hidden="true" className="h-4 w-4 text-red-500" viewBox="0 0 24 24" fill="none">
+                            <path
+                              d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                            />
+                            <path d="M12 9v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                            <path d="M12 17h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                          </svg>
+                          {copy.dashboard.todayOverdue}
+                        </div>
+                        <span className="text-xs text-slate-500">
+                          {todayBuckets.overdue.length} {copy.dashboard.reminderCountLabel}
+                        </span>
+                      </header>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         {todayBuckets.overdue.map((occurrence) => (
-                          <OccurrenceCard
+                          <ReminderCard
                             key={occurrence.id}
                             occurrence={occurrence}
                             locale={locale}
@@ -362,13 +427,21 @@ export default function ReminderDashboardSection({
                   ) : null}
                   {todayBuckets.soon.length ? (
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase text-yellow-700">
-                        <span className="h-2 w-2 rounded-full bg-yellow-500" aria-hidden="true" />
-                        {copy.dashboard.todaySoon}
-                      </div>
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <header className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-700">
+                          <svg aria-hidden="true" className="h-4 w-4 text-amber-500" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
+                          </svg>
+                          {copy.dashboard.todaySoon}
+                        </div>
+                        <span className="text-xs text-slate-500">
+                          {todayBuckets.soon.length} {copy.dashboard.reminderCountLabel}
+                        </span>
+                      </header>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         {todayBuckets.soon.map((occurrence) => (
-                          <OccurrenceCard
+                          <ReminderCard
                             key={occurrence.id}
                             occurrence={occurrence}
                             locale={locale}
@@ -382,13 +455,21 @@ export default function ReminderDashboardSection({
                   ) : null}
                   {todayBuckets.today.length ? (
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase text-emerald-700">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
-                        {copy.dashboard.todayRest}
-                      </div>
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <header className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-700">
+                          <svg aria-hidden="true" className="h-4 w-4 text-emerald-500" viewBox="0 0 24 24" fill="none">
+                            <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
+                          </svg>
+                          {copy.dashboard.todayRest}
+                        </div>
+                        <span className="text-xs text-slate-500">
+                          {todayBuckets.today.length} {copy.dashboard.reminderCountLabel}
+                        </span>
+                      </header>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         {todayBuckets.today.map((occurrence) => (
-                          <OccurrenceCard
+                          <ReminderCard
                             key={occurrence.id}
                             occurrence={occurrence}
                             locale={locale}
@@ -402,16 +483,31 @@ export default function ReminderDashboardSection({
                   ) : null}
                 </div>
               ) : (
-                <div className="card text-sm text-muted">{copy.dashboard.todayEmpty}</div>
-              )
-            ) : null}
-          </div>
+                <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+                  {copy.dashboard.todayEmpty}
+                </div>
+              )}
+            </section>
+          ) : null}
 
           {kindFilter !== 'tasks' ? (
-            <div className="space-y-4">
-              <SectionHeader title={copy.dashboard.medicationsTitle} />
+            <section className="space-y-3">
+              <header className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <svg aria-hidden="true" className="h-4 w-4 text-emerald-500" viewBox="0 0 24 24" fill="none">
+                    <path d="M10 2l8 8-8 8-8-8 8-8z" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M12 2v20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-900">{copy.dashboard.medicationsTitle}</h2>
+                </div>
+                {visibleDoses.length ? (
+                  <span className="text-xs text-slate-500">
+                    {visibleDoses.length} {copy.dashboard.doseCountLabel}
+                  </span>
+                ) : null}
+              </header>
               {visibleDoses.length ? (
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   {visibleDoses.map((dose) => {
                     const details = dose.reminder?.medication_details || {};
                     const personLabel = details.personId ? memberLabels[details.personId] : null;
@@ -424,21 +520,24 @@ export default function ReminderDashboardSection({
                       ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
                       : dose.status === 'skipped'
                         ? 'border-amber-200 bg-amber-50 text-amber-700'
-                        : 'border-slate-200 bg-white text-slate-600';
+                        : 'border-slate-200 bg-slate-50 text-slate-600';
                     return (
-                      <div key={dose.id} className="rounded-2xl border border-borderSubtle bg-white/90 p-4 shadow-sm">
+                      <div key={dose.id} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
                         <div className="flex items-start justify-between gap-3">
                           <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-                              <span aria-hidden="true">💊</span>
+                            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                              <svg aria-hidden="true" className="h-4 w-4 text-emerald-600" viewBox="0 0 24 24" fill="none">
+                                <path
+                                  d="M6.5 17.5l11-11a4 4 0 00-5.66-5.66l-11 11a4 4 0 105.66 5.66z"
+                                  stroke="currentColor"
+                                  strokeWidth="1.5"
+                                />
+                                <path d="M8 16l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                              </svg>
                               <span>{details.name || dose.reminder?.title}</span>
                             </div>
-                            {details.dose ? (
-                              <div className="text-xs text-muted">{details.dose}</div>
-                            ) : null}
-                            {personLabel ? (
-                              <div className="text-xs text-muted">{personLabel}</div>
-                            ) : null}
+                            {details.dose ? <div className="text-xs text-slate-500">{details.dose}</div> : null}
+                            {personLabel ? <div className="text-xs text-slate-500">{personLabel}</div> : null}
                           </div>
                           <div className="flex flex-col items-end gap-2">
                             <div className="text-xs font-semibold text-slate-500">
@@ -485,328 +584,142 @@ export default function ReminderDashboardSection({
                   })}
                 </div>
               ) : (
-                <div className="card text-sm text-muted">{copy.dashboard.medicationsEmpty}</div>
+                <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+                  {copy.dashboard.medicationsEmpty}
+                </div>
               )}
-            </div>
+            </section>
           ) : null}
 
           {kindFilter !== 'medications' ? (
-            <div className="space-y-4">
-              <SectionHeader title={copy.dashboard.upcomingTitle} description={copy.dashboard.upcomingSubtitle} />
+            <section className="space-y-3">
+              <header className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <svg aria-hidden="true" className="h-4 w-4 text-sky-500" viewBox="0 0 24 24" fill="none">
+                    <rect x="3" y="4" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M8 2v4M16 2v4M3 10h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-900">{copy.dashboard.upcomingTitle}</h2>
+                </div>
+              </header>
               {hasUpcoming ? (
-                <div className="space-y-6">
+                <div className="space-y-5">
                   {upcomingEntries.map(([dayKey, items]) => {
                     const [year, month, day] = dayKey.split('-').map(Number);
                     const dayDate = new Date(year, Math.max(0, month - 1), day);
                     return (
                       <div key={dayKey} className="space-y-3">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-muted">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                           {dayLabelFormatter.format(dayDate)}
                         </div>
-                        <div className="space-y-3 border-l border-borderSubtle pl-4">
-                          {items.map((occurrence) => {
-                            const displayAt = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
-                            const timeLabel = formatTimeOnly(
-                              displayAt,
-                              occurrence.reminder?.tz ?? null,
-                              effectiveTimeZone,
-                              localeTag
-                            );
-                            return (
-                              <div key={occurrence.id} className="relative">
-                                <span className="absolute -left-[10px] top-6 h-2 w-2 rounded-full bg-slate-300" aria-hidden="true" />
-                                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderSubtle bg-white/90 px-4 py-3 shadow-sm">
-                                  <div className="space-y-1">
-                                    <div className="text-xs font-semibold text-slate-500">{timeLabel}</div>
-                                    <div className="text-sm font-semibold text-ink">{occurrence.reminder?.title}</div>
-                                  </div>
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <SmartSnoozeMenu
-                                      occurrenceId={occurrence.id}
-                                      dueAt={displayAt}
-                                      title={occurrence.reminder?.title}
-                                      notes={occurrence.reminder?.notes}
-                                      category={occurrence.reminder?.category}
-                                      copy={copy}
-                                      snoozeAction={snoozeOccurrence}
-                                    />
-                                    <details className="group">
-                                      <summary className="btn btn-primary dropdown-summary h-9">
-                                        <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
-                                          <path
-                                            stroke="currentColor"
-                                            strokeWidth="1.5"
-                                            d="M5 13l4 4L19 7"
-                                          />
-                                        </svg>
-                                        {copy.common.doneAction}
-                                      </summary>
-                                      <form
-                                        action={markDone}
-                                        className="mt-3 space-y-2 rounded-2xl border border-borderSubtle bg-surfaceMuted p-3 sm:w-72"
-                                      >
-                                        <input type="hidden" name="occurrenceId" value={occurrence.id} />
-                                        <input type="hidden" name="reminderId" value={occurrence.reminder?.id} />
-                                        <input type="hidden" name="occurAt" value={occurrence.occur_at} />
-                                        <label className="text-xs font-semibold text-muted">{copy.common.commentOptional}</label>
-                                        <textarea
-                                          name="done_comment"
-                                          rows={2}
-                                          className="input"
-                                          placeholder={copy.common.commentPlaceholder}
-                                          aria-label={copy.common.commentLabel}
-                                        />
-                                        <ActionSubmitButton
-                                          className="btn btn-primary w-full"
-                                          type="submit"
-                                          data-action-feedback={copy.common.actionDone}
-                                        >
-                                          {copy.common.doneConfirm}
-                                        </ActionSubmitButton>
-                                      </form>
-                                    </details>
-                                    <details className="relative">
-                                      <summary
-                                        className="btn btn-secondary dropdown-summary h-9 w-9 p-0 text-lg leading-none"
-                                        aria-label={copy.common.moreActions}
-                                      >
-                                        <span aria-hidden="true">...</span>
-                                      </summary>
-                                      <div className="absolute right-0 z-20 mt-3 w-56 rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft">
-                                        {occurrence.reminder?.id ? (
-                                          <div className="space-y-1">
-                                            <Link
-                                              className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
-                                              href={`/app/reminders/${occurrence.reminder.id}`}
-                                              data-action-close="true"
-                                            >
-                                              {copy.common.details}
-                                            </Link>
-                                            <Link
-                                              className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
-                                              href={`/app/reminders/${occurrence.reminder.id}/edit`}
-                                              data-action-close="true"
-                                            >
-                                              {copy.common.edit}
-                                            </Link>
-                                            <form action={cloneReminder}>
-                                              <input type="hidden" name="reminderId" value={occurrence.reminder.id} />
-                                              <ActionSubmitButton
-                                                className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
-                                                type="submit"
-                                                data-action-feedback={copy.common.actionCloned}
-                                              >
-                                                {copy.reminderDetail.clone}
-                                              </ActionSubmitButton>
-                                            </form>
-                                            <details className="mt-2 rounded-lg border border-dashed border-slate-200 p-2 text-xs font-semibold text-slate-700">
-                                              <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-slate-400">
-                                                {copy.actions.calendar}
-                                              </summary>
-                                              <div className="mt-2 space-y-1">
-                                                <GoogleCalendarSyncButton
-                                                  reminderId={occurrence.reminder.id}
-                                                  connected={googleConnected}
-                                                  variant="menu"
-                                                  copy={{
-                                                    syncLabel: copy.actions.sendDirect,
-                                                    syncLoading: copy.reminderDetail.googleCalendarSyncing,
-                                                    syncSuccess: copy.reminderDetail.googleCalendarSyncSuccess,
-                                                    syncError: copy.reminderDetail.googleCalendarSyncError,
-                                                    connectFirst: copy.reminderDetail.googleCalendarConnectFirst,
-                                                    connectLink: copy.reminderDetail.googleCalendarConnectLink
-                                                  }}
-                                                />
-                                                <GoogleCalendarAutoBlockButton
-                                                  reminderId={occurrence.reminder.id}
-                                                  connected={googleConnected}
-                                                  hasDueDate={Boolean(occurrence.reminder.due_at)}
-                                                  variant="menu"
-                                                  copy={{
-                                                    label: copy.actions.schedule,
-                                                    loading: copy.reminderDetail.googleCalendarAutoBlocking,
-                                                    success: copy.reminderDetail.googleCalendarAutoBlockSuccess,
-                                                    error: copy.reminderDetail.googleCalendarAutoBlockError,
-                                                    connectHint: copy.reminderDetail.googleCalendarConnectFirst,
-                                                    connectLink: copy.reminderDetail.googleCalendarConnectLink,
-                                                    missingDueDate: copy.reminderDetail.googleCalendarAutoBlockMissingDueDate,
-                                                    confirmIfBusy: copy.reminderDetail.googleCalendarAutoBlockConfirmBusy
-                                                  }}
-                                                />
-                                              </div>
-                                            </details>
-                                            <GoogleCalendarDeleteDialog
-                                              reminderId={occurrence.reminder.id}
-                                              hasGoogleEvent={Boolean(occurrence.reminder.google_event_id)}
-                                              copy={{
-                                                label: copy.common.delete,
-                                                dialogTitle: copy.reminderDetail.googleCalendarDeleteTitle,
-                                                dialogHint: copy.reminderDetail.googleCalendarDeleteHint,
-                                                justReminder: copy.reminderDetail.googleCalendarDeleteOnly,
-                                                reminderAndCalendar: copy.reminderDetail.googleCalendarDeleteBoth,
-                                                cancel: copy.reminderDetail.googleCalendarDeleteCancel
-                                              }}
-                                            />
-                                          </div>
-                                        ) : null}
-                                      </div>
-                                    </details>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="card text-sm text-muted">{copy.dashboard.upcomingEmpty}</div>
-              )}
-            </div>
-          ) : null}
-
-        </div>
-
-        <aside className="space-y-6 lg:col-start-2">
-          <div className="rounded-2xl border border-borderSubtle bg-white/80 p-4 shadow-sm">
-            <SemanticSearch
-              householdId={householdId}
-              localeTag={localeTag}
-              copy={copy.search}
-            />
-          </div>
-          <div className="rounded-2xl border border-borderSubtle bg-white/80 p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted">
-                {copy.dashboard.filtersTitle}
-                {activeFilterCount > 0 ? (
-                  <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
-                    {activeFilterCount}
-                  </span>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                className="text-xs font-semibold text-slate-500 hover:text-slate-700"
-                onClick={() => setFiltersOpen((prev) => !prev)}
-              >
-                {filtersOpen ? copy.common.hide : copy.common.show}
-              </button>
-            </div>
-            {filtersOpen ? (
-              <div className="mt-4 space-y-4">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.dashboard.filtersTitle}</div>
-                  <SegmentedControl
-                    options={[
-                      { value: 'all', label: copy.dashboard.filtersKindAll },
-                      { value: 'tasks', label: copy.dashboard.filtersKindTasks },
-                      { value: 'medications', label: copy.dashboard.filtersKindMeds }
-                    ]}
-                    value={kindFilter}
-                    onChange={(value) => setKindFilter(value as typeof kindFilter)}
-                    className="mt-2"
-                  />
-                </div>
-                <ReminderFilterBar
-                  createdBy={createdBy}
-                  assignment={assignment}
-                  category={categoryFilter}
-                  onChangeCreatedBy={(value) => {
-                    if (CreatedOptions.includes(value)) {
-                      setCreatedBy(value);
-                    }
-                  }}
-                  onChangeAssignment={(value) => {
-                    if (AssignmentOptions.includes(value)) {
-                      setAssignment(value);
-                    }
-                  }}
-                  onChangeCategory={(value) => setCategoryFilter(value)}
-                  showHeader={false}
-                  className="border-0 bg-transparent px-0 py-0 shadow-none"
-                />
-              </div>
-            ) : null}
-          </div>
-        </aside>
-
-        <div className="space-y-8 lg:col-start-1">
-          {kindFilter !== 'medications' ? (
-            <div className="space-y-4">
-              <SectionHeader title={copy.dashboard.householdTitle} description={copy.dashboard.householdSubtitle} />
-              {householdItems.length ? (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {householdItems.map((occurrence) => (
-                    <OccurrenceCard
-                      key={occurrence.id}
-                      occurrence={occurrence}
-                      locale={locale}
-                      googleConnected={googleConnected}
-                      userTimeZone={effectiveTimeZone}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="card text-sm text-muted">{copy.dashboard.householdEmpty}</div>
-              )}
-            </div>
-          ) : null}
-
-          {kindFilter !== 'medications' && hasMonthGroups ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-                  {copy.dashboard.groupNextMonth}
-                </div>
-                <button
-                  type="button"
-                  className="text-xs font-semibold text-slate-500 hover:text-slate-700"
-                  onClick={() => toggleSection('later')}
-                >
-                  {expandedSections.later ? copy.common.hide : copy.common.show}
-                </button>
-              </div>
-              {expandedSections.later ? (
-                <div className="space-y-6">
-                  {visibleMonthEntries.map(([monthKey, items]) => {
-                    const [year, month] = monthKey.split('-').map(Number);
-                    const labelDate = new Date(year, Math.max(0, month - 1), 1);
-                    return (
-                      <div key={monthKey} className="space-y-3">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-                          {monthLabelFormatter.format(labelDate)}
-                        </div>
-                        <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-3">
                           {items.map((occurrence) => (
-                            <OccurrenceCard
+                            <ReminderCard
                               key={occurrence.id}
                               occurrence={occurrence}
                               locale={locale}
                               googleConnected={googleConnected}
                               userTimeZone={effectiveTimeZone}
+                              urgency={urgencyStyles.upcoming}
+                              variant="row"
                             />
                           ))}
                         </div>
                       </div>
                     );
                   })}
-                  {hasMoreMonths ? (
-                    <div className="flex justify-center">
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => setVisibleMonthGroups((prev) => prev + 2)}
-                      >
-                        {copy.dashboard.viewMoreMonths}
-                      </button>
-                    </div>
-                  ) : null}
                 </div>
-              ) : null}
-            </div>
+              ) : (
+                <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+                  {copy.dashboard.upcomingEmpty}
+                </div>
+              )}
+            </section>
+          ) : null}
+
+          {kindFilter !== 'medications' ? (
+            <section className="space-y-3">
+              <header className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <svg aria-hidden="true" className="h-4 w-4 text-purple-500" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M16 11c1.66 0 3-1.34 3-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zM8 11c1.66 0 3-1.34 3-3S9.66 5 8 5s-3 1.34-3 3 1.34 3 3 3zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45v2h6v-2c0-2.66-4-3.5-7-3.5z"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-900">{copy.dashboard.householdTitle}</h2>
+                </div>
+              </header>
+              {householdItems.length ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {householdItems.map((occurrence) => (
+                    <ReminderCard
+                      key={occurrence.id}
+                      occurrence={occurrence}
+                      locale={locale}
+                      googleConnected={googleConnected}
+                      userTimeZone={effectiveTimeZone}
+                      urgency={urgencyStyles.scheduled}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+                  {copy.dashboard.householdEmpty}
+                </div>
+              )}
+            </section>
+          ) : null}
+
+          {kindFilter !== 'medications' && hasMonthGroups ? (
+            <section className="space-y-3">
+              <header className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <svg aria-hidden="true" className="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none">
+                    <rect x="3" y="4" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M8 2v4M16 2v4M3 10h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-900">{copy.dashboard.groupNextMonth}</h2>
+                </div>
+                {hasMoreMonths ? (
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                    onClick={() => setVisibleMonthGroups((prev) => prev + 2)}
+                  >
+                    {copy.dashboard.viewMoreMonths}
+                  </button>
+                ) : null}
+              </header>
+              <div className="space-y-5">
+                {visibleMonthEntries.map(([monthKey, items]) => {
+                  const [year, month] = monthKey.split('-').map(Number);
+                  const labelDate = new Date(year, Math.max(0, month - 1), 1);
+                  return (
+                    <div key={monthKey} className="space-y-3">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {monthLabelFormatter.format(labelDate)}
+                      </div>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        {items.map((occurrence) => (
+                          <ReminderCard
+                            key={occurrence.id}
+                            occurrence={occurrence}
+                            locale={locale}
+                            googleConnected={googleConnected}
+                            userTimeZone={effectiveTimeZone}
+                            urgency={urgencyStyles.scheduled}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
           ) : null}
         </div>
       </div>

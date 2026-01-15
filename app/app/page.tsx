@@ -9,7 +9,7 @@ import { createHousehold } from './household/actions';
 import { getUserGoogleConnection } from '@/lib/google/calendar';
 import ReminderDashboardSection from '@/app/reminders/ReminderDashboardSection';
 import { getTodayMedicationDoses } from '@/lib/reminders/medication';
-import { formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
+import { diffDaysInTimeZone, formatDateTimeWithTimeZone, formatReminderDateTime, interpretAsTimeZone, resolveReminderTimeZone } from '@/lib/dates';
 import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
 
 export default async function DashboardPage({
@@ -105,6 +105,16 @@ export default async function DashboardPage({
   const nextOccurrenceAt = nextOccurrence
     ? nextOccurrence.snoozed_until ?? nextOccurrence.effective_at ?? nextOccurrence.occur_at
     : null;
+  const nextOccurrenceCompare = nextOccurrenceAt
+    ? nextOccurrence?.snoozed_until
+      ? new Date(nextOccurrenceAt)
+      : nextOccurrenceTimeZone && nextOccurrenceTimeZone !== 'UTC'
+        ? interpretAsTimeZone(nextOccurrenceAt, nextOccurrenceTimeZone)
+        : new Date(nextOccurrenceAt)
+    : null;
+  const nextDayDiff = nextOccurrenceCompare
+    ? diffDaysInTimeZone(nextOccurrenceCompare, new Date(), userTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')
+    : null;
   const nextOccurrenceLabel = nextOccurrence && nextOccurrenceAt
     ? nextOccurrence.snoozed_until
       ? formatDateTimeWithTimeZone(nextOccurrenceAt, nextOccurrenceTimeZone)
@@ -121,10 +131,27 @@ export default async function DashboardPage({
     : 'default';
   const nextCategory = getReminderCategory(nextCategoryId);
   const nextCategoryStyle = getCategoryChipStyle(nextCategory.color, true);
+  const nextUrgencyLabel = nextDayDiff === 0
+    ? copy.dashboard.groupToday
+    : nextDayDiff === 1
+      ? copy.dashboard.groupTomorrow
+      : copy.dashboard.upcomingTitle;
+  const nextUrgencyClass = nextDayDiff === 0
+    ? 'border-amber-200 bg-amber-50 text-amber-700'
+    : nextDayDiff === 1
+      ? 'border-sky-200 bg-sky-50 text-sky-700'
+      : 'border-slate-200 bg-slate-50 text-slate-600';
+  const nextAction = nextOccurrence?.id && nextOccurrence?.reminder?.id && nextOccurrence?.occur_at
+    ? {
+        occurrenceId: nextOccurrence.id,
+        reminderId: nextOccurrence.reminder.id,
+        occurAt: nextOccurrence.occur_at
+      }
+    : null;
 
   return (
     <AppShell locale={locale} activePath="/app" userEmail={user.email}>
-      <div className="space-y-10">
+      <div className="mx-auto max-w-6xl space-y-6 px-4 pb-10 md:space-y-8">
         <DashboardHero
           title={copy.dashboard.heroTitle}
           subtitle={copy.dashboard.heroSubtitle}
@@ -143,7 +170,11 @@ export default async function DashboardPage({
                   title: nextOccurrence.reminder?.title ?? copy.dashboard.nextTitle,
                   timeLabel: nextOccurrenceLabel,
                   categoryLabel: nextCategory.label,
-                  categoryStyle: nextCategoryStyle
+                  categoryStyle: nextCategoryStyle,
+                  urgencyLabel: nextUrgencyLabel,
+                  urgencyClassName: nextUrgencyClass,
+                  action: nextAction ?? undefined,
+                  actionLabel: copy.common.doneAction
                 }
               : null
           }
