@@ -3,6 +3,7 @@ import { useSpeechToText } from '@/hooks/useSpeechToText';
 
 export type SpeechStatus =
   | 'idle'
+  | 'starting'
   | 'listening'
   | 'transcribing'
   | 'processing'
@@ -55,11 +56,27 @@ export function useSpeechToReminder<TParsed>({
   useEffect(() => {
     if (!autoStart || autoStartedRef.current || !supported) return;
     autoStartedRef.current = true;
-    resetSpeech();
-    setError(null);
-    setStatus('listening');
-    lastTranscriptRef.current = '';
-    startSpeech();
+    const startNow = () => {
+      resetSpeech();
+      setError(null);
+      setStatus('starting');
+      lastTranscriptRef.current = '';
+      startSpeech();
+    };
+    const hasActivation =
+      typeof navigator !== 'undefined'
+      && 'userActivation' in navigator
+      && (navigator as Navigator & { userActivation?: { isActive: boolean } }).userActivation?.isActive;
+    if (!hasActivation && typeof window !== 'undefined') {
+      const handle = () => startNow();
+      window.addEventListener('pointerdown', handle, { once: true });
+      window.addEventListener('keydown', handle, { once: true });
+      return () => {
+        window.removeEventListener('pointerdown', handle);
+        window.removeEventListener('keydown', handle);
+      };
+    }
+    startNow();
   }, [autoStart, resetSpeech, startSpeech, supported]);
 
   useEffect(() => {
@@ -137,7 +154,7 @@ export function useSpeechToReminder<TParsed>({
     if (listening) return;
     resetSpeech();
     setError(null);
-    setStatus('listening');
+    setStatus('starting');
     lastTranscriptRef.current = '';
     startSpeech();
   }, [listening, onError, resetSpeech, startSpeech, supported]);

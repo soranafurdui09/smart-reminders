@@ -38,8 +38,15 @@ export default function ReminderNewClient({
     supported: false
   });
 
-  const isListening = voiceStatus.status === 'listening' || voiceStatus.status === 'transcribing';
-  const isBusy = voiceStatus.status === 'processing' || voiceStatus.status === 'parsing' || voiceStatus.status === 'creating';
+  const isListening =
+    voiceStatus.status === 'starting' ||
+    voiceStatus.status === 'listening' ||
+    voiceStatus.status === 'transcribing';
+  const isBusy =
+    voiceStatus.status === 'starting' ||
+    voiceStatus.status === 'processing' ||
+    voiceStatus.status === 'parsing' ||
+    voiceStatus.status === 'creating';
   const micClasses = useMemo(() => (
     `relative flex h-10 w-10 items-center justify-center rounded-full border border-borderSubtle bg-surface text-ink transition hover:border-primary/30 hover:bg-white ${
       isListening ? 'border-primary/40 text-primaryStrong' : ''

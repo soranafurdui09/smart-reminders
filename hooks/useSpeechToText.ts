@@ -38,6 +38,8 @@ export interface UseSpeechToTextResult {
 export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const silenceTimerRef = useRef<number | null>(null);
+  const noSpeechTimerRef = useRef<number | null>(null);
+  const warmupRef = useRef(false);
   const manualStopRef = useRef(false);
   const finalTranscriptRef = useRef('');
   const interimTranscriptRef = useRef('');
@@ -46,6 +48,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
   const silenceMs = 3000;
+  const noSpeechMs = 8000;
   const minWords = 4;
 
   const resetSilenceTimer = useCallback(() => {
@@ -75,12 +78,22 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
     recognition.continuous = true;
     recognition.onstart = () => {
       setListening(true);
-      resetSilenceTimer();
+      if (noSpeechTimerRef.current) {
+        window.clearTimeout(noSpeechTimerRef.current);
+      }
+      noSpeechTimerRef.current = window.setTimeout(() => {
+        manualStopRef.current = false;
+        recognitionRef.current?.stop();
+      }, noSpeechMs);
     };
     recognition.onend = () => {
       if (silenceTimerRef.current) {
         window.clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = null;
+      }
+      if (noSpeechTimerRef.current) {
+        window.clearTimeout(noSpeechTimerRef.current);
+        noSpeechTimerRef.current = null;
       }
       setListening(false);
       const combined = `${finalTranscriptRef.current} ${interimTranscriptRef.current}`.trim();
@@ -115,6 +128,10 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
       finalTranscriptRef.current = finalText;
       interimTranscriptRef.current = interim;
       setTranscript(`${finalText}${interim}`.trim());
+      if (noSpeechTimerRef.current) {
+        window.clearTimeout(noSpeechTimerRef.current);
+        noSpeechTimerRef.current = null;
+      }
       resetSilenceTimer();
     };
 
@@ -129,10 +146,27 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
         window.clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = null;
       }
+      if (noSpeechTimerRef.current) {
+        window.clearTimeout(noSpeechTimerRef.current);
+        noSpeechTimerRef.current = null;
+      }
       recognition.stop();
       recognitionRef.current = null;
     };
   }, [lang, resetSilenceTimer]);
+
+  const warmUpMicrophone = useCallback(async () => {
+    if (warmupRef.current) return;
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return;
+    try {
+      warmupRef.current = true;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+    } catch (err) {
+      warmupRef.current = false;
+      throw err;
+    }
+  }, []);
 
   const start = useCallback(() => {
     if (!supported || listening) {
@@ -151,13 +185,25 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
     finalTranscriptRef.current = '';
     interimTranscriptRef.current = '';
     manualStopRef.current = false;
-    try {
-      recognition.start();
-    } catch {
-      setError('start-failed');
-      setListening(false);
-    }
-  }, [listening, supported]);
+    const run = async () => {
+      try {
+        await warmUpMicrophone();
+        recognition.start();
+      } catch (err) {
+        const errorName =
+          err && typeof err === 'object' && 'name' in err
+            ? String((err as { name?: string }).name)
+            : '';
+        if (errorName === 'NotAllowedError' || errorName === 'SecurityError') {
+          setError('not-allowed');
+        } else {
+          setError('start-failed');
+        }
+        setListening(false);
+      }
+    };
+    void run();
+  }, [listening, supported, warmUpMicrophone]);
 
   const stop = useCallback(() => {
     manualStopRef.current = true;

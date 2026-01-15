@@ -673,9 +673,13 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     onError: (message) => setVoiceErrorCode(message)
   });
 
-  const voiceIsListening = voice.status === 'listening' || voice.status === 'transcribing';
+  const voiceIsListening =
+    voice.status === 'starting' || voice.status === 'listening' || voice.status === 'transcribing';
   const voiceIsProcessing =
-    voice.status === 'processing' || voice.status === 'parsing' || voice.status === 'creating';
+    voice.status === 'starting' ||
+    voice.status === 'processing' ||
+    voice.status === 'parsing' ||
+    voice.status === 'creating';
 
   useImperativeHandle(ref, () => ({
     startVoice: voice.start,
@@ -743,6 +747,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   ]);
 
   const voiceStatusLabel = useMemo(() => {
+    if (voice.status === 'starting') return copy.remindersNew.voiceStarting;
     if (voice.status === 'processing') return copy.remindersNew.voiceProcessing;
     if (voice.status === 'parsing') return copy.remindersNew.voiceParsing;
     if (voice.status === 'creating') return copy.remindersNew.voiceCreating;
@@ -754,6 +759,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     copy.remindersNew.voiceListening,
     copy.remindersNew.voiceParsing,
     copy.remindersNew.voiceProcessing,
+    copy.remindersNew.voiceStarting,
     copy.remindersNew.voiceTranscribing,
     voice.status
   ]);
