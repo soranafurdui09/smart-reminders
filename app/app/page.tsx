@@ -100,7 +100,18 @@ export default async function DashboardPage({
       ? 'others'
       : 'all';
   const initialAssignment = searchParams?.assigned === 'me' ? 'assigned_to_me' : 'all';
-  const nextOccurrence = sortedOccurrences[0];
+  const now = new Date();
+  const nextOccurrence = sortedOccurrences.find((occurrence: any) => {
+    const occurrenceAt = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
+    if (!occurrenceAt) return false;
+    const occurrenceTimeZone = resolveReminderTimeZone(occurrence.reminder?.tz ?? null, userTimeZone);
+    const compareDate = occurrence.snoozed_until
+      ? new Date(occurrenceAt)
+      : occurrenceTimeZone && occurrenceTimeZone !== 'UTC'
+        ? interpretAsTimeZone(occurrenceAt, occurrenceTimeZone)
+        : new Date(occurrenceAt);
+    return compareDate.getTime() >= now.getTime();
+  });
   const nextOccurrenceTimeZone = resolveReminderTimeZone(nextOccurrence?.reminder?.tz ?? null, userTimeZone);
   const nextOccurrenceAt = nextOccurrence
     ? nextOccurrence.snoozed_until ?? nextOccurrence.effective_at ?? nextOccurrence.occur_at
