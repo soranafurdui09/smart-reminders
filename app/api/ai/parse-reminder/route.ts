@@ -14,11 +14,14 @@ const EXAMPLE_INPUTS = [
   'Jeden Dienstag und Donnerstag um 20:00 soll Andrei den Muell rausbringen'
 ];
 
-function buildSystemPrompt() {
+function buildSystemPrompt(currentTime: string, timezone: string) {
   return [
     'You are a strict parser that converts natural language into a reminder JSON.',
     'Return ONLY valid JSON, no prose, no markdown.',
     'Use ISO 8601 with timezone offset for dueAt (e.g. 2026-01-10T09:00:00+02:00).',
+    `Current time is ${currentTime} in timezone ${timezone}.`,
+    'For relative expressions (e.g. "in 30 minutes", "peste jumatate de ora", "tomorrow"), compute dueAt from currentTime.',
+    'Do not assume server time; always anchor relative times to currentTime.',
     'Use RFC5545 RRULE for recurrenceRule if recurring, otherwise null.',
     'preReminderMinutes is the minutes before dueAt (integer) or null.',
     'assignedMemberId must be one of the provided member ids or null.',
@@ -80,6 +83,10 @@ export async function POST(request: Request) {
   const timezone = String(payload.timezone ?? 'UTC').trim() || 'UTC';
   const householdId = String(payload.householdId ?? '').trim();
   const clientNow = String(payload.clientNow ?? '').trim();
+  const parsedClientNow = clientNow ? new Date(clientNow) : null;
+  const currentTime = parsedClientNow && !Number.isNaN(parsedClientNow.getTime())
+    ? clientNow
+    : new Date().toISOString();
 
   if (!text || !householdId) {
     return NextResponse.json({ error: 'Missing text or householdId.' }, { status: 400 });
@@ -132,13 +139,13 @@ export async function POST(request: Request) {
       temperature: 0.1,
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: buildSystemPrompt() },
+        { role: 'system', content: buildSystemPrompt(currentTime, timezone) },
         {
           role: 'user',
           content: JSON.stringify({
             text,
             timezone,
-            currentTime: clientNow || new Date().toISOString(),
+            currentTime,
             householdMembers: memberList,
             categories: categoryList,
             examples: EXAMPLE_INPUTS,
