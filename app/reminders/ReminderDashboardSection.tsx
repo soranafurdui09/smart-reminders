@@ -105,7 +105,7 @@ const getUrgencyStyles = (copy: MessageBundle) => ({
     label: copy.dashboard.todayOverdue
   },
   soon: {
-    key: 'today' as const,
+    key: 'soon' as const,
     label: copy.dashboard.todaySoon
   },
   today: {
@@ -382,7 +382,7 @@ export default function ReminderDashboardSection({
                         </span>
                       </button>
                       {showOverdue ? (
-                        <div className="grid grid-cols-1 gap-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
+                        <div className="space-y-3">
                           {todayBuckets.overdue.map((occurrence) => (
                             <ReminderCard
                               key={occurrence.id}
@@ -391,6 +391,7 @@ export default function ReminderDashboardSection({
                               googleConnected={googleConnected}
                               userTimeZone={effectiveTimeZone}
                               urgency={urgencyStyles.overdue}
+                              variant="row"
                             />
                           ))}
                         </div>
@@ -431,7 +432,7 @@ export default function ReminderDashboardSection({
                         </span>
                       </button>
                       {showSoon ? (
-                        <div className="grid grid-cols-1 gap-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
+                        <div className="space-y-3">
                           {todayBuckets.soon.map((occurrence) => (
                             <ReminderCard
                               key={occurrence.id}
@@ -440,6 +441,7 @@ export default function ReminderDashboardSection({
                               googleConnected={googleConnected}
                               userTimeZone={effectiveTimeZone}
                               urgency={urgencyStyles.soon}
+                              variant="row"
                             />
                           ))}
                         </div>
@@ -480,7 +482,7 @@ export default function ReminderDashboardSection({
                         </span>
                       </button>
                       {showToday ? (
-                        <div className="grid grid-cols-1 gap-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
+                        <div className="space-y-3">
                           {todayBuckets.today.map((occurrence) => (
                             <ReminderCard
                               key={occurrence.id}
@@ -489,6 +491,7 @@ export default function ReminderDashboardSection({
                               googleConnected={googleConnected}
                               userTimeZone={effectiveTimeZone}
                               urgency={urgencyStyles.today}
+                              variant="row"
                             />
                           ))}
                         </div>
@@ -649,7 +652,7 @@ export default function ReminderDashboardSection({
                           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                             {dayLabelFormatter.format(dayDate)}
                           </div>
-                          <div className="space-y-3">
+                          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                             {items.map((occurrence) => (
                               <ReminderCard
                                 key={occurrence.id}
@@ -658,7 +661,6 @@ export default function ReminderDashboardSection({
                                 googleConnected={googleConnected}
                                 userTimeZone={effectiveTimeZone}
                                 urgency={urgencyStyles.upcoming}
-                                variant="row"
                               />
                             ))}
                           </div>
@@ -692,7 +694,7 @@ export default function ReminderDashboardSection({
                 </div>
               </header>
               {householdItems.length ? (
-                <div className="grid grid-cols-1 gap-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 gap-y-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {householdItems.map((occurrence) => (
                     <ReminderCard
                       key={occurrence.id}
@@ -767,16 +769,17 @@ export default function ReminderDashboardSection({
                           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                             {monthLabelFormatter.format(labelDate)}
                           </div>
-                          <div className="grid grid-cols-1 gap-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
+                          <div className="flex gap-4 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-3 xl:grid-cols-4">
                             {items.map((occurrence) => (
-                              <ReminderCard
-                                key={occurrence.id}
-                                occurrence={occurrence}
-                                locale={locale}
-                                googleConnected={googleConnected}
-                                userTimeZone={effectiveTimeZone}
-                                urgency={urgencyStyles.scheduled}
-                              />
+                              <div key={occurrence.id} className="min-w-[240px] sm:min-w-0">
+                                <ReminderCard
+                                  occurrence={occurrence}
+                                  locale={locale}
+                                  googleConnected={googleConnected}
+                                  userTimeZone={effectiveTimeZone}
+                                  urgency={urgencyStyles.scheduled}
+                                />
+                              </div>
                             ))}
                           </div>
                         </div>

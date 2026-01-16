@@ -1,4 +1,4 @@
-export type ReminderUrgency = 'overdue' | 'today' | 'upcoming' | 'completed';
+export type ReminderUrgency = 'overdue' | 'today' | 'soon' | 'upcoming' | 'completed';
 
 export type ReminderCategory =
   | 'health_medication'
@@ -93,9 +93,13 @@ const URGENCY_CLASSES: Record<ReminderUrgency, { strip: string; status: string }
     strip: 'bg-red-500',
     status: 'border border-red-100 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-white/5 dark:text-red-300'
   },
-  today: {
+  soon: {
     strip: 'bg-amber-500',
     status: 'border border-amber-100 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-white/5 dark:text-amber-300'
+  },
+  today: {
+    strip: 'bg-blue-500',
+    status: 'border border-blue-100 bg-blue-50 text-blue-700 dark:border-blue-500/40 dark:bg-white/5 dark:text-blue-300'
   },
   upcoming: {
     strip: 'bg-blue-500',

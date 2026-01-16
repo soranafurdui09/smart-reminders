@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
-import { AlertTriangle, CalendarDays, Check, Clock, MoreHorizontal, UserRound } from 'lucide-react';
+import { AlertTriangle, Calendar, Check, Clock, MoreVertical, User } from 'lucide-react';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
@@ -112,56 +112,76 @@ export default function ReminderCard({
     ? AlertTriangle
     : urgencyKey === 'today'
       ? Clock
-      : urgencyKey === 'completed'
-        ? Check
-        : CalendarDays;
-  const isRow = variant === 'row';
+      : urgencyKey === 'soon'
+        ? Clock
+        : urgencyKey === 'completed'
+          ? Check
+          : CalendarDays;
+  const isPrimary = variant === 'row';
+  const cardClass = isPrimary
+    ? 'rounded-xl bg-slate-50 text-gray-900 dark:bg-white/5 dark:text-gray-200'
+    : 'rounded-lg border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:shadow-sm dark:border-slate-700/60 dark:bg-[#1A1A1E] dark:text-gray-200';
+  const statusTextClass = urgencyKey === 'overdue'
+    ? 'text-red-600'
+    : urgencyKey === 'today'
+      ? 'text-blue-600'
+      : urgencyKey === 'soon'
+        ? 'text-amber-600'
+        : urgencyKey === 'completed'
+          ? 'text-gray-500'
+          : 'text-blue-600';
 
   useCloseOnOutside(actionMenuRef);
   useCloseOnOutside(doneMenuRef);
 
   return (
     <OccurrenceHighlightCard
-      className={`relative flex h-full flex-col gap-2 rounded-2xl border border-transparent bg-slate-50 p-4 shadow-sm transition-shadow ${isRow ? 'md:flex-row md:items-center md:gap-4' : ''} dark:border-slate-800/60 dark:bg-white/5`}
+      className={`relative flex h-full flex-col gap-3 p-4 shadow-sm ${cardClass} ${isPrimary ? 'md:flex-row md:items-center md:gap-4' : ''}`}
       occurrenceId={occurrence.id}
       highlightKey={displayAt}
     >
-      <span className={`absolute inset-y-0 left-0 w-[3px] rounded-l-2xl ${urgencyClasses.strip}`} />
+      <span className={`absolute inset-y-0 left-0 w-[3px] rounded-l-xl ${urgencyClasses.strip}`} />
 
-      <div className={`flex-1 ${isRow ? 'space-y-1' : 'space-y-2'}`}>
+      <div className={`flex-1 ${isPrimary ? 'space-y-2' : 'space-y-1.5'}`}>
         <div className="flex items-center justify-between gap-2">
           <span
             className={`inline-flex items-center rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${categoryStyles.pillBg} ${categoryStyles.pillText}`}
           >
             {categoryStyles.label}
           </span>
-          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${urgencyClasses.status}`}>
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${urgencyClasses.status} ${statusTextClass}`}>
             <StatusIcon className="h-3.5 w-3.5" />
             {statusPillLabel}
           </span>
         </div>
 
-        <h3 className={`text-gray-900 dark:text-gray-200 ${isRow ? 'text-sm' : 'text-sm'} font-semibold leading-snug line-clamp-2`}>
+        <h3 className={`text-sm font-semibold text-gray-900 leading-snug line-clamp-2 ${isPrimary ? 'md:text-base' : ''} dark:text-gray-200`}>
           {reminder?.title}
         </h3>
 
-        <div className="mt-2 flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-300">
+        <div className={`flex flex-wrap items-center gap-3 text-xs ${isPrimary ? 'text-gray-600' : 'text-gray-500'} dark:text-gray-300`}>
           <div className="flex items-center gap-1.5">
-            <CalendarDays className="h-3.5 w-3.5 text-gray-500 dark:text-gray-300" />
+            <Calendar className="h-3.5 w-3.5" />
             <OccurrenceDateChip
               occurrenceId={occurrence.id}
               label={displayLabel}
               highlightKey={displayAt}
-              className="border-0 bg-transparent px-0 py-0 text-xs text-gray-600 dark:text-gray-300"
+              className="border-0 bg-transparent px-0 py-0 text-xs"
             />
           </div>
+          {isPrimary && assigneeLabel ? (
+            <div className="flex items-center gap-1.5">
+              <User className="h-3.5 w-3.5" />
+              <span>{assigneeLabel}</span>
+            </div>
+          ) : null}
         </div>
       </div>
 
-      <div className={`mt-auto flex flex-wrap items-center justify-between gap-2 pt-3 ${isRow ? 'md:ml-auto md:min-w-[280px]' : ''}`}>
-        {assigneeLabel ? (
-          <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
-            <UserRound className="h-3.5 w-3.5 text-gray-400 dark:text-gray-400" />
+      <div className={`mt-auto flex flex-wrap items-center justify-between gap-2 pt-2 ${isPrimary ? 'md:ml-auto md:min-w-[320px]' : ''}`}>
+        {!isPrimary && assigneeLabel ? (
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-300">
+            <User className="h-3.5 w-3.5" />
             <span>{assigneeLabel}</span>
           </div>
         ) : (
@@ -169,10 +189,10 @@ export default function ReminderCard({
         )}
         <details ref={actionMenuRef} className="relative">
           <summary
-            className="dropdown-summary inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-white/80 dark:border-slate-600 dark:text-slate-200"
+            className="dropdown-summary inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50 dark:border-slate-600 dark:text-gray-200"
             aria-label={copy.common.moreActions}
           >
-            <MoreHorizontal className="h-4 w-4" />
+            <MoreVertical className="h-4 w-4" />
           </summary>
           <div className="absolute left-0 z-50 mt-3 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-lg sm:left-auto sm:right-0 dark:border-slate-700 dark:bg-slate-900">
             {reminderId ? (
@@ -264,8 +284,10 @@ export default function ReminderCard({
           snoozeAction={snoozeOccurrence}
         />
 
-        <details ref={doneMenuRef} className="group flex-1">
-          <summary className={`inline-flex h-8 w-full items-center justify-center gap-2 rounded-full px-3 text-xs font-semibold text-white shadow-sm transition ${categoryStyles.buttonBg} ${categoryStyles.buttonHover}`}>
+        <details ref={doneMenuRef} className={isPrimary ? 'group flex-1' : 'group'}>
+          <summary
+            className={`inline-flex h-8 items-center justify-center gap-2 rounded-full px-3 text-xs font-semibold text-white shadow-sm transition ${categoryStyles.buttonBg} ${categoryStyles.buttonHover} ${isPrimary ? 'w-full' : ''}`}
+          >
             <Check className="h-3.5 w-3.5" />
             {copy.common.doneAction}
           </summary>
