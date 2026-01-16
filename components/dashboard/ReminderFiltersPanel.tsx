@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from 'react';
-import { SlidersHorizontal, ChevronDown } from 'lucide-react';
 import SegmentedControl from '@/components/filters/SegmentedControl';
 import FilterChip from '@/components/filters/FilterChip';
 import { reminderCategories, type ReminderCategoryId } from '@/lib/categories';
@@ -115,7 +114,14 @@ export default function ReminderFiltersPanel({
         aria-expanded={filtersOpen}
       >
         <span className="flex items-center gap-2">
-          <SlidersHorizontal className="h-4 w-4" />
+          <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M4 6h16M7 12h10M10 18h4"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
           <span>{copy.dashboard.filtersTitle}</span>
           {activeFilterCount > 0 ? (
             <span className="rounded-full bg-sky-500 px-2 py-0.5 text-[11px] font-semibold text-white">
@@ -182,7 +188,14 @@ export default function ReminderFiltersPanel({
               <span>{copy.dashboard.filtersCategoryLabel}</span>
               <span className="flex items-center gap-2 text-[11px] font-medium text-slate-400">
                 {category === 'all' ? copy.dashboard.filtersCreatedAll : copy.dashboard.filtersCategorySelected}
-                <ChevronDown className={`h-3.5 w-3.5 transition ${categoriesOpen ? 'rotate-180' : ''}`} />
+                <svg
+                  aria-hidden="true"
+                  className={`h-3.5 w-3.5 transition ${categoriesOpen ? 'rotate-180' : ''}`}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
               </span>
             </button>
             {categoriesOpen ? (
