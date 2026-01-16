@@ -112,11 +112,11 @@ export default function ReminderCard({
     ? AlertTriangle
     : urgencyKey === 'today'
       ? Clock
-      : urgencyKey === 'soon'
-        ? Clock
-        : urgencyKey === 'completed'
-          ? Check
-          : CalendarDays;
+    : urgencyKey === 'soon'
+      ? Clock
+      : urgencyKey === 'completed'
+        ? Check
+        : Calendar;
   const isPrimary = variant === 'row';
   const cardClass = isPrimary
     ? 'rounded-xl bg-slate-50 text-gray-900 dark:bg-white/5 dark:text-gray-200'
