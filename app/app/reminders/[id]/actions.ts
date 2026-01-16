@@ -12,6 +12,7 @@ import { getUserContextDefaults } from '@/lib/data';
 import { isReminderCategoryId } from '@/lib/categories';
 import { ensureMedicationDoses, getFirstMedicationDose, type MedicationDetails, type MedicationFrequencyType } from '@/lib/reminders/medication';
 import { scheduleNotificationJobsForMedication, scheduleNotificationJobsForReminder } from '@/lib/notifications/jobs';
+import { interpretAsTimeZone } from '@/lib/dates';
 
 const DAYS: DayOfWeek[] = [
   'monday',
@@ -70,6 +71,23 @@ function buildContextSettings(formData: FormData, defaults?: ReturnType<typeof g
     return baseIsDefault ? { category: categoryId } : { ...settings, category: categoryId };
   }
   return baseIsDefault ? null : settings;
+}
+
+function resolveDueAtFromForm(dueAtIso: string, dueAtRaw: string, timeZone: string) {
+  if (dueAtIso) {
+    return new Date(dueAtIso);
+  }
+  if (!dueAtRaw) {
+    return null;
+  }
+  if (timeZone) {
+    try {
+      return interpretAsTimeZone(dueAtRaw, timeZone);
+    } catch {
+      return new Date(dueAtRaw);
+    }
+  }
+  return new Date(dueAtRaw);
 }
 
 export async function updateReminder(formData: FormData) {
@@ -158,6 +176,7 @@ export async function updateReminder(formData: FormData) {
     const notes = String(formData.get('notes') || '').trim();
     const dueAtRaw = String(formData.get('due_at') || '').trim();
     const dueAtIso = String(formData.get('due_at_iso') || '').trim();
+    const tz = String(formData.get('tz') || '').trim();
     const scheduleTypeRaw = String(formData.get('schedule_type') || 'once');
     const scheduleType = ['once', 'daily', 'weekly', 'monthly', 'yearly'].includes(scheduleTypeRaw)
       ? scheduleTypeRaw
@@ -176,14 +195,15 @@ export async function updateReminder(formData: FormData) {
     payload.notes = notes || null;
     payload.schedule_type = scheduleType;
     payload.recurrence_rule = recurrenceRuleRaw || null;
-    if (dueAtIso || dueAtRaw) {
-      payload.due_at = new Date(dueAtIso || dueAtRaw).toISOString();
+    const resolvedDueAt = resolveDueAtFromForm(dueAtIso, dueAtRaw, tz);
+    if (resolvedDueAt) {
+      payload.due_at = resolvedDueAt.toISOString();
     }
     const preReminderMinutes = preReminderRaw ? Number(preReminderRaw) : null;
     payload.pre_reminder_minutes = Number.isFinite(preReminderMinutes) ? preReminderMinutes : null;
     assignedMemberId = assignedMemberRaw || null;
-    effectiveDueAt = dueAtIso || dueAtRaw
-      ? new Date(dueAtIso || dueAtRaw)
+    effectiveDueAt = resolvedDueAt
+      ? resolvedDueAt
       : reminderRecord.due_at
         ? new Date(reminderRecord.due_at)
         : null;

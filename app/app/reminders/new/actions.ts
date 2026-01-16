@@ -16,6 +16,7 @@ import {
 } from '@/lib/reminders/medication';
 import { createCalendarEventForMedication, getUserGoogleConnection } from '@/lib/google/calendar';
 import { scheduleNotificationJobsForMedication, scheduleNotificationJobsForReminder } from '@/lib/notifications/jobs';
+import { interpretAsTimeZone } from '@/lib/dates';
 
 const DAYS: DayOfWeek[] = [
   'monday',
@@ -76,6 +77,23 @@ function buildContextSettings(formData: FormData, defaults?: ReturnType<typeof g
   return baseIsDefault ? null : settings;
 }
 
+function resolveDueAtFromForm(dueAtIso: string, dueAtRaw: string, timeZone: string) {
+  if (dueAtIso) {
+    return new Date(dueAtIso);
+  }
+  if (!dueAtRaw) {
+    return new Date();
+  }
+  if (timeZone) {
+    try {
+      return interpretAsTimeZone(dueAtRaw, timeZone);
+    } catch {
+      return new Date(dueAtRaw);
+    }
+  }
+  return new Date(dueAtRaw);
+}
+
 export async function createReminder(formData: FormData) {
   const user = await requireUser('/app/reminders/new');
   const membership = await getUserHousehold(user.id);
@@ -134,11 +152,7 @@ export async function createReminder(formData: FormData) {
     ? medicationDetails
       ? new Date(getFirstMedicationDose(medicationDetails) || new Date().toISOString())
       : new Date()
-    : dueAtIso
-      ? new Date(dueAtIso)
-      : dueAtRaw
-        ? new Date(dueAtRaw)
-      : new Date();
+    : resolveDueAtFromForm(dueAtIso, dueAtRaw, tz);
 
   const supabase = createServerClient();
   let assignedMemberId: string | null = assignedMemberRaw || null;
