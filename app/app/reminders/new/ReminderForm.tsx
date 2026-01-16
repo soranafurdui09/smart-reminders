@@ -284,6 +284,10 @@ function deriveScheduleType(rule: string | null) {
   return 'once';
 }
 
+function hasTimezoneOffset(value: string) {
+  return /[zZ]$/.test(value) || /[+-]\d{2}:?\d{2}$/.test(value);
+}
+
 function toLocalInputValue(iso: string) {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) {
@@ -292,6 +296,12 @@ function toLocalInputValue(iso: string) {
   const offsetMs = date.getTimezoneOffset() * 60000;
   const local = new Date(date.getTime() - offsetMs);
   return local.toISOString().slice(0, 16);
+}
+
+function toLocalInputValueFromAi(iso: string) {
+  if (!iso) return '';
+  const normalized = hasTimezoneOffset(iso) ? iso : `${iso}Z`;
+  return toLocalInputValue(normalized);
 }
 
 function toLocalIsoWithOffset(date: Date) {
@@ -615,7 +625,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const applyParsedReminder = useCallback((data: AiResult) => {
     setTitle(data.title || '');
     setNotes(data.description || '');
-    setDueAt(data.dueAt ? toLocalInputValue(data.dueAt) : '');
+    setDueAt(data.dueAt ? toLocalInputValueFromAi(data.dueAt) : '');
     setRecurrenceRule(data.recurrenceRule || '');
     setPreReminderMinutes(
       data.preReminderMinutes !== null && data.preReminderMinutes !== undefined
