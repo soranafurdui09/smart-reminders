@@ -136,7 +136,7 @@ export default function ReminderCard({
 
   return (
     <OccurrenceHighlightCard
-      className={`relative flex h-full flex-col gap-3 p-4 ${cardClass} ${isPrimary ? 'md:flex-row md:items-center md:gap-4' : ''}`}
+      className={`relative flex flex-col gap-3 p-4 ${cardClass} ${isPrimary ? 'md:flex-row md:items-center md:gap-4' : ''}`}
       occurrenceId={occurrence.id}
       highlightKey={displayAt}
     >
