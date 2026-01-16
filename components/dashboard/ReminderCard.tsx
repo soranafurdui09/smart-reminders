@@ -145,11 +145,12 @@ export default function ReminderCard({
       <div className={`flex-1 ${isPrimary ? 'space-y-2' : 'space-y-1.5'}`}>
         <div className="flex items-center justify-between gap-2">
           <span
-            className={`inline-flex items-center rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${categoryStyles.pillBg} ${categoryStyles.pillText}`}
+            className={`inline-flex max-w-[65%] items-center rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${categoryStyles.pillBg} ${categoryStyles.pillText} truncate whitespace-nowrap`}
+            title={categoryStyles.label}
           >
             {categoryStyles.label}
           </span>
-          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${urgencyClasses.status} ${statusTextClass}`}>
+          <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium ${urgencyClasses.status} ${statusTextClass}`}>
             <StatusIcon className="h-3.5 w-3.5" />
             {statusPillLabel}
           </span>
@@ -178,143 +179,150 @@ export default function ReminderCard({
         </div>
       </div>
 
-      <div className={`mt-auto flex flex-wrap items-center justify-between gap-2 pt-2 ${isPrimary ? 'md:ml-auto md:min-w-[320px]' : ''}`}>
+      <div className={`mt-auto pt-2 ${isPrimary ? 'flex flex-wrap items-center gap-2' : 'flex items-center justify-between gap-2'}`}>
+        {isPrimary && assigneeLabel ? (
+          <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
+            <User className="h-3.5 w-3.5" />
+            <span>{assigneeLabel}</span>
+          </div>
+        ) : null}
         {!isPrimary && assigneeLabel ? (
           <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-300">
             <User className="h-3.5 w-3.5" />
             <span>{assigneeLabel}</span>
           </div>
-        ) : (
-          <span />
-        )}
-        <details ref={actionMenuRef} className="relative">
-          <summary
-            className="dropdown-summary inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50 dark:border-slate-600 dark:text-gray-200"
-            aria-label={copy.common.moreActions}
-          >
-            <MoreVertical className="h-4 w-4" />
-          </summary>
-          <div className="absolute left-0 z-50 mt-3 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-lg sm:left-auto sm:right-0 dark:border-slate-700 dark:bg-slate-900">
-            {reminderId ? (
-              <div className="space-y-1">
-                <Link
-                  className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
-                  href={`/app/reminders/${reminderId}`}
-                  data-action-close="true"
-                >
-                  {copy.common.details}
-                </Link>
-                <Link
-                  className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
-                  href={`/app/reminders/${reminderId}/edit`}
-                  data-action-close="true"
-                >
-                  {copy.common.edit}
-                </Link>
-                <form action={cloneReminder}>
-                  <input type="hidden" name="reminderId" value={reminderId} />
-                  <ActionSubmitButton
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
-                    type="submit"
-                    data-action-feedback={copy.common.actionCloned}
-                  >
-                    {copy.reminderDetail.clone}
-                  </ActionSubmitButton>
-                </form>
-                <details className="mt-2 rounded-lg border border-dashed border-slate-200 p-2 text-xs font-semibold text-slate-700">
-                  <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-slate-400">
-                    {copy.actions.calendar}
-                  </summary>
-                  <div className="mt-2 space-y-1">
-                    <GoogleCalendarSyncButton
-                      reminderId={reminderId}
-                      connected={googleConnected}
-                      variant="menu"
-                      copy={{
-                        syncLabel: copy.actions.sendDirect,
-                        syncLoading: copy.reminderDetail.googleCalendarSyncing,
-                        syncSuccess: copy.reminderDetail.googleCalendarSyncSuccess,
-                        syncError: copy.reminderDetail.googleCalendarSyncError,
-                        connectFirst: copy.reminderDetail.googleCalendarConnectFirst,
-                        connectLink: copy.reminderDetail.googleCalendarConnectLink
-                      }}
-                    />
-                    <GoogleCalendarAutoBlockButton
-                      reminderId={reminderId}
-                      connected={googleConnected}
-                      hasDueDate={hasDueDate}
-                      variant="menu"
-                      copy={{
-                        label: copy.actions.schedule,
-                        loading: copy.reminderDetail.googleCalendarAutoBlocking,
-                        success: copy.reminderDetail.googleCalendarAutoBlockSuccess,
-                        error: copy.reminderDetail.googleCalendarAutoBlockError,
-                        connectHint: copy.reminderDetail.googleCalendarConnectFirst,
-                        connectLink: copy.reminderDetail.googleCalendarConnectLink,
-                        missingDueDate: copy.reminderDetail.googleCalendarAutoBlockMissingDueDate,
-                        confirmIfBusy: copy.reminderDetail.googleCalendarAutoBlockConfirmBusy
-                      }}
-                    />
-                  </div>
-                </details>
-                <GoogleCalendarDeleteDialog
-                  reminderId={reminderId}
-                  hasGoogleEvent={Boolean(reminder?.google_event_id)}
-                  copy={{
-                    label: copy.common.delete,
-                    dialogTitle: copy.reminderDetail.googleCalendarDeleteTitle,
-                    dialogHint: copy.reminderDetail.googleCalendarDeleteHint,
-                    justReminder: copy.reminderDetail.googleCalendarDeleteOnly,
-                    reminderAndCalendar: copy.reminderDetail.googleCalendarDeleteBoth,
-                    cancel: copy.reminderDetail.googleCalendarDeleteCancel
-                  }}
-                />
-              </div>
-            ) : null}
-          </div>
-        </details>
+        ) : null}
 
-        <SmartSnoozeMenu
-          occurrenceId={occurrence.id}
-          dueAt={displayAt}
-          title={reminder?.title}
-          notes={reminder?.notes}
-          category={reminder?.category}
-          copy={copy}
-          snoozeAction={snoozeOccurrence}
-        />
-
-        <details ref={doneMenuRef} className={isPrimary ? 'group flex-1' : 'group'}>
-          <summary
-            className={`inline-flex h-8 items-center justify-center gap-2 rounded-full px-3 text-xs font-semibold text-white shadow-sm transition ${categoryStyles.buttonBg} ${categoryStyles.buttonHover} ${isPrimary ? 'w-full' : ''}`}
-          >
-            <Check className="h-3.5 w-3.5" />
-            {copy.common.doneAction}
-          </summary>
-          <form
-            action={markDone}
-            className="mt-3 space-y-2 rounded-2xl border border-slate-100 bg-white p-3 sm:w-72 dark:border-slate-700 dark:bg-slate-900"
-          >
-            <input type="hidden" name="occurrenceId" value={occurrence.id} />
-            <input type="hidden" name="reminderId" value={reminderId} />
-            <input type="hidden" name="occurAt" value={occurrence.occur_at} />
-            <label className="text-xs font-semibold text-muted">{copy.common.commentOptional}</label>
-            <textarea
-              name="done_comment"
-              rows={2}
-              className="input"
-              placeholder={copy.common.commentPlaceholder}
-              aria-label={copy.common.commentLabel}
-            />
-            <ActionSubmitButton
-              className={`w-full rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm transition ${categoryStyles.buttonBg} ${categoryStyles.buttonHover}`}
-              type="submit"
-              data-action-feedback={copy.common.actionDone}
+        <div className={`flex items-center gap-2 ${isPrimary ? 'ml-auto' : ''}`}>
+          <details ref={actionMenuRef} className="relative">
+            <summary
+              className="dropdown-summary inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50 dark:border-slate-600 dark:text-gray-200"
+              aria-label={copy.common.moreActions}
             >
-              {copy.common.doneConfirm}
-            </ActionSubmitButton>
-          </form>
-        </details>
+              <MoreVertical className="h-4 w-4" />
+            </summary>
+            <div className="absolute left-0 z-50 mt-3 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-lg sm:left-auto sm:right-0 dark:border-slate-700 dark:bg-slate-900">
+              {reminderId ? (
+                <div className="space-y-1">
+                  <Link
+                    className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
+                    href={`/app/reminders/${reminderId}`}
+                    data-action-close="true"
+                  >
+                    {copy.common.details}
+                  </Link>
+                  <Link
+                    className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
+                    href={`/app/reminders/${reminderId}/edit`}
+                    data-action-close="true"
+                  >
+                    {copy.common.edit}
+                  </Link>
+                  <form action={cloneReminder}>
+                    <input type="hidden" name="reminderId" value={reminderId} />
+                    <ActionSubmitButton
+                      className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
+                      type="submit"
+                      data-action-feedback={copy.common.actionCloned}
+                    >
+                      {copy.reminderDetail.clone}
+                    </ActionSubmitButton>
+                  </form>
+                  <details className="mt-2 rounded-lg border border-dashed border-slate-200 p-2 text-xs font-semibold text-slate-700">
+                    <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-slate-400">
+                      {copy.actions.calendar}
+                    </summary>
+                    <div className="mt-2 space-y-1">
+                      <GoogleCalendarSyncButton
+                        reminderId={reminderId}
+                        connected={googleConnected}
+                        variant="menu"
+                        copy={{
+                          syncLabel: copy.actions.sendDirect,
+                          syncLoading: copy.reminderDetail.googleCalendarSyncing,
+                          syncSuccess: copy.reminderDetail.googleCalendarSyncSuccess,
+                          syncError: copy.reminderDetail.googleCalendarSyncError,
+                          connectFirst: copy.reminderDetail.googleCalendarConnectFirst,
+                          connectLink: copy.reminderDetail.googleCalendarConnectLink
+                        }}
+                      />
+                      <GoogleCalendarAutoBlockButton
+                        reminderId={reminderId}
+                        connected={googleConnected}
+                        hasDueDate={hasDueDate}
+                        variant="menu"
+                        copy={{
+                          label: copy.actions.schedule,
+                          loading: copy.reminderDetail.googleCalendarAutoBlocking,
+                          success: copy.reminderDetail.googleCalendarAutoBlockSuccess,
+                          error: copy.reminderDetail.googleCalendarAutoBlockError,
+                          connectHint: copy.reminderDetail.googleCalendarConnectFirst,
+                          connectLink: copy.reminderDetail.googleCalendarConnectLink,
+                          missingDueDate: copy.reminderDetail.googleCalendarAutoBlockMissingDueDate,
+                          confirmIfBusy: copy.reminderDetail.googleCalendarAutoBlockConfirmBusy
+                        }}
+                      />
+                    </div>
+                  </details>
+                  <GoogleCalendarDeleteDialog
+                    reminderId={reminderId}
+                    hasGoogleEvent={Boolean(reminder?.google_event_id)}
+                    copy={{
+                      label: copy.common.delete,
+                      dialogTitle: copy.reminderDetail.googleCalendarDeleteTitle,
+                      dialogHint: copy.reminderDetail.googleCalendarDeleteHint,
+                      justReminder: copy.reminderDetail.googleCalendarDeleteOnly,
+                      reminderAndCalendar: copy.reminderDetail.googleCalendarDeleteBoth,
+                      cancel: copy.reminderDetail.googleCalendarDeleteCancel
+                    }}
+                  />
+                </div>
+              ) : null}
+            </div>
+          </details>
+
+          <SmartSnoozeMenu
+            occurrenceId={occurrence.id}
+            dueAt={displayAt}
+            title={reminder?.title}
+            notes={reminder?.notes}
+            category={reminder?.category}
+            copy={copy}
+            snoozeAction={snoozeOccurrence}
+          />
+
+          <details ref={doneMenuRef} className={isPrimary ? 'group flex-1' : 'group'}>
+            <summary
+              className={`inline-flex h-8 items-center justify-center gap-2 rounded-full px-3 text-xs font-semibold text-white shadow-sm transition ${categoryStyles.buttonBg} ${categoryStyles.buttonHover} ${isPrimary ? 'w-full' : ''}`}
+            >
+              <Check className="h-3.5 w-3.5" />
+              {copy.common.doneAction}
+            </summary>
+            <form
+              action={markDone}
+              className="mt-3 space-y-2 rounded-2xl border border-slate-100 bg-white p-3 sm:w-72 dark:border-slate-700 dark:bg-slate-900"
+            >
+              <input type="hidden" name="occurrenceId" value={occurrence.id} />
+              <input type="hidden" name="reminderId" value={reminderId} />
+              <input type="hidden" name="occurAt" value={occurrence.occur_at} />
+              <label className="text-xs font-semibold text-muted">{copy.common.commentOptional}</label>
+              <textarea
+                name="done_comment"
+                rows={2}
+                className="input"
+                placeholder={copy.common.commentPlaceholder}
+                aria-label={copy.common.commentLabel}
+              />
+              <ActionSubmitButton
+                className={`w-full rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm transition ${categoryStyles.buttonBg} ${categoryStyles.buttonHover}`}
+                type="submit"
+                data-action-feedback={copy.common.actionDone}
+              >
+                {copy.common.doneConfirm}
+              </ActionSubmitButton>
+            </form>
+          </details>
+        </div>
       </div>
     </OccurrenceHighlightCard>
   );
