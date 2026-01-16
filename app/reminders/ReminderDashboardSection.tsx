@@ -355,6 +355,7 @@ export default function ReminderDashboardSection({
         </aside>
 
         <div className="order-2 space-y-6 lg:order-1">
+          <div className="h-px bg-slate-200/70" />
           <section className="mt-2">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">

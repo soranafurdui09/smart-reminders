@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth';
@@ -241,6 +242,8 @@ export async function createReminder(formData: FormData) {
       channel: 'both'
     });
   }
+
+  revalidatePath('/app');
 
   if (voiceAuto) {
     redirect(`/app?voice_created=${reminder.id}`);
