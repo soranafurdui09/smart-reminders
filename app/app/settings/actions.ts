@@ -83,3 +83,17 @@ export async function updateContextDefaults(formData: FormData) {
 
   redirect('/app/settings?context=1');
 }
+
+export async function updateNotificationPreferences(formData: FormData) {
+  const user = await requireUser('/app/settings');
+  const notifyByEmail = String(formData.get('notify_by_email') || '') === '1';
+  const notifyByPush = String(formData.get('notify_by_push') || '') === '1';
+
+  const supabase = createServerClient();
+  await supabase
+    .from('profiles')
+    .update({ notify_by_email: notifyByEmail, notify_by_push: notifyByPush })
+    .eq('user_id', user.id);
+
+  redirect('/app/settings?notifications=1');
+}

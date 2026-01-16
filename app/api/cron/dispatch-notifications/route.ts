@@ -195,7 +195,7 @@ export async function GET() {
 
   const { data: profiles } = await admin
     .from('profiles')
-    .select('user_id, email, time_zone, context_defaults')
+    .select('user_id, email, time_zone, context_defaults, notify_by_email, notify_by_push')
     .in('user_id', userIds);
   const profileMap = new Map(
     (profiles ?? []).map((profile: any) => [
@@ -203,7 +203,9 @@ export async function GET() {
       {
         email: profile.email,
         timeZone: profile.time_zone,
-        contextDefaults: parseContextSettings(profile.context_defaults ?? null)
+        contextDefaults: parseContextSettings(profile.context_defaults ?? null),
+        notifyByEmail: profile.notify_by_email ?? true,
+        notifyByPush: profile.notify_by_push ?? false
       }
     ])
   );
@@ -411,6 +413,11 @@ export async function GET() {
     }
 
     const channel = job.channel;
+    const allowEmail = profile?.notifyByEmail ?? true;
+    const allowPush = profile?.notifyByPush ?? false;
+    // Respect user notification preferences per channel.
+    const shouldSendEmail = (channel === 'email' || channel === 'both') && allowEmail;
+    const shouldSendPush = (channel === 'push' || channel === 'both') && allowPush;
     let emailStatus: NotificationStatus = 'skipped';
     let pushStatus: NotificationStatus = 'skipped';
     let errorMessage: string | null = null;
@@ -432,7 +439,7 @@ export async function GET() {
       snooze: `${actionBase}&action=snooze`
     };
 
-    if (channel === 'email' || channel === 'both') {
+    if (shouldSendEmail) {
       const email = profile?.email;
       if (email) {
         let logRow: { id?: string } | null = null;
@@ -491,7 +498,7 @@ export async function GET() {
       }
     }
 
-    if (channel === 'push' || channel === 'both') {
+    if (shouldSendPush) {
       const subs = pushMap.get(job.user_id) ?? [];
       const pushResult = await sendPushNotification(subs, { title, body, url, jobId: job.id, token });
       pushStatus = pushResult.status;

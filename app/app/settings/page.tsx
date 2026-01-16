@@ -4,16 +4,16 @@ import SectionHeader from '@/components/SectionHeader';
 import PushSettings from '@/components/PushSettings';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { requireUser } from '@/lib/auth';
-import { getUserContextDefaults, getUserLocale } from '@/lib/data';
+import { getUserContextDefaults, getUserLocale, getUserNotificationPreferences } from '@/lib/data';
 import { getVapidPublicKey } from '@/lib/push';
 import { messages } from '@/lib/i18n';
-import { updateContextDefaults, updateLocale } from './actions';
+import { updateContextDefaults, updateLocale, updateNotificationPreferences } from './actions';
 import { getUserGoogleConnection } from '@/lib/google/calendar';
 
 export default async function SettingsPage({
   searchParams
 }: {
-  searchParams: { updated?: string; google?: string; context?: string };
+  searchParams: { updated?: string; google?: string; context?: string; notifications?: string };
 }) {
   const user = await requireUser('/app/settings');
   const locale = await getUserLocale(user.id);
@@ -22,6 +22,7 @@ export default async function SettingsPage({
   const googleConnection = await getUserGoogleConnection(user.id);
   const googleStatus = searchParams.google;
   const contextDefaults = await getUserContextDefaults(user.id);
+  const notificationPrefs = await getUserNotificationPreferences(user.id);
   const timeWindow = contextDefaults.timeWindow ?? { enabled: false, startHour: 9, endHour: 20, daysOfWeek: [] };
   const calendarBusy = contextDefaults.calendarBusy ?? { enabled: false, snoozeMinutes: 15 };
   const hourOptions = Array.from({ length: 24 }, (_, index) => index);
@@ -159,6 +160,46 @@ export default async function SettingsPage({
                 />
               </div>
             </div>
+            <ActionSubmitButton
+              className="btn btn-primary"
+              type="submit"
+              data-action-feedback={copy.common.actionSaved}
+            >
+              {copy.common.save}
+            </ActionSubmitButton>
+          </form>
+        </section>
+        <section className="card space-y-4 max-w-lg">
+          <div>
+            <div className="text-lg font-semibold text-ink">{copy.settings.notificationsTitle}</div>
+            <p className="text-sm text-muted">{copy.settings.notificationsSubtitle}</p>
+          </div>
+          {searchParams.notifications ? (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+              {copy.settings.notificationsUpdated}
+            </div>
+          ) : null}
+          <form action={updateNotificationPreferences} className="space-y-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="notify_by_email"
+                value="1"
+                className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                defaultChecked={notificationPrefs.notifyByEmail}
+              />
+              {copy.settings.notificationsEmailLabel}
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="notify_by_push"
+                value="1"
+                className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                defaultChecked={notificationPrefs.notifyByPush}
+              />
+              {copy.settings.notificationsPushLabel}
+            </label>
             <ActionSubmitButton
               className="btn btn-primary"
               type="submit"

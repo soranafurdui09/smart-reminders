@@ -309,6 +309,23 @@ export async function getUserLocale(userId: string) {
   return normalizeLocale(data?.locale);
 }
 
+export async function getUserNotificationPreferences(userId: string) {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('notify_by_email, notify_by_push')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) {
+    logDataError('getUserNotificationPreferences', error);
+    return { notifyByEmail: true, notifyByPush: false };
+  }
+  return {
+    notifyByEmail: data?.notify_by_email ?? true,
+    notifyByPush: data?.notify_by_push ?? false
+  };
+}
+
 export async function getUserTimeZone(userId: string) {
   const supabase = createServerClient();
   const { data, error } = await supabase
