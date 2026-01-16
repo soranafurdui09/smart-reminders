@@ -62,8 +62,8 @@ export default function ReminderFiltersPanel({
     ? copy.dashboard.filtersAssignedMe
     : copy.dashboard.filtersAssignedAll;
   const categoryLabel = category === 'all'
-    ? copy.dashboard.filtersCreatedAll
-    : reminderCategories.find((item) => item.id === category)?.label ?? copy.dashboard.filtersCreatedAll;
+    ? copy.dashboard.filtersCategoryAll
+    : reminderCategories.find((item) => item.id === category)?.label ?? copy.dashboard.filtersCategoryAll;
 
   const summaryParts = useMemo(() => {
     const parts: string[] = [];
@@ -123,7 +123,10 @@ export default function ReminderFiltersPanel({
             </span>
           ) : null}
         </span>
-        <span className="text-[11px] text-slate-500">{summaryText}</span>
+        <span className="flex items-center gap-2 text-[11px] text-slate-500">
+          <span>{summaryText}</span>
+          <ChevronDown className={`h-3.5 w-3.5 transition ${filtersOpen ? 'rotate-180' : ''}`} />
+        </span>
       </button>
 
       {filtersOpen ? (
@@ -181,14 +184,14 @@ export default function ReminderFiltersPanel({
             >
               <span>{copy.dashboard.filtersCategoryLabel}</span>
               <span className="flex items-center gap-2 text-[11px] font-medium text-slate-400">
-                {category === 'all' ? copy.dashboard.filtersCreatedAll : copy.dashboard.filtersCategorySelected}
+                {category === 'all' ? copy.dashboard.filtersCategoryAll : copy.dashboard.filtersCategorySelected}
                 <ChevronDown className={`h-3.5 w-3.5 transition ${categoriesOpen ? 'rotate-180' : ''}`} />
               </span>
             </button>
             {categoriesOpen ? (
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 <FilterChip
-                  label={copy.dashboard.filtersCreatedAll}
+                  label={copy.dashboard.filtersCategoryAll}
                   selected={category === 'all'}
                   onToggle={() => onChangeCategory('all')}
                   className="text-xs"

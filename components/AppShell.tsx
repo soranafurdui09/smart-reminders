@@ -54,8 +54,8 @@ export default function AppShell({
                         href={link.href}
                         className={`rounded-full px-4 py-2 transition-all ${
                           active
-                            ? 'bg-surface text-ink shadow-sm'
-                            : 'text-muted hover:bg-surface hover:text-ink'
+                            ? 'bg-sky-500 text-white shadow-sm'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                         }`}
                       >
                         {link.label}
@@ -83,8 +83,8 @@ export default function AppShell({
                     href={link.href}
                     className={`rounded-full px-4 py-2 transition-all ${
                       active
-                        ? 'bg-surface text-ink shadow-sm'
-                        : 'text-muted hover:bg-surface hover:text-ink'
+                        ? 'bg-sky-500 text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                     }`}
                   >
                     {link.label}
@@ -130,8 +130,8 @@ export default function AppShell({
                       href={link.href}
                       className={`rounded-full border px-3 py-1 text-xs transition ${
                         active
-                          ? 'border-primary/40 bg-primarySoft text-primaryStrong'
-                          : 'border-borderSubtle text-muted hover:border-primary/30 hover:bg-surface'
+                          ? 'border-sky-500 bg-sky-500 text-white shadow-sm'
+                          : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                       }`}
                     >
                       {link.label}
@@ -159,8 +159,8 @@ export default function AppShell({
                   href={link.href}
                   className={`rounded-full border px-3 py-1 text-xs transition ${
                     active
-                      ? 'border-primary/40 bg-primarySoft text-primaryStrong'
-                      : 'border-borderSubtle text-muted hover:border-primary/30 hover:bg-surface'
+                      ? 'border-sky-500 bg-sky-500 text-white shadow-sm'
+                      : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
                   {link.label}
