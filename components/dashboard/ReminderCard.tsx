@@ -2,13 +2,18 @@
 
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
-import { Check, Clock, MoreHorizontal, UserRound } from 'lucide-react';
+import { CalendarDays, Check, MoreHorizontal, UserRound } from 'lucide-react';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
 import { formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
 import { inferReminderCategoryId, type ReminderCategoryId } from '@/lib/categories';
-import { getCategoryClasses, getUrgencyClasses, type ReminderCategory, type ReminderUrgency } from '@/lib/ui/reminderStyles';
+import {
+  getReminderCategoryStyle,
+  getUrgencyClasses,
+  type ReminderCategory,
+  type ReminderUrgency
+} from '@/lib/ui/reminderStyles';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import OccurrenceDateChip from '@/components/OccurrenceDateChip';
 import OccurrenceHighlightCard from '@/components/OccurrenceHighlightCard';
@@ -57,6 +62,7 @@ const useCloseOnOutside = (ref: React.RefObject<HTMLDetailsElement>) => {
   }, [ref]);
 };
 
+// Main reminder card component used across dashboard sections.
 export default function ReminderCard({
   occurrence,
   locale = defaultLocale,
@@ -92,7 +98,7 @@ export default function ReminderCard({
     medicationDetails: reminder?.medication_details
   });
   const categoryKey = mapCategoryId(categoryId);
-  const categoryStyles = getCategoryClasses(categoryKey);
+  const categoryStyles = getReminderCategoryStyle(categoryKey);
   const urgencyKey: ReminderUrgency = occurrence.status === 'done'
     ? 'completed'
     : urgency?.key ?? 'upcoming';
@@ -109,56 +115,66 @@ export default function ReminderCard({
 
   return (
     <OccurrenceHighlightCard
-      className={`relative flex flex-col gap-3 rounded-xl border border-slate-100 bg-white py-4 pl-5 pr-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${isRow ? 'md:flex-row md:items-center md:gap-4' : ''}`}
+      className={`relative flex h-full flex-col gap-3 rounded-2xl border border-slate-200/60 p-4 shadow-sm transition-shadow ${categoryStyles.cardBg} ${
+        urgencyKey === 'today' ? 'shadow-md ring-1 ring-sky-200/70' : ''
+      } ${urgencyKey === 'overdue' ? 'ring-1 ring-rose-200/70' : ''} ${
+        isRow ? 'md:flex-row md:items-center md:gap-4' : ''
+      } dark:border-slate-700/60 dark:shadow-none`}
       occurrenceId={occurrence.id}
       highlightKey={displayAt}
     >
-      <span className={`absolute inset-y-0 left-0 w-1 rounded-l-xl ${urgencyClasses.strip}`} />
+      <span className={`absolute inset-y-0 left-0 w-1.5 rounded-l-2xl ${urgencyClasses.strip}`} />
 
       <div className={`flex-1 ${isRow ? 'space-y-1' : 'space-y-2'}`}>
         <div className="flex items-center justify-between gap-2">
           <span
-            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${categoryStyles.badgeBg} ${categoryStyles.badgeText}`}
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${categoryStyles.pillBg} ${categoryStyles.pillText}`}
           >
             {categoryStyles.label}
           </span>
-          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${urgencyClasses.status}`}>
+          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${urgencyClasses.status}`}>
             {statusPillLabel}
           </span>
         </div>
 
-        <h3 className={`text-slate-900 ${isRow ? 'text-sm' : 'text-base'} font-semibold leading-snug line-clamp-2`}>
+        <h3 className={`text-slate-900 dark:text-slate-50 ${isRow ? 'text-sm' : 'text-base'} font-semibold leading-snug line-clamp-2`}>
           {reminder?.title}
         </h3>
 
-        <div className="mt-2 flex flex-col gap-1 text-xs text-slate-600">
+        <div className="mt-2 flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
           <div className="flex items-center gap-1.5">
-            <Clock className={`h-3.5 w-3.5 ${urgencyKey === 'overdue' ? 'text-red-500' : urgencyKey === 'today' ? 'text-amber-500' : 'text-slate-500'}`} />
-            <OccurrenceDateChip
-              occurrenceId={occurrence.id}
-              label={displayLabel}
-              highlightKey={displayAt}
-              className="border-0 bg-transparent px-0 py-0 text-xs text-slate-600"
-            />
+            <CalendarDays className={`h-3.5 w-3.5 ${urgencyKey === 'overdue' ? 'text-red-500' : urgencyKey === 'today' ? 'text-amber-500' : 'text-slate-500'}`} />
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-1 text-xs text-slate-700 dark:bg-slate-800/70 dark:text-slate-200">
+              <OccurrenceDateChip
+                occurrenceId={occurrence.id}
+                label={displayLabel}
+                highlightKey={displayAt}
+                className="border-0 bg-transparent px-0 py-0 text-xs text-slate-700 dark:text-slate-200"
+              />
+            </span>
           </div>
-          {assigneeLabel ? (
-            <div className="flex items-center gap-1.5">
-              <UserRound className="h-3.5 w-3.5 text-slate-500" />
-              <span>{assigneeLabel}</span>
-            </div>
-          ) : null}
         </div>
       </div>
 
       <div className={`mt-auto flex flex-wrap items-center justify-between gap-2 pt-3 ${isRow ? 'md:ml-auto md:min-w-[280px]' : ''}`}>
+        {assigneeLabel ? (
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/80 text-[11px] font-semibold text-slate-700 dark:bg-slate-800/70 dark:text-slate-200">
+              {getInitials(assigneeLabel)}
+            </span>
+            <span className="text-xs font-medium text-slate-700 dark:text-slate-200">{assigneeLabel}</span>
+          </div>
+        ) : (
+          <span />
+        )}
         <details ref={actionMenuRef} className="relative">
           <summary
-            className="dropdown-summary inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-50"
+            className="dropdown-summary inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-white/80 dark:border-slate-600 dark:text-slate-200"
             aria-label={copy.common.moreActions}
           >
             <MoreHorizontal className="h-4 w-4" />
           </summary>
-          <div className="absolute left-0 z-50 mt-3 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-lg sm:left-auto sm:right-0">
+          <div className="absolute left-0 z-50 mt-3 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-lg sm:left-auto sm:right-0 dark:border-slate-700 dark:bg-slate-900">
             {reminderId ? (
               <div className="space-y-1">
                 <Link
@@ -249,13 +265,13 @@ export default function ReminderCard({
         />
 
         <details ref={doneMenuRef} className="group flex-1">
-          <summary className="inline-flex h-8 w-full items-center justify-center gap-2 rounded-full bg-sky-500 px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-600">
+          <summary className={`inline-flex h-8 w-full items-center justify-center gap-2 rounded-full px-3 text-xs font-semibold text-white shadow-sm transition ${categoryStyles.buttonBg} ${categoryStyles.buttonHover}`}>
             <Check className="h-3.5 w-3.5" />
             {copy.common.doneAction}
           </summary>
           <form
             action={markDone}
-            className="mt-3 space-y-2 rounded-2xl border border-slate-100 bg-white p-3 sm:w-72"
+            className="mt-3 space-y-2 rounded-2xl border border-slate-100 bg-white p-3 sm:w-72 dark:border-slate-700 dark:bg-slate-900"
           >
             <input type="hidden" name="occurrenceId" value={occurrence.id} />
             <input type="hidden" name="reminderId" value={reminderId} />
@@ -268,7 +284,11 @@ export default function ReminderCard({
               placeholder={copy.common.commentPlaceholder}
               aria-label={copy.common.commentLabel}
             />
-            <ActionSubmitButton className="w-full rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-600" type="submit" data-action-feedback={copy.common.actionDone}>
+            <ActionSubmitButton
+              className={`w-full rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm transition ${categoryStyles.buttonBg} ${categoryStyles.buttonHover}`}
+              type="submit"
+              data-action-feedback={copy.common.actionDone}
+            >
               {copy.common.doneConfirm}
             </ActionSubmitButton>
           </form>
@@ -295,4 +315,11 @@ function mapCategoryId(categoryId: ReminderCategoryId): ReminderCategory {
     default:
       return 'general';
   }
+}
+
+function getInitials(value: string) {
+  const parts = value.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
