@@ -119,8 +119,8 @@ export default function ReminderCard({
         : Calendar;
   const isPrimary = variant === 'row';
   const cardClass = isPrimary
-    ? 'rounded-xl bg-slate-50 text-gray-900 dark:bg-white/5 dark:text-gray-200'
-    : 'rounded-lg border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:shadow-sm dark:border-slate-700/60 dark:bg-[#1A1A1E] dark:text-gray-200';
+    ? 'rounded-xl bg-white text-gray-900 shadow-sm border border-slate-100 dark:bg-slate-900/70 dark:text-gray-200 dark:border-slate-800'
+    : 'rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:shadow-md dark:border-slate-700/60 dark:bg-slate-900/70 dark:text-gray-200';
   const statusTextClass = urgencyKey === 'overdue'
     ? 'text-red-600'
     : urgencyKey === 'today'
@@ -136,7 +136,7 @@ export default function ReminderCard({
 
   return (
     <OccurrenceHighlightCard
-      className={`relative flex h-full flex-col gap-3 p-4 shadow-sm ${cardClass} ${isPrimary ? 'md:flex-row md:items-center md:gap-4' : ''}`}
+      className={`relative flex h-full flex-col gap-3 p-4 ${cardClass} ${isPrimary ? 'md:flex-row md:items-center md:gap-4' : ''}`}
       occurrenceId={occurrence.id}
       highlightKey={displayAt}
     >

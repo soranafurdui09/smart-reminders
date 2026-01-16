@@ -162,50 +162,52 @@ export default async function DashboardPage({
 
   return (
     <AppShell locale={locale} activePath="/app" userEmail={user.email}>
-      <div className="mx-auto max-w-6xl space-y-6 px-4 pb-10 md:space-y-8">
-        <DashboardHero
-          title={copy.dashboard.heroTitle}
-          subtitle={copy.dashboard.heroSubtitle}
-          hintExample={copy.dashboard.heroHintExample}
-          voiceLabel={copy.dashboard.heroVoiceCta}
-          voiceAriaLabel={copy.remindersNew.voiceNavLabel}
-          voiceTitle={copy.remindersNew.voiceNavLabel}
-          voiceHref="/app/reminders/new?voice=1"
-          manualLabel={copy.dashboard.heroManualCta}
-          manualHref="/app/reminders/new"
-          nextTitle={copy.dashboard.nextTitle}
-          nextEmpty={copy.dashboard.nextEmptyRelaxed}
-          nextReminder={
-            nextOccurrence && nextOccurrenceLabel
-              ? {
-                  title: nextOccurrence.reminder?.title ?? copy.dashboard.nextTitle,
-                  timeLabel: nextOccurrenceLabel,
-                  categoryLabel: nextCategory.label,
-                  categoryStyle: nextCategoryStyle,
-                  urgencyLabel: nextUrgencyLabel,
-                  urgencyClassName: nextUrgencyClass,
-                  action: nextAction ?? undefined,
-                  actionLabel: copy.common.doneAction
-                }
-              : null
-          }
-        />
+      <div className="bg-gradient-to-b from-[#F7FAFD] to-[#ECF4FF] dark:from-slate-900 dark:to-slate-950">
+        <div className="mx-auto max-w-6xl space-y-6 px-4 pb-10 md:space-y-8">
+          <DashboardHero
+            title={copy.dashboard.heroTitle}
+            subtitle={copy.dashboard.heroSubtitle}
+            hintExample={copy.dashboard.heroHintExample}
+            voiceLabel={copy.dashboard.heroVoiceCta}
+            voiceAriaLabel={copy.remindersNew.voiceNavLabel}
+            voiceTitle={copy.remindersNew.voiceNavLabel}
+            voiceHref="/app/reminders/new?voice=1"
+            manualLabel={copy.dashboard.heroManualCta}
+            manualHref="/app/reminders/new"
+            nextTitle={copy.dashboard.nextTitle}
+            nextEmpty={copy.dashboard.nextEmptyRelaxed}
+            nextReminder={
+              nextOccurrence && nextOccurrenceLabel
+                ? {
+                    title: nextOccurrence.reminder?.title ?? copy.dashboard.nextTitle,
+                    timeLabel: nextOccurrenceLabel,
+                    categoryLabel: nextCategory.label,
+                    categoryStyle: nextCategoryStyle,
+                    urgencyLabel: nextUrgencyLabel,
+                    urgencyClassName: nextUrgencyClass,
+                    action: nextAction ?? undefined,
+                    actionLabel: copy.common.doneAction
+                  }
+                : null
+            }
+          />
 
-        <ReminderDashboardSection
-          occurrences={occurrences}
-          copy={copy}
-          membershipId={membership.id}
-          householdId={membership.households.id}
-          userId={user.id}
-          googleConnected={Boolean(googleConnection)}
-          medicationDoses={medicationDoses}
-          memberLabels={memberLabels}
-          initialCreatedBy={initialCreatedBy}
-          initialAssignment={initialAssignment}
-          locale={locale}
-          localeTag={getLocaleTag(locale)}
-          userTimeZone={userTimeZone}
-        />
+          <ReminderDashboardSection
+            occurrences={occurrences}
+            copy={copy}
+            membershipId={membership.id}
+            householdId={membership.households.id}
+            userId={user.id}
+            googleConnected={Boolean(googleConnection)}
+            medicationDoses={medicationDoses}
+            memberLabels={memberLabels}
+            initialCreatedBy={initialCreatedBy}
+            initialAssignment={initialAssignment}
+            locale={locale}
+            localeTag={getLocaleTag(locale)}
+            userTimeZone={userTimeZone}
+          />
+        </div>
       </div>
     </AppShell>
   );

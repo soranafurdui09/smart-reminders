@@ -110,7 +110,7 @@ export default function ReminderFiltersPanel({
     <div className="space-y-3">
       <button
         type="button"
-        className="flex w-full items-center justify-between gap-3 rounded-full bg-slate-50 px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-100"
+        className="flex w-full items-center justify-between gap-3 rounded-full border border-gray-300 bg-white px-3 py-2 text-left text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
         onClick={() => setFiltersOpen((prev) => !prev)}
         aria-expanded={filtersOpen}
       >
@@ -130,9 +130,9 @@ export default function ReminderFiltersPanel({
       </button>
 
       {filtersOpen ? (
-        <div className="space-y-4 rounded-2xl border border-slate-100 bg-white/90 p-4">
+        <div className="space-y-4 rounded-2xl border border-gray-300 bg-white p-4">
           <div className="space-y-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
               {copy.dashboard.filtersKindLabel}
             </div>
             <SegmentedControl
@@ -147,7 +147,7 @@ export default function ReminderFiltersPanel({
           </div>
 
           <div className="space-y-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
               {copy.dashboard.filtersCreatedLabel}
             </div>
             <SegmentedControl
@@ -162,7 +162,7 @@ export default function ReminderFiltersPanel({
           </div>
 
           <div className="space-y-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
               {copy.dashboard.filtersAssignedLabel}
             </div>
             <SegmentedControl
@@ -178,7 +178,7 @@ export default function ReminderFiltersPanel({
           <div className="space-y-2">
             <button
               type="button"
-              className="flex w-full items-center justify-between text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500"
+              className="flex w-full items-center justify-between text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600"
               onClick={() => setCategoriesOpen((prev) => !prev)}
               aria-expanded={categoriesOpen}
             >

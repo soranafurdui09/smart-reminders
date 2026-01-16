@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from 'react';
+import { AlertTriangle, Calendar, Clock, Pill, SunMedium, Users } from 'lucide-react';
 import SemanticSearch from '@/components/SemanticSearch';
 import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
 import ReminderCard from '@/components/dashboard/ReminderCard';
@@ -303,7 +304,7 @@ export default function ReminderDashboardSection({
     <section className="space-y-6">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)] md:gap-8">
         <aside className="order-1 space-y-4 lg:order-2">
-          <div className="rounded-3xl border border-slate-100 bg-white/80 p-4 shadow-sm backdrop-blur-sm md:p-5">
+          <div className="rounded-3xl border border-gray-300 bg-white p-4 shadow-sm md:p-5">
             <SemanticSearch householdId={householdId} localeTag={localeTag} copy={copy.search} />
             <div className="mt-4">
               <ReminderFiltersPanel
@@ -334,11 +335,8 @@ export default function ReminderDashboardSection({
             <section className="space-y-3">
               <header className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <svg aria-hidden="true" className="h-4 w-4 text-amber-500" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.5" />
-                    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-900">{copy.dashboard.todayTitle}</h2>
+                  <SunMedium className="h-4 w-4 text-amber-500" aria-hidden="true" />
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">{copy.dashboard.todayTitle}</h2>
                 </div>
               </header>
               {hasToday ? (
@@ -351,16 +349,8 @@ export default function ReminderDashboardSection({
                         onClick={() => setShowOverdue((prev) => !prev)}
                         aria-expanded={showOverdue}
                       >
-                        <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-700">
-                          <svg aria-hidden="true" className="h-4 w-4 text-red-500" viewBox="0 0 24 24" fill="none">
-                            <path
-                              d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                            />
-                            <path d="M12 9v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                            <path d="M12 17h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                          </svg>
+                        <div className="flex items-center gap-2 text-xs font-semibold uppercase text-gray-700">
+                          <AlertTriangle className="h-4 w-4 text-red-500" aria-hidden="true" />
                           {copy.dashboard.todayOverdue}
                         </div>
                         <span className="flex items-center gap-2 text-xs text-slate-500">
@@ -406,11 +396,8 @@ export default function ReminderDashboardSection({
                         onClick={() => setShowSoon((prev) => !prev)}
                         aria-expanded={showSoon}
                       >
-                        <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-700">
-                          <svg aria-hidden="true" className="h-4 w-4 text-amber-500" viewBox="0 0 24 24" fill="none">
-                            <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
-                          </svg>
+                        <div className="flex items-center gap-2 text-xs font-semibold uppercase text-gray-700">
+                          <Clock className="h-4 w-4 text-amber-500" aria-hidden="true" />
                           {copy.dashboard.todaySoon}
                         </div>
                         <span className="flex items-center gap-2 text-xs text-slate-500">
@@ -456,11 +443,8 @@ export default function ReminderDashboardSection({
                         onClick={() => setShowToday((prev) => !prev)}
                         aria-expanded={showToday}
                       >
-                        <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-700">
-                          <svg aria-hidden="true" className="h-4 w-4 text-emerald-500" viewBox="0 0 24 24" fill="none">
-                            <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
-                          </svg>
+                        <div className="flex items-center gap-2 text-xs font-semibold uppercase text-gray-700">
+                          <SunMedium className="h-4 w-4 text-emerald-500" aria-hidden="true" />
                           {copy.dashboard.todayRest}
                         </div>
                         <span className="flex items-center gap-2 text-xs text-slate-500">
@@ -511,11 +495,8 @@ export default function ReminderDashboardSection({
             <section className="space-y-3">
               <header className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <svg aria-hidden="true" className="h-4 w-4 text-emerald-500" viewBox="0 0 24 24" fill="none">
-                    <path d="M10 2l8 8-8 8-8-8 8-8z" stroke="currentColor" strokeWidth="1.5" />
-                    <path d="M12 2v20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-900">{copy.dashboard.medicationsTitle}</h2>
+                  <Pill className="h-4 w-4 text-emerald-500" aria-hidden="true" />
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">{copy.dashboard.medicationsTitle}</h2>
                 </div>
                 {visibleDoses.length ? (
                   <span className="text-xs text-slate-500">
@@ -617,11 +598,8 @@ export default function ReminderDashboardSection({
                 aria-expanded={showUpcoming}
               >
                 <div className="flex items-center gap-2">
-                  <svg aria-hidden="true" className="h-4 w-4 text-sky-500" viewBox="0 0 24 24" fill="none">
-                    <rect x="3" y="4" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.5" />
-                    <path d="M8 2v4M16 2v4M3 10h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-900">{copy.dashboard.upcomingTitle}</h2>
+                  <Calendar className="h-4 w-4 text-sky-500" aria-hidden="true" />
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">{copy.dashboard.upcomingTitle}</h2>
                 </div>
                 <span className="flex items-center gap-2 text-xs text-slate-500">
                   {hasUpcoming ? upcomingEntries.length : 0} {copy.dashboard.reminderCountLabel}
@@ -681,16 +659,8 @@ export default function ReminderDashboardSection({
             <section className="space-y-3">
               <header className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <svg aria-hidden="true" className="h-4 w-4 text-purple-500" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M16 11c1.66 0 3-1.34 3-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zM8 11c1.66 0 3-1.34 3-3S9.66 5 8 5s-3 1.34-3 3 1.34 3 3 3zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45v2h6v-2c0-2.66-4-3.5-7-3.5z"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-900">{copy.dashboard.householdTitle}</h2>
+                  <Users className="h-4 w-4 text-purple-500" aria-hidden="true" />
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">{copy.dashboard.householdTitle}</h2>
                 </div>
               </header>
               {householdItems.length ? (
@@ -723,11 +693,8 @@ export default function ReminderDashboardSection({
                 aria-expanded={showMonths}
               >
                 <div className="flex items-center gap-2">
-                  <svg aria-hidden="true" className="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none">
-                    <rect x="3" y="4" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.5" />
-                    <path d="M8 2v4M16 2v4M3 10h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-900">{copy.dashboard.groupNextMonth}</h2>
+                  <Calendar className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">{copy.dashboard.groupNextMonth}</h2>
                 </div>
                 <span className="flex items-center gap-2 text-xs text-slate-500">
                   {visibleMonthEntries.length} {copy.dashboard.reminderCountLabel}
