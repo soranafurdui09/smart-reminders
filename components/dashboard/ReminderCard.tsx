@@ -63,6 +63,7 @@ export default function ReminderCard({
   googleConnected = false,
   userTimeZone,
   urgency,
+  urgencyLabel,
   variant = 'card'
 }: Props) {
   const actionMenuRef = useRef<HTMLDetailsElement | null>(null);
