@@ -117,7 +117,7 @@ const getUrgencyStyles = (copy: MessageBundle) => ({
     label: copy.dashboard.upcomingTitle
   },
   scheduled: {
-    key: 'open' as const,
+    key: 'upcoming' as const,
     label: copy.common.statusOpen
   }
 });
@@ -357,7 +357,7 @@ export default function ReminderDashboardSection({
                           {todayBuckets.overdue.length} {copy.dashboard.reminderCountLabel}
                         </span>
                       </header>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      <div className="grid grid-cols-1 gap-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
                         {todayBuckets.overdue.map((occurrence) => (
                           <ReminderCard
                             key={occurrence.id}
@@ -385,7 +385,7 @@ export default function ReminderDashboardSection({
                           {todayBuckets.soon.length} {copy.dashboard.reminderCountLabel}
                         </span>
                       </header>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      <div className="grid grid-cols-1 gap-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
                         {todayBuckets.soon.map((occurrence) => (
                           <ReminderCard
                             key={occurrence.id}
@@ -413,7 +413,7 @@ export default function ReminderDashboardSection({
                           {todayBuckets.today.length} {copy.dashboard.reminderCountLabel}
                         </span>
                       </header>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      <div className="grid grid-cols-1 gap-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
                         {todayBuckets.today.map((occurrence) => (
                           <ReminderCard
                             key={occurrence.id}
@@ -453,7 +453,7 @@ export default function ReminderDashboardSection({
                 ) : null}
               </header>
               {visibleDoses.length ? (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
                   {visibleDoses.map((dose) => {
                     const details = dose.reminder?.medication_details || {};
                     const personLabel = details.personId ? memberLabels[details.personId] : null;
@@ -600,7 +600,7 @@ export default function ReminderDashboardSection({
                 </div>
               </header>
               {householdItems.length ? (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
                   {householdItems.map((occurrence) => (
                     <ReminderCard
                       key={occurrence.id}
@@ -649,7 +649,7 @@ export default function ReminderDashboardSection({
                       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                         {monthLabelFormatter.format(labelDate)}
                       </div>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      <div className="grid grid-cols-1 gap-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
                         {items.map((occurrence) => (
                           <ReminderCard
                             key={occurrence.id}

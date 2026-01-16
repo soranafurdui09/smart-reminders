@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
+import { Check, Clock, MoreHorizontal, UserRound } from 'lucide-react';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
 import { formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
-import { getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
-import { getReminderVisualContext, type UrgencyKey } from '@/lib/reminders/ui';
+import { inferReminderCategoryId, type ReminderCategoryId } from '@/lib/categories';
+import { getCategoryClasses, getUrgencyClasses, type ReminderCategory, type ReminderUrgency } from '@/lib/ui/reminderStyles';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import OccurrenceDateChip from '@/components/OccurrenceDateChip';
 import OccurrenceHighlightCard from '@/components/OccurrenceHighlightCard';
@@ -17,7 +18,7 @@ import GoogleCalendarSyncButton from '@/components/GoogleCalendarSyncButton';
 import GoogleCalendarAutoBlockButton from '@/components/GoogleCalendarAutoBlockButton';
 
 type UrgencyStyles = {
-  key: UrgencyKey;
+  key: ReminderUrgency;
   label: string;
 };
 
@@ -27,6 +28,7 @@ type Props = {
   googleConnected?: boolean;
   userTimeZone?: string;
   urgency?: UrgencyStyles | null;
+  urgencyLabel?: string;
   variant?: 'card' | 'row';
 };
 
@@ -88,17 +90,17 @@ export default function ReminderCard({
     category: reminder?.category,
     medicationDetails: reminder?.medication_details
   });
-  const category = getReminderCategory(categoryId);
-  const visual = getReminderVisualContext({
-    status: occurrence.status,
-    urgencyKey: urgency?.key ?? null,
-    categoryId
-  });
+  const categoryKey = mapCategoryId(categoryId);
+  const categoryStyles = getCategoryClasses(categoryKey);
+  const urgencyKey: ReminderUrgency = occurrence.status === 'done'
+    ? 'completed'
+    : urgency?.key ?? 'upcoming';
+  const urgencyClasses = getUrgencyClasses(urgencyKey);
   const statusPillLabel = occurrence.status === 'done'
     ? copy.common.done
     : occurrence.status === 'snoozed'
       ? copy.common.statusSnoozed
-      : urgency?.label ?? statusLabel;
+      : urgencyLabel ?? urgency?.label ?? statusLabel;
   const isRow = variant === 'row';
 
   useCloseOnOutside(actionMenuRef);
@@ -106,71 +108,54 @@ export default function ReminderCard({
 
   return (
     <OccurrenceHighlightCard
-      className={`relative flex flex-col gap-3 rounded-xl border border-slate-100 bg-white p-4 shadow-md shadow-slate-100 transition hover:-translate-y-0.5 hover:shadow-lg ${isRow ? 'md:flex-row md:items-center md:gap-4' : ''}`}
+      className={`relative flex flex-col gap-3 rounded-xl border border-slate-100 bg-white py-4 pl-5 pr-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${isRow ? 'md:flex-row md:items-center md:gap-4' : ''}`}
       occurrenceId={occurrence.id}
       highlightKey={displayAt}
     >
-      <span className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl ${visual.urgencyBarClass}`} />
+      <span className={`absolute inset-y-0 left-0 w-1 rounded-l-xl ${urgencyClasses.strip}`} />
 
       <div className={`flex-1 ${isRow ? 'space-y-1' : 'space-y-2'}`}>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
           <span
-            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${visual.categoryStyle.bg} ${visual.categoryStyle.text}`}
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${categoryStyles.badgeBg} ${categoryStyles.badgeText}`}
           >
-            {category.label}
+            {categoryStyles.label}
           </span>
-          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${visual.statusClass}`}>
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${urgencyClasses.status}`}>
             {statusPillLabel}
           </span>
         </div>
 
-        <div className={`font-semibold text-slate-900 ${isRow ? 'text-sm' : 'text-base'} line-clamp-2`}>
+        <h3 className={`text-slate-900 ${isRow ? 'text-sm' : 'text-base'} font-semibold leading-snug line-clamp-2`}>
           {reminder?.title}
-        </div>
+        </h3>
 
-        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-          <span className="inline-flex items-center gap-1.5">
-            <svg aria-hidden="true" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M8 2v4M16 2v4M3 10h18"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-              <rect x="3" y="4" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.5" />
-            </svg>
+        <div className="mt-2 flex flex-col gap-1 text-xs text-slate-600">
+          <div className="flex items-center gap-1.5">
+            <Clock className={`h-3.5 w-3.5 ${urgencyKey === 'overdue' ? 'text-red-500' : urgencyKey === 'today' ? 'text-amber-500' : 'text-slate-500'}`} />
             <OccurrenceDateChip
               occurrenceId={occurrence.id}
               label={displayLabel}
               highlightKey={displayAt}
-              className="border-0 bg-transparent px-0 py-0 text-xs text-slate-500"
+              className="border-0 bg-transparent px-0 py-0 text-xs text-slate-600"
             />
-          </span>
+          </div>
+          {assigneeLabel ? (
+            <div className="flex items-center gap-1.5">
+              <UserRound className="h-3.5 w-3.5 text-slate-500" />
+              <span>{assigneeLabel}</span>
+            </div>
+          ) : null}
         </div>
       </div>
 
-      <div className={`flex flex-wrap items-center justify-between gap-2 ${isRow ? 'md:ml-auto md:min-w-[280px]' : ''}`}>
-        {assigneeLabel ? (
-          <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
-            <svg aria-hidden="true" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              />
-            </svg>
-            {assigneeLabel}
-          </span>
-        ) : (
-          <span />
-        )}
-        <div className="flex flex-wrap items-center gap-2">
+      <div className={`mt-auto flex flex-wrap items-center justify-between gap-2 pt-3 ${isRow ? 'md:ml-auto md:min-w-[280px]' : ''}`}>
         <details ref={actionMenuRef} className="relative">
           <summary
-            className="btn btn-secondary dropdown-summary h-9 w-9 p-0 text-lg leading-none"
+            className="dropdown-summary inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-50"
             aria-label={copy.common.moreActions}
           >
-            <span aria-hidden="true">...</span>
+            <MoreHorizontal className="h-4 w-4" />
           </summary>
           <div className="absolute right-0 z-50 mt-3 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
             {reminderId ? (
@@ -262,15 +247,9 @@ export default function ReminderCard({
           snoozeAction={snoozeOccurrence}
         />
 
-        <details ref={doneMenuRef} className="group">
-          <summary className="dropdown-summary inline-flex h-8 items-center gap-2 rounded-full bg-sky-500 px-3.5 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-600">
-            <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
-              <path
-                stroke="currentColor"
-                strokeWidth="1.5"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
+        <details ref={doneMenuRef} className="group flex-1">
+          <summary className="inline-flex h-8 w-full items-center justify-center gap-2 rounded-full bg-sky-500 px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-600">
+            <Check className="h-3.5 w-3.5" />
             {copy.common.doneAction}
           </summary>
           <form
@@ -293,8 +272,26 @@ export default function ReminderCard({
             </ActionSubmitButton>
           </form>
         </details>
-        </div>
       </div>
     </OccurrenceHighlightCard>
   );
+}
+
+function mapCategoryId(categoryId: ReminderCategoryId): ReminderCategory {
+  switch (categoryId) {
+    case 'health':
+      return 'health_medication';
+    case 'car':
+      return 'car_auto';
+    case 'home':
+      return 'home_maintenance';
+    case 'family':
+      return 'family_kids';
+    case 'shopping':
+      return 'shopping_groceries';
+    case 'personal':
+      return 'personal_admin';
+    default:
+      return 'general';
+  }
 }
