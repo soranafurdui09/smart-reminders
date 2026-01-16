@@ -19,6 +19,9 @@ const CATEGORY_LABELS: Record<ReminderCategory, string> = {
   general: 'General'
 };
 
+const ACTION_BUTTON_BG = 'bg-blue-500 text-white dark:bg-blue-400 dark:text-slate-900';
+const ACTION_BUTTON_HOVER = 'hover:bg-blue-600 dark:hover:bg-blue-300';
+
 const CATEGORY_STYLES: Record<ReminderCategory, {
   cardBg: string;
   accent: string;
@@ -28,79 +31,79 @@ const CATEGORY_STYLES: Record<ReminderCategory, {
   buttonHover: string;
 }> = {
   health_medication: {
-    cardBg: 'bg-emerald-50/90 dark:bg-slate-900/70 dark:ring-1 dark:ring-emerald-400/40',
+    cardBg: 'bg-transparent',
     accent: 'text-emerald-700',
-    pillBg: 'bg-emerald-500',
-    pillText: 'text-white',
-    buttonBg: 'bg-emerald-500',
-    buttonHover: 'hover:bg-emerald-600'
+    pillBg: 'bg-emerald-500/20',
+    pillText: 'text-emerald-700',
+    buttonBg: ACTION_BUTTON_BG,
+    buttonHover: ACTION_BUTTON_HOVER
   },
   car_auto: {
-    cardBg: 'bg-orange-50/90 dark:bg-slate-900/70 dark:ring-1 dark:ring-orange-400/40',
-    accent: 'text-orange-700',
-    pillBg: 'bg-orange-500',
-    pillText: 'text-white',
-    buttonBg: 'bg-orange-500',
-    buttonHover: 'hover:bg-orange-600'
+    cardBg: 'bg-transparent',
+    accent: 'text-amber-700',
+    pillBg: 'bg-amber-500/20',
+    pillText: 'text-amber-700',
+    buttonBg: ACTION_BUTTON_BG,
+    buttonHover: ACTION_BUTTON_HOVER
   },
   home_maintenance: {
-    cardBg: 'bg-sky-50/90 dark:bg-slate-900/70 dark:ring-1 dark:ring-sky-400/40',
-    accent: 'text-sky-700',
-    pillBg: 'bg-sky-500',
-    pillText: 'text-white',
-    buttonBg: 'bg-sky-500',
-    buttonHover: 'hover:bg-sky-600'
+    cardBg: 'bg-transparent',
+    accent: 'text-indigo-700',
+    pillBg: 'bg-indigo-500/20',
+    pillText: 'text-indigo-700',
+    buttonBg: ACTION_BUTTON_BG,
+    buttonHover: ACTION_BUTTON_HOVER
   },
   family_kids: {
-    cardBg: 'bg-fuchsia-50/90 dark:bg-slate-900/70 dark:ring-1 dark:ring-fuchsia-400/40',
-    accent: 'text-fuchsia-700',
-    pillBg: 'bg-fuchsia-500',
-    pillText: 'text-white',
-    buttonBg: 'bg-fuchsia-500',
-    buttonHover: 'hover:bg-fuchsia-600'
+    cardBg: 'bg-transparent',
+    accent: 'text-pink-700',
+    pillBg: 'bg-pink-500/20',
+    pillText: 'text-pink-700',
+    buttonBg: ACTION_BUTTON_BG,
+    buttonHover: ACTION_BUTTON_HOVER
   },
   shopping_groceries: {
-    cardBg: 'bg-yellow-50/90 dark:bg-slate-900/70 dark:ring-1 dark:ring-yellow-400/40',
+    cardBg: 'bg-transparent',
     accent: 'text-yellow-700',
-    pillBg: 'bg-yellow-500',
-    pillText: 'text-white',
-    buttonBg: 'bg-yellow-500',
-    buttonHover: 'hover:bg-yellow-600'
+    pillBg: 'bg-yellow-500/20',
+    pillText: 'text-yellow-700',
+    buttonBg: ACTION_BUTTON_BG,
+    buttonHover: ACTION_BUTTON_HOVER
   },
   personal_admin: {
-    cardBg: 'bg-indigo-50/90 dark:bg-slate-900/70 dark:ring-1 dark:ring-indigo-400/40',
-    accent: 'text-indigo-700',
-    pillBg: 'bg-indigo-500',
-    pillText: 'text-white',
-    buttonBg: 'bg-indigo-500',
-    buttonHover: 'hover:bg-indigo-600'
+    cardBg: 'bg-transparent',
+    accent: 'text-blue-700',
+    pillBg: 'bg-blue-500/20',
+    pillText: 'text-blue-700',
+    buttonBg: ACTION_BUTTON_BG,
+    buttonHover: ACTION_BUTTON_HOVER
   },
   general: {
-    cardBg: 'bg-slate-50 dark:bg-slate-900/70 dark:ring-1 dark:ring-slate-700/60',
+    cardBg: 'bg-transparent',
     accent: 'text-slate-700',
-    pillBg: 'bg-slate-500',
-    pillText: 'text-white',
-    buttonBg: 'bg-slate-500',
-    buttonHover: 'hover:bg-slate-600'
+    pillBg: 'bg-slate-500/20',
+    pillText: 'text-slate-700',
+    buttonBg: ACTION_BUTTON_BG,
+    buttonHover: ACTION_BUTTON_HOVER
   }
 };
 
 const URGENCY_CLASSES: Record<ReminderUrgency, { strip: string; status: string }> = {
   overdue: {
     strip: 'bg-red-500',
-    status: 'border border-red-100 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-slate-900/70 dark:text-red-300'
+    status: 'border border-red-100 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-white/5 dark:text-red-300'
   },
   today: {
-    strip: 'bg-amber-400',
-    status: 'border border-sky-400 bg-white/80 text-sky-600 dark:border-sky-500/50 dark:bg-slate-900/80 dark:text-sky-300'
+    strip: 'bg-amber-500',
+    status: 'border border-amber-100 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-white/5 dark:text-amber-300'
   },
   upcoming: {
-    strip: 'bg-blue-400',
-    status: 'border border-slate-100 bg-white/70 text-slate-600 dark:border-slate-700/60 dark:bg-slate-900/70 dark:text-slate-300'
+    strip: 'bg-blue-500',
+    status: 'border border-blue-100 bg-blue-50 text-blue-700 dark:border-blue-500/40 dark:bg-white/5 dark:text-blue-300'
   },
   completed: {
-    strip: 'bg-green-400',
-    status: 'border border-emerald-100 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-slate-900/70 dark:text-emerald-300'
+    strip: 'bg-gray-500',
+    status: 'border border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-600/60 dark:bg-white/5 dark:text-slate-300'
   }
 };
 

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
-import { CalendarDays, Check, MoreHorizontal, UserRound } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Check, Clock, MoreHorizontal, UserRound } from 'lucide-react';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
@@ -108,6 +108,13 @@ export default function ReminderCard({
     : occurrence.status === 'snoozed'
       ? copy.common.statusSnoozed
       : urgencyLabel ?? urgency?.label ?? statusLabel;
+  const StatusIcon = urgencyKey === 'overdue'
+    ? AlertTriangle
+    : urgencyKey === 'today'
+      ? Clock
+      : urgencyKey === 'completed'
+        ? Check
+        : CalendarDays;
   const isRow = variant === 'row';
 
   useCloseOnOutside(actionMenuRef);
@@ -115,54 +122,47 @@ export default function ReminderCard({
 
   return (
     <OccurrenceHighlightCard
-      className={`relative flex h-full flex-col gap-3 rounded-2xl border border-slate-200/60 p-4 shadow-sm transition-shadow ${categoryStyles.cardBg} ${
-        urgencyKey === 'today' ? 'shadow-md ring-1 ring-sky-200/70' : ''
-      } ${urgencyKey === 'overdue' ? 'ring-1 ring-rose-200/70' : ''} ${
-        isRow ? 'md:flex-row md:items-center md:gap-4' : ''
-      } dark:border-slate-700/60 dark:shadow-none`}
+      className={`relative flex h-full flex-col gap-2 rounded-2xl border border-transparent bg-slate-50 p-4 shadow-sm transition-shadow ${isRow ? 'md:flex-row md:items-center md:gap-4' : ''} dark:border-slate-800/60 dark:bg-white/5`}
       occurrenceId={occurrence.id}
       highlightKey={displayAt}
     >
-      <span className={`absolute inset-y-0 left-0 w-1.5 rounded-l-2xl ${urgencyClasses.strip}`} />
+      <span className={`absolute inset-y-0 left-0 w-[3px] rounded-l-2xl ${urgencyClasses.strip}`} />
 
       <div className={`flex-1 ${isRow ? 'space-y-1' : 'space-y-2'}`}>
         <div className="flex items-center justify-between gap-2">
           <span
-            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${categoryStyles.pillBg} ${categoryStyles.pillText}`}
+            className={`inline-flex items-center rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${categoryStyles.pillBg} ${categoryStyles.pillText}`}
           >
             {categoryStyles.label}
           </span>
-          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${urgencyClasses.status}`}>
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${urgencyClasses.status}`}>
+            <StatusIcon className="h-3.5 w-3.5" />
             {statusPillLabel}
           </span>
         </div>
 
-        <h3 className={`text-slate-900 dark:text-slate-50 ${isRow ? 'text-sm' : 'text-base'} font-semibold leading-snug line-clamp-2`}>
+        <h3 className={`text-gray-900 dark:text-gray-200 ${isRow ? 'text-sm' : 'text-sm'} font-semibold leading-snug line-clamp-2`}>
           {reminder?.title}
         </h3>
 
-        <div className="mt-2 flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+        <div className="mt-2 flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-300">
           <div className="flex items-center gap-1.5">
-            <CalendarDays className={`h-3.5 w-3.5 ${urgencyKey === 'overdue' ? 'text-red-500' : urgencyKey === 'today' ? 'text-amber-500' : 'text-slate-500'}`} />
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-1 text-xs text-slate-700 dark:bg-slate-800/70 dark:text-slate-200">
-              <OccurrenceDateChip
-                occurrenceId={occurrence.id}
-                label={displayLabel}
-                highlightKey={displayAt}
-                className="border-0 bg-transparent px-0 py-0 text-xs text-slate-700 dark:text-slate-200"
-              />
-            </span>
+            <CalendarDays className="h-3.5 w-3.5 text-gray-500 dark:text-gray-300" />
+            <OccurrenceDateChip
+              occurrenceId={occurrence.id}
+              label={displayLabel}
+              highlightKey={displayAt}
+              className="border-0 bg-transparent px-0 py-0 text-xs text-gray-600 dark:text-gray-300"
+            />
           </div>
         </div>
       </div>
 
       <div className={`mt-auto flex flex-wrap items-center justify-between gap-2 pt-3 ${isRow ? 'md:ml-auto md:min-w-[280px]' : ''}`}>
         {assigneeLabel ? (
-          <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/80 text-[11px] font-semibold text-slate-700 dark:bg-slate-800/70 dark:text-slate-200">
-              {getInitials(assigneeLabel)}
-            </span>
-            <span className="text-xs font-medium text-slate-700 dark:text-slate-200">{assigneeLabel}</span>
+          <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
+            <UserRound className="h-3.5 w-3.5 text-gray-400 dark:text-gray-400" />
+            <span>{assigneeLabel}</span>
           </div>
         ) : (
           <span />
@@ -315,11 +315,4 @@ function mapCategoryId(categoryId: ReminderCategoryId): ReminderCategory {
     default:
       return 'general';
   }
-}
-
-function getInitials(value: string) {
-  const parts = value.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
