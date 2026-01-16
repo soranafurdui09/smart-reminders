@@ -34,7 +34,7 @@ export default function AppShell({
     return activePath.startsWith(href);
   };
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-slate-50 bg-[radial-gradient(circle_at_top,_#dbeafe_0,_transparent_55%)] dark:bg-[#05060a] dark:bg-[radial-gradient(circle_at_top,_#0b1326_0,_transparent_55%)]">
       <header className="sticky top-0 z-30 border-b border-border/70 bg-surface/80 shadow-sm backdrop-blur">
         <div className="page-wrap flex flex-wrap items-center justify-between gap-4 py-4">
           <Link href="/app" className="flex items-center gap-3 text-lg font-semibold tracking-tight text-ink">

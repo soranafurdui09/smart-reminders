@@ -123,6 +123,28 @@ const getUrgencyStyles = (copy: MessageBundle) => ({
   }
 });
 
+const SectionHeading = ({
+  label,
+  icon,
+  countLabel
+}: {
+  label: string;
+  icon?: React.ReactNode;
+  countLabel?: string;
+}) => (
+  <div className="flex items-center gap-3">
+    <span className="h-px flex-1 bg-slate-200" />
+    <span className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-500">
+      {icon}
+      <span>{label}</span>
+      {countLabel ? (
+        <span className="text-[11px] font-semibold text-slate-500 normal-case">{countLabel}</span>
+      ) : null}
+    </span>
+    <span className="h-px flex-1 bg-slate-200" />
+  </div>
+);
+
 export default function ReminderDashboardSection({
   occurrences,
   copy,
@@ -332,13 +354,11 @@ export default function ReminderDashboardSection({
 
         <div className="order-2 space-y-6 lg:order-1">
           {kindFilter !== 'medications' ? (
-            <section className="space-y-3">
-              <header className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <SunMedium className="h-4 w-4 text-amber-500" aria-hidden="true" />
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">{copy.dashboard.todayTitle}</h2>
-                </div>
-              </header>
+            <section className="mt-8 space-y-4">
+              <SectionHeading
+                label={copy.dashboard.todayTitle}
+                icon={<SunMedium className="h-4 w-4 text-amber-500" aria-hidden="true" />}
+              />
               {hasToday ? (
                 <div className="space-y-5">
                   {todayBuckets.overdue.length ? (
@@ -372,7 +392,7 @@ export default function ReminderDashboardSection({
                         </span>
                       </button>
                       {showOverdue ? (
-                        <div className="space-y-3">
+                        <div className="grid gap-3">
                           {todayBuckets.overdue.map((occurrence) => (
                             <ReminderCard
                               key={occurrence.id}
@@ -419,7 +439,7 @@ export default function ReminderDashboardSection({
                         </span>
                       </button>
                       {showSoon ? (
-                        <div className="space-y-3">
+                        <div className="grid gap-3">
                           {todayBuckets.soon.map((occurrence) => (
                             <ReminderCard
                               key={occurrence.id}
@@ -466,7 +486,7 @@ export default function ReminderDashboardSection({
                         </span>
                       </button>
                       {showToday ? (
-                        <div className="space-y-3">
+                        <div className="grid gap-3">
                           {todayBuckets.today.map((occurrence) => (
                             <ReminderCard
                               key={occurrence.id}
@@ -492,20 +512,18 @@ export default function ReminderDashboardSection({
           ) : null}
 
           {kindFilter !== 'tasks' ? (
-            <section className="space-y-3">
-              <header className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Pill className="h-4 w-4 text-emerald-500" aria-hidden="true" />
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">{copy.dashboard.medicationsTitle}</h2>
-                </div>
-                {visibleDoses.length ? (
-                  <span className="text-xs text-slate-500">
-                    {visibleDoses.length} {copy.dashboard.doseCountLabel}
-                  </span>
-                ) : null}
-              </header>
+            <section className="mt-8 space-y-4">
+              <SectionHeading
+                label={copy.dashboard.medicationsTitle}
+                icon={<Pill className="h-4 w-4 text-emerald-500" aria-hidden="true" />}
+                countLabel={
+                  visibleDoses.length
+                    ? `${visibleDoses.length} ${copy.dashboard.doseCountLabel}`
+                    : undefined
+                }
+              />
               {visibleDoses.length ? (
-                <div className="grid grid-cols-1 gap-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {visibleDoses.map((dose) => {
                     const details = dose.reminder?.medication_details || {};
                     const personLabel = details.personId ? memberLabels[details.personId] : null;
@@ -590,19 +608,20 @@ export default function ReminderDashboardSection({
           ) : null}
 
           {kindFilter !== 'medications' ? (
-            <section className="space-y-3">
+            <section className="mt-8 space-y-4">
               <button
                 type="button"
-                className="flex w-full items-center justify-between"
+                className="flex w-full items-center gap-3"
                 onClick={() => setShowUpcoming((prev) => !prev)}
                 aria-expanded={showUpcoming}
               >
-                <div className="flex items-center gap-2">
+                <span className="h-px flex-1 bg-slate-200" />
+                <span className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-500">
                   <Calendar className="h-4 w-4 text-sky-500" aria-hidden="true" />
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">{copy.dashboard.upcomingTitle}</h2>
-                </div>
-                <span className="flex items-center gap-2 text-xs text-slate-500">
-                  {hasUpcoming ? upcomingEntries.length : 0} {copy.dashboard.reminderCountLabel}
+                  <span>{copy.dashboard.upcomingTitle}</span>
+                  <span className="text-[11px] font-semibold text-slate-500 normal-case">
+                    {hasUpcoming ? upcomingEntries.length : 0} {copy.dashboard.reminderCountLabel}
+                  </span>
                   <svg
                     aria-hidden="true"
                     className={`h-3.5 w-3.5 transition ${showUpcoming ? 'rotate-180' : ''}`}
@@ -618,6 +637,7 @@ export default function ReminderDashboardSection({
                     />
                   </svg>
                 </span>
+                <span className="h-px flex-1 bg-slate-200" />
               </button>
               {showUpcoming ? (
                 hasUpcoming ? (
@@ -630,7 +650,7 @@ export default function ReminderDashboardSection({
                           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                             {dayLabelFormatter.format(dayDate)}
                           </div>
-                          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                             {items.map((occurrence) => (
                               <ReminderCard
                                 key={occurrence.id}
@@ -656,15 +676,13 @@ export default function ReminderDashboardSection({
           ) : null}
 
           {kindFilter !== 'medications' ? (
-            <section className="space-y-3">
-              <header className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-purple-500" aria-hidden="true" />
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">{copy.dashboard.householdTitle}</h2>
-                </div>
-              </header>
+            <section className="mt-8 space-y-4">
+              <SectionHeading
+                label={copy.dashboard.householdTitle}
+                icon={<Users className="h-4 w-4 text-purple-500" aria-hidden="true" />}
+              />
               {householdItems.length ? (
-                <div className="grid grid-cols-1 gap-4 gap-y-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {householdItems.map((occurrence) => (
                     <ReminderCard
                       key={occurrence.id}
@@ -685,19 +703,20 @@ export default function ReminderDashboardSection({
           ) : null}
 
           {kindFilter !== 'medications' && hasMonthGroups ? (
-            <section className="space-y-3">
+            <section className="mt-8 space-y-4">
               <button
                 type="button"
-                className="flex w-full items-center justify-between"
+                className="flex w-full items-center gap-3"
                 onClick={() => setShowMonths((prev) => !prev)}
                 aria-expanded={showMonths}
               >
-                <div className="flex items-center gap-2">
+                <span className="h-px flex-1 bg-slate-200" />
+                <span className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-500">
                   <Calendar className="h-4 w-4 text-slate-400" aria-hidden="true" />
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">{copy.dashboard.groupNextMonth}</h2>
-                </div>
-                <span className="flex items-center gap-2 text-xs text-slate-500">
-                  {visibleMonthEntries.length} {copy.dashboard.reminderCountLabel}
+                  <span>{copy.dashboard.groupNextMonth}</span>
+                  <span className="text-[11px] font-semibold text-slate-500 normal-case">
+                    {visibleMonthEntries.length} {copy.dashboard.reminderCountLabel}
+                  </span>
                   <svg
                     aria-hidden="true"
                     className={`h-3.5 w-3.5 transition ${showMonths ? 'rotate-180' : ''}`}
@@ -713,6 +732,7 @@ export default function ReminderDashboardSection({
                     />
                   </svg>
                 </span>
+                <span className="h-px flex-1 bg-slate-200" />
               </button>
               {showMonths ? (
                 <>
@@ -736,17 +756,16 @@ export default function ReminderDashboardSection({
                           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                             {monthLabelFormatter.format(labelDate)}
                           </div>
-                          <div className="flex gap-4 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-3 xl:grid-cols-4">
+                          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                             {items.map((occurrence) => (
-                              <div key={occurrence.id} className="min-w-[240px] sm:min-w-0">
-                                <ReminderCard
-                                  occurrence={occurrence}
-                                  locale={locale}
-                                  googleConnected={googleConnected}
-                                  userTimeZone={effectiveTimeZone}
-                                  urgency={urgencyStyles.scheduled}
-                                />
-                              </div>
+                              <ReminderCard
+                                key={occurrence.id}
+                                occurrence={occurrence}
+                                locale={locale}
+                                googleConnected={googleConnected}
+                                userTimeZone={effectiveTimeZone}
+                                urgency={urgencyStyles.scheduled}
+                              />
                             ))}
                           </div>
                         </div>
