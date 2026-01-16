@@ -6,7 +6,8 @@ import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
 import { formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
-import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
+import { getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
+import { getReminderVisualContext, type UrgencyKey } from '@/lib/reminders/ui';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import OccurrenceDateChip from '@/components/OccurrenceDateChip';
 import OccurrenceHighlightCard from '@/components/OccurrenceHighlightCard';
@@ -16,9 +17,8 @@ import GoogleCalendarSyncButton from '@/components/GoogleCalendarSyncButton';
 import GoogleCalendarAutoBlockButton from '@/components/GoogleCalendarAutoBlockButton';
 
 type UrgencyStyles = {
+  key: UrgencyKey;
   label: string;
-  stripClass: string;
-  badgeClass: string;
 };
 
 type Props = {
@@ -78,11 +78,6 @@ export default function ReminderCard({
     : occurrence.status === 'snoozed'
       ? copy.common.statusSnoozed
       : copy.common.statusOpen;
-  const statusClass = occurrence.status === 'done'
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-    : occurrence.status === 'snoozed'
-      ? 'border-amber-200 bg-amber-50 text-amber-700'
-      : 'border-slate-200 bg-slate-100 text-slate-600';
   const assigneeLabel = reminder?.assigned_member_label;
   const hasDueDate = Boolean(reminder?.due_at);
 
@@ -94,7 +89,16 @@ export default function ReminderCard({
     medicationDetails: reminder?.medication_details
   });
   const category = getReminderCategory(categoryId);
-  const categoryChipStyle = getCategoryChipStyle(category.color, true);
+  const visual = getReminderVisualContext({
+    status: occurrence.status,
+    urgencyKey: urgency?.key ?? null,
+    categoryId
+  });
+  const statusPillLabel = occurrence.status === 'done'
+    ? copy.common.done
+    : occurrence.status === 'snoozed'
+      ? copy.common.statusSnoozed
+      : urgency?.label ?? statusLabel;
   const isRow = variant === 'row';
 
   useCloseOnOutside(actionMenuRef);
@@ -102,25 +106,22 @@ export default function ReminderCard({
 
   return (
     <OccurrenceHighlightCard
-      className={`relative flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${isRow ? 'md:flex-row md:items-center md:gap-4' : ''}`}
+      className={`relative flex flex-col gap-3 rounded-xl border border-slate-100 bg-white p-4 shadow-md shadow-slate-100 transition hover:-translate-y-0.5 hover:shadow-lg ${isRow ? 'md:flex-row md:items-center md:gap-4' : ''}`}
       occurrenceId={occurrence.id}
       highlightKey={displayAt}
     >
-      <span className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-2xl ${urgency?.stripClass ?? 'bg-slate-300'}`} />
+      <span className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl ${visual.urgencyBarClass}`} />
 
       <div className={`flex-1 ${isRow ? 'space-y-1' : 'space-y-2'}`}>
         <div className="flex flex-wrap items-center gap-2">
           <span
-            className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium"
-            style={categoryChipStyle}
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${visual.categoryStyle.bg} ${visual.categoryStyle.text}`}
           >
             {category.label}
           </span>
-          {urgency ? (
-            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${urgency.badgeClass}`}>
-              {urgency.label}
-            </span>
-          ) : null}
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${visual.statusClass}`}>
+            {statusPillLabel}
+          </span>
         </div>
 
         <div className={`font-semibold text-slate-900 ${isRow ? 'text-sm' : 'text-base'} line-clamp-2`}>
@@ -144,9 +145,6 @@ export default function ReminderCard({
               highlightKey={displayAt}
               className="border-0 bg-transparent px-0 py-0 text-xs text-slate-500"
             />
-          </span>
-          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusClass}`}>
-            {statusLabel}
           </span>
         </div>
       </div>
@@ -265,7 +263,7 @@ export default function ReminderCard({
         />
 
         <details ref={doneMenuRef} className="group">
-          <summary className="btn btn-primary dropdown-summary h-9 rounded-full px-3.5 text-xs font-semibold">
+          <summary className="dropdown-summary inline-flex h-8 items-center gap-2 rounded-full bg-sky-500 px-3.5 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-600">
             <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
               <path
                 stroke="currentColor"
@@ -277,7 +275,7 @@ export default function ReminderCard({
           </summary>
           <form
             action={markDone}
-            className="mt-3 space-y-2 rounded-2xl border border-borderSubtle bg-surfaceMuted p-3 sm:w-72"
+            className="mt-3 space-y-2 rounded-2xl border border-slate-100 bg-white p-3 sm:w-72"
           >
             <input type="hidden" name="occurrenceId" value={occurrence.id} />
             <input type="hidden" name="reminderId" value={reminderId} />
@@ -290,7 +288,7 @@ export default function ReminderCard({
               placeholder={copy.common.commentPlaceholder}
               aria-label={copy.common.commentLabel}
             />
-            <ActionSubmitButton className="btn btn-primary w-full" type="submit" data-action-feedback={copy.common.actionDone}>
+            <ActionSubmitButton className="w-full rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-600" type="submit" data-action-feedback={copy.common.actionDone}>
               {copy.common.doneConfirm}
             </ActionSubmitButton>
           </form>

@@ -101,29 +101,24 @@ const getCompareDate = (occurrence: OccurrencePayload, timeZone: string) => {
 
 const getUrgencyStyles = (copy: MessageBundle) => ({
   overdue: {
-    label: copy.dashboard.todayOverdue,
-    stripClass: 'bg-red-500',
-    badgeClass: 'border-red-200 bg-red-50 text-red-700'
+    key: 'overdue' as const,
+    label: copy.dashboard.todayOverdue
   },
   soon: {
-    label: copy.dashboard.todaySoon,
-    stripClass: 'bg-amber-500',
-    badgeClass: 'border-amber-200 bg-amber-50 text-amber-700'
+    key: 'today' as const,
+    label: copy.dashboard.todaySoon
   },
   today: {
-    label: copy.dashboard.todayRest,
-    stripClass: 'bg-amber-500',
-    badgeClass: 'border-amber-200 bg-amber-50 text-amber-700'
+    key: 'today' as const,
+    label: copy.dashboard.todayRest
   },
   upcoming: {
-    label: copy.dashboard.upcomingTitle,
-    stripClass: 'bg-sky-500',
-    badgeClass: 'border-sky-200 bg-sky-50 text-sky-700'
+    key: 'upcoming' as const,
+    label: copy.dashboard.upcomingTitle
   },
   scheduled: {
-    label: copy.common.statusOpen,
-    stripClass: 'bg-slate-300',
-    badgeClass: 'border-slate-200 bg-slate-50 text-slate-600'
+    key: 'open' as const,
+    label: copy.common.statusOpen
   }
 });
 
@@ -362,7 +357,7 @@ export default function ReminderDashboardSection({
                           {todayBuckets.overdue.length} {copy.dashboard.reminderCountLabel}
                         </span>
                       </header>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                         {todayBuckets.overdue.map((occurrence) => (
                           <ReminderCard
                             key={occurrence.id}
@@ -390,7 +385,7 @@ export default function ReminderDashboardSection({
                           {todayBuckets.soon.length} {copy.dashboard.reminderCountLabel}
                         </span>
                       </header>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                         {todayBuckets.soon.map((occurrence) => (
                           <ReminderCard
                             key={occurrence.id}
@@ -418,7 +413,7 @@ export default function ReminderDashboardSection({
                           {todayBuckets.today.length} {copy.dashboard.reminderCountLabel}
                         </span>
                       </header>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                         {todayBuckets.today.map((occurrence) => (
                           <ReminderCard
                             key={occurrence.id}
@@ -458,7 +453,7 @@ export default function ReminderDashboardSection({
                 ) : null}
               </header>
               {visibleDoses.length ? (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {visibleDoses.map((dose) => {
                     const details = dose.reminder?.medication_details || {};
                     const personLabel = details.personId ? memberLabels[details.personId] : null;
@@ -605,7 +600,7 @@ export default function ReminderDashboardSection({
                 </div>
               </header>
               {householdItems.length ? (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {householdItems.map((occurrence) => (
                     <ReminderCard
                       key={occurrence.id}
@@ -654,7 +649,7 @@ export default function ReminderDashboardSection({
                       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                         {monthLabelFormatter.format(labelDate)}
                       </div>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                         {items.map((occurrence) => (
                           <ReminderCard
                             key={occurrence.id}
