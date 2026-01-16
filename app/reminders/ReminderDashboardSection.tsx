@@ -172,6 +172,7 @@ export default function ReminderDashboardSection({
   const [showToday, setShowToday] = useState(false);
   const [showUpcoming, setShowUpcoming] = useState(false);
   const [showMonths, setShowMonths] = useState(false);
+  const [autoExpanded, setAutoExpanded] = useState(false);
 
   const filteredOccurrences = useMemo(() => {
     const normalized = occurrences
@@ -279,6 +280,32 @@ export default function ReminderDashboardSection({
     () => new Intl.DateTimeFormat(localeTag, { weekday: 'short', day: 'numeric', month: 'short' }),
     [localeTag]
   );
+
+  useEffect(() => {
+    if (autoExpanded) return;
+    if (hasToday) {
+      if (todayBuckets.overdue.length) {
+        setShowOverdue(true);
+      } else if (todayBuckets.soon.length) {
+        setShowSoon(true);
+      } else if (todayBuckets.today.length) {
+        setShowToday(true);
+      }
+      setAutoExpanded(true);
+      return;
+    }
+    if (hasUpcoming) {
+      setShowUpcoming(true);
+      setAutoExpanded(true);
+    }
+  }, [
+    autoExpanded,
+    hasToday,
+    hasUpcoming,
+    todayBuckets.overdue.length,
+    todayBuckets.soon.length,
+    todayBuckets.today.length
+  ]);
 
   const householdItems = useMemo(
     () =>
