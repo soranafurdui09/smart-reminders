@@ -158,7 +158,7 @@ export default function ReminderCard({
           >
             <MoreHorizontal className="h-4 w-4" />
           </summary>
-          <div className="absolute right-0 z-50 mt-3 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+          <div className="absolute left-0 z-50 mt-3 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-lg sm:left-auto sm:right-0">
             {reminderId ? (
               <div className="space-y-1">
                 <Link

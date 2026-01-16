@@ -96,7 +96,7 @@ export default function AppShell({
               <summary className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-surfaceMuted text-sm font-semibold text-ink shadow-sm transition hover:bg-surface">
                 {userInitial}
               </summary>
-              <div className="absolute right-0 z-20 mt-3 w-56 rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft">
+              <div className="absolute left-0 z-20 mt-3 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft sm:left-auto sm:right-0">
                 <div className="px-3 py-2 text-xs text-muted">
                   {safeEmail || copy.common.profile}
                 </div>

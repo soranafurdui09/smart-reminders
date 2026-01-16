@@ -96,7 +96,7 @@ export default function OccurrenceCard({
                 />
               </svg>
             </summary>
-            <div className="absolute right-0 z-20 mt-2 w-max rounded-xl border border-borderSubtle bg-surface px-3 py-2 text-xs font-semibold text-ink shadow-soft">
+            <div className="absolute left-0 z-20 mt-2 w-max max-w-[calc(100vw-2rem)] rounded-xl border border-borderSubtle bg-surface px-3 py-2 text-xs font-semibold text-ink shadow-soft sm:left-auto sm:right-0">
               {assigneeLabel}
             </div>
           </details>
@@ -133,7 +133,7 @@ export default function OccurrenceCard({
             >
               <span aria-hidden="true">...</span>
             </summary>
-            <div className="absolute left-0 z-20 mt-3 w-56 rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft">
+            <div className="absolute left-0 z-20 mt-3 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft sm:left-auto sm:right-0">
               {reminderId ? (
                 <div className="space-y-1">
                   <Link
