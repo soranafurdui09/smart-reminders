@@ -74,20 +74,20 @@ function buildContextSettings(formData: FormData, defaults?: ReturnType<typeof g
 }
 
 function resolveDueAtFromForm(dueAtIso: string, dueAtRaw: string, timeZone: string) {
+  if (dueAtRaw) {
+    if (timeZone) {
+      try {
+        return interpretAsTimeZone(dueAtRaw, timeZone);
+      } catch {
+        return new Date(dueAtRaw);
+      }
+    }
+    return new Date(dueAtRaw);
+  }
   if (dueAtIso) {
     return new Date(dueAtIso);
   }
-  if (!dueAtRaw) {
-    return null;
-  }
-  if (timeZone) {
-    try {
-      return interpretAsTimeZone(dueAtRaw, timeZone);
-    } catch {
-      return new Date(dueAtRaw);
-    }
-  }
-  return new Date(dueAtRaw);
+  return null;
 }
 
 export async function updateReminder(formData: FormData) {
@@ -196,6 +196,14 @@ export async function updateReminder(formData: FormData) {
     payload.schedule_type = scheduleType;
     payload.recurrence_rule = recurrenceRuleRaw || null;
     const resolvedDueAt = resolveDueAtFromForm(dueAtIso, dueAtRaw, tz);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[debug][updateReminder] due_at inputs', {
+        dueAtRaw,
+        dueAtIso,
+        tz,
+        resolvedIso: resolvedDueAt?.toISOString() ?? null
+      });
+    }
     if (resolvedDueAt) {
       payload.due_at = resolvedDueAt.toISOString();
     }
