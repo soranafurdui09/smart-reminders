@@ -147,6 +147,7 @@ export default function ReminderDashboardSection({
   const [showSoon, setShowSoon] = useState(false);
   const [showToday, setShowToday] = useState(false);
   const [showUpcoming, setShowUpcoming] = useState(false);
+  const [showMonths, setShowMonths] = useState(false);
 
   const filteredOccurrences = useMemo(() => {
     const normalized = occurrences
@@ -713,7 +714,12 @@ export default function ReminderDashboardSection({
 
           {kindFilter !== 'medications' && hasMonthGroups ? (
             <section className="space-y-3">
-              <header className="flex items-center justify-between">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between"
+                onClick={() => setShowMonths((prev) => !prev)}
+                aria-expanded={showMonths}
+              >
                 <div className="flex items-center gap-2">
                   <svg aria-hidden="true" className="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none">
                     <rect x="3" y="4" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.5" />
@@ -721,41 +727,64 @@ export default function ReminderDashboardSection({
                   </svg>
                   <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-900">{copy.dashboard.groupNextMonth}</h2>
                 </div>
-                {hasMoreMonths ? (
-                  <button
-                    type="button"
-                    className="text-xs font-semibold text-slate-500 hover:text-slate-700"
-                    onClick={() => setVisibleMonthGroups((prev) => prev + 2)}
+                <span className="flex items-center gap-2 text-xs text-slate-500">
+                  {visibleMonthEntries.length} {copy.dashboard.reminderCountLabel}
+                  <svg
+                    aria-hidden="true"
+                    className={`h-3.5 w-3.5 transition ${showMonths ? 'rotate-180' : ''}`}
+                    viewBox="0 0 20 20"
+                    fill="none"
                   >
-                    {copy.dashboard.viewMoreMonths}
-                  </button>
-                ) : null}
-              </header>
-              <div className="space-y-5">
-                {visibleMonthEntries.map(([monthKey, items]) => {
-                  const [year, month] = monthKey.split('-').map(Number);
-                  const labelDate = new Date(year, Math.max(0, month - 1), 1);
-                  return (
-                    <div key={monthKey} className="space-y-3">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        {monthLabelFormatter.format(labelDate)}
-                      </div>
-                      <div className="grid grid-cols-1 gap-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
-                        {items.map((occurrence) => (
-                          <ReminderCard
-                            key={occurrence.id}
-                            occurrence={occurrence}
-                            locale={locale}
-                            googleConnected={googleConnected}
-                            userTimeZone={effectiveTimeZone}
-                            urgency={urgencyStyles.scheduled}
-                          />
-                        ))}
-                      </div>
+                    <path
+                      d="M5 7l5 5 5-5"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+              </button>
+              {showMonths ? (
+                <>
+                  {hasMoreMonths ? (
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                        onClick={() => setVisibleMonthGroups((prev) => prev + 2)}
+                      >
+                        {copy.dashboard.viewMoreMonths}
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
+                  ) : null}
+                  <div className="space-y-5">
+                    {visibleMonthEntries.map(([monthKey, items]) => {
+                      const [year, month] = monthKey.split('-').map(Number);
+                      const labelDate = new Date(year, Math.max(0, month - 1), 1);
+                      return (
+                        <div key={monthKey} className="space-y-3">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            {monthLabelFormatter.format(labelDate)}
+                          </div>
+                          <div className="grid grid-cols-1 gap-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
+                            {items.map((occurrence) => (
+                              <ReminderCard
+                                key={occurrence.id}
+                                occurrence={occurrence}
+                                locale={locale}
+                                googleConnected={googleConnected}
+                                userTimeZone={effectiveTimeZone}
+                                urgency={urgencyStyles.scheduled}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : null}
             </section>
           ) : null}
         </div>
