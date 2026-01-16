@@ -179,7 +179,7 @@ export default function ReminderCard({
         </div>
       </div>
 
-      <div className={`mt-auto pt-2 ${isPrimary ? 'flex flex-wrap items-center gap-2' : 'flex items-center justify-between gap-2'}`}>
+      <div className="mt-auto flex flex-wrap items-center gap-2 pt-2">
         {isPrimary && assigneeLabel ? (
           <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
             <User className="h-3.5 w-3.5" />
@@ -193,7 +193,7 @@ export default function ReminderCard({
           </div>
         ) : null}
 
-        <div className={`flex items-center gap-2 ${isPrimary ? 'ml-auto' : ''}`}>
+        <div className={`flex flex-wrap items-center gap-2 ${isPrimary ? 'ml-auto' : 'w-full'}`}>
           <details ref={actionMenuRef} className="relative">
             <summary
               className="dropdown-summary inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50 dark:border-slate-600 dark:text-gray-200"
@@ -291,9 +291,9 @@ export default function ReminderCard({
             snoozeAction={snoozeOccurrence}
           />
 
-          <details ref={doneMenuRef} className={isPrimary ? 'group flex-1' : 'group'}>
+          <details ref={doneMenuRef} className={isPrimary ? 'group flex-1' : 'group flex-1 min-w-[140px]'}>
             <summary
-              className={`inline-flex h-8 items-center justify-center gap-2 rounded-full px-3 text-xs font-semibold text-white shadow-sm transition ${categoryStyles.buttonBg} ${categoryStyles.buttonHover} ${isPrimary ? 'w-full' : ''}`}
+              className={`inline-flex h-8 items-center justify-center gap-2 rounded-full px-3 text-xs font-semibold text-white shadow-sm transition ${categoryStyles.buttonBg} ${categoryStyles.buttonHover} ${isPrimary ? 'w-full' : 'w-full'}`}
             >
               <Check className="h-3.5 w-3.5" />
               {copy.common.doneAction}
