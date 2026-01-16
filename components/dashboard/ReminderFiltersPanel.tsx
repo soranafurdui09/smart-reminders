@@ -22,6 +22,7 @@ type Props = {
   onChangeCreatedBy: (value: CreatedByOption) => void;
   onChangeAssignment: (value: AssignmentOption) => void;
   onChangeCategory: (value: CategoryOption) => void;
+  showKindFilter?: boolean;
 };
 
 export default function ReminderFiltersPanel({
@@ -33,7 +34,8 @@ export default function ReminderFiltersPanel({
   onChangeKind,
   onChangeCreatedBy,
   onChangeAssignment,
-  onChangeCategory
+  onChangeCategory,
+  showKindFilter = true
 }: Props) {
   const copy = messages[locale];
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -131,20 +133,22 @@ export default function ReminderFiltersPanel({
 
       {filtersOpen ? (
         <div className="space-y-4 rounded-2xl border border-gray-300 bg-white p-4">
-          <div className="space-y-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
-              {copy.dashboard.filtersKindLabel}
+          {showKindFilter ? (
+            <div className="space-y-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                {copy.dashboard.filtersKindLabel}
+              </div>
+              <SegmentedControl
+                options={[
+                  { value: 'all', label: copy.dashboard.filtersKindAll },
+                  { value: 'tasks', label: copy.dashboard.filtersKindTasks },
+                  { value: 'medications', label: copy.dashboard.filtersKindMeds }
+                ]}
+                value={kindFilter}
+                onChange={(value) => onChangeKind(value as KindFilter)}
+              />
             </div>
-            <SegmentedControl
-              options={[
-                { value: 'all', label: copy.dashboard.filtersKindAll },
-                { value: 'tasks', label: copy.dashboard.filtersKindTasks },
-                { value: 'medications', label: copy.dashboard.filtersKindMeds }
-              ]}
-              value={kindFilter}
-              onChange={(value) => onChangeKind(value as KindFilter)}
-            />
-          </div>
+          ) : null}
 
           <div className="space-y-2">
             <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">

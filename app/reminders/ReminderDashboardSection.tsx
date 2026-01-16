@@ -5,6 +5,7 @@ import { AlertTriangle, Calendar, Clock, Pill, SunMedium, Users } from 'lucide-r
 import SemanticSearch from '@/components/SemanticSearch';
 import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
 import ReminderCard from '@/components/dashboard/ReminderCard';
+import SegmentedControl from '@/components/filters/SegmentedControl';
 import { messages, type Locale } from '@/lib/i18n';
 import {
   diffDaysInTimeZone,
@@ -347,12 +348,31 @@ export default function ReminderDashboardSection({
                   }
                 }}
                 onChangeCategory={(value) => setCategoryFilter(value)}
+                showKindFilter={false}
               />
             </div>
           </div>
         </aside>
 
         <div className="order-2 space-y-6 lg:order-1">
+          <section className="mt-2">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                {copy.dashboard.filtersKindLabel}
+              </div>
+              <div className="mt-2">
+                <SegmentedControl
+                  options={[
+                    { value: 'all', label: copy.dashboard.filtersKindAll },
+                    { value: 'tasks', label: copy.dashboard.filtersKindTasks },
+                    { value: 'medications', label: copy.dashboard.filtersKindMeds }
+                  ]}
+                  value={kindFilter}
+                  onChange={(value) => setKindFilter(value as 'all' | 'tasks' | 'medications')}
+                />
+              </div>
+            </div>
+          </section>
           {kindFilter !== 'medications' ? (
             <section className="mt-8 space-y-4">
               <SectionHeading
