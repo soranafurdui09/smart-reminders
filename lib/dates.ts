@@ -40,6 +40,10 @@ function parseIsoParts(value: string) {
   return { year, month, day, hour, minute };
 }
 
+function hasTimeZoneOffset(value: string) {
+  return /[zZ]$/.test(value) || /[+-]\d{2}:?\d{2}$/.test(value);
+}
+
 function getTimeZoneOffsetMinutes(date: Date, timeZone: string) {
   try {
     const formatter = new Intl.DateTimeFormat('en-US', {
@@ -123,6 +127,14 @@ export function getMonthKeyInTimeZone(date: DateInput, timeZone: string) {
 
 export function formatReminderDateTime(value: DateInput, reminderTimeZone?: string | null, userTimeZone?: string | null) {
   const resolved = resolveReminderTimeZone(reminderTimeZone, userTimeZone);
-  const date = resolved && resolved !== 'UTC' ? interpretAsTimeZone(value, resolved) : new Date(value);
-  return formatDateTimeWithTimeZone(date, resolved);
+  if (!resolved || resolved === 'UTC') {
+    return formatDateTimeWithTimeZone(value, resolved);
+  }
+  if (typeof value === 'string') {
+    const date = hasTimeZoneOffset(value)
+      ? new Date(value)
+      : interpretAsTimeZone(value, resolved);
+    return formatDateTimeWithTimeZone(date, resolved);
+  }
+  return formatDateTimeWithTimeZone(value, resolved);
 }
