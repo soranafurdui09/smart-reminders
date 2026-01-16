@@ -6,7 +6,7 @@ import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
 import { formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
-import { getCategoryChipStyle, getReminderCategory, hexToRgba, inferReminderCategoryId } from '@/lib/categories';
+import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import OccurrenceDateChip from '@/components/OccurrenceDateChip';
 import OccurrenceHighlightCard from '@/components/OccurrenceHighlightCard';
@@ -82,7 +82,7 @@ export default function ReminderCard({
     ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
     : occurrence.status === 'snoozed'
       ? 'border-amber-200 bg-amber-50 text-amber-700'
-      : 'border-slate-200 bg-white text-slate-600';
+      : 'border-slate-200 bg-slate-100 text-slate-600';
   const assigneeLabel = reminder?.assigned_member_label;
   const hasDueDate = Boolean(reminder?.due_at);
 
@@ -95,7 +95,6 @@ export default function ReminderCard({
   });
   const category = getReminderCategory(categoryId);
   const categoryChipStyle = getCategoryChipStyle(category.color, true);
-  const tintColor = category?.color ? hexToRgba(category.color, 0.08) : undefined;
   const isRow = variant === 'row';
 
   useCloseOnOutside(actionMenuRef);
@@ -106,17 +105,19 @@ export default function ReminderCard({
       className={`relative flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${isRow ? 'md:flex-row md:items-center md:gap-4' : ''}`}
       occurrenceId={occurrence.id}
       highlightKey={displayAt}
-      style={tintColor ? { backgroundColor: tintColor } : undefined}
     >
-      <span className={`absolute inset-y-3 left-0 w-1 rounded-full ${urgency?.stripClass ?? 'bg-slate-300'}`} />
+      <span className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-2xl ${urgency?.stripClass ?? 'bg-slate-300'}`} />
 
       <div className={`flex-1 ${isRow ? 'space-y-1' : 'space-y-2'}`}>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold" style={categoryChipStyle}>
+          <span
+            className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium"
+            style={categoryChipStyle}
+          >
             {category.label}
           </span>
           {urgency ? (
-            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${urgency.badgeClass}`}>
+            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${urgency.badgeClass}`}>
               {urgency.label}
             </span>
           ) : null}
@@ -127,31 +128,45 @@ export default function ReminderCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-          <OccurrenceDateChip
-            occurrenceId={occurrence.id}
-            label={displayLabel}
-            highlightKey={displayAt}
-            className="text-[11px]"
-          />
+          <span className="inline-flex items-center gap-1.5">
+            <svg aria-hidden="true" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M8 2v4M16 2v4M3 10h18"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <rect x="3" y="4" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+            <OccurrenceDateChip
+              occurrenceId={occurrence.id}
+              label={displayLabel}
+              highlightKey={displayAt}
+              className="border-0 bg-transparent px-0 py-0 text-xs text-slate-500"
+            />
+          </span>
           <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusClass}`}>
             {statusLabel}
           </span>
-          {assigneeLabel ? (
-            <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
-              <svg aria-hidden="true" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5z"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                />
-              </svg>
-              {assigneeLabel}
-            </span>
-          ) : null}
         </div>
       </div>
 
-      <div className={`flex flex-wrap items-center gap-2 ${isRow ? 'md:ml-auto' : ''}`}>
+      <div className={`flex flex-wrap items-center justify-between gap-2 ${isRow ? 'md:ml-auto md:min-w-[280px]' : ''}`}>
+        {assigneeLabel ? (
+          <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
+            <svg aria-hidden="true" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+            </svg>
+            {assigneeLabel}
+          </span>
+        ) : (
+          <span />
+        )}
+        <div className="flex flex-wrap items-center gap-2">
         <details ref={actionMenuRef} className="relative">
           <summary
             className="btn btn-secondary dropdown-summary h-9 w-9 p-0 text-lg leading-none"
@@ -250,7 +265,7 @@ export default function ReminderCard({
         />
 
         <details ref={doneMenuRef} className="group">
-          <summary className="btn btn-primary dropdown-summary h-9">
+          <summary className="btn btn-primary dropdown-summary h-9 rounded-full px-3.5 text-xs font-semibold">
             <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
               <path
                 stroke="currentColor"
@@ -280,6 +295,7 @@ export default function ReminderCard({
             </ActionSubmitButton>
           </form>
         </details>
+        </div>
       </div>
     </OccurrenceHighlightCard>
   );

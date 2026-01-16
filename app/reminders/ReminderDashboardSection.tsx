@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import SemanticSearch from '@/components/SemanticSearch';
-import ReminderFilterBar from './ReminderFilterBar';
-import SegmentedControl from '@/components/filters/SegmentedControl';
+import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
 import ReminderCard from '@/components/dashboard/ReminderCard';
 import { messages, type Locale } from '@/lib/i18n';
 import {
@@ -113,8 +112,8 @@ const getUrgencyStyles = (copy: MessageBundle) => ({
   },
   today: {
     label: copy.dashboard.todayRest,
-    stripClass: 'bg-emerald-500',
-    badgeClass: 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    stripClass: 'bg-amber-500',
+    badgeClass: 'border-amber-200 bg-amber-50 text-amber-700'
   },
   upcoming: {
     label: copy.dashboard.upcomingTitle,
@@ -145,7 +144,6 @@ export default function ReminderDashboardSection({
 }: Props) {
   const [createdBy, setCreatedBy] = useState<CreatedByOption>(initialCreatedBy);
   const [assignment, setAssignment] = useState<AssignmentOption>(initialAssignment);
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [kindFilter, setKindFilter] = useState<'all' | 'tasks' | 'medications'>('all');
   const [categoryFilter, setCategoryFilter] = useState<CategoryOption>('all');
   const [doseState, setDoseState] = useState<MedicationDose[]>(medicationDoses);
@@ -192,15 +190,6 @@ export default function ReminderDashboardSection({
       .sort((a, b) => new Date(a.effective_at ?? a.occur_at).getTime() - new Date(b.effective_at ?? b.occur_at).getTime());
     return normalized;
   }, [occurrences, createdBy, assignment, membershipId, userId, kindFilter, categoryFilter]);
-
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (kindFilter !== 'all') count += 1;
-    if (createdBy !== 'all') count += 1;
-    if (assignment !== 'all') count += 1;
-    if (categoryFilter !== 'all') count += 1;
-    return count;
-  }, [assignment, categoryFilter, createdBy, kindFilter]);
 
   const effectiveTimeZone = userTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   const urgencyStyles = useMemo(() => getUrgencyStyles(copy), [copy]);
@@ -310,70 +299,32 @@ export default function ReminderDashboardSection({
     }
   };
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
-      setFiltersOpen(true);
-    }
-  }, []);
-
   return (
     <section className="space-y-6">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)] md:gap-8">
         <aside className="order-1 space-y-4 lg:order-2">
-          <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm md:p-5">
+          <div className="rounded-3xl border border-slate-100 bg-white/80 p-4 shadow-sm backdrop-blur-sm md:p-5">
             <SemanticSearch householdId={householdId} localeTag={localeTag} copy={copy.search} />
-            <div className="mt-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.dashboard.filtersTitle}</div>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 md:hidden"
-                  onClick={() => setFiltersOpen((prev) => !prev)}
-                >
-                  <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M4 6h16M7 12h10M10 18h4"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  {copy.dashboard.filtersTitle}{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
-                </button>
-              </div>
-              <div className={`${filtersOpen ? 'block' : 'hidden md:block'} space-y-4`}>
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.dashboard.filtersKindLabel}</div>
-                  <SegmentedControl
-                    options={[
-                      { value: 'all', label: copy.dashboard.filtersKindAll },
-                      { value: 'tasks', label: copy.dashboard.filtersKindTasks },
-                      { value: 'medications', label: copy.dashboard.filtersKindMeds }
-                    ]}
-                    value={kindFilter}
-                    onChange={(value) => setKindFilter(value as typeof kindFilter)}
-                    className="mt-2"
-                  />
-                </div>
-                <ReminderFilterBar
-                  createdBy={createdBy}
-                  assignment={assignment}
-                  category={categoryFilter}
-                  onChangeCreatedBy={(value) => {
-                    if (CreatedOptions.includes(value)) {
-                      setCreatedBy(value);
-                    }
-                  }}
-                  onChangeAssignment={(value) => {
-                    if (AssignmentOptions.includes(value)) {
-                      setAssignment(value);
-                    }
-                  }}
-                  onChangeCategory={(value) => setCategoryFilter(value)}
-                  showHeader={false}
-                  className="border-0 bg-transparent px-0 py-0 shadow-none"
-                />
-              </div>
+            <div className="mt-4">
+              <ReminderFiltersPanel
+                locale={locale}
+                kindFilter={kindFilter}
+                createdBy={createdBy}
+                assignment={assignment}
+                category={categoryFilter}
+                onChangeKind={(value) => setKindFilter(value)}
+                onChangeCreatedBy={(value) => {
+                  if (CreatedOptions.includes(value)) {
+                    setCreatedBy(value);
+                  }
+                }}
+                onChangeAssignment={(value) => {
+                  if (AssignmentOptions.includes(value)) {
+                    setAssignment(value);
+                  }
+                }}
+                onChangeCategory={(value) => setCategoryFilter(value)}
+              />
             </div>
           </div>
         </aside>

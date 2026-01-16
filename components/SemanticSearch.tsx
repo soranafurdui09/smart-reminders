@@ -89,13 +89,13 @@ export default function SemanticSearch({
             </svg>
           </span>
           <input
-            className="input w-full rounded-full py-2.5 pl-10 pr-4"
+            className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-900 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-sky-200"
             placeholder={copy.placeholder}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
-        <button className="btn btn-primary md:shrink-0" type="submit" disabled={loading}>
+        <button className="inline-flex h-10 items-center justify-center rounded-2xl bg-sky-500 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-600 md:shrink-0" type="submit" disabled={loading}>
           {loading ? copy.loading : copy.button}
         </button>
       </form>
