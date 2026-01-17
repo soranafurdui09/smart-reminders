@@ -395,7 +395,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [dueAt, setDueAt] = useState('');
-  const [scheduleType, setScheduleType] = useState('once');
+  const [scheduleType, setScheduleType] = useState<ScheduleType>('once');
   const [recurrenceRule, setRecurrenceRule] = useState('');
   const [preReminderMinutes, setPreReminderMinutes] = useState('');
   const [assignedMemberId, setAssignedMemberId] = useState('');
@@ -474,13 +474,19 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
       copy.remindersNew.contextDayWednesday
     ]
   );
-  const scheduleLabels: Record<ScheduleType, string> = {
+  const scheduleLabels = useMemo<Record<ScheduleType, string>>(() => ({
     once: copy.remindersNew.once,
     daily: copy.remindersNew.daily,
     weekly: copy.remindersNew.weekly,
     monthly: copy.remindersNew.monthly,
     yearly: copy.remindersNew.yearly
-  };
+  }), [
+    copy.remindersNew.daily,
+    copy.remindersNew.monthly,
+    copy.remindersNew.once,
+    copy.remindersNew.weekly,
+    copy.remindersNew.yearly
+  ]);
 
   useEffect(() => {
     if (medFrequencyType !== 'times_per_day') return;
