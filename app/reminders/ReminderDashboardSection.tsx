@@ -165,7 +165,6 @@ export default function ReminderDashboardSection({
   const [doseState, setDoseState] = useState<MedicationDose[]>(medicationDoses);
   const [visibleMonthGroups, setVisibleMonthGroups] = useState(2);
   const [showOverdue, setShowOverdue] = useState(false);
-  const [showSoon, setShowSoon] = useState(false);
   const [showToday, setShowToday] = useState(false);
   const [showUpcoming, setShowUpcoming] = useState(false);
   const [showMonths, setShowMonths] = useState(false);
@@ -228,11 +227,16 @@ export default function ReminderDashboardSection({
     const monthBuckets = new Map<string, OccurrencePayload[]>();
 
     filteredOccurrences.forEach((occurrence) => {
-      const compareDate = getCompareDate(occurrence, effectiveTimeZone);
+      const rawDate = occurrence.effective_at ?? occurrence.occur_at;
+      const reminderTimeZone = resolveReminderTimeZone(occurrence.reminder?.tz ?? null, effectiveTimeZone);
+      const compareDate = occurrence.snoozed_until
+        ? new Date(rawDate)
+        : coerceDateForTimeZone(rawDate, reminderTimeZone);
       if (Number.isNaN(compareDate.getTime())) {
         return;
       }
-      const dayDiff = diffDaysInTimeZone(compareDate, now, effectiveTimeZone);
+      const bucketTimeZone = reminderTimeZone || effectiveTimeZone;
+      const dayDiff = diffDaysInTimeZone(compareDate, now, bucketTimeZone);
       if (dayDiff <= 0) {
         if (compareDate.getTime() < now.getTime()) {
           todayBuckets.overdue.push(occurrence);
@@ -244,13 +248,13 @@ export default function ReminderDashboardSection({
         return;
       }
       if (dayDiff <= 7) {
-        const key = getDayKey(compareDate, effectiveTimeZone);
+        const key = getDayKey(compareDate, bucketTimeZone);
         const existing = upcomingByDay.get(key) ?? [];
         existing.push(occurrence);
         upcomingByDay.set(key, existing);
         return;
       }
-      const monthKey = getMonthKeyInTimeZone(compareDate, effectiveTimeZone);
+      const monthKey = getMonthKeyInTimeZone(compareDate, bucketTimeZone);
       const existing = monthBuckets.get(monthKey) ?? [];
       existing.push(occurrence);
       monthBuckets.set(monthKey, existing);
@@ -262,7 +266,8 @@ export default function ReminderDashboardSection({
   }, [effectiveTimeZone, filteredOccurrences]);
 
   const todayBuckets = grouped.todayBuckets;
-  const hasToday = todayBuckets.overdue.length + todayBuckets.soon.length + todayBuckets.today.length > 0;
+  const todayItems = [...todayBuckets.soon, ...todayBuckets.today];
+  const hasToday = todayBuckets.overdue.length + todayItems.length > 0;
   const upcomingEntries = grouped.upcomingEntries;
   const hasUpcoming = upcomingEntries.length > 0;
   const monthEntries = grouped.monthEntries;
@@ -283,9 +288,7 @@ export default function ReminderDashboardSection({
     if (hasToday) {
       if (todayBuckets.overdue.length) {
         setShowOverdue(true);
-      } else if (todayBuckets.soon.length) {
-        setShowSoon(true);
-      } else if (todayBuckets.today.length) {
+      } else if (todayItems.length) {
         setShowToday(true);
       }
       setAutoExpanded(true);
@@ -300,8 +303,7 @@ export default function ReminderDashboardSection({
     hasToday,
     hasUpcoming,
     todayBuckets.overdue.length,
-    todayBuckets.soon.length,
-    todayBuckets.today.length
+    todayItems.length
   ]);
 
   const householdItems = useMemo(
@@ -399,159 +401,118 @@ export default function ReminderDashboardSection({
             </div>
           </section>
           {kindFilter !== 'medications' ? (
-            <section className="mt-8 space-y-4">
+            <section className="mt-8 space-y-5">
               <SectionHeading
                 label={copy.dashboard.todayTitle}
                 icon={<SunMedium className="h-4 w-4 text-amber-500" aria-hidden="true" />}
               />
-              {hasToday ? (
-                <div className="space-y-5">
-                  {todayBuckets.overdue.length ? (
-                    <div className="space-y-3">
-                      <button
-                        type="button"
-                        className="flex w-full items-center justify-between"
-                        onClick={() => setShowOverdue((prev) => !prev)}
-                        aria-expanded={showOverdue}
+
+              {todayBuckets.overdue.length ? (
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between"
+                    onClick={() => setShowOverdue((prev) => !prev)}
+                    aria-expanded={showOverdue}
+                  >
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase text-gray-700">
+                      <AlertTriangle className="h-4 w-4 text-red-500" aria-hidden="true" />
+                      {copy.dashboard.todayOverdue}
+                    </div>
+                    <span className="flex items-center gap-2 text-xs text-slate-500">
+                      {todayBuckets.overdue.length} {copy.dashboard.reminderCountLabel}
+                      <svg
+                        aria-hidden="true"
+                        className={`h-3.5 w-3.5 transition ${showOverdue ? 'rotate-180' : ''}`}
+                        viewBox="0 0 20 20"
+                        fill="none"
                       >
-                        <div className="flex items-center gap-2 text-xs font-semibold uppercase text-gray-700">
-                          <AlertTriangle className="h-4 w-4 text-red-500" aria-hidden="true" />
-                          {copy.dashboard.todayOverdue}
-                        </div>
-                        <span className="flex items-center gap-2 text-xs text-slate-500">
-                          {todayBuckets.overdue.length} {copy.dashboard.reminderCountLabel}
-                          <svg
-                            aria-hidden="true"
-                            className={`h-3.5 w-3.5 transition ${showOverdue ? 'rotate-180' : ''}`}
-                            viewBox="0 0 20 20"
-                            fill="none"
-                          >
-                            <path
-                              d="M5 7l5 5 5-5"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </span>
-                      </button>
-                      {showOverdue ? (
-                        <div className="grid gap-3">
-                          {todayBuckets.overdue.map((occurrence) => (
-                            <ReminderCard
-                              key={occurrence.id}
-                              occurrence={occurrence}
-                              locale={locale}
-                              googleConnected={googleConnected}
-                              userTimeZone={effectiveTimeZone}
-                              urgency={urgencyStyles.overdue}
-                              variant="row"
-                            />
-                          ))}
-                        </div>
-                      ) : null}
+                        <path
+                          d="M5 7l5 5 5-5"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                  {showOverdue ? (
+                    <div className="grid gap-3">
+                      {todayBuckets.overdue.map((occurrence) => (
+                        <ReminderCard
+                          key={occurrence.id}
+                          occurrence={occurrence}
+                          locale={locale}
+                          googleConnected={googleConnected}
+                          userTimeZone={effectiveTimeZone}
+                          urgency={urgencyStyles.overdue}
+                          variant="row"
+                        />
+                      ))}
                     </div>
                   ) : null}
-                  {todayBuckets.soon.length ? (
-                    <div className="space-y-3">
-                      <button
-                        type="button"
-                        className="flex w-full items-center justify-between"
-                        onClick={() => setShowSoon((prev) => !prev)}
-                        aria-expanded={showSoon}
-                      >
-                        <div className="flex items-center gap-2 text-xs font-semibold uppercase text-gray-700">
-                          <Clock className="h-4 w-4 text-amber-500" aria-hidden="true" />
-                          {copy.dashboard.todaySoon}
-                        </div>
-                        <span className="flex items-center gap-2 text-xs text-slate-500">
-                          {todayBuckets.soon.length} {copy.dashboard.reminderCountLabel}
-                          <svg
-                            aria-hidden="true"
-                            className={`h-3.5 w-3.5 transition ${showSoon ? 'rotate-180' : ''}`}
-                            viewBox="0 0 20 20"
-                            fill="none"
-                          >
-                            <path
-                              d="M5 7l5 5 5-5"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </span>
-                      </button>
-                      {showSoon ? (
-                        <div className="grid gap-3">
-                          {todayBuckets.soon.map((occurrence) => (
-                            <ReminderCard
-                              key={occurrence.id}
-                              occurrence={occurrence}
-                              locale={locale}
-                              googleConnected={googleConnected}
-                              userTimeZone={effectiveTimeZone}
-                              urgency={urgencyStyles.soon}
-                              variant="row"
-                            />
-                          ))}
-                        </div>
-                      ) : null}
+                </div>
+              ) : null}
+
+              {todayItems.length ? (
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between"
+                    onClick={() => setShowToday((prev) => !prev)}
+                    aria-expanded={showToday}
+                  >
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase text-gray-700">
+                      <SunMedium className="h-4 w-4 text-emerald-500" aria-hidden="true" />
+                      {copy.dashboard.todayRest}
                     </div>
-                  ) : null}
-                  {todayBuckets.today.length ? (
-                    <div className="space-y-3">
-                      <button
-                        type="button"
-                        className="flex w-full items-center justify-between"
-                        onClick={() => setShowToday((prev) => !prev)}
-                        aria-expanded={showToday}
+                    <span className="flex items-center gap-2 text-xs text-slate-500">
+                      {todayItems.length} {copy.dashboard.reminderCountLabel}
+                      <svg
+                        aria-hidden="true"
+                        className={`h-3.5 w-3.5 transition ${showToday ? 'rotate-180' : ''}`}
+                        viewBox="0 0 20 20"
+                        fill="none"
                       >
-                        <div className="flex items-center gap-2 text-xs font-semibold uppercase text-gray-700">
-                          <SunMedium className="h-4 w-4 text-emerald-500" aria-hidden="true" />
-                          {copy.dashboard.todayRest}
-                        </div>
-                        <span className="flex items-center gap-2 text-xs text-slate-500">
-                          {todayBuckets.today.length} {copy.dashboard.reminderCountLabel}
-                          <svg
-                            aria-hidden="true"
-                            className={`h-3.5 w-3.5 transition ${showToday ? 'rotate-180' : ''}`}
-                            viewBox="0 0 20 20"
-                            fill="none"
-                          >
-                            <path
-                              d="M5 7l5 5 5-5"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </span>
-                      </button>
-                      {showToday ? (
-                        <div className="grid gap-3">
-                          {todayBuckets.today.map((occurrence) => (
-                            <ReminderCard
-                              key={occurrence.id}
-                              occurrence={occurrence}
-                              locale={locale}
-                              googleConnected={googleConnected}
-                              userTimeZone={effectiveTimeZone}
-                              urgency={urgencyStyles.today}
-                              variant="row"
-                            />
-                          ))}
-                        </div>
-                      ) : null}
+                        <path
+                          d="M5 7l5 5 5-5"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                  {showToday ? (
+                    <div className="grid gap-3">
+                      {todayItems.map((occurrence) => {
+                        const compareDate = getCompareDate(occurrence, effectiveTimeZone);
+                        const urgency = compareDate.getTime() <= new Date().getTime() + 2 * 60 * 60 * 1000
+                          ? urgencyStyles.soon
+                          : urgencyStyles.today;
+                        return (
+                          <ReminderCard
+                            key={occurrence.id}
+                            occurrence={occurrence}
+                            locale={locale}
+                            googleConnected={googleConnected}
+                            userTimeZone={effectiveTimeZone}
+                            urgency={urgency}
+                            variant="row"
+                          />
+                        );
+                      })}
                     </div>
                   ) : null}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
-                  {copy.dashboard.todayEmpty}
-                </div>
+                !todayBuckets.overdue.length ? (
+                  <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+                    {copy.dashboard.todayEmpty}
+                  </div>
+                ) : null
               )}
             </section>
           ) : null}
