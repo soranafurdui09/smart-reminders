@@ -1613,7 +1613,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                   name="schedule_type"
                   className="input"
                   value={scheduleType}
-                  onChange={(event) => setScheduleType(event.target.value)}
+                  onChange={(event) => setScheduleType(event.target.value as ScheduleType)}
                 >
                   <option value="once">{copy.remindersNew.once}</option>
                   <option value="daily">{copy.remindersNew.daily}</option>
