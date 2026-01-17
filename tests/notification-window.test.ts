@@ -16,3 +16,9 @@ test('isJobDue only returns true for past jobs within grace', () => {
   assert.equal(isJobDue(now, windowStart, new Date('2026-01-10T10:05:00.000Z')), false);
   assert.equal(isJobDue(now, windowStart, new Date('2026-01-10T07:59:00.000Z')), false);
 });
+
+test('late cron still processes jobs within grace window', () => {
+  const now = new Date('2026-01-10T12:00:00.000Z');
+  const { windowStart } = buildCronWindow(now, { graceMinutes: 120, lookaheadMinutes: 5 });
+  assert.equal(isJobDue(now, windowStart, new Date('2026-01-10T10:30:00.000Z')), true);
+});

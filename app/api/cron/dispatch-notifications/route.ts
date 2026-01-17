@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { addMinutes } from 'date-fns';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAppUrl, sendEmail } from '@/lib/notifications';
 import { sendPushNotification } from '@/lib/push';
@@ -8,7 +7,9 @@ import { reminderEmailTemplate } from '@/lib/templates';
 import { evaluateReminderContext, parseContextSettings } from '@/lib/reminders/context';
 import { getFreeBusyIntervalsForUser } from '@/lib/google/calendar';
 import { deferNotificationJob, rescheduleNotificationJob } from '@/lib/notifications/jobs';
+import { buildNotificationJobKey } from '@/lib/notifications/keys';
 import { buildCronWindow, isJobDue } from '@/lib/notifications/scheduling';
+import { DEFAULT_MAX_RETRIES, getNextRetryAt, shouldRetry } from '@/lib/notifications/retry';
 import { computePostponeUntil, findBusyIntervalAt, FREEBUSY_CACHE_WINDOW_MS } from '@/lib/google/freebusy-cache';
 import { formatDateTimeWithTimeZone, resolveReminderTimeZone } from '@/lib/dates';
 
@@ -21,10 +22,15 @@ type NotificationJob = {
   reminder_id: string;
   user_id: string;
   notify_at: string;
-  channel: 'email' | 'push' | 'both';
+  channel: 'email' | 'push';
   status: string;
   action_token?: string | null;
   action_token_expires_at?: string | null;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  occurrence_at_utc?: string | null;
+  retry_count?: number | null;
+  next_retry_at?: string | null;
 };
 
 type ReminderRecord = {
@@ -41,7 +47,12 @@ type ReminderRecord = {
 
 export async function GET() {
   const admin = createAdminClient();
-  const now = new Date();
+  const { data: nowValue, error: nowError } = await admin.rpc('get_utc_now');
+  if (nowError || !nowValue) {
+    console.error('[cron] failed to read utc now', nowError);
+    return NextResponse.json({ error: 'now_failed' }, { status: 500 });
+  }
+  const now = new Date(nowValue as string);
   const nowIso = now.toISOString();
   const windowMinutes = 15;
   const { windowStart, windowEnd } = buildCronWindow(now, {
@@ -52,25 +63,17 @@ export async function GET() {
   const windowEndIso = windowEnd.toISOString();
   const appUrl = getAppUrl();
   console.log('[cron] dispatch notifications', {
+    now: nowIso,
     windowStart: windowStartIso,
     windowEnd: windowEndIso
   });
 
-  const { data: existingJobs, error: existingError } = await admin
-    .from('notification_jobs')
-    .select('reminder_id, notify_at')
-    .gte('notify_at', windowStartIso)
-    .lte('notify_at', windowEndIso);
-
-  if (existingError) {
-    console.error('[notifications] fetch existing jobs failed', existingError);
-    return NextResponse.json({ error: 'failed' }, { status: 500 });
-  }
-  console.log('[cron] existing jobs in window', { count: existingJobs?.length ?? 0 });
-
-  const jobKeySet = new Set(
-    (existingJobs ?? []).map((job: any) => `${job.reminder_id}:${job.notify_at}`)
-  );
+  const seedKeySet = new Set<string>();
+  const addSeedKey = (key: string) => {
+    if (seedKeySet.has(key)) return false;
+    seedKeySet.add(key);
+    return true;
+  };
 
   const { data: occurrenceSeeds } = await admin
     .from('reminder_occurrences')
@@ -80,67 +83,65 @@ export async function GET() {
       `and(snoozed_until.gte.${windowStartIso},snoozed_until.lte.${windowEndIso}),and(snoozed_until.is.null,occur_at.gte.${windowStartIso},occur_at.lte.${windowEndIso})`
     );
 
+  const seedChannels: Array<'email' | 'push'> = ['email', 'push'];
+
   const occurrenceInserts = (occurrenceSeeds ?? [])
-    .map((occurrence: any) => {
+    .flatMap((occurrence: any) => {
       const reminder = Array.isArray(occurrence.reminder) ? occurrence.reminder[0] : occurrence.reminder;
       if (!reminder?.id || !reminder?.created_by || reminder.is_active === false) {
-        return null;
+        return [];
       }
       const effectiveAt = occurrence.snoozed_until ?? occurrence.occur_at;
-      const key = `${reminder.id}:${effectiveAt}`;
-      if (jobKeySet.has(key)) {
-        return null;
-      }
-      jobKeySet.add(key);
-      return {
-        reminder_id: reminder.id,
-        user_id: reminder.created_by,
-        notify_at: effectiveAt,
-        channel: 'both',
-        status: 'pending'
-      };
-    })
-    .filter(Boolean) as {
-      reminder_id: string;
-      user_id: string;
-      notify_at: string;
-      channel: 'both';
-      status: 'pending';
-    }[];
+      return seedChannels
+        .map((channel) => ({
+          reminder_id: reminder.id,
+          user_id: reminder.created_by,
+          notify_at: effectiveAt,
+          channel,
+          status: 'pending' as const,
+          entity_type: 'reminder' as const,
+          entity_id: reminder.id,
+          occurrence_at_utc: effectiveAt
+        }))
+        .filter((job) => addSeedKey(buildNotificationJobKey({
+          entityType: job.entity_type,
+          entityId: job.entity_id,
+          occurrenceAtUtc: job.occurrence_at_utc,
+          channel: job.channel
+        })));
+    });
 
   const { data: medicationSeeds } = await admin
     .from('medication_doses')
-    .select('scheduled_at, reminder:reminders!inner(id, created_by, is_active)')
+    .select('id, scheduled_at, reminder:reminders!inner(id, created_by, is_active)')
     .eq('status', 'pending')
     .gte('scheduled_at', windowStartIso)
     .lte('scheduled_at', windowEndIso);
 
   const medicationInserts = (medicationSeeds ?? [])
-    .map((dose: any) => {
+    .flatMap((dose: any) => {
       const reminder = Array.isArray(dose.reminder) ? dose.reminder[0] : dose.reminder;
       if (!reminder?.id || !reminder?.created_by || reminder.is_active === false) {
-        return null;
+        return [];
       }
-      const key = `${reminder.id}:${dose.scheduled_at}`;
-      if (jobKeySet.has(key)) {
-        return null;
-      }
-      jobKeySet.add(key);
-      return {
-        reminder_id: reminder.id,
-        user_id: reminder.created_by,
-        notify_at: dose.scheduled_at,
-        channel: 'both',
-        status: 'pending'
-      };
-    })
-    .filter(Boolean) as {
-      reminder_id: string;
-      user_id: string;
-      notify_at: string;
-      channel: 'both';
-      status: 'pending';
-    }[];
+      return seedChannels
+        .map((channel) => ({
+          reminder_id: reminder.id,
+          user_id: reminder.created_by,
+          notify_at: dose.scheduled_at,
+          channel,
+          status: 'pending' as const,
+          entity_type: 'medication_dose' as const,
+          entity_id: dose.id,
+          occurrence_at_utc: dose.scheduled_at
+        }))
+        .filter((job) => addSeedKey(buildNotificationJobKey({
+          entityType: job.entity_type,
+          entityId: job.entity_id,
+          occurrenceAtUtc: job.occurrence_at_utc,
+          channel: job.channel
+        })));
+    });
 
   const seedInserts = [...occurrenceInserts, ...medicationInserts];
   console.log('[cron] seed candidates', {
@@ -148,36 +149,41 @@ export async function GET() {
     medications: medicationInserts.length
   });
   if (seedInserts.length) {
-    const { error: seedError } = await admin.from('notification_jobs').insert(seedInserts);
+    const { error: seedError } = await admin
+      .from('notification_jobs')
+      .upsert(seedInserts, {
+        onConflict: 'entity_type,entity_id,occurrence_at_utc,channel',
+        ignoreDuplicates: true
+      });
     if (seedError) {
       console.error('[notifications] seed jobs failed', seedError);
     }
   }
 
-  const { data: jobs, error } = await admin
-    .from('notification_jobs')
-    .select('id, reminder_id, user_id, notify_at, channel, status, action_token, action_token_expires_at')
-    .eq('status', 'pending')
-    .gte('notify_at', windowStartIso)
-    .lte('notify_at', windowEndIso)
-    .order('notify_at', { ascending: true })
-    .limit(1000);
-
-  if (error) {
-    console.error('[notifications] fetch jobs failed', error);
-    return NextResponse.json({ error: 'failed' }, { status: 500 });
-  }
-  console.log('[cron] pending jobs', {
-    count: jobs?.length ?? 0,
-    sample: (jobs ?? []).slice(0, 3).map((job: any) => job.id)
+  const claimToken = crypto.randomBytes(16).toString('hex');
+  const { data: jobs, error } = await admin.rpc('claim_notification_jobs', {
+    p_window_start: windowStartIso,
+    p_window_end: windowEndIso,
+    p_limit: 1000,
+    p_claim_token: claimToken
   });
 
-  if (!jobs?.length) {
+  if (error) {
+    console.error('[notifications] claim jobs failed', error);
+    return NextResponse.json({ error: 'failed' }, { status: 500 });
+  }
+  const claimedJobs = (jobs ?? []) as NotificationJob[];
+  console.log('[cron] claimed jobs', {
+    count: claimedJobs.length,
+    sample: claimedJobs.slice(0, 3).map((job) => job.id)
+  });
+
+  if (!claimedJobs.length) {
     return NextResponse.json({ ok: true, processed: 0 });
   }
 
-  const reminderIds = Array.from(new Set(jobs.map((job) => job.reminder_id)));
-  const userIds = Array.from(new Set(jobs.map((job) => job.user_id)));
+  const reminderIds = Array.from(new Set(claimedJobs.map((job) => job.reminder_id)));
+  const userIds = Array.from(new Set(claimedJobs.map((job) => job.user_id)));
 
   const { data: reminders, error: reminderError } = await admin
     .from('reminders')
@@ -227,14 +233,10 @@ export async function GET() {
     .in('status', ['open', 'snoozed']);
   const occurrenceMap = new Map<string, { id: string; occur_at: string; snoozed_until?: string | null }>();
   (occurrences ?? []).forEach((occurrence: any) => {
-    const existing = occurrenceMap.get(occurrence.reminder_id);
-    if (!existing) {
-      occurrenceMap.set(occurrence.reminder_id, occurrence);
-      return;
-    }
-    if (new Date(occurrence.occur_at).getTime() < new Date(existing.occur_at).getTime()) {
-      occurrenceMap.set(occurrence.reminder_id, occurrence);
-    }
+    const times = [occurrence.occur_at, occurrence.snoozed_until].filter(Boolean);
+    times.forEach((time) => {
+      occurrenceMap.set(`${occurrence.reminder_id}:${time}`, occurrence);
+    });
   });
 
   const { data: medicationDoses } = await admin
@@ -244,16 +246,75 @@ export async function GET() {
     .eq('status', 'pending')
     .gte('scheduled_at', windowStartIso)
     .lte('scheduled_at', windowEndIso);
-  const medicationDoseMap = new Map<string, { id: string; scheduled_at: string }>();
+  const medicationDoseMap = new Map<string, { id: string; scheduled_at: string; reminder_id: string }>();
   (medicationDoses ?? []).forEach((dose: any) => {
     medicationDoseMap.set(`${dose.reminder_id}:${dose.scheduled_at}`, dose);
+    medicationDoseMap.set(dose.id, dose);
   });
 
-  const updateJobStatus = async (jobId: string, status: NotificationStatus, lastError?: string | null) => {
+  const releaseJob = async (jobId: string) => {
     await admin
       .from('notification_jobs')
-      .update({ status, last_error: lastError ?? null, updated_at: new Date().toISOString() })
+      .update({
+        status: 'pending',
+        claimed_at: null,
+        claim_token: null,
+        updated_at: nowIso
+      })
       .eq('id', jobId);
+  };
+
+  const markJobSent = async (jobId: string) => {
+    await admin
+      .from('notification_jobs')
+      .update({
+        status: 'sent',
+        last_error: null,
+        updated_at: nowIso
+      })
+      .eq('id', jobId);
+  };
+
+  const markJobSkipped = async (jobId: string, reason?: string | null) => {
+    await admin
+      .from('notification_jobs')
+      .update({
+        status: 'skipped',
+        last_error: reason ?? null,
+        updated_at: nowIso
+      })
+      .eq('id', jobId);
+  };
+
+  const markJobFailed = async (job: NotificationJob, errorMessage: string | null) => {
+    const currentRetry = job.retry_count ?? 0;
+    const nextRetryCount = currentRetry + 1;
+    if (shouldRetry(currentRetry, DEFAULT_MAX_RETRIES)) {
+      const nextRetryAt = getNextRetryAt(now, nextRetryCount).toISOString();
+      await admin
+        .from('notification_jobs')
+        .update({
+          status: 'pending',
+          retry_count: nextRetryCount,
+          next_retry_at: nextRetryAt,
+          last_error: errorMessage ?? null,
+          claimed_at: null,
+          claim_token: null,
+          updated_at: nowIso
+        })
+        .eq('id', job.id);
+      return;
+    }
+
+    await admin
+      .from('notification_jobs')
+      .update({
+        status: 'failed',
+        retry_count: nextRetryCount,
+        last_error: errorMessage ?? null,
+        updated_at: nowIso
+      })
+      .eq('id', job.id);
   };
 
   const updateLogStatus = async (logId: string, status: NotificationStatus, errorMessage?: string | null) => {
@@ -275,7 +336,7 @@ export async function GET() {
   const insertReminderLog = async (options: {
     occurrenceId: string;
     reminderId: string;
-    notifyAt: string;
+    occurrenceAtUtc: string;
     channel: 'email' | 'push';
   }) => {
     const { data, error: insertError } = await admin
@@ -283,7 +344,7 @@ export async function GET() {
       .insert({
         reminder_occurrence_id: options.occurrenceId,
         reminder_id: options.reminderId,
-        occurrence_at_utc: options.notifyAt,
+        occurrence_at_utc: options.occurrenceAtUtc,
         channel: options.channel,
         status: 'sent',
         sent_at: nowIso
@@ -394,29 +455,45 @@ export async function GET() {
     }
   }
 
-  for (const job of jobs as NotificationJob[]) {
-    if (job.status !== 'pending') continue;
+  let processedCount = 0;
+  let sentCount = 0;
+  let failedCount = 0;
+  let skippedCount = 0;
+  let maxLagMinutes = 0;
+
+  for (const job of claimedJobs) {
+    if (job.status !== 'processing') continue;
+    processedCount += 1;
     console.log('[cron] processing job', {
       jobId: job.id,
       reminderId: job.reminder_id,
       userId: job.user_id,
       channel: job.channel,
-      notifyAt: job.notify_at
+      notifyAt: job.notify_at,
+      occurrenceAtUtc: job.occurrence_at_utc ?? null,
+      reminderTimeZone: reminderMap.get(job.reminder_id)?.tz ?? null
     });
+
+    const notifyAt = new Date(job.notify_at);
+    const lagMinutes = Math.max(0, Math.round((now.getTime() - notifyAt.getTime()) / 60000));
+    maxLagMinutes = Math.max(maxLagMinutes, lagMinutes);
+
+    if (!isJobDue(now, windowStart, notifyAt)) {
+      await releaseJob(job.id);
+      continue;
+    }
+
     const reminder = reminderMap.get(job.reminder_id);
     if (!reminder?.household_id || !reminder?.is_active || !reminder.created_by) {
-      await updateJobStatus(job.id, 'failed', 'reminder_inactive');
+      await markJobFailed(job, 'reminder_inactive');
+      failedCount += 1;
       continue;
     }
 
     const profile = profileMap.get(job.user_id);
     const userTimeZone = profile?.timeZone || 'UTC';
     const displayTimeZone = resolveReminderTimeZone(reminder.tz ?? null, userTimeZone);
-    const notifyAt = new Date(job.notify_at);
-    if (!isJobDue(now, windowStart, notifyAt)) {
-      continue;
-    }
-    const notifyAtIso = notifyAt.toISOString();
+    const occurrenceAtUtc = job.occurrence_at_utc ?? job.notify_at;
     const occurAtLabel = formatDateTimeWithTimeZone(notifyAt, displayTimeZone);
     const settings = settingsMap.get(reminder.id)
       ?? parseContextSettings(
@@ -445,7 +522,7 @@ export async function GET() {
         nextScheduledAt
       });
       if (reminder.kind !== 'medication') {
-        const occurrence = occurrenceMap.get(reminder.id);
+        const occurrence = occurrenceMap.get(`${reminder.id}:${job.notify_at}`);
         if (occurrence) {
           await admin
             .from('reminder_occurrences')
@@ -459,19 +536,22 @@ export async function GET() {
 
     if (decision.type === 'skip_for_now') {
       console.log('[cron] skip for now', { jobId: job.id });
-      await deferNotificationJob({ jobId: job.id, minutes: 15 });
+      await deferNotificationJob({ jobId: job.id, minutes: 15, now });
       continue;
     }
 
-    const channel = job.channel;
     const allowEmail = profile?.notifyByEmail ?? true;
     const allowPush = profile?.notifyByPush ?? false;
-    // Respect user notification preferences per channel.
-    const shouldSendEmail = (channel === 'email' || channel === 'both') && allowEmail;
-    const shouldSendPush = (channel === 'push' || channel === 'both') && allowPush;
-    let emailStatus: NotificationStatus = 'skipped';
-    let pushStatus: NotificationStatus = 'skipped';
-    let errorMessage: string | null = null;
+    if (job.channel === 'email' && !allowEmail) {
+      await markJobSkipped(job.id, 'pref_email_off');
+      skippedCount += 1;
+      continue;
+    }
+    if (job.channel === 'push' && !allowPush) {
+      await markJobSkipped(job.id, 'pref_push_off');
+      skippedCount += 1;
+      continue;
+    }
 
     const isMedication = reminder.kind === 'medication';
     const details = reminder.medication_details || {};
@@ -490,115 +570,147 @@ export async function GET() {
       snooze: `${actionBase}&action=snooze`
     };
 
-    if (shouldSendEmail) {
+    if (job.channel === 'email') {
       const email = profile?.email;
-      if (email) {
-        let logId: string | null = null;
-        let skip = false;
-        if (isMedication) {
-          const doseId = medicationDoseMap.get(`${reminder.id}:${job.notify_at}`)?.id;
-          if (doseId) {
-            const logResult = await insertMedicationLog({ doseId, channel: 'email' });
-            skip = logResult.skip;
-            logId = logResult.id;
-            if (logResult.error) {
-              emailStatus = 'failed';
-              errorMessage = 'log_insert_failed';
-            }
-          } else {
-            emailStatus = 'failed';
-            errorMessage = 'dose_missing';
+      if (!email) {
+        await markJobSkipped(job.id, 'missing_email');
+        skippedCount += 1;
+        continue;
+      }
+
+      let logId: string | null = null;
+      let skip = false;
+      if (isMedication) {
+        const doseId = (job.entity_type === 'medication_dose' ? job.entity_id : null)
+          || medicationDoseMap.get(job.entity_id ?? '')?.id
+          || medicationDoseMap.get(`${reminder.id}:${job.notify_at}`)?.id;
+        if (doseId) {
+          const logResult = await insertMedicationLog({ doseId, channel: 'email' });
+          skip = logResult.skip;
+          logId = logResult.id;
+          if (logResult.error) {
+            await markJobFailed(job, 'log_insert_failed');
+            failedCount += 1;
+            continue;
           }
         } else {
-          const occurrenceId = occurrenceMap.get(reminder.id)?.id;
-          if (occurrenceId) {
-            const logResult = await insertReminderLog({
-              occurrenceId,
-              reminderId: reminder.id,
-              notifyAt: notifyAtIso,
-              channel: 'email'
-            });
-            skip = logResult.skip;
-            logId = logResult.id;
-            if (logResult.error) {
-              emailStatus = 'failed';
-              errorMessage = 'log_insert_failed';
-            }
-          } else {
-            emailStatus = 'failed';
-            errorMessage = 'occurrence_missing';
-          }
+          await markJobFailed(job, 'dose_missing');
+          failedCount += 1;
+          continue;
         }
-
-        if (skip) {
-          emailStatus = 'skipped';
-        } else if (logId) {
-          const emailResult = await sendEmail({
-            to: email,
-            subject: isMedication ? title : `Reminder: ${title}`,
-            html: reminderEmailTemplate({ title, occurAt: occurAtLabel, actionUrls })
+      } else {
+        const occurrenceId = occurrenceMap.get(`${reminder.id}:${job.notify_at}`)?.id;
+        if (occurrenceId) {
+          const logResult = await insertReminderLog({
+            occurrenceId,
+            reminderId: reminder.id,
+            occurrenceAtUtc,
+            channel: 'email'
           });
-          emailStatus = emailResult.status;
-          if (emailResult.status === 'failed') {
-            errorMessage = emailResult.error || 'email_failed';
+          skip = logResult.skip;
+          logId = logResult.id;
+          if (logResult.error) {
+            await markJobFailed(job, 'log_insert_failed');
+            failedCount += 1;
+            continue;
           }
-          console.log('[cron] email result', { jobId: job.id, status: emailResult.status });
-          if (isMedication) {
-            await updateMedicationLogStatus(logId, emailResult.status);
-          } else {
-            await updateLogStatus(logId, emailResult.status, emailResult.error ?? null);
-          }
+        } else {
+          await markJobFailed(job, 'occurrence_missing');
+          failedCount += 1;
+          continue;
+        }
+      }
+
+      if (skip) {
+        await markJobSkipped(job.id, 'duplicate');
+        skippedCount += 1;
+        continue;
+      }
+
+      if (logId) {
+        const emailResult = await sendEmail({
+          to: email,
+          subject: isMedication ? title : `Reminder: ${title}`,
+          html: reminderEmailTemplate({ title, occurAt: occurAtLabel, actionUrls })
+        });
+        console.log('[cron] email result', { jobId: job.id, status: emailResult.status });
+        if (isMedication) {
+          await updateMedicationLogStatus(logId, emailResult.status);
+        } else {
+          await updateLogStatus(logId, emailResult.status, emailResult.error ?? null);
+        }
+        if (emailResult.status === 'failed') {
+          await markJobFailed(job, emailResult.error ?? 'email_failed');
+          failedCount += 1;
+          continue;
+        }
+        if (emailResult.status === 'skipped') {
+          await markJobSkipped(job.id, 'email_skipped');
+          skippedCount += 1;
+          continue;
         }
       }
     }
 
-    if (shouldSendPush) {
+    if (job.channel === 'push') {
       const subs = pushMap.get(job.user_id) ?? [];
+      if (!subs.length) {
+        await markJobSkipped(job.id, 'missing_push');
+        skippedCount += 1;
+        continue;
+      }
+
       let logId: string | null = null;
       let skip = false;
       if (isMedication) {
-        const doseId = medicationDoseMap.get(`${reminder.id}:${job.notify_at}`)?.id;
+        const doseId = (job.entity_type === 'medication_dose' ? job.entity_id : null)
+          || medicationDoseMap.get(job.entity_id ?? '')?.id
+          || medicationDoseMap.get(`${reminder.id}:${job.notify_at}`)?.id;
         if (doseId) {
           const logResult = await insertMedicationLog({ doseId, channel: 'push' });
           skip = logResult.skip;
           logId = logResult.id;
           if (logResult.error) {
-            pushStatus = 'failed';
-            errorMessage = errorMessage || 'log_insert_failed';
+            await markJobFailed(job, 'log_insert_failed');
+            failedCount += 1;
+            continue;
           }
         } else {
-          pushStatus = 'failed';
-          errorMessage = errorMessage || 'dose_missing';
+          await markJobFailed(job, 'dose_missing');
+          failedCount += 1;
+          continue;
         }
       } else {
-        const occurrenceId = occurrenceMap.get(reminder.id)?.id;
+        const occurrenceId = occurrenceMap.get(`${reminder.id}:${job.notify_at}`)?.id;
         if (occurrenceId) {
           const logResult = await insertReminderLog({
             occurrenceId,
             reminderId: reminder.id,
-            notifyAt: notifyAtIso,
+            occurrenceAtUtc,
             channel: 'push'
           });
           skip = logResult.skip;
           logId = logResult.id;
           if (logResult.error) {
-            pushStatus = 'failed';
-            errorMessage = errorMessage || 'log_insert_failed';
+            await markJobFailed(job, 'log_insert_failed');
+            failedCount += 1;
+            continue;
           }
         } else {
-          pushStatus = 'failed';
-          errorMessage = errorMessage || 'occurrence_missing';
+          await markJobFailed(job, 'occurrence_missing');
+          failedCount += 1;
+          continue;
         }
       }
 
       if (skip) {
-        pushStatus = 'skipped';
-      } else if (logId) {
+        await markJobSkipped(job.id, 'duplicate');
+        skippedCount += 1;
+        continue;
+      }
+
+      if (logId) {
         const pushResult = await sendPushNotification(subs, { title, body, url, jobId: job.id, token });
-        pushStatus = pushResult.status;
-        if (pushResult.status === 'failed') {
-          errorMessage = errorMessage || 'push_failed';
-        }
         console.log('[cron] push result', { jobId: job.id, status: pushResult.status });
         if (pushResult.staleEndpoints.length) {
           await admin
@@ -609,15 +721,40 @@ export async function GET() {
         if (isMedication) {
           await updateMedicationLogStatus(logId, pushResult.status);
         } else {
-          await updateLogStatus(logId, pushResult.status, pushResult.status === 'failed' ? errorMessage : null);
+          await updateLogStatus(logId, pushResult.status, pushResult.status === 'failed' ? 'push_failed' : null);
+        }
+        if (pushResult.status === 'failed') {
+          await markJobFailed(job, 'push_failed');
+          failedCount += 1;
+          continue;
+        }
+        if (pushResult.status === 'skipped') {
+          await markJobSkipped(job.id, 'push_skipped');
+          skippedCount += 1;
+          continue;
         }
       }
     }
 
-    const failed = emailStatus === 'failed' || pushStatus === 'failed';
-    console.log('[cron] job final status', { jobId: job.id, status: failed ? 'failed' : 'sent' });
-    await updateJobStatus(job.id, failed ? 'failed' : 'sent', failed ? errorMessage : null);
+    await markJobSent(job.id);
+    sentCount += 1;
   }
 
-  return NextResponse.json({ ok: true, processed: jobs.length });
+  console.log('[cron] run summary', {
+    claimed: claimedJobs.length,
+    processed: processedCount,
+    sent: sentCount,
+    failed: failedCount,
+    skipped: skippedCount,
+    maxLagMinutes
+  });
+
+  return NextResponse.json({
+    ok: true,
+    processed: processedCount,
+    sent: sentCount,
+    failed: failedCount,
+    skipped: skippedCount,
+    maxLagMinutes
+  });
 }

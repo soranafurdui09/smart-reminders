@@ -1,6 +1,7 @@
-import { addDays, addHours, endOfDay, isAfter, startOfDay } from 'date-fns';
+import { addDays, addHours, isAfter } from 'date-fns';
 import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { createServerClient } from '@/lib/supabase/server';
+import { getUtcDayBounds, resolveTimeZone } from '@/lib/time/schedule';
 
 export type MedicationFrequencyType = 'once_per_day' | 'times_per_day' | 'every_n_hours';
 
@@ -19,10 +20,6 @@ export type MedicationDetails = {
 
 const DEFAULT_PRESETS = ['08:00', '12:00', '18:00', '22:00'];
 const MAX_HORIZON_DAYS = 90;
-
-function resolveTimeZone(value?: string | null) {
-  return value && value.trim() ? value : 'UTC';
-}
 
 function parseTime(value: string) {
   const [hours, minutes] = value.split(':').map((part) => Number(part));
@@ -158,9 +155,7 @@ export async function ensureMedicationDoses(
 export async function getTodayMedicationDoses(householdId: string, now = new Date(), timeZone?: string | null) {
   const supabase = createServerClient();
   const tz = resolveTimeZone(timeZone);
-  const zonedNow = toZonedTime(now, tz);
-  const dayStart = fromZonedTime(startOfDay(zonedNow), tz);
-  const dayEnd = fromZonedTime(endOfDay(zonedNow), tz);
+  const { start: dayStart, end: dayEnd } = getUtcDayBounds(now, tz);
 
   const { data, error } = await supabase
     .from('medication_doses')

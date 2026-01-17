@@ -16,7 +16,7 @@ import {
 } from '@/lib/reminders/medication';
 import { createCalendarEventForMedication, getUserGoogleConnection } from '@/lib/google/calendar';
 import { scheduleNotificationJobsForMedication, scheduleNotificationJobsForReminder } from '@/lib/notifications/jobs';
-import { interpretAsTimeZone } from '@/lib/dates';
+import { localDateTimeToUtc, resolveTimeZone } from '@/lib/time/schedule';
 
 const DAYS: DayOfWeek[] = [
   'monday',
@@ -79,14 +79,12 @@ function buildContextSettings(formData: FormData, defaults?: ReturnType<typeof g
 
 function resolveDueAtFromForm(dueAtIso: string, dueAtRaw: string, timeZone: string) {
   if (dueAtRaw) {
-    if (timeZone) {
-      try {
-        return interpretAsTimeZone(dueAtRaw, timeZone);
-      } catch {
-        return new Date(dueAtRaw);
-      }
+    const tz = resolveTimeZone(timeZone);
+    try {
+      return localDateTimeToUtc(dueAtRaw, tz);
+    } catch {
+      return new Date(dueAtRaw);
     }
-    return new Date(dueAtRaw);
   }
   if (dueAtIso) {
     return new Date(dueAtIso);

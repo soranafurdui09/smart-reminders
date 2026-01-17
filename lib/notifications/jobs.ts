@@ -1,7 +1,20 @@
 import { addMinutes } from 'date-fns';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-export type NotificationChannel = 'email' | 'push' | 'both';
+export type NotificationChannel = 'email' | 'push';
+export type NotificationChannelPreference = NotificationChannel | 'both';
+export type NotificationEntityType = 'reminder' | 'medication_dose';
+
+export type NotificationJobInsert = {
+  reminder_id: string;
+  user_id: string;
+  notify_at: string;
+  channel: NotificationChannel;
+  status: 'pending';
+  entity_type: NotificationEntityType;
+  entity_id: string;
+  occurrence_at_utc: string;
+};
 
 function uniqueIsoTimes(times: Date[]) {
   const unique = new Map<number, Date>();
@@ -15,6 +28,59 @@ export function buildNotificationTimes(dueAt: Date) {
   return uniqueIsoTimes([new Date(dueAt)]);
 }
 
+function resolveChannels(channel: NotificationChannelPreference) {
+  if (channel === 'both') {
+    return ['email', 'push'] satisfies NotificationChannel[];
+  }
+  return [channel];
+}
+
+export function buildReminderJobInserts(options: {
+  reminderId: string;
+  userId: string;
+  times: Date[];
+  channel?: NotificationChannelPreference;
+}) {
+  const { reminderId, userId, times, channel = 'both' } = options;
+  const channels = resolveChannels(channel);
+  return times.flatMap((time) => {
+    const notifyAt = time.toISOString();
+    return channels.map((resolvedChannel) => ({
+      reminder_id: reminderId,
+      user_id: userId,
+      notify_at: notifyAt,
+      channel: resolvedChannel,
+      status: 'pending',
+      entity_type: 'reminder',
+      entity_id: reminderId,
+      occurrence_at_utc: notifyAt
+    } satisfies NotificationJobInsert));
+  });
+}
+
+export function buildMedicationJobInserts(options: {
+  reminderId: string;
+  userId: string;
+  doses: { id: string; scheduled_at: string }[];
+  channel?: NotificationChannelPreference;
+}) {
+  const { reminderId, userId, doses, channel = 'both' } = options;
+  const channels = resolveChannels(channel);
+  return doses.flatMap((dose) => {
+    const notifyAt = dose.scheduled_at;
+    return channels.map((resolvedChannel) => ({
+      reminder_id: reminderId,
+      user_id: userId,
+      notify_at: notifyAt,
+      channel: resolvedChannel,
+      status: 'pending',
+      entity_type: 'medication_dose',
+      entity_id: dose.id,
+      occurrence_at_utc: notifyAt
+    } satisfies NotificationJobInsert));
+  });
+}
+
 export async function clearNotificationJobsForReminder(reminderId: string) {
   const admin = createAdminClient();
   await admin.from('notification_jobs').delete().eq('reminder_id', reminderId);
@@ -25,7 +91,7 @@ export async function scheduleNotificationJobsForReminder(options: {
   userId: string;
   dueAt: Date;
   preReminderMinutes?: number | null;
-  channel?: NotificationChannel;
+  channel?: NotificationChannelPreference;
   now?: Date;
 }) {
   const {
@@ -38,23 +104,18 @@ export async function scheduleNotificationJobsForReminder(options: {
   } = options;
 
   const times = buildNotificationTimes(dueAt).filter((time) => time.getTime() >= now.getTime());
+  const channels = resolveChannels(channel);
   console.log('[notifications] schedule reminder jobs', {
     reminderId,
     userId,
-    count: times.length,
+    count: times.length * channels.length,
     sample: times.slice(0, 3).map((time) => time.toISOString())
   });
   await clearNotificationJobsForReminder(reminderId);
   if (!times.length) return;
 
   const admin = createAdminClient();
-  const inserts = times.map((time) => ({
-    reminder_id: reminderId,
-    user_id: userId,
-    notify_at: time.toISOString(),
-    channel,
-    status: 'pending'
-  }));
+  const inserts = buildReminderJobInserts({ reminderId, userId, times, channel });
   const { error } = await admin.from('notification_jobs').insert(inserts);
   if (error) {
     console.error('[notifications] schedule jobs failed', error);
@@ -64,7 +125,7 @@ export async function scheduleNotificationJobsForReminder(options: {
 export async function scheduleNotificationJobsForMedication(options: {
   reminderId: string;
   userId: string;
-  channel?: NotificationChannel;
+  channel?: NotificationChannelPreference;
   now?: Date;
 }) {
   const { reminderId, userId, channel = 'both', now = new Date() } = options;
@@ -73,7 +134,7 @@ export async function scheduleNotificationJobsForMedication(options: {
 
   const { data: doses, error } = await admin
     .from('medication_doses')
-    .select('scheduled_at')
+    .select('id, scheduled_at')
     .eq('reminder_id', reminderId)
     .eq('status', 'pending')
     .gte('scheduled_at', now.toISOString())
@@ -90,13 +151,12 @@ export async function scheduleNotificationJobsForMedication(options: {
     sample: (doses ?? []).slice(0, 3).map((dose: any) => dose.scheduled_at)
   });
 
-  const inserts = (doses ?? []).map((dose) => ({
-    reminder_id: reminderId,
-    user_id: userId,
-    notify_at: dose.scheduled_at,
-    channel,
-    status: 'pending'
-  }));
+  const inserts = buildMedicationJobInserts({
+    reminderId,
+    userId,
+    doses: doses ?? [],
+    channel
+  });
   if (!inserts.length) return;
 
   const { error: insertError } = await admin.from('notification_jobs').insert(inserts);
@@ -112,14 +172,23 @@ export async function rescheduleNotificationJob(options: {
   const admin = createAdminClient();
   await admin
     .from('notification_jobs')
-    .update({ notify_at: options.notifyAt.toISOString(), status: 'pending', updated_at: new Date().toISOString() })
+    .update({
+      notify_at: options.notifyAt.toISOString(),
+      status: 'pending',
+      next_retry_at: null,
+      claimed_at: null,
+      claim_token: null,
+      updated_at: new Date().toISOString()
+    })
     .eq('id', options.jobId);
 }
 
 export async function deferNotificationJob(options: {
   jobId: string;
   minutes: number;
+  now?: Date;
 }) {
-  const next = addMinutes(new Date(), options.minutes);
+  const base = options.now ?? new Date();
+  const next = addMinutes(base, options.minutes);
   await rescheduleNotificationJob({ jobId: options.jobId, notifyAt: next });
 }

@@ -3,7 +3,7 @@ import { addMinutes } from 'date-fns';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAppUrl } from '@/lib/notifications';
 import { getNextOccurrence } from '@/lib/reminders';
-import { buildNotificationTimes } from '@/lib/notifications/jobs';
+import { buildNotificationTimes, buildReminderJobInserts } from '@/lib/notifications/jobs';
 
 const SNOOZE_MINUTES = 30;
 
@@ -25,7 +25,7 @@ async function handleAction(payload: { action: ActionName; jobId: string; token:
   const nowIso = new Date().toISOString();
   const { data: job } = await admin
     .from('notification_jobs')
-    .select('id, reminder_id, user_id, notify_at, status, channel, action_token, action_token_expires_at, action_handled_at')
+    .select('id, reminder_id, user_id, notify_at, status, channel, action_token, action_token_expires_at, action_handled_at, entity_type, entity_id, occurrence_at_utc')
     .eq('id', payload.jobId)
     .maybeSingle();
 
@@ -61,12 +61,11 @@ async function handleAction(payload: { action: ActionName; jobId: string; token:
 
   if (payload.action === 'done') {
     if (reminder.kind === 'medication') {
-      const { data: dose } = await admin
-        .from('medication_doses')
-        .select('id')
-        .eq('reminder_id', job.reminder_id)
-        .eq('scheduled_at', job.notify_at)
-        .maybeSingle();
+      const doseId = job.entity_type === 'medication_dose' ? job.entity_id : null;
+      const doseQuery = admin.from('medication_doses').select('id');
+      const { data: dose } = doseId
+        ? await doseQuery.eq('id', doseId).maybeSingle()
+        : await doseQuery.eq('reminder_id', job.reminder_id).eq('scheduled_at', job.notify_at).maybeSingle();
       if (dose?.id) {
         await admin
           .from('medication_doses')
@@ -109,13 +108,12 @@ async function handleAction(payload: { action: ActionName; jobId: string; token:
 
             if (nextOccurrence?.id && reminder.created_by) {
               const times = buildNotificationTimes(next).filter((time) => time.getTime() >= Date.now());
-              const inserts = times.map((time) => ({
-                reminder_id: job.reminder_id,
-                user_id: reminder.created_by,
-                notify_at: time.toISOString(),
-                channel: 'both',
-                status: 'pending'
-              }));
+              const inserts = buildReminderJobInserts({
+                reminderId: job.reminder_id,
+                userId: reminder.created_by,
+                times,
+                channel: 'both'
+              });
               if (inserts.length) {
                 await admin.from('notification_jobs').insert(inserts);
               }
@@ -129,12 +127,16 @@ async function handleAction(payload: { action: ActionName; jobId: string; token:
   if (payload.action === 'snooze') {
     const target = addMinutes(new Date(job.notify_at), SNOOZE_MINUTES);
     if (reminder.kind === 'medication') {
+      const channel = job.channel === 'push' ? 'push' : 'email';
       await admin.from('notification_jobs').insert({
         reminder_id: job.reminder_id,
         user_id: job.user_id,
         notify_at: target.toISOString(),
-        channel: job.channel ?? 'both',
-        status: 'pending'
+        channel,
+        status: 'pending',
+        entity_type: job.entity_type ?? 'medication_dose',
+        entity_id: job.entity_id ?? job.reminder_id,
+        occurrence_at_utc: target.toISOString()
       });
     } else {
       const { data: occurrence } = await admin
@@ -155,12 +157,16 @@ async function handleAction(payload: { action: ActionName; jobId: string; token:
           })
           .eq('id', occurrence.id);
       }
+      const channel = job.channel === 'push' ? 'push' : 'email';
       await admin.from('notification_jobs').insert({
         reminder_id: job.reminder_id,
         user_id: job.user_id,
         notify_at: target.toISOString(),
-        channel: job.channel ?? 'both',
-        status: 'pending'
+        channel,
+        status: 'pending',
+        entity_type: 'reminder',
+        entity_id: job.reminder_id,
+        occurrence_at_utc: target.toISOString()
       });
     }
   }
