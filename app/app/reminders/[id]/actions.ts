@@ -98,7 +98,7 @@ export async function updateReminder(formData: FormData) {
   const supabase = createServerClient();
   const { data: reminderRecord } = await supabase
     .from('reminders')
-    .select('id, household_id, kind, created_by, due_at, pre_reminder_minutes, google_event_id')
+    .select('id, household_id, kind, created_by, due_at, pre_reminder_minutes, google_event_id, tz')
     .eq('id', reminderId)
     .maybeSingle();
 
