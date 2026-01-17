@@ -1,4 +1,4 @@
-import { addDays, addHours, isAfter } from 'date-fns';
+import { addDays, addHours, isAfter, startOfDay } from 'date-fns';
 import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { createServerClient } from '@/lib/supabase/server';
 import { getUtcDayBounds, resolveTimeZone } from '@/lib/time/schedule';
