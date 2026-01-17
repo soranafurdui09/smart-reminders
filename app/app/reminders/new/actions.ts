@@ -150,7 +150,7 @@ export async function createReminder(formData: FormData) {
     : notes;
   const dueAt = kind === 'medication'
     ? medicationDetails
-      ? new Date(getFirstMedicationDose(medicationDetails) || new Date().toISOString())
+      ? new Date(getFirstMedicationDose(medicationDetails, tz) || new Date().toISOString())
       : new Date()
     : resolveDueAtFromForm(dueAtIso, dueAtRaw, tz);
 
@@ -219,7 +219,7 @@ export async function createReminder(formData: FormData) {
   }
 
   if (kind === 'medication' && medicationDetails) {
-    await ensureMedicationDoses(reminder.id, medicationDetails);
+    await ensureMedicationDoses(reminder.id, medicationDetails, tz);
     await scheduleNotificationJobsForMedication({
       reminderId: reminder.id,
       userId: user.id

@@ -426,7 +426,7 @@ export async function createCalendarEventForMedication(options: {
   if (!reminder) {
     return null;
   }
-  const firstDose = getFirstMedicationDose(options.details);
+  const firstDose = getFirstMedicationDose(options.details, reminder.tz || 'UTC');
   if (!firstDose) {
     return null;
   }

@@ -1,4 +1,5 @@
-import { addDays, addHours, isAfter, startOfDay } from 'date-fns';
+import { addDays, addHours, endOfDay, isAfter, startOfDay } from 'date-fns';
+import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { createServerClient } from '@/lib/supabase/server';
 
 export type MedicationFrequencyType = 'once_per_day' | 'times_per_day' | 'every_n_hours';
@@ -19,18 +20,28 @@ export type MedicationDetails = {
 const DEFAULT_PRESETS = ['08:00', '12:00', '18:00', '22:00'];
 const MAX_HORIZON_DAYS = 90;
 
+function resolveTimeZone(value?: string | null) {
+  return value && value.trim() ? value : 'UTC';
+}
+
 function parseTime(value: string) {
   const [hours, minutes] = value.split(':').map((part) => Number(part));
   if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
   return { hours: Math.min(23, Math.max(0, Math.floor(hours))), minutes: Math.min(59, Math.max(0, Math.floor(minutes))) };
 }
 
-function buildDateTime(dateStr: string, timeStr: string) {
+function buildDateTime(dateStr: string, timeStr: string, timeZone: string) {
   const parsed = parseTime(timeStr);
   if (!parsed) return null;
-  const date = new Date(`${dateStr}T00:00:00Z`);
-  date.setUTCHours(parsed.hours, parsed.minutes, 0, 0);
-  return date;
+  const safeTime = `${String(parsed.hours).padStart(2, '0')}:${String(parsed.minutes).padStart(2, '0')}:00`;
+  const local = `${dateStr}T${safeTime}`;
+  return fromZonedTime(local, timeZone);
+}
+
+function addDaysInTimeZone(date: Date, days: number, timeZone: string) {
+  const zoned = toZonedTime(date, timeZone);
+  const nextZoned = addDays(zoned, days);
+  return fromZonedTime(nextZoned, timeZone);
 }
 
 function normalizeTimes(details: MedicationDetails): string[] {
@@ -52,30 +63,38 @@ function normalizeTimes(details: MedicationDetails): string[] {
   return times;
 }
 
-export function getMedicationDoseTimes(details: MedicationDetails, horizonDays = MAX_HORIZON_DAYS) {
+export function getMedicationDoseTimes(
+  details: MedicationDetails,
+  horizonDays = MAX_HORIZON_DAYS,
+  timeZone?: string | null
+) {
+  const tz = resolveTimeZone(timeZone);
   const timesOfDay = normalizeTimes(details);
-  const startValue = new Date(`${details.startDate}T00:00:00Z`);
+  const startValue = fromZonedTime(`${details.startDate}T00:00:00`, tz);
   if (Number.isNaN(startValue.getTime())) {
     return [];
   }
-  const startDate = startOfDay(startValue);
+  const startDate = startOfDay(toZonedTime(startValue, tz));
   const endDate = details.endDate
-    ? startOfDay(new Date(`${details.endDate}T00:00:00Z`))
+    ? startOfDay(toZonedTime(fromZonedTime(`${details.endDate}T00:00:00`, tz), tz))
     : addDays(startDate, horizonDays);
 
   const result: Date[] = [];
   if (details.frequencyType === 'every_n_hours') {
     const hours = Math.max(1, Number(details.everyNHours || 8));
-    const start = buildDateTime(details.startDate, timesOfDay[0] || DEFAULT_PRESETS[0]);
+    const start = buildDateTime(details.startDate, timesOfDay[0] || DEFAULT_PRESETS[0], tz);
     if (!start) return [];
-    const endLimit = addDays(endDate, 1);
+    const endLimit = addDaysInTimeZone(fromZonedTime(formatInTimeZone(endDate, tz, 'yyyy-MM-dd'), tz), 1, tz);
     for (let cursor = start; !isAfter(cursor, endLimit); cursor = addHours(cursor, hours)) {
       result.push(new Date(cursor));
     }
   } else {
-    for (let cursor = startDate; !isAfter(cursor, endDate); cursor = addDays(cursor, 1)) {
+    const startCursor = fromZonedTime(formatInTimeZone(startDate, tz, 'yyyy-MM-dd'), tz);
+    const endCursor = fromZonedTime(formatInTimeZone(endDate, tz, 'yyyy-MM-dd'), tz);
+    for (let cursor = startCursor; !isAfter(cursor, endCursor); cursor = addDaysInTimeZone(cursor, 1, tz)) {
+      const dayKey = formatInTimeZone(cursor, tz, 'yyyy-MM-dd');
       timesOfDay.forEach((timeStr) => {
-        const at = buildDateTime(cursor.toISOString().slice(0, 10), timeStr);
+        const at = buildDateTime(dayKey, timeStr, tz);
         if (at) {
           result.push(at);
         }
@@ -89,13 +108,17 @@ export function getMedicationDoseTimes(details: MedicationDetails, horizonDays =
     .map((date) => date.toISOString());
 }
 
-export function getFirstMedicationDose(details: MedicationDetails) {
-  return getMedicationDoseTimes(details, 1)[0] ?? null;
+export function getFirstMedicationDose(details: MedicationDetails, timeZone?: string | null) {
+  return getMedicationDoseTimes(details, 1, timeZone)[0] ?? null;
 }
 
-export async function ensureMedicationDoses(reminderId: string, details: MedicationDetails) {
+export async function ensureMedicationDoses(
+  reminderId: string,
+  details: MedicationDetails,
+  timeZone?: string | null
+) {
   const supabase = createServerClient();
-  const planned = getMedicationDoseTimes(details);
+  const planned = getMedicationDoseTimes(details, MAX_HORIZON_DAYS, timeZone);
   if (!planned.length) return [];
 
   const start = planned[0];
@@ -132,12 +155,12 @@ export async function ensureMedicationDoses(reminderId: string, details: Medicat
   return created ?? [];
 }
 
-export async function getTodayMedicationDoses(householdId: string, now = new Date()) {
+export async function getTodayMedicationDoses(householdId: string, now = new Date(), timeZone?: string | null) {
   const supabase = createServerClient();
-  const dayStart = new Date(now);
-  dayStart.setUTCHours(0, 0, 0, 0);
-  const dayEnd = new Date(now);
-  dayEnd.setUTCHours(23, 59, 59, 999);
+  const tz = resolveTimeZone(timeZone);
+  const zonedNow = toZonedTime(now, tz);
+  const dayStart = fromZonedTime(startOfDay(zonedNow), tz);
+  const dayEnd = fromZonedTime(endOfDay(zonedNow), tz);
 
   const { data, error } = await supabase
     .from('medication_doses')

@@ -49,7 +49,7 @@ export default async function DashboardPage({
 
   const occurrencesAll = await getOpenOccurrencesForHousehold(membership.households.id);
   const members = await getHouseholdMembers(membership.households.id);
-  const medicationDoses = await getTodayMedicationDoses(membership.households.id);
+  const medicationDoses = await getTodayMedicationDoses(membership.households.id, new Date(), userTimeZone);
   const memberMap = new Map(
     members.map((member: any) => [
       member.id,

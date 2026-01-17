@@ -8,6 +8,7 @@ import { reminderEmailTemplate } from '@/lib/templates';
 import { evaluateReminderContext, parseContextSettings } from '@/lib/reminders/context';
 import { getFreeBusyIntervalsForUser } from '@/lib/google/calendar';
 import { deferNotificationJob, rescheduleNotificationJob } from '@/lib/notifications/jobs';
+import { buildCronWindow, isJobDue } from '@/lib/notifications/scheduling';
 import { computePostponeUntil, findBusyIntervalAt, FREEBUSY_CACHE_WINDOW_MS } from '@/lib/google/freebusy-cache';
 import { formatDateTimeWithTimeZone, resolveReminderTimeZone } from '@/lib/dates';
 
@@ -43,18 +44,16 @@ export async function GET() {
   const now = new Date();
   const nowIso = now.toISOString();
   const windowMinutes = 15;
-  const tzPaddingMinutes = 14 * 60;
-  const windowStart = addMinutes(now, -windowMinutes);
+  const { windowStart, windowEnd } = buildCronWindow(now, {
+    graceMinutes: 120,
+    lookaheadMinutes: windowMinutes + 2
+  });
   const windowStartIso = windowStart.toISOString();
-  const windowEndIso = nowIso;
-  const fetchStartIso = addMinutes(now, -(windowMinutes + tzPaddingMinutes)).toISOString();
-  const fetchEndIso = addMinutes(now, tzPaddingMinutes).toISOString();
+  const windowEndIso = windowEnd.toISOString();
   const appUrl = getAppUrl();
   console.log('[cron] dispatch notifications', {
     windowStart: windowStartIso,
-    windowEnd: windowEndIso,
-    fetchStart: fetchStartIso,
-    fetchEnd: fetchEndIso
+    windowEnd: windowEndIso
   });
 
   const { data: existingJobs, error: existingError } = await admin
@@ -159,8 +158,8 @@ export async function GET() {
     .from('notification_jobs')
     .select('id, reminder_id, user_id, notify_at, channel, status, action_token, action_token_expires_at')
     .eq('status', 'pending')
-    .gte('notify_at', fetchStartIso)
-    .lte('notify_at', fetchEndIso)
+    .gte('notify_at', windowStartIso)
+    .lte('notify_at', windowEndIso)
     .order('notify_at', { ascending: true })
     .limit(1000);
 
@@ -257,10 +256,10 @@ export async function GET() {
       .eq('id', jobId);
   };
 
-  const updateLogStatus = async (logId: string, status: NotificationStatus) => {
+  const updateLogStatus = async (logId: string, status: NotificationStatus, errorMessage?: string | null) => {
     await admin
       .from('notification_log')
-      .update({ status })
+      .update({ status, error: errorMessage ?? null })
       .eq('id', logId);
   };
 
@@ -269,6 +268,57 @@ export async function GET() {
       .from('medication_notification_log')
       .update({ status })
       .eq('id', logId);
+  };
+
+  const isUniqueViolation = (error: any) => error?.code === '23505';
+
+  const insertReminderLog = async (options: {
+    occurrenceId: string;
+    reminderId: string;
+    notifyAt: string;
+    channel: 'email' | 'push';
+  }) => {
+    const { data, error: insertError } = await admin
+      .from('notification_log')
+      .insert({
+        reminder_occurrence_id: options.occurrenceId,
+        reminder_id: options.reminderId,
+        occurrence_at_utc: options.notifyAt,
+        channel: options.channel,
+        status: 'sent',
+        sent_at: nowIso
+      })
+      .select('id')
+      .single();
+    if (isUniqueViolation(insertError)) {
+      return { skip: true, id: null };
+    }
+    if (insertError) {
+      console.error('[notifications] log insert failed', insertError);
+      return { skip: false, id: null, error: insertError };
+    }
+    return { skip: false, id: data?.id ?? null };
+  };
+
+  const insertMedicationLog = async (options: { doseId: string; channel: 'email' | 'push' }) => {
+    const { data, error: insertError } = await admin
+      .from('medication_notification_log')
+      .insert({
+        medication_dose_id: options.doseId,
+        channel: options.channel,
+        status: 'sent',
+        sent_at: nowIso
+      })
+      .select('id')
+      .single();
+    if (isUniqueViolation(insertError)) {
+      return { skip: true, id: null };
+    }
+    if (insertError) {
+      console.error('[notifications] medication log insert failed', insertError);
+      return { skip: false, id: null, error: insertError };
+    }
+    return { skip: false, id: data?.id ?? null };
   };
 
   const toWallClockDate = (date: Date, timeZone: string) => {
@@ -363,9 +413,10 @@ export async function GET() {
     const userTimeZone = profile?.timeZone || 'UTC';
     const displayTimeZone = resolveReminderTimeZone(reminder.tz ?? null, userTimeZone);
     const notifyAt = new Date(job.notify_at);
-    if (notifyAt < windowStart || notifyAt > now) {
+    if (!isJobDue(now, windowStart, notifyAt)) {
       continue;
     }
+    const notifyAtIso = notifyAt.toISOString();
     const occurAtLabel = formatDateTimeWithTimeZone(notifyAt, displayTimeZone);
     const settings = settingsMap.get(reminder.id)
       ?? parseContextSettings(
@@ -442,57 +493,60 @@ export async function GET() {
     if (shouldSendEmail) {
       const email = profile?.email;
       if (email) {
-        let logRow: { id?: string } | null = null;
-        let logError: unknown = null;
+        let logId: string | null = null;
+        let skip = false;
         if (isMedication) {
           const doseId = medicationDoseMap.get(`${reminder.id}:${job.notify_at}`)?.id;
           if (doseId) {
-            const result = await admin
-              .from('medication_notification_log')
-              .insert({
-                medication_dose_id: doseId,
-                channel: 'email',
-                status: 'sent',
-                sent_at: nowIso
-              })
-              .select('id')
-              .single();
-            logRow = result.data ?? null;
-            logError = result.error;
+            const logResult = await insertMedicationLog({ doseId, channel: 'email' });
+            skip = logResult.skip;
+            logId = logResult.id;
+            if (logResult.error) {
+              emailStatus = 'failed';
+              errorMessage = 'log_insert_failed';
+            }
+          } else {
+            emailStatus = 'failed';
+            errorMessage = 'dose_missing';
           }
         } else {
           const occurrenceId = occurrenceMap.get(reminder.id)?.id;
           if (occurrenceId) {
-            const result = await admin
-              .from('notification_log')
-              .insert({
-                reminder_occurrence_id: occurrenceId,
-                channel: 'email',
-                status: 'sent',
-                sent_at: nowIso
-              })
-              .select('id')
-              .single();
-            logRow = result.data ?? null;
-            logError = result.error;
+            const logResult = await insertReminderLog({
+              occurrenceId,
+              reminderId: reminder.id,
+              notifyAt: notifyAtIso,
+              channel: 'email'
+            });
+            skip = logResult.skip;
+            logId = logResult.id;
+            if (logResult.error) {
+              emailStatus = 'failed';
+              errorMessage = 'log_insert_failed';
+            }
+          } else {
+            emailStatus = 'failed';
+            errorMessage = 'occurrence_missing';
           }
         }
 
-        const emailResult = await sendEmail({
-          to: email,
-          subject: isMedication ? title : `Reminder: ${title}`,
-          html: reminderEmailTemplate({ title, occurAt: occurAtLabel, actionUrls })
-        });
-        emailStatus = emailResult.status;
-        if (emailResult.status === 'failed') {
-          errorMessage = emailResult.error || 'email_failed';
-        }
-        console.log('[cron] email result', { jobId: job.id, status: emailResult.status });
-        if (!logError && logRow?.id) {
+        if (skip) {
+          emailStatus = 'skipped';
+        } else if (logId) {
+          const emailResult = await sendEmail({
+            to: email,
+            subject: isMedication ? title : `Reminder: ${title}`,
+            html: reminderEmailTemplate({ title, occurAt: occurAtLabel, actionUrls })
+          });
+          emailStatus = emailResult.status;
+          if (emailResult.status === 'failed') {
+            errorMessage = emailResult.error || 'email_failed';
+          }
+          console.log('[cron] email result', { jobId: job.id, status: emailResult.status });
           if (isMedication) {
-            await updateMedicationLogStatus(logRow.id, emailResult.status);
+            await updateMedicationLogStatus(logId, emailResult.status);
           } else {
-            await updateLogStatus(logRow.id, emailResult.status);
+            await updateLogStatus(logId, emailResult.status, emailResult.error ?? null);
           }
         }
       }
@@ -500,59 +554,62 @@ export async function GET() {
 
     if (shouldSendPush) {
       const subs = pushMap.get(job.user_id) ?? [];
-      const pushResult = await sendPushNotification(subs, { title, body, url, jobId: job.id, token });
-      pushStatus = pushResult.status;
-      if (pushResult.status === 'failed') {
-        errorMessage = errorMessage || 'push_failed';
-      }
-      console.log('[cron] push result', { jobId: job.id, status: pushResult.status });
-      if (pushResult.staleEndpoints.length) {
-        await admin
-          .from('push_subscriptions')
-          .delete()
-          .in('endpoint', pushResult.staleEndpoints);
-      }
-      let logRow: { id?: string } | null = null;
-      let logError: unknown = null;
+      let logId: string | null = null;
+      let skip = false;
       if (isMedication) {
         const doseId = medicationDoseMap.get(`${reminder.id}:${job.notify_at}`)?.id;
         if (doseId) {
-          const result = await admin
-            .from('medication_notification_log')
-            .insert({
-              medication_dose_id: doseId,
-              channel: 'push',
-              status: 'sent',
-              sent_at: nowIso
-            })
-            .select('id')
-            .single();
-          logRow = result.data ?? null;
-          logError = result.error;
+          const logResult = await insertMedicationLog({ doseId, channel: 'push' });
+          skip = logResult.skip;
+          logId = logResult.id;
+          if (logResult.error) {
+            pushStatus = 'failed';
+            errorMessage = errorMessage || 'log_insert_failed';
+          }
+        } else {
+          pushStatus = 'failed';
+          errorMessage = errorMessage || 'dose_missing';
         }
       } else {
         const occurrenceId = occurrenceMap.get(reminder.id)?.id;
         if (occurrenceId) {
-          const result = await admin
-            .from('notification_log')
-            .insert({
-              reminder_occurrence_id: occurrenceId,
-              channel: 'push',
-              status: 'sent',
-              sent_at: nowIso
-            })
-            .select('id')
-            .single();
-          logRow = result.data ?? null;
-          logError = result.error;
+          const logResult = await insertReminderLog({
+            occurrenceId,
+            reminderId: reminder.id,
+            notifyAt: notifyAtIso,
+            channel: 'push'
+          });
+          skip = logResult.skip;
+          logId = logResult.id;
+          if (logResult.error) {
+            pushStatus = 'failed';
+            errorMessage = errorMessage || 'log_insert_failed';
+          }
+        } else {
+          pushStatus = 'failed';
+          errorMessage = errorMessage || 'occurrence_missing';
         }
       }
 
-      if (!logError && logRow?.id) {
+      if (skip) {
+        pushStatus = 'skipped';
+      } else if (logId) {
+        const pushResult = await sendPushNotification(subs, { title, body, url, jobId: job.id, token });
+        pushStatus = pushResult.status;
+        if (pushResult.status === 'failed') {
+          errorMessage = errorMessage || 'push_failed';
+        }
+        console.log('[cron] push result', { jobId: job.id, status: pushResult.status });
+        if (pushResult.staleEndpoints.length) {
+          await admin
+            .from('push_subscriptions')
+            .delete()
+            .in('endpoint', pushResult.staleEndpoints);
+        }
         if (isMedication) {
-          await updateMedicationLogStatus(logRow.id, pushResult.status);
+          await updateMedicationLogStatus(logId, pushResult.status);
         } else {
-          await updateLogStatus(logRow.id, pushResult.status);
+          await updateLogStatus(logId, pushResult.status, pushResult.status === 'failed' ? errorMessage : null);
         }
       }
     }

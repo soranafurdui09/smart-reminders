@@ -120,6 +120,7 @@ export async function updateReminder(formData: FormData) {
   let medicationAddCalendar = false;
   let effectiveDueAt: Date | null = null;
   let effectivePreReminder: number | null = null;
+  let medicationTimeZone: string | null = null;
 
   if (reminderRecord.kind === 'medication') {
     const name = String(formData.get('med_name') || '').trim();
@@ -159,7 +160,8 @@ export async function updateReminder(formData: FormData) {
 
     resolvedTitle = name || 'Medicament';
     resolvedNotes = dose ? `Doza: ${dose}` : null;
-    const firstDose = medicationDetails ? getFirstMedicationDose(medicationDetails) : null;
+    medicationTimeZone = String(formData.get('tz') || '').trim() || reminderRecord?.tz || 'UTC';
+    const firstDose = medicationDetails ? getFirstMedicationDose(medicationDetails, medicationTimeZone) : null;
     payload.title = resolvedTitle;
     payload.notes = resolvedNotes;
     payload.schedule_type = 'once';
@@ -258,7 +260,7 @@ export async function updateReminder(formData: FormData) {
 
   if (regenerateDoses && medicationDetails) {
     await supabase.from('medication_doses').delete().eq('reminder_id', reminderId);
-    await ensureMedicationDoses(reminderId, medicationDetails);
+    await ensureMedicationDoses(reminderId, medicationDetails, medicationTimeZone);
     await scheduleNotificationJobsForMedication({
       reminderId,
       userId: reminderRecord.created_by || user.id

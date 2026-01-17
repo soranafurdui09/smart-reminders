@@ -5,6 +5,7 @@ import ActionFeedback from '@/components/ActionFeedback';
 import VoiceCreateToast from '@/components/VoiceCreateToast';
 import { deleteReminder } from '@/app/app/reminders/[id]/actions';
 import VoiceNavButton from '@/components/VoiceNavButton';
+import TimeZoneSync from '@/components/TimeZoneSync';
 
 export default function AppShell({
   children,
@@ -171,6 +172,7 @@ export default function AppShell({
         </div>
       </header>
       <main className="page-wrap">{children}</main>
+      <TimeZoneSync />
       <VoiceCreateToast copy={copy} locale={locale} undoAction={deleteReminder} />
       <ActionFeedback />
     </div>
