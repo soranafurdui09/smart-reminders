@@ -22,6 +22,8 @@ type AiResult = {
   categoryId?: ReminderCategoryId | null;
 };
 
+type AiStatus = 'idle' | 'transcribing' | 'parsing' | 'ready' | 'creating' | 'created' | 'error';
+
 export type ReminderFormVoiceHandle = {
   startVoice: () => void;
   stopVoice: () => void;
@@ -383,6 +385,9 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const [aiText, setAiText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [aiStatus, setAiStatus] = useState<AiStatus>('idle');
+  const [lastParsedResult, setLastParsedResult] = useState<AiResult | null>(null);
+  const [aiCreateError, setAiCreateError] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState<ReminderCategoryId | ''>('');
   const [createMode, setCreateMode] = useState<'ai' | 'manual' | 'medication'>('ai');
 
@@ -406,9 +411,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const [medPersonId, setMedPersonId] = useState('');
   const [medAddToCalendar, setMedAddToCalendar] = useState(false);
   const [aiHighlight, setAiHighlight] = useState(false);
-  const [pendingAutoCreate, setPendingAutoCreate] = useState(false);
-  const [autoCreateSource, setAutoCreateSource] = useState<'voice' | null>(null);
-  const [autoCreateSummary, setAutoCreateSummary] = useState<{ title: string; dueAt: string | null } | null>(null);
+  const [autoCreateSource, setAutoCreateSource] = useState<'voice' | 'ai' | null>(null);
   const [voiceUseAi, setVoiceUseAi] = useState(true);
   const [voiceCreateMode, setVoiceCreateMode] = useState<'review' | 'auto'>('review');
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -439,6 +442,9 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const highlightTimer = useRef<number | null>(null);
   const detailsRef = useRef<HTMLDivElement | null>(null);
   const medicationRef = useRef<HTMLDivElement | null>(null);
+  const autoCreateInFlightRef = useRef(false);
+  const lastAutoCreateKeyRef = useRef<string | null>(null);
+  const lastAiTextRef = useRef('');
   const titleRef = useRef<HTMLInputElement | null>(null);
   const dueAtRef = useRef<HTMLInputElement | null>(null);
   const aiCharCount = aiText.length;
@@ -613,9 +619,8 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     if (highlightTimer.current) {
       window.clearTimeout(highlightTimer.current);
     }
-    highlightTimer.current = window.setTimeout(() => setAiHighlight(false), 2200);
-    detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, [detailsRef]);
+    highlightTimer.current = window.setTimeout(() => setAiHighlight(false), 1500);
+  }, []);
   const openAdvancedOptions = useCallback(() => {
     setAdvancedOpen(true);
     if (typeof window !== 'undefined') {
@@ -640,6 +645,12 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
       return null;
     }
     setAiLoading(true);
+    setAutoCreateSource(null);
+    setAiStatus('parsing');
+    setLastParsedResult(null);
+    setAiCreateError(null);
+    autoCreateInFlightRef.current = false;
+    lastAutoCreateKeyRef.current = null;
     if (showErrors) {
       setAiError(null);
     }
@@ -661,6 +672,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
         if (showErrors) {
           setAiError(errorBody.error || copy.remindersNew.aiFailed);
         }
+        setAiStatus('error');
         return null;
       }
       return (await response.json()) as AiResult;
@@ -669,6 +681,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
       if (showErrors) {
         setAiError(copy.remindersNew.aiFailed);
       }
+      setAiStatus('error');
       return null;
     } finally {
       setAiLoading(false);
@@ -693,7 +706,11 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     setAssignedMemberId(data.assignedMemberId || '');
     setScheduleType(deriveScheduleType(data.recurrenceRule));
     setCategoryId(data.categoryId || '');
-  }, []);
+    setLastParsedResult(data);
+    setAiStatus('ready');
+    setAiCreateError(null);
+    triggerHighlight();
+  }, [triggerHighlight]);
 
   const getCompleteness = useCallback((data: AiResult) => {
     const missing: string[] = [];
@@ -706,17 +723,106 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     return { complete: missing.length === 0, missing };
   }, []);
 
-  const queueAutoCreate = useCallback((source: 'voice', data: AiResult) => {
+  const buildFormDataFromParsed = useCallback((data: AiResult, source: 'voice' | 'ai') => {
+    const formData = new FormData();
+    const localDueAt = data.dueAt ? toLocalInputValueFromAi(data.dueAt) : '';
+    const preReminderValue =
+      data.preReminderMinutes !== null && data.preReminderMinutes !== undefined
+        ? String(data.preReminderMinutes)
+        : preReminderMinutes;
+    const resolvedCategory = data.categoryId || categoryId;
+
+    formData.set('voice_auto', source === 'voice' ? '1' : '');
+    formData.set('kind', kind);
+    formData.set('title', data.title || title);
+    formData.set('notes', data.description || notes);
+    formData.set('schedule_type', deriveScheduleType(data.recurrenceRule));
+    formData.set('recurrence_rule', data.recurrenceRule || '');
+    formData.set('pre_reminder_minutes', preReminderValue || '');
+    formData.set('assigned_member_id', data.assignedMemberId || assignedMemberId);
+    formData.set('medication_details', medicationDetailsJson);
+    formData.set('medication_add_to_calendar', medAddToCalendar ? '1' : '');
+    formData.set('context_category', resolvedCategory && resolvedCategory !== 'default' ? resolvedCategory : '');
+    formData.set('due_at', localDueAt);
+    formData.set('due_at_iso', localDueAt ? toIsoFromLocalInput(localDueAt) : '');
+    formData.set('tz', Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+
+    if (timeWindowEnabled) {
+      formData.set('context_time_window_enabled', '1');
+      formData.set('context_time_start_hour', String(timeWindowStartHour));
+      formData.set('context_time_end_hour', String(timeWindowEndHour));
+      timeWindowDays.forEach((day) => formData.append('context_time_days', day));
+    }
+    if (calendarBusyEnabled) {
+      formData.set('context_calendar_busy_enabled', '1');
+      formData.set('context_calendar_snooze_minutes', String(calendarSnoozeMinutes));
+    }
+    return formData;
+  }, [
+    assignedMemberId,
+    calendarBusyEnabled,
+    calendarSnoozeMinutes,
+    categoryId,
+    kind,
+    medAddToCalendar,
+    medicationDetailsJson,
+    notes,
+    preReminderMinutes,
+    timeWindowDays,
+    timeWindowEnabled,
+    timeWindowEndHour,
+    timeWindowStartHour,
+    title
+  ]);
+
+  const runAutoCreate = useCallback(async (data: AiResult, source: 'voice' | 'ai') => {
+    if (autoCreateInFlightRef.current) return;
+    const signature = JSON.stringify({
+      title: data.title,
+      dueAt: data.dueAt,
+      recurrenceRule: data.recurrenceRule,
+      preReminderMinutes: data.preReminderMinutes,
+      assignedMemberId: data.assignedMemberId,
+      categoryId: data.categoryId
+    });
+    if (lastAutoCreateKeyRef.current === signature) return;
+    autoCreateInFlightRef.current = true;
+    lastAutoCreateKeyRef.current = signature;
+    setAiStatus('creating');
+    setAiCreateError(null);
     setAutoCreateSource(source);
-    setAutoCreateSummary({ title: data.title, dueAt: data.dueAt || null });
-    setPendingAutoCreate(true);
-  }, []);
+    if (source === 'voice' && typeof window !== 'undefined') {
+      window.sessionStorage.setItem(
+        'voice-create-summary',
+        JSON.stringify({ title: data.title, dueAt: data.dueAt || null, source: 'voice', ts: Date.now() })
+      );
+    }
+    try {
+      const payload = buildFormDataFromParsed(data, source);
+      await action(payload);
+      setAiStatus('created');
+    } catch (error) {
+      const digest = (error as { digest?: string } | null)?.digest;
+      if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) {
+        return;
+      }
+      const errorMessage = copy.remindersNew.aiAutoCreateFailed;
+      setAiStatus('error');
+      setAiCreateError(errorMessage);
+      setAutoCreateSource(null);
+      console.error('[ai] auto-create failed', error);
+    } finally {
+      autoCreateInFlightRef.current = false;
+    }
+  }, [action, buildFormDataFromParsed, copy.remindersNew.aiAutoCreateFailed]);
 
   const handleVoiceFallback = useCallback((text: string) => {
     setTitle(text);
     setAiText(text);
     setVoiceMissingMessage(null);
     setVoiceErrorCode(null);
+    setAiStatus('idle');
+    setLastParsedResult(null);
     titleRef.current?.focus();
     detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, []);
@@ -741,16 +847,17 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     isComplete: getCompleteness,
     onParsed: (data) => {
       applyParsedReminder(data);
-      triggerHighlight();
       setVoiceMissingMessage(null);
       setVoiceErrorCode(null);
-    },
-    onIncomplete: handleVoiceIncomplete,
-    onCreate: (data) => {
       if (voiceCreateMode === 'auto') {
-        queueAutoCreate('voice', data);
+        const { complete } = getCompleteness(data);
+        if (complete) {
+          void runAutoCreate(data, 'voice');
+        }
       }
     },
+    onIncomplete: handleVoiceIncomplete,
+    onCreate: () => undefined,
     onFallback: handleVoiceFallback,
     onError: (message) => setVoiceErrorCode(message)
   });
@@ -770,6 +877,20 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     voiceStatus === 'processing' ||
     voiceStatus === 'parsing' ||
     voiceStatus === 'creating';
+
+  useEffect(() => {
+    if (voiceStatus === 'starting' || voiceStatus === 'listening' || voiceStatus === 'transcribing') {
+      setAiStatus('transcribing');
+      return;
+    }
+    if (voiceStatus === 'processing' || voiceStatus === 'parsing') {
+      setAiStatus('parsing');
+      return;
+    }
+    if (voiceStatus === 'creating') {
+      setAiStatus('creating');
+    }
+  }, [voiceStatus]);
 
   useImperativeHandle(ref, () => ({
     startVoice: voiceStart,
@@ -798,19 +919,20 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   }, []);
 
   useEffect(() => {
-    if (!pendingAutoCreate || !autoCreateSummary) return;
-    if (autoCreateSource === 'voice' && typeof window !== 'undefined') {
-      window.sessionStorage.setItem(
-        'voice-create-summary',
-        JSON.stringify({ ...autoCreateSummary, source: autoCreateSource, ts: Date.now() })
-      );
+    if (lastAiTextRef.current === aiText) return;
+    lastAiTextRef.current = aiText;
+    if (!aiText.trim()) {
+      setAiStatus('idle');
+      setLastParsedResult(null);
+      setAiCreateError(null);
+      return;
     }
-    const frame = window.requestAnimationFrame(() => {
-      formRef.current?.requestSubmit();
-      setPendingAutoCreate(false);
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [autoCreateSource, autoCreateSummary, pendingAutoCreate]);
+    if (aiStatus === 'ready' || aiStatus === 'error' || aiStatus === 'created') {
+      setAiStatus('idle');
+      setLastParsedResult(null);
+      setAiCreateError(null);
+    }
+  }, [aiStatus, aiText]);
 
   const handleParse = useCallback(async () => {
     const data = await parseReminderText(aiText, true);
@@ -818,14 +940,21 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
       return;
     }
     applyParsedReminder(data);
-    triggerHighlight();
     setVoiceMissingMessage(null);
     setVoiceErrorCode(null);
+    if (voiceCreateMode === 'auto') {
+      const { complete } = getCompleteness(data);
+      if (complete) {
+        void runAutoCreate(data, 'ai');
+      }
+    }
   }, [
     aiText,
     applyParsedReminder,
+    getCompleteness,
     parseReminderText,
-    triggerHighlight
+    runAutoCreate,
+    voiceCreateMode
   ]);
 
   const voiceStatusLabel = useMemo(() => {
@@ -901,6 +1030,69 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
       : createMode === 'manual'
         ? copy.remindersNew.modeManualHint
         : copy.remindersNew.modeMedicationHint;
+  const aiReady = aiStatus === 'ready' || aiStatus === 'created';
+  const aiBusy = aiStatus === 'parsing' || aiStatus === 'transcribing' || aiStatus === 'creating';
+  const aiHasResult = Boolean(lastParsedResult);
+  const aiMissingTitle = kind !== 'medication' && !title.trim();
+  const aiMissingDate = kind !== 'medication' && !dueAt && !recurrenceRule;
+  const aiCompleteness = {
+    complete: !(aiMissingTitle || aiMissingDate),
+    missing: [aiMissingTitle ? 'title' : null, aiMissingDate ? 'due_at' : null].filter(Boolean)
+  } as { complete: boolean; missing: string[] };
+  const aiMissingLabels = [
+    aiMissingTitle ? copy.remindersNew.titleLabel : null,
+    aiMissingDate ? copy.remindersNew.dateLabel : null
+  ].filter(Boolean) as string[];
+  const aiMissingJoiner = activeLocale === 'de' ? ' und ' : activeLocale === 'en' ? ' and ' : ' și ';
+  const aiMissingMessage = aiMissingLabels.length
+    ? copy.remindersNew.aiMissingFields.replace('{fields}', aiMissingLabels.join(aiMissingJoiner))
+    : '';
+  const aiBadgeLabel =
+    createMode === 'ai'
+      ? aiStatus === 'created'
+        ? copy.remindersNew.aiBadgeCreated
+        : aiStatus === 'error'
+          ? copy.remindersNew.aiBadgeError
+          : aiReady
+            ? aiMissingMessage || copy.remindersNew.aiBadgeReady
+            : ''
+      : '';
+  const aiSummaryRows = useMemo(() => ([
+    { label: copy.remindersNew.titleLabel, value: previewTitleValue || '—' },
+    { label: copy.remindersNew.dateLabel, value: previewDateValue ? previewDateLabel : '—' },
+    { label: copy.remindersNew.categoryLabel, value: categoryId ? previewCategoryLabel : '—' },
+    {
+      label: copy.remindersNew.repeatLabel,
+      value: recurrenceRule ? recurrenceRule : scheduleLabels[scheduleType] || '—'
+    },
+    {
+      label: copy.remindersNew.preReminderLabel,
+      value: preReminderMinutes ? `${preReminderMinutes} ${copy.remindersNew.aiMinutesLabel}` : '—'
+    },
+    {
+      label: copy.remindersNew.assigneeLabel,
+      value: memberOptions.find((member) => member.id === assignedMemberId)?.label || '—'
+    }
+  ]), [
+    assignedMemberId,
+    categoryId,
+    copy.remindersNew.aiMinutesLabel,
+    copy.remindersNew.assigneeLabel,
+    copy.remindersNew.categoryLabel,
+    copy.remindersNew.dateLabel,
+    copy.remindersNew.preReminderLabel,
+    copy.remindersNew.repeatLabel,
+    copy.remindersNew.titleLabel,
+    memberOptions,
+    preReminderMinutes,
+    previewCategoryLabel,
+    previewDateLabel,
+    previewDateValue,
+    previewTitleValue,
+    recurrenceRule,
+    scheduleLabels,
+    scheduleType
+  ]);
 
   return (
     <form ref={formRef} action={action} className="space-y-8">
@@ -981,15 +1173,43 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                   value={aiText}
                   onChange={(event) => setAiText(event.target.value)}
                 />
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    className="btn btn-primary"
-                    type="button"
-                    onClick={handleParse}
-                    disabled={aiLoading}
-                  >
-                    {aiLoading ? copy.remindersNew.aiLoading : copy.remindersNew.aiButton}
-                  </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {aiReady ? (
+                    <>
+                      <button
+                        className="btn btn-primary"
+                        type="button"
+                        onClick={() => formRef.current?.requestSubmit()}
+                        disabled={!aiCompleteness.complete || aiBusy || aiStatus === 'created'}
+                      >
+                        {aiBusy ? copy.remindersNew.aiLoading : copy.remindersNew.create}
+                      </button>
+                      <button
+                        className="btn btn-secondary"
+                        type="button"
+                        onClick={openAdvancedOptions}
+                      >
+                        {copy.remindersNew.aiEditDetails}
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-sky-600 transition hover:text-sky-700"
+                        onClick={handleParse}
+                        disabled={aiBusy}
+                      >
+                        {copy.remindersNew.aiRegenerate}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      className="btn btn-primary"
+                      type="button"
+                      onClick={handleParse}
+                      disabled={aiBusy}
+                    >
+                      {aiBusy ? copy.remindersNew.aiLoading : copy.remindersNew.aiButton}
+                    </button>
+                  )}
                   <button
                     className={`btn btn-secondary relative inline-flex items-center gap-2 ${
                       voiceIsActive ? 'border-primary/40 text-primaryStrong' : ''
@@ -1293,9 +1513,18 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
             ) : null}
           </div>
 
-          <div className="rounded-xl border border-borderSubtle bg-white p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-              {copy.remindersNew.previewTitle}
+          <div
+            className={`rounded-xl border border-borderSubtle bg-white p-4 shadow-sm transition ${
+              aiHighlight ? 'ring-2 ring-sky-200 bg-sky-50/40' : ''
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wide text-muted">
+              <span>{copy.remindersNew.previewTitle}</span>
+              {aiBadgeLabel ? (
+                <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
+                  {aiBadgeLabel}
+                </span>
+              ) : null}
             </div>
             <div className={`mt-2 text-base font-semibold ${previewTitleValue ? 'text-ink' : 'text-muted'}`}>
               {previewTitleLabel}
@@ -1313,14 +1542,32 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                 <span className="text-xs text-muted">{previewCategoryLabel}</span>
               )}
             </div>
+            {createMode === 'ai' && aiHasResult ? (
+              <div className="mt-4 space-y-2 text-xs text-muted">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+                  {copy.remindersNew.aiSummaryTitle}
+                </div>
+                <ul className="space-y-1">
+                  {aiSummaryRows.map((row) => (
+                    <li key={row.label} className="flex items-start justify-between gap-3">
+                      <span className="text-muted">{row.label}</span>
+                      <span className="font-medium text-slate-700">{row.value}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             {showPreviewHint ? (
               <p className="mt-3 text-xs text-muted">{copy.remindersNew.previewHint}</p>
+            ) : null}
+            {createMode === 'ai' && aiCreateError ? (
+              <p className="mt-3 text-xs text-rose-600">{aiCreateError}</p>
             ) : null}
           </div>
         </div>
         <div
           ref={detailsRef}
-          className={`mt-6 rounded-2xl border border-borderSubtle bg-surface p-4 shadow-soft ${aiHighlight ? 'flash-outline flash-bg' : ''}`}
+          className="mt-6 rounded-2xl border border-borderSubtle bg-surface p-4 shadow-soft"
         >
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="space-y-1">
