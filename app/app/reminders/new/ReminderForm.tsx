@@ -411,6 +411,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const [autoCreateSummary, setAutoCreateSummary] = useState<{ title: string; dueAt: string | null } | null>(null);
   const [voiceUseAi, setVoiceUseAi] = useState(true);
   const [voiceCreateMode, setVoiceCreateMode] = useState<'review' | 'auto'>('review');
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [voiceMissingMessage, setVoiceMissingMessage] = useState<string | null>(null);
   const [voiceErrorCode, setVoiceErrorCode] = useState<string | null>(null);
   const defaultContext = useMemo(
@@ -434,9 +435,10 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     setKind(nextMode === 'medication' ? 'medication' : 'generic');
   }, []);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const mainCardRef = useRef<HTMLDivElement | null>(null);
   const highlightTimer = useRef<number | null>(null);
-  const detailsRef = useRef<HTMLElement>(null);
-  const medicationRef = useRef<HTMLDivElement>(null);
+  const detailsRef = useRef<HTMLDivElement | null>(null);
+  const medicationRef = useRef<HTMLDivElement | null>(null);
   const titleRef = useRef<HTMLInputElement | null>(null);
   const dueAtRef = useRef<HTMLInputElement | null>(null);
   const aiCharCount = aiText.length;
@@ -562,6 +564,49 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     setAiError(null);
     triggerHighlight();
   };
+  const quickTemplates = useMemo(() => ([
+    { id: 'rent', label: copy.remindersNew.quickTemplateRent, mode: 'ai' as const, text: copy.remindersNew.quickTemplateRentText },
+    { id: 'utilities', label: copy.remindersNew.quickTemplateUtilities, mode: 'ai' as const, text: copy.remindersNew.quickTemplateUtilitiesText },
+    { id: 'itp', label: copy.remindersNew.quickTemplateItp, mode: 'ai' as const, text: copy.remindersNew.quickTemplateItpText },
+    { id: 'medication', label: copy.remindersNew.quickTemplateMedication, mode: 'medication' as const },
+    { id: 'task', label: copy.remindersNew.quickTemplateTask, mode: 'ai' as const, text: copy.remindersNew.quickTemplateTaskText }
+  ]), [
+    copy.remindersNew.quickTemplateItp,
+    copy.remindersNew.quickTemplateItpText,
+    copy.remindersNew.quickTemplateMedication,
+    copy.remindersNew.quickTemplateRent,
+    copy.remindersNew.quickTemplateRentText,
+    copy.remindersNew.quickTemplateTask,
+    copy.remindersNew.quickTemplateTaskText,
+    copy.remindersNew.quickTemplateUtilities,
+    copy.remindersNew.quickTemplateUtilitiesText
+  ]);
+  const handleQuickTemplateSelect = useCallback((template: (typeof quickTemplates)[number]) => {
+    setCreateModeAndKind(template.mode);
+    setAiError(null);
+    setVoiceMissingMessage(null);
+    setVoiceErrorCode(null);
+    if (template.mode === 'ai') {
+      setAiText(template.text ?? '');
+    }
+    if (template.mode === 'medication') {
+      setMedName(copy.remindersNew.quickTemplateMedicationName);
+    }
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        mainCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }, [
+    copy.remindersNew.quickTemplateMedicationName,
+    mainCardRef,
+    setCreateModeAndKind,
+    setAiError,
+    setAiText,
+    setMedName,
+    setVoiceErrorCode,
+    setVoiceMissingMessage
+  ]);
 
   const triggerHighlight = useCallback(() => {
     setAiHighlight(true);
@@ -570,7 +615,15 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     }
     highlightTimer.current = window.setTimeout(() => setAiHighlight(false), 2200);
     detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, []);
+  }, [detailsRef]);
+  const openAdvancedOptions = useCallback(() => {
+    setAdvancedOpen(true);
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }, [detailsRef]);
 
   const parseReminderText = useCallback(async (textToParse: string, showErrors: boolean) => {
     const normalizedText = textToParse.trim();
@@ -853,6 +906,8 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     <form ref={formRef} action={action} className="space-y-8">
       <input type="hidden" name="voice_auto" value={autoCreateSource === 'voice' ? '1' : ''} />
       <input type="hidden" name="kind" value={kind} />
+      <input type="hidden" name="title" value={title} />
+      <input type="hidden" name="due_at" value={dueAt} />
       <input type="hidden" name="medication_details" value={medicationDetailsJson} />
       <input type="hidden" name="medication_add_to_calendar" value={medAddToCalendar ? '1' : ''} />
       <input
@@ -871,8 +926,29 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
         value={Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'}
       />
 
-      <section className="rounded-2xl border border-borderSubtle bg-white/90 p-6 shadow-soft">
-        <div className="flex flex-wrap gap-2 overflow-x-auto pb-1">
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-slate-600">{copy.remindersNew.quickTemplatesLabel}</p>
+        <div className="flex flex-wrap gap-2">
+          {quickTemplates.map((template) => (
+            <button
+              key={template.id}
+              type="button"
+              className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-700 transition hover:bg-slate-50"
+              onClick={() => handleQuickTemplateSelect(template)}
+            >
+              {template.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <section ref={mainCardRef} className="rounded-2xl border border-borderSubtle bg-white/90 p-6 shadow-soft">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold text-ink">{copy.remindersNew.createCardTitle}</h2>
+          <p className="text-sm text-muted">{copy.remindersNew.createCardSubtitle}</p>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2 overflow-x-auto pb-1">
           {(['ai', 'manual', 'medication'] as const).map((mode) => (
             <button
               key={mode}
@@ -1030,6 +1106,8 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                     placeholder={copy.remindersNew.titlePlaceholder}
                     value={title}
                     onChange={(event) => setTitle(event.target.value)}
+                    ref={titleRef}
+                    required={kind === 'generic'}
                   />
                 </div>
                 <div>
@@ -1039,6 +1117,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                     className="input"
                     value={dueAt}
                     onChange={(event) => setDueAt(event.target.value)}
+                    ref={dueAtRef}
                   />
                 </div>
                 <div>
@@ -1062,7 +1141,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                 <button
                   type="button"
                   className="text-xs font-semibold text-sky-600 transition hover:text-sky-700"
-                  onClick={() => detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  onClick={openAdvancedOptions}
                 >
                   {copy.remindersNew.moreDetailsLink}
                 </button>
@@ -1206,7 +1285,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                 <button
                   type="button"
                   className="text-xs font-semibold text-sky-600 transition hover:text-sky-700"
-                  onClick={() => detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  onClick={openAdvancedOptions}
                 >
                   {copy.remindersNew.moreDetailsLink}
                 </button>
@@ -1239,68 +1318,33 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
             ) : null}
           </div>
         </div>
-      </section>
-
-      <section
-        ref={detailsRef}
-        className={`rounded-2xl border border-borderSubtle bg-surface p-6 shadow-soft ${aiHighlight ? 'flash-outline flash-bg' : ''}`}
-      >
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold text-ink">{copy.remindersNew.details}</h2>
-          <p className="text-sm text-muted">{copy.remindersNew.detailsSubtitle}</p>
-        </div>
-
-        {voiceMissingMessage ? (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-            {voiceMissingMessage}
-          </div>
-        ) : null}
-
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <div className="md:col-span-2">
-            <label className="text-sm font-semibold">{copy.remindersNew.titleLabel}</label>
-            <input
-              name="title"
-              className="input"
-              placeholder={copy.remindersNew.titlePlaceholder}
-              required={kind === 'generic'}
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              ref={titleRef}
-            />
-          </div>
-          <div>
-            <label className="text-sm font-semibold">{copy.remindersNew.dateLabel}</label>
-            <input
-              name="due_at"
-              type="datetime-local"
-              className="input"
-              value={dueAt}
-              onChange={(event) => setDueAt(event.target.value)}
-              ref={dueAtRef}
-            />
-          </div>
-          <div>
-            <label className="text-sm font-semibold">{copy.remindersNew.categoryLabel}</label>
-            <select
-              className="input"
-              value={categoryId}
-              onChange={(event) => {
-                const value = event.target.value;
-                setCategoryId(value ? (value as ReminderCategoryId) : '');
-              }}
+        <div
+          ref={detailsRef}
+          className={`mt-6 rounded-2xl border border-borderSubtle bg-surface p-4 shadow-soft ${aiHighlight ? 'flash-outline flash-bg' : ''}`}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="text-sm font-semibold text-ink">{copy.remindersNew.advancedTitle}</div>
+              <p className="text-xs text-muted">{copy.remindersNew.detailsSubtitle}</p>
+            </div>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 transition hover:text-slate-800"
+              onClick={() => setAdvancedOpen((prev) => !prev)}
+              aria-expanded={advancedOpen}
             >
-              <option value="">{copy.remindersNew.categoryDefault}</option>
-              {reminderCategories.filter((category) => category.id !== 'default').map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.label}
-                </option>
-              ))}
-            </select>
+              <span>{advancedOpen ? copy.remindersNew.advancedToggleClose : copy.remindersNew.advancedToggleOpen}</span>
+              <span className={`transition ${advancedOpen ? 'rotate-180' : ''}`}>⌄</span>
+            </button>
           </div>
-        </div>
 
-        <div className="mt-6 space-y-4">
+          {voiceMissingMessage ? (
+            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              {voiceMissingMessage}
+            </div>
+          ) : null}
+
+          <div className={`mt-4 space-y-4 ${advancedOpen ? '' : 'hidden'}`}>
           <details className="rounded-2xl border border-borderSubtle bg-surface p-4">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
               <div>
@@ -1567,11 +1611,11 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
 
           {kind === 'generic' ? (
             <details className="rounded-2xl border border-borderSubtle bg-surface p-4">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
-                <div>
-                  <div className="text-sm font-semibold text-ink">{copy.remindersNew.templatesTitle}</div>
-                  <p className="text-xs text-muted">{copy.remindersNew.templatesSubtitle}</p>
-                </div>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-semibold text-ink">{copy.remindersNew.templatesTitle}</div>
+                <p className="text-xs text-muted">{copy.remindersNew.templatesSubtitle}</p>
+              </div>
                 <span className="text-muted">⌄</span>
               </summary>
               <div className="space-y-4 pt-4">
@@ -1676,10 +1720,11 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
               </div>
             </details>
           ) : null}
+          </div>
         </div>
 
         <ActionSubmitButton
-          className="btn btn-primary mt-6 w-full sm:w-auto"
+          className="btn btn-primary mt-6 w-full sm:w-auto sm:ml-auto"
           type="submit"
           data-action-feedback={copy.common.actionCreated}
         >
