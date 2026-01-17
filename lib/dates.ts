@@ -44,6 +44,19 @@ function hasTimeZoneOffset(value: string) {
   return /[zZ]$/.test(value) || /[+-]\d{2}:?\d{2}$/.test(value);
 }
 
+export function coerceDateForTimeZone(value: DateInput, timeZone?: string | null) {
+  if (value instanceof Date) {
+    return value;
+  }
+  if (!timeZone || timeZone === 'UTC') {
+    return new Date(value);
+  }
+  if (hasTimeZoneOffset(value)) {
+    return new Date(value);
+  }
+  return interpretAsTimeZone(value, timeZone);
+}
+
 function getTimeZoneOffsetMinutes(date: Date, timeZone: string) {
   try {
     const formatter = new Intl.DateTimeFormat('en-US', {

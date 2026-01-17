@@ -9,8 +9,8 @@ import SegmentedControl from '@/components/filters/SegmentedControl';
 import { messages, type Locale } from '@/lib/i18n';
 import {
   diffDaysInTimeZone,
+  coerceDateForTimeZone,
   getMonthKeyInTimeZone,
-  interpretAsTimeZone,
   resolveReminderTimeZone
 } from '@/lib/dates';
 import { inferReminderCategoryId, type ReminderCategoryId } from '@/lib/categories';
@@ -95,10 +95,7 @@ const getCompareDate = (occurrence: OccurrencePayload, timeZone: string) => {
   if (occurrence.snoozed_until) {
     return new Date(rawDate);
   }
-  if (reminderTimeZone && reminderTimeZone !== 'UTC') {
-    return interpretAsTimeZone(rawDate, reminderTimeZone);
-  }
-  return new Date(rawDate);
+  return coerceDateForTimeZone(rawDate, reminderTimeZone);
 };
 
 const getUrgencyStyles = (copy: MessageBundle) => ({

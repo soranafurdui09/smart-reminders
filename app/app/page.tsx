@@ -9,7 +9,7 @@ import { createHousehold } from './household/actions';
 import { getUserGoogleConnection } from '@/lib/google/calendar';
 import ReminderDashboardSection from '@/app/reminders/ReminderDashboardSection';
 import { getTodayMedicationDoses } from '@/lib/reminders/medication';
-import { diffDaysInTimeZone, formatDateTimeWithTimeZone, formatReminderDateTime, interpretAsTimeZone, resolveReminderTimeZone } from '@/lib/dates';
+import { coerceDateForTimeZone, diffDaysInTimeZone, formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
 import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
 
 export default async function DashboardPage({
@@ -107,9 +107,7 @@ export default async function DashboardPage({
     const occurrenceTimeZone = resolveReminderTimeZone(occurrence.reminder?.tz ?? null, userTimeZone);
     const compareDate = occurrence.snoozed_until
       ? new Date(occurrenceAt)
-      : occurrenceTimeZone && occurrenceTimeZone !== 'UTC'
-        ? interpretAsTimeZone(occurrenceAt, occurrenceTimeZone)
-        : new Date(occurrenceAt);
+      : coerceDateForTimeZone(occurrenceAt, occurrenceTimeZone);
     return compareDate.getTime() >= now.getTime();
   });
   const nextOccurrenceTimeZone = resolveReminderTimeZone(nextOccurrence?.reminder?.tz ?? null, userTimeZone);
@@ -119,9 +117,7 @@ export default async function DashboardPage({
   const nextOccurrenceCompare = nextOccurrenceAt
     ? nextOccurrence?.snoozed_until
       ? new Date(nextOccurrenceAt)
-      : nextOccurrenceTimeZone && nextOccurrenceTimeZone !== 'UTC'
-        ? interpretAsTimeZone(nextOccurrenceAt, nextOccurrenceTimeZone)
-        : new Date(nextOccurrenceAt)
+      : coerceDateForTimeZone(nextOccurrenceAt, nextOccurrenceTimeZone)
     : null;
   const nextDayDiff = nextOccurrenceCompare
     ? diffDaysInTimeZone(nextOccurrenceCompare, new Date(), userTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')
