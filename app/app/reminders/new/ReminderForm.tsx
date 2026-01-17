@@ -384,6 +384,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState<ReminderCategoryId | ''>('');
+  const [createMode, setCreateMode] = useState<'ai' | 'manual' | 'medication'>('ai');
 
   const [templateQuery, setTemplateQuery] = useState('');
   const [title, setTitle] = useState('');
@@ -428,6 +429,10 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const [calendarSnoozeMinutes, setCalendarSnoozeMinutes] = useState(
     defaultContext.calendarBusy?.snoozeMinutes ?? 15
   );
+  const setCreateModeAndKind = useCallback((nextMode: 'ai' | 'manual' | 'medication') => {
+    setCreateMode(nextMode);
+    setKind(nextMode === 'medication' ? 'medication' : 'generic');
+  }, []);
   const formRef = useRef<HTMLFormElement | null>(null);
   const highlightTimer = useRef<number | null>(null);
   const detailsRef = useRef<HTMLElement>(null);
@@ -816,6 +821,33 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   ]);
 
   const voiceTranscriptClean = voiceTranscript.trim();
+  const previewLocale = activeLocale === 'en' ? 'en-US' : activeLocale === 'de' ? 'de-DE' : 'ro-RO';
+  const previewDateValue =
+    createMode === 'medication'
+      ? medStartDate
+        ? `${medStartDate}T${medTimesOfDay[0] || '08:00'}`
+        : ''
+      : dueAt;
+  const previewDateLabel = (() => {
+    if (!previewDateValue) return copy.remindersNew.previewDatePlaceholder;
+    const date = new Date(previewDateValue);
+    if (Number.isNaN(date.getTime())) return copy.remindersNew.previewDatePlaceholder;
+    return new Intl.DateTimeFormat(previewLocale, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+  })();
+  const previewTitleValue = (createMode === 'medication' ? medName : title).trim();
+  const previewTitleLabel = previewTitleValue || copy.remindersNew.previewTitlePlaceholder;
+  const previewCategory = reminderCategories.find((category) => category.id === categoryId);
+  const previewCategoryLabel = previewCategory
+    ? previewCategory.label
+    : copy.remindersNew.previewCategoryPlaceholder;
+  const previewStatusLabel = copy.remindersNew.previewStatus;
+  const showPreviewHint = !previewTitleValue && !previewDateValue && !categoryId;
+  const modeDescription =
+    createMode === 'ai'
+      ? copy.remindersNew.modeAiHint
+      : createMode === 'manual'
+        ? copy.remindersNew.modeManualHint
+        : copy.remindersNew.modeMedicationHint;
 
   return (
     <form ref={formRef} action={action} className="space-y-8">
@@ -839,496 +871,174 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
         value={Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'}
       />
 
-      {kind === 'generic' ? (
-        <section className="card space-y-4">
-          <div className="space-y-1">
-            <div className="text-lg font-semibold text-ink">{copy.remindersNew.aiTitle}</div>
-            <p className="text-sm text-muted">{copy.remindersNew.aiSubtitle}</p>
-          </div>
-          <div className="space-y-3">
-            <input
-              className="input"
-              placeholder={copy.remindersNew.aiPlaceholder}
-              value={aiText}
-              onChange={(event) => setAiText(event.target.value)}
-            />
-            <div className="flex flex-wrap gap-2">
-              <button
-                className="btn btn-primary"
-                type="button"
-                onClick={handleParse}
-                disabled={aiLoading}
-              >
-                {aiLoading ? copy.remindersNew.aiLoading : copy.remindersNew.aiButton}
-              </button>
-              <button
-                className={`btn btn-secondary relative inline-flex items-center gap-2 ${
-                  voiceIsActive ? 'border-primary/40 text-primaryStrong' : ''
-                }`}
-                type="button"
-                onClick={() => {
-                  if (voiceIsProcessing) return;
-                  voiceToggle();
-                }}
-                disabled={!voiceSupported || voiceIsProcessing}
-                aria-label={copy.remindersNew.voiceNavLabel}
-                aria-pressed={voiceIsActive}
-                aria-busy={voiceIsProcessing}
-                title={!voiceSupported ? copy.remindersNew.voiceNotSupported : copy.remindersNew.voiceNavLabel}
-              >
-                {voiceIsReady ? (
-                  <span className="absolute -inset-1 rounded-full bg-sky-300/30 animate-ping" aria-hidden="true" />
-                ) : null}
-                <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <path
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    d="M12 3a3 3 0 013 3v6a3 3 0 11-6 0V6a3 3 0 013-3zm0 14a7 7 0 007-7h-2a5 5 0 01-10 0H5a7 7 0 007 7zm0 0v4"
-                  />
-                </svg>
-                {copy.remindersNew.voiceQuickCta}
-              </button>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
-              <span>{copy.remindersNew.aiHint}</span>
-              <span>{aiCharCount} {copy.remindersNew.aiCounterLabel}</span>
-            </div>
-            <p className="text-xs text-muted">{copy.remindersNew.aiExample}</p>
-            <label className="flex items-center gap-2 text-xs text-muted">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
-                checked={voiceUseAi}
-                onChange={(event) => setVoiceUseAi(event.target.checked)}
-              />
-              {copy.remindersNew.voiceUseAi}
-            </label>
-            <div className="space-y-2">
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-                {copy.remindersNew.voiceModeLabel}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {(['review', 'auto'] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                      voiceCreateMode === mode
-                        ? 'border-sky-400 bg-sky-50 text-sky-700'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                    }`}
-                    onClick={() => setVoiceCreateMode(mode)}
-                  >
-                    {mode === 'review'
-                      ? copy.remindersNew.voiceModeReview
-                      : copy.remindersNew.voiceModeAuto}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-muted">{copy.remindersNew.voiceModeHint}</p>
-            </div>
-            {voiceIsReady ? (
-              <div className="text-xs text-muted">{copy.remindersNew.voicePrompt}</div>
-            ) : null}
-            {voiceSupported ? (
-              <div className="text-xs text-muted">{copy.remindersNew.voiceReadyHint}</div>
-            ) : null}
-            {voiceStatusLabel ? (
-              <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-                <span>{voiceStatusLabel}</span>
-                {voiceIsProcessing ? (
-                  <span className="inline-flex items-center gap-2 rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-0.5 text-[11px]">
-                    <span className="h-3 w-3 animate-spin rounded-full border border-slate-300 border-t-slate-600" />
-                    <span className="sr-only">{copy.remindersNew.voiceProcessing}</span>
-                  </span>
-                ) : null}
-                {voiceStatus === 'transcribing' && voiceTranscriptClean ? (
-                  <span className="rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-0.5 text-[11px]">
-                    {voiceTranscriptClean}
-                  </span>
-                ) : null}
-                {voiceIsReady ? (
-                  <button className="btn btn-secondary h-7 px-3 text-xs" type="button" onClick={voiceStop}>
-                    {copy.remindersNew.voiceStop}
-                  </button>
-                ) : null}
-              </div>
-            ) : autoVoice ? (
-              <div className="text-xs text-muted">{copy.remindersNew.voiceAutoActive}</div>
-            ) : null}
-            {!voiceSupported ? (
-              <div className="text-xs text-muted">{copy.remindersNew.voiceNotSupported}</div>
-            ) : null}
-            {voiceErrorMessage ? (
-              <div className="text-xs text-rose-600">{voiceErrorMessage}</div>
-            ) : null}
-          </div>
-          {aiError ? (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{aiError}</div>
-          ) : null}
-        </section>
-      ) : null}
-
-      <section className="card space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold text-ink">{copy.remindersNew.typeTitle}</h2>
-          <p className="text-sm text-muted">{copy.remindersNew.typeSubtitle}</p>
+      <section className="rounded-2xl border border-borderSubtle bg-white/90 p-6 shadow-soft">
+        <div className="flex flex-wrap gap-2 overflow-x-auto pb-1">
+          {(['ai', 'manual', 'medication'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                createMode === mode
+                  ? 'border-sky-300 bg-white text-slate-900 shadow-sm'
+                  : 'border-transparent bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+              onClick={() => setCreateModeAndKind(mode)}
+            >
+              {mode === 'ai'
+                ? copy.remindersNew.modeAi
+                : mode === 'manual'
+                  ? copy.remindersNew.modeManual
+                  : copy.remindersNew.modeMedication}
+            </button>
+          ))}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <button
-            type="button"
-            className={`rounded-2xl border px-4 py-3 text-left transition ${
-              kind === 'generic'
-                ? 'border-sky-300 bg-sky-50 text-slate-900 shadow-sm'
-                : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-            }`}
-            onClick={() => setKind('generic')}
-          >
-            <div className="text-sm font-semibold">{copy.remindersNew.typeGeneric}</div>
-            <div className="text-xs text-muted">{copy.remindersNew.typeGenericSubtitle}</div>
-          </button>
-          <button
-            type="button"
-            className={`rounded-2xl border px-4 py-3 text-left transition ${
-              kind === 'medication'
-                ? 'border-sky-300 bg-sky-50 text-slate-900 shadow-sm'
-                : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-            }`}
-            onClick={() => {
-              setKind('medication');
-              setTimeout(() => medicationRef.current?.scrollIntoView({ behavior: 'smooth' }), 150);
-            }}
-          >
-            <div className="text-sm font-semibold">{copy.remindersNew.typeMedication}</div>
-            <div className="text-xs text-muted">{copy.remindersNew.typeMedicationSubtitle}</div>
-          </button>
-        </div>
-      </section>
+        <p className="mt-3 text-sm text-muted">{modeDescription}</p>
 
-      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        {kind === 'generic' ? (
-          <details className="card space-y-4">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
-              <div>
-                <div className="text-lg font-semibold text-ink">{copy.remindersNew.templatesTitle}</div>
-                <p className="text-sm text-muted">{copy.remindersNew.templatesSubtitle}</p>
-              </div>
-              <span className="text-muted">⌄</span>
-            </summary>
-            <div className="space-y-4 pt-2">
-              <div className="relative w-full md:w-64">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
-                  <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <path
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                </span>
-                <input
-                  className="input pl-9"
-                  aria-label={copy.remindersNew.templatesSearchPlaceholder}
-                  placeholder={copy.remindersNew.templatesSearchPlaceholder}
-                  value={templateQuery}
-                  onChange={(event) => setTemplateQuery(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                    }
-                  }}
+        <div className="mt-6 grid gap-6 md:grid-cols-2">
+          <div className="space-y-4">
+            {createMode === 'ai' ? (
+              <div className="space-y-4">
+                <textarea
+                  className="input"
+                  rows={3}
+                  placeholder={copy.remindersNew.aiPlaceholder}
+                  value={aiText}
+                  onChange={(event) => setAiText(event.target.value)}
                 />
-              </div>
-              {filteredTemplates.length ? (
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex flex-wrap gap-2">
                   <button
+                    className="btn btn-primary"
                     type="button"
-                    className="card flex flex-col gap-3 border-dashed border-slate-200 text-left transition hover:border-sky-300 hover:bg-sky-50"
+                    onClick={handleParse}
+                    disabled={aiLoading}
+                  >
+                    {aiLoading ? copy.remindersNew.aiLoading : copy.remindersNew.aiButton}
+                  </button>
+                  <button
+                    className={`btn btn-secondary relative inline-flex items-center gap-2 ${
+                      voiceIsActive ? 'border-primary/40 text-primaryStrong' : ''
+                    }`}
+                    type="button"
                     onClick={() => {
-                      setKind('medication');
-                      setTimeout(() => medicationRef.current?.scrollIntoView({ behavior: 'smooth' }), 150);
+                      if (voiceIsProcessing) return;
+                      voiceToggle();
                     }}
+                    disabled={!voiceSupported || voiceIsProcessing}
+                    aria-label={copy.remindersNew.voiceNavLabel}
+                    aria-pressed={voiceIsActive}
+                    aria-busy={voiceIsProcessing}
+                    title={!voiceSupported ? copy.remindersNew.voiceNotSupported : copy.remindersNew.voiceNavLabel}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
-                        💊
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold text-ink">{copy.remindersNew.typeMedication}</div>
-                        <div className="text-xs text-muted">{copy.remindersNew.typeMedicationSubtitle}</div>
-                      </div>
-                    </div>
-                    <div className="text-xs text-muted">{copy.remindersNew.typeMedicationHint}</div>
-                  </button>
-                  {filteredTemplates.map((template) => {
-                    const preReminder = template.preReminderMinutes
-                      ? formatPreReminder(activeLocale, template.preReminderMinutes)
-                      : '';
-                    return (
-                      <div
-                        key={template.id}
-                        className="flex flex-col gap-3 rounded-2xl border border-borderSubtle bg-surface p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primarySoft text-primaryStrong">
-                            {TEMPLATE_ICONS[template.icon]}
-                          </div>
-                          <div className="min-w-0 space-y-1">
-                            <div className="text-sm font-semibold text-ink">{template.title[activeLocale]}</div>
-                            <div className="text-xs text-muted">{template.description[activeLocale]}</div>
-                          </div>
-                        </div>
-                        {template.tags[activeLocale].length ? (
-                          <div className="flex flex-wrap gap-2">
-                            {template.tags[activeLocale].map((tag) => (
-                              <span key={tag} className="chip">
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        ) : null}
-                        <div className="flex flex-wrap gap-2 text-xs text-muted">
-                          <span className="chip">
-                            {copy.remindersNew.repeatLabel}: {scheduleLabels[template.scheduleType]}
-                          </span>
-                          {preReminder ? (
-                            <span className="chip">
-                              {copy.remindersNew.templatesPreReminderLabel}: {preReminder}
-                            </span>
-                          ) : null}
-                        </div>
-                        {template.notes?.[activeLocale] ? (
-                          <div className="text-xs text-muted">{template.notes[activeLocale]}</div>
-                        ) : null}
-                        <button
-                          className="btn btn-secondary mt-1 w-full"
-                          type="button"
-                          onClick={() => applyTemplate(template)}
-                        >
-                          {copy.remindersNew.templatesApply}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-sm text-muted">{copy.remindersNew.templatesEmpty}</div>
-              )}
-            </div>
-          </details>
-        ) : null}
-
-        {kind === 'medication' ? (
-          <section ref={medicationRef} className="card space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold text-ink">{copy.remindersNew.medicationTitle}</h3>
-              <p className="text-sm text-muted">{copy.remindersNew.medicationSubtitle}</p>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-semibold">{copy.remindersNew.medicationNameLabel}</label>
-                <input
-                  className="input"
-                  required={kind === 'medication'}
-                  value={medName}
-                  onChange={(event) => setMedName(event.target.value)}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold">{copy.remindersNew.medicationDoseLabel}</label>
-                <input
-                  className="input"
-                  value={medDose}
-                  onChange={(event) => setMedDose(event.target.value)}
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-semibold">{copy.remindersNew.medicationPersonLabel}</label>
-              <select
-                className="input"
-                value={medPersonId}
-                onChange={(event) => setMedPersonId(event.target.value)}
-              >
-                <option value="">{copy.remindersNew.medicationPersonSelf}</option>
-                {members.map((member) => (
-                  <option key={member.id} value={member.id}>{member.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold">{copy.remindersNew.medicationFrequencyLabel}</label>
-              <div className="grid gap-2 md:grid-cols-3">
-                {(['once_per_day', 'times_per_day', 'every_n_hours'] as MedicationFrequencyType[]).map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={`rounded-full border px-3 py-2 text-sm font-semibold transition ${
-                      medFrequencyType === value
-                        ? 'border-sky-400 bg-sky-50 text-sky-700'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                    }`}
-                    onClick={() => setMedFrequencyType(value)}
-                  >
-                    {value === 'once_per_day'
-                      ? copy.remindersNew.medicationFrequencyOnce
-                      : value === 'times_per_day'
-                        ? copy.remindersNew.medicationFrequencyTimes
-                        : copy.remindersNew.medicationFrequencyEvery}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {medFrequencyType === 'once_per_day' ? (
-              <div>
-                <label className="text-sm font-semibold">{copy.remindersNew.medicationTimeLabel}</label>
-                <input
-                  type="time"
-                  className="input"
-                  value={medTimesOfDay[0] || '08:00'}
-                  onChange={(event) => setMedTimesOfDay([event.target.value])}
-                />
-              </div>
-            ) : null}
-            {medFrequencyType === 'times_per_day' ? (
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-semibold">{copy.remindersNew.medicationTimesPerDayLabel}</label>
-                  <input
-                    type="range"
-                    min={1}
-                    max={4}
-                    value={medTimesPerDay}
-                    onChange={(event) => setMedTimesPerDay(Number(event.target.value))}
-                    className="w-full"
-                  />
-                  <div className="text-xs text-muted">{medTimesPerDay} {copy.remindersNew.medicationTimesPerDayHint}</div>
-                </div>
-                <div className="grid gap-2 md:grid-cols-2">
-                  {Array.from({ length: medTimesPerDay }).map((_, index) => (
-                    <div key={`time-${index}`}>
-                      <label className="text-xs font-semibold text-muted">{copy.remindersNew.medicationTimeSlotLabel} {index + 1}</label>
-                      <input
-                        type="time"
-                        className="input"
-                        value={medTimesOfDay[index] || '08:00'}
-                        onChange={(event) => {
-                          const next = [...medTimesOfDay];
-                          next[index] = event.target.value;
-                          setMedTimesOfDay(next);
-                        }}
+                    {voiceIsReady ? (
+                      <span className="absolute -inset-1 rounded-full bg-sky-300/30 animate-ping" aria-hidden="true" />
+                    ) : null}
+                    <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <path
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        d="M12 3a3 3 0 013 3v6a3 3 0 11-6 0V6a3 3 0 013-3zm0 14a7 7 0 007-7h-2a5 5 0 01-10 0H5a7 7 0 007 7zm0 0v4"
                       />
-                    </div>
-                  ))}
+                    </svg>
+                    {copy.remindersNew.voiceQuickCta}
+                  </button>
                 </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+                  <span>{copy.remindersNew.aiHint}</span>
+                  <span>{aiCharCount} {copy.remindersNew.aiCounterLabel}</span>
+                </div>
+                <p className="text-xs text-muted">{copy.remindersNew.aiExample}</p>
+                <label className="flex items-center gap-2 text-xs text-muted">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                    checked={voiceUseAi}
+                    onChange={(event) => setVoiceUseAi(event.target.checked)}
+                  />
+                  {copy.remindersNew.voiceUseAi}
+                </label>
+                <div className="space-y-2">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">
+                    {copy.remindersNew.voiceModeLabel}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {(['review', 'auto'] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                          voiceCreateMode === mode
+                            ? 'border-sky-400 bg-sky-50 text-sky-700'
+                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                        }`}
+                        onClick={() => setVoiceCreateMode(mode)}
+                      >
+                        {mode === 'review'
+                          ? copy.remindersNew.voiceModeReview
+                          : copy.remindersNew.voiceModeAuto}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted">{copy.remindersNew.voiceModeHint}</p>
+                </div>
+                {voiceIsReady ? (
+                  <div className="text-xs text-muted">{copy.remindersNew.voicePrompt}</div>
+                ) : null}
+                {voiceSupported ? (
+                  <div className="text-xs text-muted">{copy.remindersNew.voiceReadyHint}</div>
+                ) : null}
+                {voiceStatusLabel ? (
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                    <span>{voiceStatusLabel}</span>
+                    {voiceIsProcessing ? (
+                      <span className="inline-flex items-center gap-2 rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-0.5 text-[11px]">
+                        <span className="h-3 w-3 animate-spin rounded-full border border-slate-300 border-t-slate-600" />
+                        <span className="sr-only">{copy.remindersNew.voiceProcessing}</span>
+                      </span>
+                    ) : null}
+                    {voiceStatus === 'transcribing' && voiceTranscriptClean ? (
+                      <span className="rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-0.5 text-[11px]">
+                        {voiceTranscriptClean}
+                      </span>
+                    ) : null}
+                    {voiceIsReady ? (
+                      <button className="btn btn-secondary h-7 px-3 text-xs" type="button" onClick={voiceStop}>
+                        {copy.remindersNew.voiceStop}
+                      </button>
+                    ) : null}
+                  </div>
+                ) : autoVoice ? (
+                  <div className="text-xs text-muted">{copy.remindersNew.voiceAutoActive}</div>
+                ) : null}
+                {!voiceSupported ? (
+                  <div className="text-xs text-muted">{copy.remindersNew.voiceNotSupported}</div>
+                ) : null}
+                {voiceErrorMessage ? (
+                  <div className="text-xs text-rose-600">{voiceErrorMessage}</div>
+                ) : null}
+                {aiError ? (
+                  <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{aiError}</div>
+                ) : null}
               </div>
             ) : null}
-            {medFrequencyType === 'every_n_hours' ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="text-sm font-semibold">{copy.remindersNew.medicationEveryHoursLabel}</label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={24}
-                    className="input"
-                    value={medEveryNHours}
-                    onChange={(event) => setMedEveryNHours(Number(event.target.value))}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-semibold">{copy.remindersNew.medicationFirstDoseLabel}</label>
-                  <input
-                    type="time"
-                    className="input"
-                    value={medTimesOfDay[0] || '08:00'}
-                    onChange={(event) => setMedTimesOfDay([event.target.value])}
-                  />
-                </div>
-              </div>
-            ) : null}
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-semibold">{copy.remindersNew.medicationStartLabel}</label>
-                  <input
-                    type="date"
-                    className="input"
-                    required={kind === 'medication'}
-                    value={medStartDate}
-                    onChange={(event) => setMedStartDate(event.target.value)}
-                  />
-              </div>
-              <div>
-                <label className="text-sm font-semibold">{copy.remindersNew.medicationEndLabel}</label>
-                <input
-                  type="date"
-                  className="input"
-                  value={medEndDate}
-                  onChange={(event) => setMedEndDate(event.target.value)}
-                />
-              </div>
-            </div>
-            {googleConnected ? (
-              <label className="flex items-center gap-2 text-sm text-muted">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
-                  checked={medAddToCalendar}
-                  onChange={(event) => setMedAddToCalendar(event.target.checked)}
-                />
-                {copy.remindersNew.medicationAddCalendar}
-              </label>
-            ) : (
-              <div className="text-xs text-muted">{copy.remindersNew.medicationCalendarHint}</div>
-            )}
-            <div className="flex flex-wrap gap-2">
-              <button type="button" className="btn btn-secondary" onClick={() => setKind('generic')}>
-                {copy.remindersNew.medicationBack}
-              </button>
-              <button type="submit" className="btn btn-primary">
-                {copy.remindersNew.medicationSave}
-              </button>
-            </div>
-          </section>
-        ) : null}
 
-        {kind === 'generic' ? (
-          <section
-            ref={detailsRef}
-            className={`card space-y-6 ${aiHighlight ? 'flash-outline flash-bg' : ''}`}
-          >
-            <div>
-              <h3 className="text-lg font-semibold text-ink">{copy.remindersNew.details}</h3>
-              <p className="text-sm text-muted">{copy.remindersNew.detailsSubtitle}</p>
-            </div>
-            {voiceMissingMessage ? (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                {voiceMissingMessage}
-              </div>
-            ) : null}
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-semibold">{copy.remindersNew.titleLabel}</label>
-                <input
-                  name="title"
-                  className="input"
-                  placeholder={copy.remindersNew.titlePlaceholder}
-                  required
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  ref={titleRef}
-                />
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
+            {createMode === 'manual' ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-semibold">{copy.remindersNew.titleLabel}</label>
+                  <input
+                    className="input"
+                    placeholder={copy.remindersNew.titlePlaceholder}
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                  />
+                </div>
                 <div>
                   <label className="text-sm font-semibold">{copy.remindersNew.dateLabel}</label>
                   <input
-                    name="due_at"
                     type="datetime-local"
                     className="input"
                     value={dueAt}
                     onChange={(event) => setDueAt(event.target.value)}
-                    ref={dueAtRef}
                   />
                 </div>
                 <div>
@@ -1349,236 +1059,633 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                     ))}
                   </select>
                 </div>
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-sky-600 transition hover:text-sky-700"
+                  onClick={() => detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                >
+                  {copy.remindersNew.moreDetailsLink}
+                </button>
               </div>
+            ) : null}
+
+            {createMode === 'medication' ? (
+              <div ref={medicationRef} className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-semibold">{copy.remindersNew.medicationNameLabel}</label>
+                    <input
+                      className="input"
+                      required={kind === 'medication'}
+                      value={medName}
+                      onChange={(event) => setMedName(event.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold">{copy.remindersNew.medicationDoseLabel}</label>
+                    <input
+                      className="input"
+                      placeholder={copy.remindersNew.medicationDosePlaceholder}
+                      value={medDose}
+                      onChange={(event) => setMedDose(event.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">{copy.remindersNew.medicationFrequencyLabel}</label>
+                  <div className="grid gap-2 md:grid-cols-3">
+                    {(['once_per_day', 'times_per_day', 'every_n_hours'] as MedicationFrequencyType[]).map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        className={`rounded-full border px-3 py-2 text-sm font-semibold transition ${
+                          medFrequencyType === value
+                            ? 'border-sky-400 bg-sky-50 text-sky-700'
+                            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                        }`}
+                        onClick={() => setMedFrequencyType(value)}
+                      >
+                        {value === 'once_per_day'
+                          ? copy.remindersNew.medicationFrequencyOnce
+                          : value === 'times_per_day'
+                            ? copy.remindersNew.medicationFrequencyTimes
+                            : copy.remindersNew.medicationFrequencyEvery}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {medFrequencyType === 'once_per_day' ? (
+                  <div>
+                    <label className="text-sm font-semibold">{copy.remindersNew.medicationTimeLabel}</label>
+                    <input
+                      type="time"
+                      className="input"
+                      value={medTimesOfDay[0] || '08:00'}
+                      onChange={(event) => setMedTimesOfDay([event.target.value])}
+                    />
+                  </div>
+                ) : null}
+                {medFrequencyType === 'times_per_day' ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-semibold">{copy.remindersNew.medicationTimesPerDayLabel}</label>
+                      <input
+                        type="range"
+                        min={1}
+                        max={4}
+                        value={medTimesPerDay}
+                        onChange={(event) => setMedTimesPerDay(Number(event.target.value))}
+                        className="w-full"
+                      />
+                      <div className="text-xs text-muted">{medTimesPerDay} {copy.remindersNew.medicationTimesPerDayHint}</div>
+                    </div>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {Array.from({ length: medTimesPerDay }).map((_, index) => (
+                        <div key={`time-${index}`}>
+                          <label className="text-xs font-semibold text-muted">{copy.remindersNew.medicationTimeSlotLabel} {index + 1}</label>
+                          <input
+                            type="time"
+                            className="input"
+                            value={medTimesOfDay[index] || '08:00'}
+                            onChange={(event) => {
+                              const next = [...medTimesOfDay];
+                              next[index] = event.target.value;
+                              setMedTimesOfDay(next);
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {medFrequencyType === 'every_n_hours' ? (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-semibold">{copy.remindersNew.medicationEveryHoursLabel}</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={24}
+                        className="input"
+                        value={medEveryNHours}
+                        onChange={(event) => setMedEveryNHours(Number(event.target.value))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold">{copy.remindersNew.medicationFirstDoseLabel}</label>
+                      <input
+                        type="time"
+                        className="input"
+                        value={medTimesOfDay[0] || '08:00'}
+                        onChange={(event) => setMedTimesOfDay([event.target.value])}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-semibold">{copy.remindersNew.medicationStartLabel}</label>
+                    <input
+                      type="date"
+                      className="input"
+                      required={kind === 'medication'}
+                      value={medStartDate}
+                      onChange={(event) => setMedStartDate(event.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold">{copy.remindersNew.medicationEndLabel}</label>
+                    <input
+                      type="date"
+                      className="input"
+                      value={medEndDate}
+                      onChange={(event) => setMedEndDate(event.target.value)}
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-sky-600 transition hover:text-sky-700"
+                  onClick={() => detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                >
+                  {copy.remindersNew.moreDetailsLink}
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="rounded-xl border border-borderSubtle bg-white p-4 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted">
+              {copy.remindersNew.previewTitle}
+            </div>
+            <div className={`mt-2 text-base font-semibold ${previewTitleValue ? 'text-ink' : 'text-muted'}`}>
+              {previewTitleLabel}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
+              <span>{previewDateLabel}</span>
+              <span className="rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-0.5 text-[11px] text-muted">
+                {previewStatusLabel}
+              </span>
+            </div>
+            <div className="mt-2">
+              {categoryId ? (
+                <span className="chip">{previewCategoryLabel}</span>
+              ) : (
+                <span className="text-xs text-muted">{previewCategoryLabel}</span>
+              )}
+            </div>
+            {showPreviewHint ? (
+              <p className="mt-3 text-xs text-muted">{copy.remindersNew.previewHint}</p>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      <section
+        ref={detailsRef}
+        className={`rounded-2xl border border-borderSubtle bg-surface p-6 shadow-soft ${aiHighlight ? 'flash-outline flash-bg' : ''}`}
+      >
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold text-ink">{copy.remindersNew.details}</h2>
+          <p className="text-sm text-muted">{copy.remindersNew.detailsSubtitle}</p>
+        </div>
+
+        {voiceMissingMessage ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            {voiceMissingMessage}
+          </div>
+        ) : null}
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label className="text-sm font-semibold">{copy.remindersNew.titleLabel}</label>
+            <input
+              name="title"
+              className="input"
+              placeholder={copy.remindersNew.titlePlaceholder}
+              required={kind === 'generic'}
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              ref={titleRef}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-semibold">{copy.remindersNew.dateLabel}</label>
+            <input
+              name="due_at"
+              type="datetime-local"
+              className="input"
+              value={dueAt}
+              onChange={(event) => setDueAt(event.target.value)}
+              ref={dueAtRef}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-semibold">{copy.remindersNew.categoryLabel}</label>
+            <select
+              className="input"
+              value={categoryId}
+              onChange={(event) => {
+                const value = event.target.value;
+                setCategoryId(value ? (value as ReminderCategoryId) : '');
+              }}
+            >
+              <option value="">{copy.remindersNew.categoryDefault}</option>
+              {reminderCategories.filter((category) => category.id !== 'default').map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-4">
+          <details className="rounded-2xl border border-borderSubtle bg-surface p-4">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
               <div>
-                <label className="text-sm font-semibold">{copy.remindersNew.notesLabel}</label>
-                <textarea
-                  name="notes"
+                <div className="text-sm font-semibold text-ink">{copy.remindersNew.recurrenceTitle}</div>
+                <p className="text-xs text-muted">{copy.remindersNew.recurrenceSubtitle}</p>
+              </div>
+              <span className="text-muted">⌄</span>
+            </summary>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="text-sm font-semibold">{copy.remindersNew.repeatLabel}</label>
+                <select
+                  name="schedule_type"
                   className="input"
-                  rows={3}
-                  placeholder={copy.remindersNew.notesPlaceholder}
-                  value={notes}
-                  onChange={(event) => setNotes(event.target.value)}
+                  value={scheduleType}
+                  onChange={(event) => setScheduleType(event.target.value)}
+                >
+                  <option value="once">{copy.remindersNew.once}</option>
+                  <option value="daily">{copy.remindersNew.daily}</option>
+                  <option value="weekly">{copy.remindersNew.weekly}</option>
+                  <option value="monthly">{copy.remindersNew.monthly}</option>
+                  <option value="yearly">{copy.remindersNew.yearly}</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-sm font-semibold">{copy.remindersNew.recurrenceRuleLabel}</label>
+                <input
+                  name="recurrence_rule"
+                  className="input"
+                  placeholder={copy.remindersNew.recurrenceRulePlaceholder}
+                  value={recurrenceRule}
+                  onChange={(event) => setRecurrenceRule(event.target.value)}
                 />
               </div>
             </div>
+          </details>
 
-            <div className="grid gap-4">
-              <details className="rounded-2xl border border-borderSubtle bg-surface p-4">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+          <details className="rounded-2xl border border-borderSubtle bg-surface p-4">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-semibold text-ink">{copy.remindersNew.notificationsTitle}</div>
+                <p className="text-xs text-muted">{copy.remindersNew.notificationsSubtitle}</p>
+              </div>
+              <span className="text-muted">⌄</span>
+            </summary>
+            <div className="mt-4 space-y-4">
+              <div>
+                <label className="text-sm font-semibold">{copy.remindersNew.preReminderLabel}</label>
+                <input
+                  name="pre_reminder_minutes"
+                  type="number"
+                  className="input"
+                  value={preReminderMinutes}
+                  onChange={(event) => setPreReminderMinutes(event.target.value)}
+                />
+              </div>
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink">
+                  <span>{copy.remindersNew.contextTitle}</span>
+                  {contextDefaultsActive ? (
+                    <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-700">
+                      {copy.remindersNew.contextDefaultsActive}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-xs text-muted">{copy.remindersNew.contextOverrideHint}</p>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="context_time_window_enabled"
+                    value="1"
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                    checked={timeWindowEnabled}
+                    onChange={(event) => setTimeWindowEnabled(event.target.checked)}
+                  />
+                  {copy.remindersNew.contextTimeWindowLabel}
+                </label>
+                <div className="grid gap-3 md:grid-cols-2">
                   <div>
-                    <div className="text-sm font-semibold text-ink">{copy.remindersNew.recurrenceTitle}</div>
-                    <p className="text-xs text-muted">{copy.remindersNew.recurrenceSubtitle}</p>
-                  </div>
-                  <span className="text-muted">⌄</span>
-                </summary>
-                <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="text-sm font-semibold">{copy.remindersNew.repeatLabel}</label>
+                    <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextStartLabel}</label>
                     <select
-                      name="schedule_type"
+                      name="context_time_start_hour"
                       className="input"
-                      value={scheduleType}
-                      onChange={(event) => setScheduleType(event.target.value)}
+                      value={timeWindowStartHour}
+                      onChange={(event) => setTimeWindowStartHour(Number(event.target.value))}
+                      disabled={!timeWindowEnabled}
                     >
-                      <option value="once">{copy.remindersNew.once}</option>
-                      <option value="daily">{copy.remindersNew.daily}</option>
-                      <option value="weekly">{copy.remindersNew.weekly}</option>
-                      <option value="monthly">{copy.remindersNew.monthly}</option>
-                      <option value="yearly">{copy.remindersNew.yearly}</option>
+                      {hourOptions.map((hour) => (
+                        <option key={`start-${hour}`} value={hour}>
+                          {String(hour).padStart(2, '0')}:00
+                        </option>
+                      ))}
                     </select>
                   </div>
-                  <div className="md:col-span-2">
-                    <label className="text-sm font-semibold">{copy.remindersNew.recurrenceRuleLabel}</label>
-                    <input
-                      name="recurrence_rule"
+                  <div>
+                    <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextEndLabel}</label>
+                    <select
+                      name="context_time_end_hour"
                       className="input"
-                      placeholder={copy.remindersNew.recurrenceRulePlaceholder}
-                      value={recurrenceRule}
-                      onChange={(event) => setRecurrenceRule(event.target.value)}
-                    />
+                      value={timeWindowEndHour}
+                      onChange={(event) => setTimeWindowEndHour(Number(event.target.value))}
+                      disabled={!timeWindowEnabled}
+                    >
+                      {hourOptions.map((hour) => (
+                        <option key={`end-${hour}`} value={hour}>
+                          {String(hour).padStart(2, '0')}:00
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
-              </details>
-
-              <details className="rounded-2xl border border-borderSubtle bg-surface p-4">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
-                  <div>
-                    <div className="text-sm font-semibold text-ink">{copy.remindersNew.notificationsTitle}</div>
-                    <p className="text-xs text-muted">{copy.remindersNew.notificationsSubtitle}</p>
-                  </div>
-                  <span className="text-muted">⌄</span>
-                </summary>
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <label className="text-sm font-semibold">{copy.remindersNew.preReminderLabel}</label>
-                    <input
-                      name="pre_reminder_minutes"
-                      type="number"
-                      className="input"
-                      value={preReminderMinutes}
-                      onChange={(event) => setPreReminderMinutes(event.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink">
-                      <span>{copy.remindersNew.contextTitle}</span>
-                      {contextDefaultsActive ? (
-                        <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-700">
-                          {copy.remindersNew.contextDefaultsActive}
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="text-xs text-muted">{copy.remindersNew.contextOverrideHint}</p>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        name="context_time_window_enabled"
-                        value="1"
-                        className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
-                        checked={timeWindowEnabled}
-                        onChange={(event) => setTimeWindowEnabled(event.target.checked)}
-                      />
-                      {copy.remindersNew.contextTimeWindowLabel}
-                    </label>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <div>
-                        <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextStartLabel}</label>
-                        <select
-                          name="context_time_start_hour"
-                          className="input"
-                          value={timeWindowStartHour}
-                          onChange={(event) => setTimeWindowStartHour(Number(event.target.value))}
+                <div>
+                  <div className="text-xs font-semibold text-muted">{copy.remindersNew.contextDaysLabel}</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {dayOptions.map((day) => (
+                      <label key={day.value} className="flex items-center gap-2 text-xs text-muted">
+                        <input
+                          type="checkbox"
+                          name="context_time_days"
+                          value={day.value}
+                          className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                          checked={timeWindowDays.includes(day.value)}
+                          onChange={(event) => {
+                            setTimeWindowDays((prev) => {
+                              if (event.target.checked) {
+                                return [...prev, day.value];
+                              }
+                              return prev.filter((item) => item !== day.value);
+                            });
+                          }}
                           disabled={!timeWindowEnabled}
-                        >
-                          {hourOptions.map((hour) => (
-                            <option key={`start-${hour}`} value={hour}>
-                              {String(hour).padStart(2, '0')}:00
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextEndLabel}</label>
-                        <select
-                          name="context_time_end_hour"
-                          className="input"
-                          value={timeWindowEndHour}
-                          onChange={(event) => setTimeWindowEndHour(Number(event.target.value))}
-                          disabled={!timeWindowEnabled}
-                        >
-                          {hourOptions.map((hour) => (
-                            <option key={`end-${hour}`} value={hour}>
-                              {String(hour).padStart(2, '0')}:00
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold text-muted">{copy.remindersNew.contextDaysLabel}</div>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {dayOptions.map((day) => (
-                          <label key={day.value} className="flex items-center gap-2 text-xs text-muted">
-                            <input
-                              type="checkbox"
-                              name="context_time_days"
-                              value={day.value}
-                              className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
-                              checked={timeWindowDays.includes(day.value)}
-                              onChange={(event) => {
-                                setTimeWindowDays((prev) => {
-                                  if (event.target.checked) {
-                                    return [...prev, day.value];
-                                  }
-                                  return prev.filter((item) => item !== day.value);
-                                });
-                              }}
-                              disabled={!timeWindowEnabled}
-                            />
-                            {day.label}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
+                        />
+                        {day.label}
+                      </label>
+                    ))}
                   </div>
                 </div>
-              </details>
+              </div>
+            </div>
+          </details>
 
-              <details className="rounded-2xl border border-borderSubtle bg-surface p-4">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
-                  <div>
-                    <div className="text-sm font-semibold text-ink">{copy.remindersNew.householdTitle}</div>
-                    <p className="text-xs text-muted">{copy.remindersNew.householdSubtitle}</p>
-                  </div>
-                  <span className="text-muted">⌄</span>
-                </summary>
-                <div className="mt-4">
-                  <label className="text-sm font-semibold">{copy.remindersNew.assigneeLabel}</label>
+          <details className="rounded-2xl border border-borderSubtle bg-surface p-4">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-semibold text-ink">{copy.remindersNew.householdTitle}</div>
+                <p className="text-xs text-muted">{copy.remindersNew.householdSubtitle}</p>
+              </div>
+              <span className="text-muted">⌄</span>
+            </summary>
+            <div className="mt-4">
+              <label className="text-sm font-semibold">{copy.remindersNew.assigneeLabel}</label>
+              <select
+                name="assigned_member_id"
+                className="input"
+                value={assignedMemberId}
+                onChange={(event) => setAssignedMemberId(event.target.value)}
+              >
+                {memberOptions.map((member) => (
+                  <option key={member.id || 'none'} value={member.id}>
+                    {member.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs text-muted">{copy.remindersNew.householdHint}</p>
+            </div>
+          </details>
+
+          <details className="rounded-2xl border border-borderSubtle bg-surface p-4">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-semibold text-ink">{copy.remindersNew.calendarTitle}</div>
+                <p className="text-xs text-muted">{copy.remindersNew.calendarSubtitle}</p>
+              </div>
+              <span className="text-muted">⌄</span>
+            </summary>
+            <div className="mt-4 space-y-3">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="context_calendar_busy_enabled"
+                  value="1"
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                  checked={calendarBusyEnabled}
+                  onChange={(event) => setCalendarBusyEnabled(event.target.checked)}
+                />
+                {copy.remindersNew.contextCalendarLabel}
+              </label>
+              <p className="text-xs text-muted">{copy.remindersNew.contextCalendarHint}</p>
+              <div className="max-w-xs">
+                <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextSnoozeLabel}</label>
+                <input
+                  type="number"
+                  name="context_calendar_snooze_minutes"
+                  className="input"
+                  min={5}
+                  max={240}
+                  value={calendarSnoozeMinutes}
+                  onChange={(event) => setCalendarSnoozeMinutes(Number(event.target.value))}
+                  disabled={!calendarBusyEnabled}
+                />
+              </div>
+            </div>
+          </details>
+
+          <details className="rounded-2xl border border-borderSubtle bg-surface p-4">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-semibold text-ink">{copy.remindersNew.notesLabel}</div>
+                <p className="text-xs text-muted">{copy.remindersNew.notesSubtitle}</p>
+              </div>
+              <span className="text-muted">⌄</span>
+            </summary>
+            <div className="mt-4">
+              <textarea
+                name="notes"
+                className="input"
+                rows={3}
+                placeholder={copy.remindersNew.notesPlaceholder}
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+              />
+            </div>
+          </details>
+
+          {kind === 'medication' ? (
+            <details className="rounded-2xl border border-borderSubtle bg-surface p-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+                <div>
+                  <div className="text-sm font-semibold text-ink">{copy.remindersNew.medicationOptionsTitle}</div>
+                  <p className="text-xs text-muted">{copy.remindersNew.medicationOptionsSubtitle}</p>
+                </div>
+                <span className="text-muted">⌄</span>
+              </summary>
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className="text-sm font-semibold">{copy.remindersNew.medicationPersonLabel}</label>
                   <select
-                    name="assigned_member_id"
                     className="input"
-                    value={assignedMemberId}
-                    onChange={(event) => setAssignedMemberId(event.target.value)}
+                    value={medPersonId}
+                    onChange={(event) => setMedPersonId(event.target.value)}
                   >
-                    {memberOptions.map((member) => (
-                      <option key={member.id || 'none'} value={member.id}>
-                        {member.label}
-                      </option>
+                    <option value="">{copy.remindersNew.medicationPersonSelf}</option>
+                    {members.map((member) => (
+                      <option key={member.id} value={member.id}>{member.label}</option>
                     ))}
                   </select>
-                  <p className="mt-2 text-xs text-muted">{copy.remindersNew.householdHint}</p>
                 </div>
-              </details>
-
-              <details className="rounded-2xl border border-borderSubtle bg-surface p-4">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
-                  <div>
-                    <div className="text-sm font-semibold text-ink">{copy.remindersNew.calendarTitle}</div>
-                    <p className="text-xs text-muted">{copy.remindersNew.calendarSubtitle}</p>
-                  </div>
-                  <span className="text-muted">⌄</span>
-                </summary>
-                <div className="mt-4 space-y-3">
-                  <label className="flex items-center gap-2 text-sm">
+                {googleConnected ? (
+                  <label className="flex items-center gap-2 text-sm text-muted">
                     <input
                       type="checkbox"
-                      name="context_calendar_busy_enabled"
-                      value="1"
                       className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
-                      checked={calendarBusyEnabled}
-                      onChange={(event) => setCalendarBusyEnabled(event.target.checked)}
+                      checked={medAddToCalendar}
+                      onChange={(event) => setMedAddToCalendar(event.target.checked)}
                     />
-                    {copy.remindersNew.contextCalendarLabel}
+                    {copy.remindersNew.medicationAddCalendar}
                   </label>
-                  <p className="text-xs text-muted">{copy.remindersNew.contextCalendarHint}</p>
-                  <div className="max-w-xs">
-                    <label className="text-xs font-semibold text-muted">{copy.remindersNew.contextSnoozeLabel}</label>
-                    <input
-                      type="number"
-                      name="context_calendar_snooze_minutes"
-                      className="input"
-                      min={5}
-                      max={240}
-                      value={calendarSnoozeMinutes}
-                      onChange={(event) => setCalendarSnoozeMinutes(Number(event.target.value))}
-                      disabled={!calendarBusyEnabled}
-                    />
-                  </div>
-                </div>
-              </details>
-            </div>
+                ) : (
+                  <div className="text-xs text-muted">{copy.remindersNew.medicationCalendarHint}</div>
+                )}
+              </div>
+            </details>
+          ) : null}
 
-            <ActionSubmitButton
-              className="btn btn-primary"
-              type="submit"
-              data-action-feedback={copy.common.actionCreated}
-            >
-              {copy.remindersNew.create}
-            </ActionSubmitButton>
-          </section>
-        ) : null}
-      </div>
+          {kind === 'generic' ? (
+            <details className="rounded-2xl border border-borderSubtle bg-surface p-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+                <div>
+                  <div className="text-sm font-semibold text-ink">{copy.remindersNew.templatesTitle}</div>
+                  <p className="text-xs text-muted">{copy.remindersNew.templatesSubtitle}</p>
+                </div>
+                <span className="text-muted">⌄</span>
+              </summary>
+              <div className="space-y-4 pt-4">
+                <div className="relative w-full md:w-64">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
+                    <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <path
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"
+                      />
+                    </svg>
+                  </span>
+                  <input
+                    className="input pl-9"
+                    aria-label={copy.remindersNew.templatesSearchPlaceholder}
+                    placeholder={copy.remindersNew.templatesSearchPlaceholder}
+                    value={templateQuery}
+                    onChange={(event) => setTemplateQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                      }
+                    }}
+                  />
+                </div>
+                {filteredTemplates.length ? (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      className="card flex flex-col gap-3 border-dashed border-slate-200 text-left transition hover:border-sky-300 hover:bg-sky-50"
+                      onClick={() => {
+                        setCreateModeAndKind('medication');
+                        setTimeout(() => medicationRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
+                          💊
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-ink">{copy.remindersNew.modeMedication}</div>
+                          <div className="text-xs text-muted">{copy.remindersNew.typeMedicationSubtitle}</div>
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted">{copy.remindersNew.typeMedicationHint}</div>
+                    </button>
+                    {filteredTemplates.map((template) => {
+                      const preReminder = template.preReminderMinutes
+                        ? formatPreReminder(activeLocale, template.preReminderMinutes)
+                        : '';
+                      return (
+                        <div
+                          key={template.id}
+                          className="flex flex-col gap-3 rounded-2xl border border-borderSubtle bg-surface p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primarySoft text-primaryStrong">
+                              {TEMPLATE_ICONS[template.icon]}
+                            </div>
+                            <div className="min-w-0 space-y-1">
+                              <div className="text-sm font-semibold text-ink">{template.title[activeLocale]}</div>
+                              <div className="text-xs text-muted">{template.description[activeLocale]}</div>
+                            </div>
+                          </div>
+                          {template.tags[activeLocale].length ? (
+                            <div className="flex flex-wrap gap-2">
+                              {template.tags[activeLocale].map((tag) => (
+                                <span key={tag} className="chip">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                          <div className="flex flex-wrap gap-2 text-xs text-muted">
+                            <span className="chip">
+                              {copy.remindersNew.repeatLabel}: {scheduleLabels[template.scheduleType]}
+                            </span>
+                            {preReminder ? (
+                              <span className="chip">
+                                {copy.remindersNew.templatesPreReminderLabel}: {preReminder}
+                              </span>
+                            ) : null}
+                          </div>
+                          {template.notes?.[activeLocale] ? (
+                            <div className="text-xs text-muted">{template.notes[activeLocale]}</div>
+                          ) : null}
+                          <button
+                            className="btn btn-secondary mt-1 w-full"
+                            type="button"
+                            onClick={() => applyTemplate(template)}
+                          >
+                            {copy.remindersNew.templatesApply}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted">{copy.remindersNew.templatesEmpty}</div>
+                )}
+              </div>
+            </details>
+          ) : null}
+        </div>
+
+        <ActionSubmitButton
+          className="btn btn-primary mt-6 w-full sm:w-auto"
+          type="submit"
+          data-action-feedback={copy.common.actionCreated}
+        >
+          {copy.remindersNew.create}
+        </ActionSubmitButton>
+      </section>
     </form>
   );
 });
