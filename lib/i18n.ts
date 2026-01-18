@@ -452,6 +452,7 @@ export const messages = {
       notificationsUpdated: 'Preferintele de notificare au fost actualizate.',
       notificationsEmailLabel: 'Primeste notificari pe email',
       notificationsPushLabel: 'Primeste notificari push',
+      notificationsAndroidBlocked: 'Notificarile push sunt gestionate de aplicatia Android.',
       contextTitle: 'Context implicit',
       contextSubtitle: 'Aceste optiuni devin implicit pentru toate reminderele noi.',
       contextUpdated: 'Contextul implicit a fost actualizat.',
@@ -485,7 +486,8 @@ export const messages = {
       disabling: 'Dezactivare...',
       enabled: 'Push activat.',
       disabled: 'Push dezactivat.',
-      notSupported: 'Browserul nu suporta push.'
+      notSupported: 'Browserul nu suporta push.',
+      androidBlocked: 'Notificarile sunt gestionate prin aplicatia Android.'
     },
     invite: {
       title: 'Invitatie',
@@ -958,6 +960,7 @@ export const messages = {
       notificationsUpdated: 'Notification preferences updated.',
       notificationsEmailLabel: 'Receive email notifications',
       notificationsPushLabel: 'Receive push notifications',
+      notificationsAndroidBlocked: 'Push notifications are handled by the Android app.',
       contextTitle: 'Default context',
       contextSubtitle: 'These options become the default for new reminders.',
       contextUpdated: 'Default context updated.',
@@ -991,7 +994,8 @@ export const messages = {
       disabling: 'Disabling...',
       enabled: 'Push enabled.',
       disabled: 'Push disabled.',
-      notSupported: 'Your browser does not support push.'
+      notSupported: 'Your browser does not support push.',
+      androidBlocked: 'Notifications are handled by the Android app.'
     },
     invite: {
       title: 'Invitation',
@@ -1464,6 +1468,7 @@ export const messages = {
       notificationsUpdated: 'Benachrichtigungseinstellungen aktualisiert.',
       notificationsEmailLabel: 'E-Mail-Benachrichtigungen erhalten',
       notificationsPushLabel: 'Push-Benachrichtigungen erhalten',
+      notificationsAndroidBlocked: 'Push-Benachrichtigungen werden von der Android-App verwaltet.',
       contextTitle: 'Standardkontext',
       contextSubtitle: 'Diese Optionen sind die Standardwerte für neue Erinnerungen.',
       contextUpdated: 'Standardkontext aktualisiert.',
@@ -1497,7 +1502,8 @@ export const messages = {
       disabling: 'Deaktivieren...',
       enabled: 'Push aktiviert.',
       disabled: 'Push deaktiviert.',
-      notSupported: 'Dein Browser unterstützt Push nicht.'
+      notSupported: 'Dein Browser unterstützt Push nicht.',
+      androidBlocked: 'Benachrichtigungen werden von der Android-App verwaltet.'
     },
     invite: {
       title: 'Einladung',

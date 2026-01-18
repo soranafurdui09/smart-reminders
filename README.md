@@ -118,6 +118,8 @@ Persistenta date:
 - `npm run docker:down` - docker compose down
 - `npm run docker:reset` - supabase db reset in container
 - `npm run docker:logs` - follow logs
+- `npm run cap:sync` - Capacitor sync Android
+- `npm run cap:open` - open Android project in Android Studio
 
 ## End-to-end test (local)
 1) Deschide `/auth` si autentifica-te cu magic link.
@@ -151,7 +153,86 @@ curl http://localhost:3000/api/cron/dispatch-notifications
 
 ## Vercel Cron
 Cron este configurat in `vercel.json`:
-- `/api/cron/dispatch-notifications` ruleaza la 15 minute.
+- `/api/cron/dispatch-notifications` ruleaza la 1 minut (fallback pentru worker).
+
+## Android (Capacitor)
+Aplicatia Android ruleaza in modul Live Web si incarca URL-ul de productie sau staging.
+
+1) Instaleaza dependintele:
+```bash
+npm install
+```
+
+2) Seteaza URL-ul pentru Capacitor (optional):
+```bash
+export CAPACITOR_SERVER_URL=\"https://<prod-or-staging>\"
+```
+
+3) Genereaza proiectul Android (o singura data):
+```bash
+npx cap add android
+```
+
+4) Sync + open:
+```bash
+npm run cap:sync
+npm run cap:open
+```
+
+Note:
+- `capacitor.config.ts` foloseste `CAPACITOR_SERVER_URL` sau `NEXT_PUBLIC_APP_URL`.
+- Pentru notificari locale pe Android, ruleaza aplicatia in Capacitor (nu in browser).
+
+## Notification Worker (push realtime)
+Worker-ul ruleaza continuu si livreaza notificari push in ~secunde (target <2 min), folosind Supabase `notification_jobs`.
+
+### Env vars necesare (worker)
+- `SUPABASE_URL` (sau `NEXT_PUBLIC_SUPABASE_URL`)
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
+- `VAPID_PRIVATE_KEY`
+- `VAPID_SUBJECT`
+- `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (doar daca folosesti „Evita notificarile in timpul intalnirilor”)
+
+Optional:
+- `WORKER_POLL_MS` (default 5000)
+- `WORKER_CLAIM_WINDOW_SECONDS` (default 5)
+- `WORKER_GRACE_MINUTES` (default 120)
+- `WORKER_MAX_CONCURRENCY` (default 100)
+- `WORKER_HEALTH_PORT` (default 8787)
+
+### Rulare locala
+```bash
+node worker/index.js
+```
+
+### Rulare pe VPS (Docker)
+```bash
+docker build -t reminder-worker -f worker/Dockerfile .
+docker run -d --restart=always \\
+  -e SUPABASE_URL=... \\
+  -e SUPABASE_SERVICE_ROLE_KEY=... \\
+  -e NEXT_PUBLIC_APP_URL=... \\
+  -e NEXT_PUBLIC_VAPID_PUBLIC_KEY=... \\
+  -e VAPID_PRIVATE_KEY=... \\
+  -e VAPID_SUBJECT=... \\
+  -e GOOGLE_CLIENT_ID=... \\
+  -e GOOGLE_CLIENT_SECRET=... \\
+  -p 8787:8787 \\
+  reminder-worker
+```
+
+Health check:
+```bash
+curl http://localhost:8787/health
+```
+
+### Smoke checklist (worker)
+- creezi reminder cu notify_at ~2-5 minute -> push ajunge sub 2 minute intarziere.
+- opresti workerul -> cronul trimite (max 1 min).
+- simulezi retry (dezactivezi VAPID / endpoint invalid) -> job trece pe pending cu next_retry_at.
+- rulezi worker + cron in paralel -> nu apar duplicate (notification_log ramane unic).
 
 ## Google Calendar busy cache
 Pentru optiunea "Evita notificarile in timpul intalnirilor":

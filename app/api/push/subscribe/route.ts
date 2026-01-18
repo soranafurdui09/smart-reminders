@@ -20,6 +20,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'invalid-payload' }, { status: 400 });
   }
 
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: installs } = await supabase
+    .from('device_installations')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('platform', 'android')
+    .gte('last_seen_at', cutoff)
+    .limit(1);
+  if (installs && installs.length > 0) {
+    return NextResponse.json({ error: 'android_app_active' }, { status: 409 });
+  }
+
   const { error } = await supabase
     .from('push_subscriptions')
     .upsert(
@@ -27,7 +39,9 @@ export async function POST(request: Request) {
         user_id: user.id,
         endpoint,
         p256dh,
-        auth
+        auth,
+        is_disabled: false,
+        disabled_reason: null
       },
       { onConflict: 'endpoint' }
     );

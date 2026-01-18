@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -28,11 +28,35 @@ export default function PushSettings({
     enabled: string;
     disabled: string;
     notSupported: string;
+    androidBlocked: string;
   };
 }) {
   const [status, setStatus] = useState<string>('');
+  const [canUseWebPush, setCanUseWebPush] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/me/notification-capabilities', { credentials: 'include' })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!mounted) return;
+        if (data && typeof data.can_use_web_push === 'boolean') {
+          setCanUseWebPush(data.can_use_web_push);
+        } else {
+          setCanUseWebPush(true);
+        }
+      })
+      .catch(() => setCanUseWebPush(true));
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleSubscribe = async () => {
+    if (canUseWebPush === false) {
+      setStatus(copy.androidBlocked);
+      return;
+    }
     setStatus(copy.enabling);
     if (!('serviceWorker' in navigator)) {
       setStatus(copy.notSupported);
@@ -52,6 +76,10 @@ export default function PushSettings({
   };
 
   const handleUnsubscribe = async () => {
+    if (canUseWebPush === false) {
+      setStatus(copy.androidBlocked);
+      return;
+    }
     setStatus(copy.disabling);
     const registration = await navigator.serviceWorker.getRegistration();
     const subscription = await registration?.pushManager.getSubscription();
@@ -72,10 +100,16 @@ export default function PushSettings({
         <div className="text-lg font-semibold text-ink">{copy.title}</div>
         <p className="text-sm text-muted">{copy.subtitle}</p>
       </div>
-      <div className="flex flex-wrap gap-3">
-        <button className="btn btn-primary" onClick={handleSubscribe} type="button">{copy.activate}</button>
-        <button className="btn btn-secondary" onClick={handleUnsubscribe} type="button">{copy.deactivate}</button>
-      </div>
+      {canUseWebPush === false ? (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+          {copy.androidBlocked}
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-3">
+          <button className="btn btn-primary" onClick={handleSubscribe} type="button">{copy.activate}</button>
+          <button className="btn btn-secondary" onClick={handleUnsubscribe} type="button">{copy.deactivate}</button>
+        </div>
+      )}
       {status ? <div className="text-sm text-muted">{status}</div> : null}
     </div>
   );

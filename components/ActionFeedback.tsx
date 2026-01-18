@@ -100,19 +100,22 @@ export default function ActionFeedback() {
   }, [message]);
 
   useEffect(() => {
-    const handleAction = (element: HTMLElement | null) => {
-      if (!element) return;
-      const feedback = element.getAttribute('data-action-feedback');
-      if (feedback) {
-        storeFeedback(feedback);
-      }
+  const handleAction = (element: HTMLElement | null) => {
+    if (!element) return;
+    const feedback = element.getAttribute('data-action-feedback');
+    if (feedback) {
+      storeFeedback(feedback);
+    }
       const highlightId = element.getAttribute('data-highlight-id');
       if (highlightId) {
         const highlightKind = element.getAttribute('data-highlight-kind');
-        storeHighlight(highlightId, highlightKind);
-      }
-      closeRelatedDetails(element);
-    };
+      storeHighlight(highlightId, highlightKind);
+    }
+    closeRelatedDetails(element);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('reminder:changed'));
+    }
+  };
 
     const handleClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;

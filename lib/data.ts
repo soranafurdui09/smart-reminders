@@ -326,6 +326,23 @@ export async function getUserNotificationPreferences(userId: string) {
   };
 }
 
+export async function getUserHasActiveAndroidApp(userId: string, activeDays = 7) {
+  const supabase = createServerClient();
+  const cutoff = new Date(Date.now() - activeDays * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from('device_installations')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('platform', 'android')
+    .gte('last_seen_at', cutoff)
+    .limit(1);
+  if (error) {
+    logDataError('getUserHasActiveAndroidApp', error);
+    return false;
+  }
+  return Boolean(data && data.length > 0);
+}
+
 export async function getUserTimeZone(userId: string) {
   const supabase = createServerClient();
   const { data, error } = await supabase

@@ -215,10 +215,20 @@ export async function GET() {
     ])
   );
 
+  const activeAndroidCutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: androidInstalls } = await admin
+    .from('device_installations')
+    .select('user_id')
+    .in('user_id', userIds)
+    .eq('platform', 'android')
+    .gte('last_seen_at', activeAndroidCutoff);
+  const activeAndroidUsers = new Set((androidInstalls ?? []).map((row: any) => row.user_id));
+
   const { data: subscriptions } = await admin
     .from('push_subscriptions')
     .select('user_id, endpoint, p256dh, auth')
-    .in('user_id', userIds);
+    .in('user_id', userIds)
+    .eq('is_disabled', false);
   const pushMap = new Map<string, { endpoint: string; p256dh: string; auth: string }[]>();
   (subscriptions ?? []).forEach((sub: any) => {
     const existing = pushMap.get(sub.user_id) ?? [];
@@ -653,6 +663,11 @@ export async function GET() {
     }
 
     if (job.channel === 'push') {
+      if (activeAndroidUsers.has(job.user_id)) {
+        await markJobSkipped(job.id, 'mobile_app_present');
+        skippedCount += 1;
+        continue;
+      }
       const subs = pushMap.get(job.user_id) ?? [];
       if (!subs.length) {
         await markJobSkipped(job.id, 'missing_push');

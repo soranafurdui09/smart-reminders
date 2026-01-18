@@ -14,9 +14,17 @@
     "docker:down": "docker compose down",
     "docker:reset": "docker compose exec supabase supabase db reset",
     "docker:logs": "docker compose logs -f",
+    "cap:sync": "npx cap sync android",
+    "cap:open": "npx cap open android",
     "embeddings:backfill": "node scripts/backfill-reminder-embeddings.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/app": "^6.0.0",
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/local-notifications": "^6.0.0",
+    "@capacitor/preferences": "^6.0.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.90.1",
     "date-fns": "^3.6.0",
