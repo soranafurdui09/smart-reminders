@@ -224,11 +224,39 @@ export async function GET() {
     .gte('last_seen_at', activeAndroidCutoff);
   const activeAndroidUsers = new Set((androidInstalls ?? []).map((row: any) => row.user_id));
 
-  const { data: subscriptions } = await admin
+  const pushEnabledUserIds = userIds.filter((id) => !activeAndroidUsers.has(id));
+  if (pushEnabledUserIds.length) {
+    const { data: disabledSubs, error: disabledError } = await admin
+      .from('push_subscriptions')
+      .select('endpoint')
+      .in('user_id', pushEnabledUserIds)
+      .eq('is_disabled', true)
+      .eq('disabled_reason', 'mobile_app_present');
+    if (disabledError) {
+      console.warn('[cron] failed to load disabled push subscriptions', disabledError);
+    }
+    if (disabledSubs?.length) {
+      const endpoints = disabledSubs.map((sub: any) => sub.endpoint).filter(Boolean);
+      if (endpoints.length) {
+        const { error: reenableError } = await admin
+          .from('push_subscriptions')
+          .update({ is_disabled: false, disabled_reason: null })
+          .in('endpoint', endpoints);
+        if (reenableError) {
+          console.warn('[cron] failed to re-enable push subscriptions', reenableError);
+        }
+      }
+    }
+  }
+
+  const { data: subscriptions, error: subscriptionsError } = await admin
     .from('push_subscriptions')
     .select('user_id, endpoint, p256dh, auth')
     .in('user_id', userIds)
     .eq('is_disabled', false);
+  if (subscriptionsError) {
+    console.warn('[cron] failed to load push subscriptions', subscriptionsError);
+  }
   const pushMap = new Map<string, { endpoint: string; p256dh: string; auth: string }[]>();
   (subscriptions ?? []).forEach((sub: any) => {
     const existing = pushMap.get(sub.user_id) ?? [];
