@@ -244,11 +244,7 @@ export default async function SettingsPage({
             </div>
           )}
         </section>
-        {hasActiveAndroidApp ? (
-          <div className="card text-sm text-muted">
-            {copy.push.androidBlocked}
-          </div>
-        ) : vapidPublicKey ? (
+        {vapidPublicKey ? (
           <PushSettings
             vapidPublicKey={vapidPublicKey}
             copy={{
