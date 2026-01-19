@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
   const { error } = await supabase
     .from('push_subscriptions')
-    .delete()
+    .update({ is_disabled: true, disabled_reason: 'user_disabled' })
     .eq('endpoint', endpoint)
     .eq('user_id', user.id);
 

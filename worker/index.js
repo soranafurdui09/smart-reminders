@@ -741,6 +741,12 @@ async function processBatch(now) {
       return;
     }
 
+    if (subscriptionsError) {
+      await markJobFailed(job, now, nowIso, 'push_subscriptions_query_failed');
+      failed += 1;
+      return;
+    }
+
     const subs = pushMap.get(job.user_id) ?? [];
     if (!subs.length) {
       await markJobSkipped(job.id, nowIso, 'missing_push');

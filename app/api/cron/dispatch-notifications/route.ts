@@ -657,6 +657,11 @@ export async function GET() {
     }
 
     if (job.channel === 'push') {
+      if (subscriptionsError) {
+        await markJobFailed(job, 'push_subscriptions_query_failed');
+        failedCount += 1;
+        continue;
+      }
       const subs = pushMap.get(job.user_id) ?? [];
       if (!subs.length) {
         await markJobSkipped(job.id, 'missing_push');
