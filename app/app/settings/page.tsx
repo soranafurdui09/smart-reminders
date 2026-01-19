@@ -4,7 +4,7 @@ import SectionHeader from '@/components/SectionHeader';
 import PushSettings from '@/components/PushSettings';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { requireUser } from '@/lib/auth';
-import { getUserContextDefaults, getUserHasActiveAndroidApp, getUserLocale, getUserNotificationPreferences } from '@/lib/data';
+import { getUserContextDefaults, getUserLocale, getUserNotificationPreferences } from '@/lib/data';
 import { getVapidPublicKey } from '@/lib/push';
 import { messages } from '@/lib/i18n';
 import { updateContextDefaults, updateLocale, updateNotificationPreferences } from './actions';
@@ -23,7 +23,6 @@ export default async function SettingsPage({
   const googleStatus = searchParams.google;
   const contextDefaults = await getUserContextDefaults(user.id);
   const notificationPrefs = await getUserNotificationPreferences(user.id);
-  const hasActiveAndroidApp = await getUserHasActiveAndroidApp(user.id);
   const timeWindow = contextDefaults.timeWindow ?? { enabled: false, startHour: 9, endHour: 20, daysOfWeek: [] };
   const calendarBusy = contextDefaults.calendarBusy ?? { enabled: false, snoozeMinutes: 15 };
   const hourOptions = Array.from({ length: 24 }, (_, index) => index);
@@ -191,22 +190,16 @@ export default async function SettingsPage({
               />
               {copy.settings.notificationsEmailLabel}
             </label>
-            {hasActiveAndroidApp ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-                {copy.settings.notificationsAndroidBlocked}
-              </div>
-            ) : (
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="notify_by_push"
-                  value="1"
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
-                  defaultChecked={notificationPrefs.notifyByPush}
-                />
-                {copy.settings.notificationsPushLabel}
-              </label>
-            )}
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="notify_by_push"
+                value="1"
+                className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                defaultChecked={notificationPrefs.notifyByPush}
+              />
+              {copy.settings.notificationsPushLabel}
+            </label>
             <ActionSubmitButton
               className="btn btn-primary"
               type="submit"

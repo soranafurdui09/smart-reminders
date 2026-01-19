@@ -616,11 +616,10 @@ async function processBatch(now) {
   const reminderIds = Array.from(new Set(jobs.map((job) => job.reminder_id)));
   const userIds = Array.from(new Set(jobs.map((job) => job.user_id)));
 
-  const [{ data: reminders }, { data: profiles }, { data: occurrences }, { data: androidInstalls }] = await Promise.all([
+  const [{ data: reminders }, { data: profiles }, { data: occurrences }] = await Promise.all([
     supabase.from('reminders').select('id, title, household_id, is_active, created_by, context_settings, kind, medication_details, tz').in('id', reminderIds),
     supabase.from('profiles').select('user_id, email, time_zone, context_defaults, notify_by_push').in('user_id', userIds),
-    supabase.from('reminder_occurrences').select('id, reminder_id, occur_at, snoozed_until, status').in('reminder_id', reminderIds).in('status', ['open', 'snoozed']),
-    supabase.from('device_installations').select('user_id, last_seen_at').in('user_id', userIds).eq('platform', 'android')
+    supabase.from('reminder_occurrences').select('id, reminder_id, occur_at, snoozed_until, status').in('reminder_id', reminderIds).in('status', ['open', 'snoozed'])
   ]);
 
   const reminderMap = new Map((reminders ?? []).map((reminder) => [reminder.id, reminder]));
@@ -633,40 +632,6 @@ async function processBatch(now) {
       notifyByPush: profile.notify_by_push ?? false
     }
   ]));
-
-  const activeAndroidUsers = new Set();
-  const activeAndroidCutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  (androidInstalls ?? []).forEach((row) => {
-    const lastSeen = new Date(row.last_seen_at || 0);
-    if (!Number.isNaN(lastSeen.getTime()) && lastSeen >= activeAndroidCutoff) {
-      activeAndroidUsers.add(row.user_id);
-    }
-  });
-
-  const pushEnabledUserIds = userIds.filter((id) => !activeAndroidUsers.has(id));
-  if (pushEnabledUserIds.length) {
-    const { data: disabledSubs, error: disabledError } = await supabase
-      .from('push_subscriptions')
-      .select('endpoint')
-      .in('user_id', pushEnabledUserIds)
-      .eq('is_disabled', true)
-      .eq('disabled_reason', 'mobile_app_present');
-    if (disabledError) {
-      console.warn('[worker] failed to load disabled push subscriptions', disabledError);
-    }
-    if (disabledSubs?.length) {
-      const endpoints = disabledSubs.map((sub) => sub.endpoint).filter(Boolean);
-      if (endpoints.length) {
-        const { error: reenableError } = await supabase
-          .from('push_subscriptions')
-          .update({ is_disabled: false, disabled_reason: null })
-          .in('endpoint', endpoints);
-        if (reenableError) {
-          console.warn('[worker] failed to re-enable push subscriptions', reenableError);
-        }
-      }
-    }
-  }
 
   const { data: subscriptions, error: subscriptionsError } = await supabase
     .from('push_subscriptions')
@@ -740,12 +705,6 @@ async function processBatch(now) {
       skipped += 1;
       return;
     }
-    if (activeAndroidUsers.has(job.user_id)) {
-      await markJobSkipped(job.id, nowIso, 'mobile_app_present');
-      skipped += 1;
-      return;
-    }
-
     const settings = settingsMap.get(reminder.id) ?? parseContextSettings(reminder.context_settings ?? null);
     const busyInterval = settings.calendarBusy?.enabled
       ? busyIntervalMap.get(reminder.created_by) ?? null

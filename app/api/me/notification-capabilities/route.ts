@@ -29,6 +29,6 @@ export async function GET() {
   const hasActiveAndroidApp = Boolean(data && data.length > 0);
   return NextResponse.json({
     has_active_android_app: hasActiveAndroidApp,
-    can_use_web_push: !hasActiveAndroidApp
+    can_use_web_push: true
   });
 }

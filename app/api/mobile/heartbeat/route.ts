@@ -35,14 +35,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'failed' }, { status: 500 });
   }
 
-  const { error: disableError } = await supabase
-    .from('push_subscriptions')
-    .update({ is_disabled: true, disabled_reason: 'mobile_app_present' })
-    .eq('user_id', user.id)
-    .eq('is_disabled', false);
-  if (disableError) {
-    console.error('[mobile] disable push failed', disableError);
-  }
-
   return NextResponse.json({ ok: true, last_seen_at: now });
 }
