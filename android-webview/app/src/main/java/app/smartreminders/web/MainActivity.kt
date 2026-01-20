@@ -21,7 +21,7 @@ class MainActivity : AppCompatActivity() {
   private lateinit var splashOverlay: View
 
   // If I change my domain later, update the URL here
-  private val startUrl = "https://smart-reminders3.vercel.app"
+  private val startUrl = "https://www.smart-reminder-app.com"
   private val allowedHost: String? by lazy { Uri.parse(startUrl).host }
 
   override fun onCreate(savedInstanceState: Bundle?) {

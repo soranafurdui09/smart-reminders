@@ -13,7 +13,7 @@ if (serverUrl) {
 const config: CapacitorConfig = {
   appId: 'com.smartreminder.app',
   appName: 'Smart Reminder',
-  webDir: 'out',
+  webDir: 'public',
   server: serverUrl
     ? {
         url: serverUrl,
