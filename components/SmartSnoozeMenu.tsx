@@ -11,7 +11,8 @@ export default function SmartSnoozeMenu({
   notes,
   category,
   copy,
-  snoozeAction
+  snoozeAction,
+  compact = false
 }: {
   occurrenceId: string;
   dueAt: string | null;
@@ -20,6 +21,7 @@ export default function SmartSnoozeMenu({
   category?: string | null;
   copy: any;
   snoozeAction: (formData: FormData) => void;
+  compact?: boolean;
 }) {
   const detailsRef = useRef<HTMLDetailsElement | null>(null);
   // UI flow: compute options instantly on the client, while the server recomputes before saving.
@@ -71,17 +73,22 @@ export default function SmartSnoozeMenu({
 
   return (
     <details ref={detailsRef} className="relative" onToggle={handleToggle}>
-      <summary className="btn btn-secondary dropdown-summary h-10">
-        <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+      <summary
+        className={`dropdown-summary inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 ${
+          compact ? 'h-9 w-9' : 'h-10 px-4'
+        }`}
+        aria-label={copy.common.snooze}
+      >
+        <svg aria-hidden="true" className={compact ? 'h-4 w-4' : 'h-4 w-4'} fill="none" viewBox="0 0 24 24">
           <path
             stroke="currentColor"
             strokeWidth="1.5"
             d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"
           />
         </svg>
-        {copy.common.snooze}
+        <span className={compact ? 'sr-only md:not-sr-only' : ''}>{copy.common.snooze}</span>
       </summary>
-      <div className="absolute left-0 z-20 mt-3 w-64 max-w-[calc(100vw-2rem)] rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft sm:left-auto sm:right-0">
+      <div className="absolute right-0 z-20 mt-3 w-64 max-w-[calc(100vw-2rem)] rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft">
         {options
           .filter((option) => option.id !== 'custom')
           .map((option) => (

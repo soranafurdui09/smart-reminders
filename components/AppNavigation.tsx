@@ -27,7 +27,6 @@ type Props = {
 const bottomTabs = [
   { href: '/app', icon: Home, key: 'home' },
   { href: '/app/calendar', icon: Calendar, key: 'calendar' },
-  { href: '/app/reminders/new', icon: Plus, key: 'add' },
   { href: '/app/history', icon: History, key: 'history' },
   { href: '/app/settings', icon: Settings, key: 'settings' }
 ] as const;
@@ -45,11 +44,39 @@ export default function AppNavigation({
 }: Props) {
   const pathname = usePathname();
   const [isNativeAndroid, setIsNativeAndroid] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     setIsNativeAndroid(Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android');
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(max-width: 768px)');
+    const handleChange = () => setIsMobile(media.matches);
+    handleChange();
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', handleChange);
+      return () => media.removeEventListener('change', handleChange);
+    }
+    media.addListener(handleChange);
+    return () => media.removeListener(handleChange);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setIsCollapsed(false);
+      return;
+    }
+    const handleScroll = () => {
+      setIsCollapsed(window.scrollY > 16);
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isMobile]);
 
   const currentPath = activePath || pathname || '';
   const isActive = useMemo(() => {
@@ -63,18 +90,25 @@ export default function AppNavigation({
     return new Map(navLinks.map((link) => [link.href, link.label]));
   }, [navLinks]);
 
+  const showBottomNav = isNativeAndroid || isMobile;
+  const showTopNav = !showBottomNav;
+  const headerClass = showBottomNav
+    ? 'bg-white/95 shadow-sm'
+    : 'bg-surface/80 shadow-sm backdrop-blur';
+  const headerPadding = isCollapsed ? 'py-2' : 'py-3';
+
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-border/70 bg-surface/80 shadow-sm backdrop-blur safe-top">
-        <div className="page-wrap flex flex-wrap items-center justify-between gap-4 py-4">
+      <header className={`sticky top-0 z-30 border-b border-border/70 ${headerClass} safe-top`}>
+        <div className={`page-wrap flex flex-wrap items-center justify-between gap-4 ${headerPadding}`}>
           <Link href="/app" className="flex items-center gap-3 text-lg font-semibold tracking-tight text-ink">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primaryStrong via-primary to-accent text-sm font-bold text-white shadow-md shadow-sky-500/30">
+            <span className={`flex ${isCollapsed ? 'h-9 w-9' : 'h-10 w-10'} items-center justify-center rounded-full bg-gradient-to-br from-primaryStrong via-primary to-accent text-sm font-bold text-white shadow-md shadow-sky-500/30`}>
               RI
             </span>
-            <span>{appName}</span>
+            <span className={isCollapsed ? 'text-base' : ''}>{appName}</span>
           </Link>
           <div className="flex flex-1 items-center justify-end gap-3 md:justify-between">
-            {!isNativeAndroid ? (
+            {showTopNav ? (
               <nav className="hidden flex-wrap items-center gap-1 rounded-full border border-borderSubtle bg-surfaceMuted/80 p-1 text-sm md:flex">
                 {navLinks.map((link) => {
                   const active = isActive(link.href);
@@ -123,9 +157,7 @@ export default function AppNavigation({
                   );
                 })}
               </nav>
-            ) : (
-              <div className="hidden md:flex" />
-            )}
+            ) : null}
             <details className="relative">
               <summary className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-surfaceMuted text-sm font-semibold text-ink shadow-sm transition hover:bg-surface">
                 {userInitial}
@@ -152,92 +184,60 @@ export default function AppNavigation({
               </div>
             </details>
           </div>
-          {!isNativeAndroid ? (
-            <nav className="flex w-full flex-wrap items-center gap-2 md:hidden">
-              {navLinks.map((link) => {
-                const active = isActive(link.href);
-                if (link.href === '/app/reminders/new') {
-                  return (
-                    <div key={link.href} className="flex items-center gap-2">
-                      <Link
-                        href={link.href}
-                        className={`rounded-full border px-3 py-1 text-xs transition ${
-                          active
-                            ? 'border-sky-500 bg-sky-500 text-white shadow-sm'
-                            : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                        }`}
-                      >
-                        {link.label}
-                      </Link>
-                      <VoiceNavButton
-                        href="/app/reminders/new?voice=1"
-                        className="flex h-8 w-8 items-center justify-center rounded-full border border-borderSubtle bg-surface text-ink transition hover:border-primary/30 hover:bg-white"
-                        label={voiceLabel}
-                        title={voiceLabel}
-                      >
-                        <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
-                          <path
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            d="M12 3a3 3 0 013 3v6a3 3 0 11-6 0V6a3 3 0 013-3zm0 14a7 7 0 007-7h-2a5 5 0 01-10 0H5a7 7 0 007 7zm0 0v4"
-                          />
-                        </svg>
-                      </VoiceNavButton>
-                    </div>
-                  );
-                }
+        </div>
+      </header>
+      {showBottomNav ? (
+        <nav className={`fixed bottom-0 left-0 right-0 z-40 border-t border-borderSubtle bg-surface/95 backdrop-blur safe-bottom ${isNativeAndroid ? '' : 'md:hidden'}`}>
+          <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between px-4 pb-2 pt-2">
+            <div className="flex flex-1 items-center justify-between">
+              {bottomTabs.slice(0, 2).map((tab) => {
+                const active = isActive(tab.href);
+                const Icon = tab.icon;
                 return (
                   <Link
-                    key={link.href}
-                    href={link.href}
-                    className={`rounded-full border px-3 py-1 text-xs transition ${
-                      active
-                        ? 'border-sky-500 bg-sky-500 text-white shadow-sm'
-                        : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                    key={tab.key}
+                    href={tab.href}
+                    className={`flex flex-col items-center gap-1 rounded-2xl px-3 py-1 text-[11px] font-semibold transition ${
+                      active ? 'text-sky-600' : 'text-slate-500 hover:text-slate-700'
                     }`}
+                    aria-current={active ? 'page' : undefined}
                   >
-                    {link.label}
+                    <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${active ? 'bg-sky-100 text-sky-600' : 'bg-surfaceMuted text-slate-500'}`}>
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <span>{navLabelByHref.get(tab.href) ?? tab.key}</span>
                   </Link>
                 );
               })}
-            </nav>
-          ) : null}
-        </div>
-      </header>
-      {isNativeAndroid ? (
-        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-borderSubtle bg-surface/95 backdrop-blur safe-bottom">
-          <div className="mx-auto flex w-full max-w-6xl items-center justify-around px-4 pb-2 pt-2">
-            {bottomTabs.map((tab) => {
-              const active = isActive(tab.href);
-              const Icon = tab.icon;
-              return (
-                <Link
-                  key={tab.key}
-                  href={tab.href}
-                  className={`flex flex-col items-center gap-1 rounded-2xl px-3 py-1 text-[11px] font-semibold transition ${
-                    active
-                      ? 'text-sky-600'
-                      : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                  aria-current={active ? 'page' : undefined}
-                >
-                  <span
-                    className={`flex h-10 w-10 items-center justify-center rounded-2xl ${
-                      tab.key === 'add'
-                        ? 'bg-sky-500 text-white shadow-md shadow-sky-500/30'
-                        : active
-                        ? 'bg-sky-100 text-sky-600'
-                        : 'bg-surfaceMuted text-slate-500'
+            </div>
+            <Link
+              href="/app/reminders/new"
+              className="absolute left-1/2 -translate-x-1/2 -translate-y-5 flex h-12 w-12 items-center justify-center rounded-full bg-sky-500 text-white shadow-float shadow-sky-500/30"
+              aria-label={navLabelByHref.get('/app/reminders/new') ?? 'Add'}
+            >
+              <Plus className="h-5 w-5" aria-hidden="true" />
+            </Link>
+            <div className="flex flex-1 items-center justify-between">
+              {bottomTabs.slice(2).map((tab) => {
+                const active = isActive(tab.href);
+                const Icon = tab.icon;
+                return (
+                  <Link
+                    key={tab.key}
+                    href={tab.href}
+                    className={`flex flex-col items-center gap-1 rounded-2xl px-3 py-1 text-[11px] font-semibold transition ${
+                      active ? 'text-sky-600' : 'text-slate-500 hover:text-slate-700'
                     }`}
+                    aria-current={active ? 'page' : undefined}
                   >
-                    <Icon className="h-5 w-5" aria-hidden="true" />
-                  </span>
-                  <span>
-                    {navLabelByHref.get(tab.href) ?? tab.key}
-                  </span>
-                </Link>
-              );
-            })}
+                    <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${active ? 'bg-sky-100 text-sky-600' : 'bg-surfaceMuted text-slate-500'}`}>
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <span>{navLabelByHref.get(tab.href) ?? tab.key}</span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </nav>
       ) : null}

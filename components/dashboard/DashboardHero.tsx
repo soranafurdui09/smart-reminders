@@ -51,8 +51,8 @@ export default function DashboardHero({
   nextReminder
 }: Props) {
   return (
-    <section className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-      <div className="rounded-3xl bg-gradient-to-r from-sky-500 to-emerald-500 p-5 text-white shadow-md md:p-6">
+    <section className="flex flex-col gap-4 md:grid md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] md:gap-6">
+      <div className="order-2 rounded-3xl bg-gradient-to-r from-sky-500 to-emerald-500 p-4 text-white shadow-md md:order-1 md:p-6">
         <div className="flex flex-col gap-4">
           <div className="space-y-2">
             <h1 className="text-xl font-semibold md:text-2xl">{title}</h1>
@@ -92,7 +92,7 @@ export default function DashboardHero({
         </div>
       </div>
 
-      <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm md:p-5">
+      <div className="order-1 rounded-3xl border border-slate-100 bg-white p-4 shadow-sm md:order-2 md:p-5">
         <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{nextTitle}</div>
         {nextReminder ? (
           <div className="mt-3 flex flex-col gap-3">

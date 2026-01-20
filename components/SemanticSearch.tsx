@@ -74,8 +74,8 @@ export default function SemanticSearch({
   return (
     <div className="space-y-3">
       <div className="space-y-1">
-        <h2 className="text-base font-semibold text-slate-900">{copy.title}</h2>
-        <p className="text-xs text-slate-500">{copy.hint}</p>
+        <h2 className="text-sm font-semibold text-slate-900 md:text-base">{copy.title}</h2>
+        <p className="hidden text-xs text-slate-500 md:block">{copy.hint}</p>
       </div>
       <form onSubmit={handleSearch} className="flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative flex-1">
@@ -95,11 +95,11 @@ export default function SemanticSearch({
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
-        <button className="inline-flex h-10 items-center justify-center rounded-2xl bg-sky-500 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-600 md:shrink-0" type="submit" disabled={loading}>
+        <button className="inline-flex h-9 items-center justify-center rounded-2xl bg-sky-500 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-600 md:h-10 md:shrink-0" type="submit" disabled={loading}>
           {loading ? copy.loading : copy.button}
         </button>
       </form>
-      <p className="text-xs text-slate-400">{copy.example}</p>
+      <p className="hidden text-xs text-slate-400 md:block">{copy.example}</p>
       {isFallback && results.length ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
           {copy.fallbackLabel}

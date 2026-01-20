@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { AlertTriangle, Calendar, Check, Clock, MoreVertical, User } from 'lucide-react';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
@@ -130,6 +130,22 @@ export default function ReminderCard({
         : urgencyKey === 'completed'
           ? 'text-gray-500'
           : 'text-blue-600';
+  const relativeLabel = useMemo(() => {
+    const parsed = new Date(displayAt);
+    if (Number.isNaN(parsed.getTime())) return null;
+    const diffMinutes = Math.round((parsed.getTime() - Date.now()) / 60000);
+    const absMinutes = Math.abs(diffMinutes);
+    const rtf = new Intl.RelativeTimeFormat(locale === 'ro' ? 'ro-RO' : locale, { numeric: 'auto' });
+    if (absMinutes < 60) {
+      return rtf.format(diffMinutes, 'minute');
+    }
+    const diffHours = Math.round(diffMinutes / 60);
+    if (Math.abs(diffHours) < 24) {
+      return rtf.format(diffHours, 'hour');
+    }
+    const diffDays = Math.round(diffHours / 24);
+    return rtf.format(diffDays, 'day');
+  }, [displayAt, locale]);
 
   useCloseOnOutside(actionMenuRef);
   useCloseOnOutside(doneMenuRef);
@@ -160,7 +176,7 @@ export default function ReminderCard({
           {reminder?.title}
         </h3>
 
-        <div className={`flex flex-wrap items-center gap-3 text-xs ${isPrimary ? 'text-gray-600' : 'text-gray-500'} dark:text-gray-300`}>
+        <div className={`flex flex-wrap items-center gap-2 text-xs ${isPrimary ? 'text-gray-600' : 'text-gray-500'} dark:text-gray-300`}>
           <div className="flex items-center gap-1.5">
             <Calendar className="h-3.5 w-3.5" />
             <OccurrenceDateChip
@@ -169,6 +185,9 @@ export default function ReminderCard({
               highlightKey={displayAt}
               className="border-0 bg-transparent px-0 py-0 text-xs"
             />
+            {relativeLabel ? (
+              <span className="text-[11px] text-slate-400">• {relativeLabel}</span>
+            ) : null}
           </div>
           {isPrimary && assigneeLabel ? (
             <div className="flex items-center gap-1.5">
@@ -180,28 +199,22 @@ export default function ReminderCard({
       </div>
 
       <div className="mt-auto flex flex-wrap items-center gap-2 pt-2">
-        {isPrimary && assigneeLabel ? (
-          <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
-            <User className="h-3.5 w-3.5" />
-            <span>{assigneeLabel}</span>
-          </div>
-        ) : null}
-        {!isPrimary && assigneeLabel ? (
-          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-300">
+        {assigneeLabel && !isPrimary ? (
+          <div className={`flex items-center gap-1.5 text-xs ${isPrimary ? 'text-gray-600' : 'text-gray-500'} dark:text-gray-300`}>
             <User className="h-3.5 w-3.5" />
             <span>{assigneeLabel}</span>
           </div>
         ) : null}
 
-        <div className={`flex flex-wrap items-center gap-2 ${isPrimary ? 'ml-auto' : 'w-full'}`}>
+        <div className={`flex flex-wrap items-center gap-2 ${isPrimary ? 'ml-auto' : 'w-full justify-end'}`}>
           <details ref={actionMenuRef} className="relative">
             <summary
-              className="dropdown-summary inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50 dark:border-slate-600 dark:text-gray-200"
+              className="dropdown-summary inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50 dark:border-slate-600 dark:text-gray-200"
               aria-label={copy.common.moreActions}
             >
               <MoreVertical className="h-4 w-4" />
             </summary>
-            <div className="absolute left-0 z-50 mt-3 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-lg sm:left-auto sm:right-0 dark:border-slate-700 dark:bg-slate-900">
+            <div className="absolute right-0 z-50 mt-3 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
               {reminderId ? (
                 <div className="space-y-1">
                   <Link
@@ -289,14 +302,15 @@ export default function ReminderCard({
             category={reminder?.category}
             copy={copy}
             snoozeAction={snoozeOccurrence}
+            compact
           />
 
-          <details ref={doneMenuRef} className={isPrimary ? 'group flex-1' : 'group flex-1 min-w-[140px]'}>
+          <details ref={doneMenuRef} className="relative">
             <summary
-              className={`inline-flex h-8 items-center justify-center gap-2 rounded-full px-3 text-xs font-semibold text-white shadow-sm transition ${categoryStyles.buttonBg} ${categoryStyles.buttonHover} ${isPrimary ? 'w-full' : 'w-full'}`}
+              className={`inline-flex h-9 w-9 items-center justify-center rounded-full text-white shadow-sm transition ${categoryStyles.buttonBg} ${categoryStyles.buttonHover}`}
+              aria-label={copy.common.doneAction}
             >
-              <Check className="h-3.5 w-3.5" />
-              {copy.common.doneAction}
+              <Check className="h-4 w-4" />
             </summary>
             <form
               action={markDone}

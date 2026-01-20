@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Calendar, Clock, Pill, SunMedium, Users } from 'lucide-react';
+import { AlertTriangle, Calendar, Pill, SunMedium, Users } from 'lucide-react';
 import SemanticSearch from '@/components/SemanticSearch';
 import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
 import ReminderCard from '@/components/dashboard/ReminderCard';
-import SegmentedControl from '@/components/filters/SegmentedControl';
 import { messages, type Locale } from '@/lib/i18n';
 import {
   diffDaysInTimeZone,
   coerceDateForTimeZone,
+  formatReminderDateTime,
   getMonthKeyInTimeZone,
   resolveReminderTimeZone
 } from '@/lib/dates';
@@ -169,6 +169,7 @@ export default function ReminderDashboardSection({
   const [showUpcoming, setShowUpcoming] = useState(false);
   const [showMonths, setShowMonths] = useState(false);
   const [autoExpanded, setAutoExpanded] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const filteredOccurrences = useMemo(() => {
     const normalized = occurrences
@@ -274,6 +275,8 @@ export default function ReminderDashboardSection({
   const hasMonthGroups = monthEntries.length > 0;
   const visibleMonthEntries = monthEntries.slice(0, visibleMonthGroups);
   const hasMoreMonths = monthEntries.length > visibleMonthGroups;
+  const previewMonthEntry = monthEntries[0];
+  const previewMonthItems = previewMonthEntry?.[1]?.slice(0, 3) ?? [];
   const monthLabelFormatter = useMemo(
     () => new Intl.DateTimeFormat(localeTag, { month: 'long', year: 'numeric' }),
     [localeTag]
@@ -284,7 +287,29 @@ export default function ReminderDashboardSection({
   );
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(max-width: 768px)');
+    const handleChange = () => setIsMobile(media.matches);
+    handleChange();
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', handleChange);
+      return () => media.removeEventListener('change', handleChange);
+    }
+    media.addListener(handleChange);
+    return () => media.removeListener(handleChange);
+  }, []);
+
+  useEffect(() => {
     if (autoExpanded) return;
+    if (isMobile) {
+      if (todayItems.length) {
+        setShowToday(true);
+      }
+      setShowOverdue(false);
+      setShowUpcoming(false);
+      setAutoExpanded(true);
+      return;
+    }
     if (hasToday) {
       if (todayBuckets.overdue.length) {
         setShowOverdue(true);
@@ -302,6 +327,7 @@ export default function ReminderDashboardSection({
     autoExpanded,
     hasToday,
     hasUpcoming,
+    isMobile,
     todayBuckets.overdue.length,
     todayItems.length
   ]);
@@ -352,7 +378,7 @@ export default function ReminderDashboardSection({
   return (
     <section className="space-y-6">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)] md:gap-8">
-        <aside className="order-1 space-y-4 lg:order-2">
+        <aside className="order-3 space-y-4 lg:order-2">
           <div className="rounded-3xl border border-gray-300 bg-white p-4 shadow-sm md:p-5">
             <SemanticSearch householdId={householdId} localeTag={localeTag} copy={copy.search} />
             <div className="mt-4">
@@ -374,32 +400,13 @@ export default function ReminderDashboardSection({
                   }
                 }}
                 onChangeCategory={(value) => setCategoryFilter(value)}
-                showKindFilter={false}
               />
             </div>
           </div>
         </aside>
 
-        <div className="order-2 space-y-6 lg:order-1">
+        <div className="order-1 space-y-6 lg:order-1">
           <div className="h-px bg-slate-200/70" />
-          <section className="mt-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
-                {copy.dashboard.filtersKindLabel}
-              </div>
-              <div className="mt-2">
-                <SegmentedControl
-                  options={[
-                    { value: 'all', label: copy.dashboard.filtersKindAll },
-                    { value: 'tasks', label: copy.dashboard.filtersKindTasks },
-                    { value: 'medications', label: copy.dashboard.filtersKindMeds }
-                  ]}
-                  value={kindFilter}
-                  onChange={(value) => setKindFilter(value as 'all' | 'tasks' | 'medications')}
-                />
-              </div>
-            </div>
-          </section>
           {kindFilter !== 'medications' ? (
             <section className="mt-8 space-y-5">
               <SectionHeading
@@ -580,7 +587,7 @@ export default function ReminderDashboardSection({
                           </button>
                           <details className="relative">
                             <summary className="btn btn-secondary h-8 px-3 text-xs">...</summary>
-                            <div className="absolute left-0 z-20 mt-2 w-48 rounded-xl border border-borderSubtle bg-surface p-2 shadow-soft">
+                            <div className="absolute right-0 z-20 mt-2 w-48 rounded-xl border border-borderSubtle bg-surface p-2 shadow-soft">
                               <button
                                 type="button"
                                 className="w-full rounded-lg px-3 py-2 text-left text-xs hover:bg-surfaceMuted"
@@ -779,7 +786,40 @@ export default function ReminderDashboardSection({
                     })}
                   </div>
                 </>
-              ) : null}
+              ) : (
+                <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+                  {previewMonthEntry ? (
+                    <div className="space-y-3">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {monthLabelFormatter.format(new Date(Number(previewMonthEntry[0].split('-')[0]), Math.max(0, Number(previewMonthEntry[0].split('-')[1]) - 1), 1))}
+                      </div>
+                      <div className="space-y-2">
+                        {previewMonthItems.map((occurrence) => {
+                          const reminderTimeZone = resolveReminderTimeZone(occurrence.reminder?.tz ?? null, effectiveTimeZone);
+                          const displayAt = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
+                          return (
+                            <div key={occurrence.id} className="flex items-center justify-between text-xs text-slate-500">
+                              <span className="truncate">{occurrence.reminder?.title ?? copy.dashboard.nextTitle}</span>
+                              <span className="whitespace-nowrap text-slate-400">
+                                {formatReminderDateTime(displayAt, reminderTimeZone, effectiveTimeZone)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                        onClick={() => setShowMonths(true)}
+                      >
+                        {copy.dashboard.viewMoreMonths}
+                      </button>
+                    </div>
+                  ) : (
+                    <div>{copy.dashboard.upcomingEmpty}</div>
+                  )}
+                </div>
+              )}
             </section>
           ) : null}
         </div>

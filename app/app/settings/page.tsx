@@ -65,6 +65,19 @@ export default async function SettingsPage({
             </ActionSubmitButton>
           </form>
         </section>
+        <section className="card space-y-3 max-w-lg">
+          <div>
+            <div className="text-lg font-semibold text-ink">{copy.household.title}</div>
+            <p className="text-sm text-muted">{copy.household.subtitleManage}</p>
+          </div>
+          <Link
+            href="/app/household"
+            className="inline-flex items-center justify-between rounded-xl border border-border bg-surface px-4 py-3 text-sm font-semibold text-ink shadow-sm transition hover:bg-surfaceMuted"
+          >
+            {copy.household.title}
+            <span className="text-xs text-muted">{copy.common.details}</span>
+          </Link>
+        </section>
         <section className="card space-y-4 max-w-lg">
           <div>
             <div className="text-lg font-semibold text-ink">{copy.settings.contextTitle}</div>
