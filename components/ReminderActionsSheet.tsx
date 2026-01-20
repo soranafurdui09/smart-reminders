@@ -10,6 +10,7 @@ export default function ReminderActionsSheet({
   title,
   categoryLabel,
   categoryClassName,
+  categoryStyle,
   children
 }: {
   open: boolean;
