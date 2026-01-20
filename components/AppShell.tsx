@@ -7,6 +7,7 @@ import TimeZoneSync from '@/components/TimeZoneSync';
 import NativeNotificationSync from '@/components/NativeNotificationSync';
 import AppNavigation from '@/components/AppNavigation';
 import NativeAppChrome from '@/components/NativeAppChrome';
+import WebViewNotice from '@/components/WebViewNotice';
 
 export default function AppShell({
   children,
@@ -44,6 +45,7 @@ export default function AppShell({
         logoutLabel={copy.nav.logout}
         comingSoonLabel={copy.common.comingSoon}
       />
+      <WebViewNotice />
       <main className="page-wrap app-content">{children}</main>
       <TimeZoneSync />
       <NativeNotificationSync />

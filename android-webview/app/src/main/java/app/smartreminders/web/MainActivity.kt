@@ -20,8 +20,7 @@ class MainActivity : AppCompatActivity() {
   private lateinit var webView: WebView
   private lateinit var splashOverlay: View
 
-  // If I change my domain later, update the URL here
-  private val startUrl = "https://www.smart-reminder-app.com"
+  private val startUrl: String by lazy { getString(R.string.app_url).trimEnd('/') }
   private val allowedHost: String? by lazy { Uri.parse(startUrl).host }
 
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,6 +40,7 @@ class MainActivity : AppCompatActivity() {
     settings.loadsImagesAutomatically = true
     settings.setSupportZoom(false)
     settings.setSupportMultipleWindows(false)
+    settings.userAgentString = settings.userAgentString + " SmartReminderWebView"
 
     // Enable cookies so the user stays logged in across sessions.
     val cookieManager = CookieManager.getInstance()
@@ -64,7 +64,12 @@ class MainActivity : AppCompatActivity() {
       }
     }
 
-    webView.loadUrl(startUrl)
+    val initialUri = intent?.data
+    if (initialUri != null) {
+      handleDeepLink(initialUri)
+    } else {
+      webView.loadUrl(startUrl)
+    }
 
     // Handle back navigation so the WebView behaves like a browser.
     onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -84,6 +89,11 @@ class MainActivity : AppCompatActivity() {
     CookieManager.getInstance().flush()
   }
 
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    intent.data?.let { handleDeepLink(it) }
+  }
+
   private fun handleUrl(uri: Uri): Boolean {
     val scheme = uri.scheme ?: return true
     val host = uri.host
@@ -101,5 +111,20 @@ class MainActivity : AppCompatActivity() {
     } catch (error: ActivityNotFoundException) {
       true
     }
+  }
+
+  private fun handleDeepLink(uri: Uri) {
+    if (uri.scheme == "com.smartreminder.app" && uri.host == "auth") {
+      val callback = StringBuilder()
+        .append(startUrl)
+        .append("/auth/callback")
+      val query = uri.query
+      if (!query.isNullOrEmpty()) {
+        callback.append("?").append(query)
+      }
+      webView.loadUrl(callback.toString())
+      return
+    }
+    webView.loadUrl(startUrl)
   }
 }

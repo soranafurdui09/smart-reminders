@@ -5,10 +5,15 @@ import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
+import { App } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
+import { useRouter } from 'next/navigation';
 
 const STATUS_BAR_COLOR = '#f8fafc';
 
 export default function NativeAppChrome() {
+  const router = useRouter();
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const isAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
@@ -43,8 +48,28 @@ export default function NativeAppChrome() {
       void applyChrome();
     }, 150);
 
+    const handleAppUrlOpen = (event: { url: string }) => {
+      try {
+        const incoming = new URL(event.url);
+        if (incoming.pathname !== '/auth/callback') return;
+        const code = incoming.searchParams.get('code');
+        const next = incoming.searchParams.get('next') ?? '/app';
+        if (code) {
+          router.push(`/auth/callback?code=${encodeURIComponent(code)}&next=${encodeURIComponent(next)}`);
+        } else {
+          router.push(next);
+        }
+        Browser.close().catch(() => undefined);
+      } catch (error) {
+        console.warn('[native] failed to handle app url', error);
+      }
+    };
+
+    const removeListener = App.addListener('appUrlOpen', handleAppUrlOpen);
+
     return () => {
       window.clearTimeout(timer);
+      removeListener.then((handler) => handler.remove());
     };
   }, []);
 

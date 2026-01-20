@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import { createBrowserClient } from '@/lib/supabase/client';
 
 export default function GoogleOAuthButton({
@@ -18,6 +20,16 @@ export default function GoogleOAuthButton({
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isNativeAndroid, setIsNativeAndroid] = useState(false);
+  const [isAndroidWebView, setIsAndroidWebView] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setIsNativeAndroid(Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android');
+    const userAgent = navigator.userAgent || '';
+    const webViewHint = userAgent.includes('SmartReminderWebView') || (userAgent.includes('Android') && userAgent.includes('wv'));
+    setIsAndroidWebView(webViewHint);
+  }, []);
 
   const handleClick = async () => {
     setPending(true);
@@ -28,16 +40,34 @@ export default function GoogleOAuthButton({
         ? 'localhost'
         : hostname;
       const origin = `${protocol}//${safeHost}${port ? `:${port}` : ''}`;
+      const useCustomScheme = isNativeAndroid || isAndroidWebView;
+      const redirectTo = useCustomScheme
+        ? `com.smartreminder.app://auth/callback?next=${encodeURIComponent(next)}`
+        : `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
       const supabase = createBrowserClient();
-      const { error: signInError } = await supabase.auth.signInWithOAuth({
+      const { data, error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`
+          redirectTo,
+          skipBrowserRedirect: useCustomScheme
         }
       });
       if (signInError) {
         const message = signInError.message?.toLowerCase() ?? '';
         setError(message.includes('provider') || message.includes('oauth') ? errorNotConfigured : errorGeneric);
+        setPending(false);
+        return;
+      }
+      if (data?.url) {
+        if (isNativeAndroid) {
+          await Browser.open({ url: data.url });
+        } else if (isAndroidWebView) {
+          window.location.assign(data.url);
+        } else {
+          window.location.assign(data.url);
+        }
+      } else {
+        setError(errorGeneric);
         setPending(false);
       }
     } catch (err) {
