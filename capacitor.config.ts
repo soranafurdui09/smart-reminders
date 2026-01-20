@@ -1,29 +1,24 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-const serverUrl = process.env.CAPACITOR_SERVER_URL;
-let allowNavigation: string[] | undefined;
-if (serverUrl) {
-  try {
-    allowNavigation = [new URL(serverUrl).origin];
-  } catch {
-    allowNavigation = [serverUrl];
-  }
-}
+const serverUrl = 'https://www.smart-reminder-app.com';
 
 const config: CapacitorConfig = {
   appId: 'com.smartreminder.app',
   appName: 'Smart Reminder',
   webDir: 'public',
-  server: serverUrl
-    ? {
-        url: serverUrl,
-        cleartext: false,
-        allowNavigation
-      }
-    : undefined,
-  android: {
-    allowMixedContent: false
+  server: {
+    url: serverUrl,
+    cleartext: false,
+    allowNavigation: [
+      'https://www.smart-reminder-app.com',
+      'https://smart-reminder-app.com',
+      'https://*.smart-reminder-app.com',
+      'https://*.supabase.co',
+      'https://accounts.google.com',
+      'https://*.googleusercontent.com'
+    ]
   },
+  android: { allowMixedContent: false },
   plugins: {
     SplashScreen: {
       launchShowDuration: 0,
