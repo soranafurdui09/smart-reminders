@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { createBrowserClient } from '@/lib/supabase/client';
 
 export default function MagicLinkForm({
@@ -23,6 +24,16 @@ export default function MagicLinkForm({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [isNativeAndroid, setIsNativeAndroid] = useState(false);
+  const [isAndroidWebView, setIsAndroidWebView] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setIsNativeAndroid(Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android');
+    const userAgent = navigator.userAgent || '';
+    const webViewHint = userAgent.includes('SmartReminderWebView') || (userAgent.includes('Android') && userAgent.includes('wv'));
+    setIsAndroidWebView(webViewHint);
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -43,11 +54,15 @@ export default function MagicLinkForm({
         ? 'localhost'
         : hostname;
       const origin = `${protocol}//${safeHost}${port ? `:${port}` : ''}`;
+      const useCustomScheme = isNativeAndroid || isAndroidWebView;
+      const emailRedirectTo = useCustomScheme
+        ? `com.smartreminder.app://auth/callback?next=${encodeURIComponent(next)}`
+        : `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
       const supabase = createBrowserClient();
       const { error: signInError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`
+          emailRedirectTo
         }
       });
       if (signInError) {

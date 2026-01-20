@@ -51,7 +51,10 @@ export default function NativeAppChrome() {
     const handleAppUrlOpen = (event: { url: string }) => {
       try {
         const incoming = new URL(event.url);
-        if (incoming.pathname !== '/auth/callback') return;
+        const isCallbackPath =
+          incoming.pathname === '/auth/callback' ||
+          (incoming.host === 'auth' && incoming.pathname === '/callback');
+        if (!isCallbackPath) return;
         const code = incoming.searchParams.get('code');
         const next = incoming.searchParams.get('next') ?? '/app';
         if (code) {
