@@ -100,10 +100,11 @@ export default async function CalendarPage({
       });
       const category = getReminderCategory(categoryId);
       const displayTimeZone = resolveReminderTimeZone(occurrence.reminder?.tz ?? null, userTimeZone);
+      const resolvedTimeZone = displayTimeZone || undefined;
       const timeLabel = new Intl.DateTimeFormat(localeTag, {
         hour: '2-digit',
         minute: '2-digit',
-        timeZone: displayTimeZone
+        timeZone: resolvedTimeZone
       }).format(new Date(occurrence.effective_at));
       return {
         id: occurrence.id,
