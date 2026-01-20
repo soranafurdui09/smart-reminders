@@ -1,11 +1,13 @@
 import Link from 'next/link';
 import { addDays, addMonths, endOfMonth, endOfWeek, format, isToday, startOfMonth, startOfWeek } from 'date-fns';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import AppShell from '@/components/AppShell';
 import SectionHeader from '@/components/SectionHeader';
+import CalendarView from '@/components/calendar/CalendarView';
 import { requireUser } from '@/lib/auth';
 import { getOpenOccurrencesForHouseholdRange, getUserHousehold, getUserLocale, getUserTimeZone } from '@/lib/data';
 import { getLocaleTag, messages } from '@/lib/i18n';
-import { formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
+import { resolveReminderTimeZone } from '@/lib/dates';
 import { getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
 
 function parseMonth(monthParam?: string) {
@@ -76,89 +78,82 @@ export default async function CalendarPage({
 
   const prevMonth = format(addMonths(monthStart, -1), 'yyyy-MM');
   const nextMonth = format(addMonths(monthStart, 1), 'yyyy-MM');
-  const monthLabel = monthStart.toLocaleDateString(getLocaleTag(locale), { month: 'long', year: 'numeric' });
+  const localeTag = getLocaleTag(locale);
+  const monthLabel = monthStart.toLocaleDateString(localeTag, { month: 'long', year: 'numeric' });
+  const dayLabelFormatter = new Intl.DateTimeFormat(localeTag, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  });
+  const dayNumberFormatter = new Intl.DateTimeFormat(localeTag, { day: 'numeric' });
+
+  const dayCells = days.map((day) => {
+    const key = format(day, 'yyyy-MM-dd');
+    const items = itemsByDay.get(key) ?? [];
+    const itemEntries = items.map((occurrence) => {
+      const categoryId = inferReminderCategoryId({
+        title: occurrence.reminder?.title,
+        notes: occurrence.reminder?.notes,
+        kind: occurrence.reminder?.kind,
+        category: occurrence.reminder?.category,
+        medicationDetails: occurrence.reminder?.medication_details
+      });
+      const category = getReminderCategory(categoryId);
+      const displayTimeZone = resolveReminderTimeZone(occurrence.reminder?.tz ?? null, userTimeZone);
+      const timeLabel = new Intl.DateTimeFormat(localeTag, {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: displayTimeZone
+      }).format(new Date(occurrence.effective_at));
+      return {
+        id: occurrence.id,
+        title: occurrence.reminder?.title ?? copy.reminderDetail.title,
+        timeLabel,
+        href: `/app/reminders/${occurrence.reminder?.id ?? ''}`,
+        color: category.color
+      };
+    });
+    return {
+      key,
+      label: dayLabelFormatter.format(day),
+      dayNumber: dayNumberFormatter.format(day),
+      isCurrentMonth: day >= monthStart && day <= monthEnd,
+      isToday: isToday(day),
+      items: itemEntries
+    };
+  });
 
   return (
     <AppShell locale={locale} activePath="/app/calendar" userEmail={user.email}>
       <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1>{copy.calendar.title}</h1>
-            <p className="text-sm text-muted">{copy.calendar.subtitle}</p>
+            <h1 className="text-lg font-semibold text-slate-900 md:text-2xl">{copy.calendar.title}</h1>
+            <p className="text-xs text-slate-500 md:text-sm">{copy.calendar.subtitle}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 rounded-full border border-borderSubtle bg-surfaceMuted/70 p-1">
-            <Link className="btn btn-secondary" href={`/app/calendar?month=${prevMonth}`}>{copy.calendar.prev}</Link>
-            <div className="rounded-full bg-surface px-4 py-2 text-sm font-semibold text-ink shadow-sm">
+          <div className="flex items-center gap-2">
+            <Link
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+              href={`/app/calendar?month=${prevMonth}`}
+              aria-label={copy.calendar.prev}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Link>
+            <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">
               {monthLabel}
             </div>
-            <Link className="btn btn-secondary" href={`/app/calendar?month=${nextMonth}`}>{copy.calendar.next}</Link>
+            <Link
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+              href={`/app/calendar?month=${nextMonth}`}
+              aria-label={copy.calendar.next}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Link>
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-px rounded-3xl border border-borderSubtle bg-borderSubtle/70 p-px">
-          {copy.calendar.weekdays.map((label) => (
-            <div key={label} className="rounded-t-xl bg-surfaceMuted px-3 py-2 text-xs font-semibold uppercase text-muted">
-              {label}
-            </div>
-          ))}
-          {days.map((day) => {
-            const key = format(day, 'yyyy-MM-dd');
-            const items = itemsByDay.get(key) ?? [];
-            const visibleItems = items.slice(0, 2);
-            const extraCount = items.length - visibleItems.length;
-            const isCurrentMonth = day >= monthStart && day <= monthEnd;
-            const isTodayCell = isToday(day);
-            return (
-              <div
-                key={key}
-                className={`min-h-[120px] rounded-xl bg-surface p-3 ${isCurrentMonth ? '' : 'opacity-50'}`}
-              >
-                <div className="text-xs font-semibold text-muted">
-                  <span className={isTodayCell ? 'rounded-full bg-primarySoft px-2 py-0.5 text-primaryStrong' : ''}>
-                    {format(day, 'd')}
-                  </span>
-                </div>
-                <div className="mt-2 space-y-1">
-                  {visibleItems.map((occurrence) => {
-                    const categoryId = inferReminderCategoryId({
-                      title: occurrence.reminder?.title,
-                      notes: occurrence.reminder?.notes,
-                      kind: occurrence.reminder?.kind,
-                      category: occurrence.reminder?.category,
-                      medicationDetails: occurrence.reminder?.medication_details
-                    });
-                    const category = getReminderCategory(categoryId);
-                    const displayTimeZone = resolveReminderTimeZone(occurrence.reminder?.tz ?? null, userTimeZone);
-                    const displayLabel = occurrence.snoozed_until
-                      ? formatDateTimeWithTimeZone(occurrence.effective_at, displayTimeZone)
-                      : formatReminderDateTime(occurrence.effective_at, displayTimeZone, userTimeZone);
-                    return (
-                      <Link
-                        key={occurrence.id}
-                        href={`/app/reminders/${occurrence.reminder?.id ?? ''}`}
-                        title={occurrence.reminder?.title ?? copy.reminderDetail.title}
-                        className="flex items-center gap-2 rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-1 text-xs text-ink transition hover:border-primary/30 hover:bg-white"
-                      >
-                        <span
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: category.color }}
-                          aria-hidden="true"
-                        />
-                        <div className="truncate font-semibold">
-                          {displayLabel.slice(-5)}{' '}
-                          {occurrence.reminder?.title ?? copy.reminderDetail.title}
-                        </div>
-                      </Link>
-                    );
-                  })}
-                  {extraCount > 0 ? (
-                    <div className="text-xs text-muted">+{extraCount} {copy.calendar.more}</div>
-                  ) : null}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <CalendarView days={dayCells} weekdays={copy.calendar.weekdays} emptyLabel={copy.calendar.empty} />
+
         {!hasOccurrences ? (
           <div className="card text-sm text-muted">{copy.calendar.empty}</div>
         ) : null}

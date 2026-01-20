@@ -119,8 +119,8 @@ export default function ReminderCard({
         : Calendar;
   const isPrimary = variant === 'row';
   const cardClass = isPrimary
-    ? 'rounded-2xl border border-slate-100 bg-white text-gray-900 shadow-[0_8px_30px_rgba(15,23,42,0.06)] transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-[#0b0d14] dark:text-gray-200 dark:hover:bg-[#111523]'
-    : 'rounded-2xl border border-slate-100 bg-white text-gray-700 shadow-[0_8px_30px_rgba(15,23,42,0.06)] transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-[#0b0d14] dark:text-gray-200 dark:hover:bg-[#111523]';
+    ? 'rounded-2xl border border-slate-100 bg-white text-gray-900 shadow-card transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-[#0b0d14] dark:text-gray-200 dark:hover:bg-[#111523]'
+    : 'rounded-2xl border border-slate-100 bg-white text-gray-700 shadow-card transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-[#0b0d14] dark:text-gray-200 dark:hover:bg-[#111523]';
   const statusTextClass = urgencyKey === 'overdue'
     ? 'text-red-600'
     : urgencyKey === 'today'
@@ -214,7 +214,7 @@ export default function ReminderCard({
             >
               <MoreVertical className="h-4 w-4" />
             </summary>
-            <div className="absolute right-0 z-50 mt-3 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+            <div className="absolute right-0 z-[1000] mt-3 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-lg max-h-[60vh] overflow-y-auto dark:border-slate-700 dark:bg-slate-900">
               {reminderId ? (
                 <div className="space-y-1">
                   <Link

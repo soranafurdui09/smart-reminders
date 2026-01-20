@@ -1,6 +1,6 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-const serverUrl = process.env.CAPACITOR_SERVER_URL || process.env.NEXT_PUBLIC_APP_URL;
+const serverUrl = process.env.CAPACITOR_SERVER_URL;
 let allowNavigation: string[] | undefined;
 if (serverUrl) {
   try {

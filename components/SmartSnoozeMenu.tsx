@@ -88,7 +88,7 @@ export default function SmartSnoozeMenu({
         </svg>
         <span className={compact ? 'sr-only md:not-sr-only' : ''}>{copy.common.snooze}</span>
       </summary>
-      <div className="absolute right-0 z-20 mt-3 w-64 max-w-[calc(100vw-2rem)] rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft">
+      <div className="absolute right-0 z-[1000] mt-3 w-64 max-w-[calc(100vw-2rem)] max-h-[60vh] overflow-y-auto rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft">
         {options
           .filter((option) => option.id !== 'custom')
           .map((option) => (

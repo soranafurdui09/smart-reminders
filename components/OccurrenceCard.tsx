@@ -133,7 +133,7 @@ export default function OccurrenceCard({
             >
               <span aria-hidden="true">...</span>
             </summary>
-            <div className="absolute left-0 z-20 mt-3 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft sm:left-auto sm:right-0">
+            <div className="absolute left-0 z-[1000] mt-3 w-56 max-w-[calc(100vw-2rem)] max-h-[60vh] overflow-y-auto rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft sm:left-auto sm:right-0">
               {reminderId ? (
                 <div className="space-y-1">
                   <Link

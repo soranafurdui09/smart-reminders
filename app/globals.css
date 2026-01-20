@@ -66,6 +66,15 @@ h3 {
   padding-bottom: calc(env(safe-area-inset-bottom) + 5rem);
 }
 
+.has-bottom-nav .app-content {
+  padding-bottom: calc(var(--bottom-nav-h, 72px) + env(safe-area-inset-bottom) + 12px);
+}
+
+.list-optimized {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 260px;
+}
+
 .card {
   @apply rounded-2xl border border-borderSubtle bg-surface p-5 shadow-soft transition-all;
 }

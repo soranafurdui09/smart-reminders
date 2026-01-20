@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Capacitor } from '@capacitor/core';
 import { Calendar, History, Home, Plus, Settings } from 'lucide-react';
 import VoiceNavButton from '@/components/VoiceNavButton';
@@ -43,9 +43,11 @@ export default function AppNavigation({
   comingSoonLabel
 }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isNativeAndroid, setIsNativeAndroid] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [fabOpen, setFabOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -96,6 +98,16 @@ export default function AppNavigation({
     ? 'bg-white/95 shadow-sm'
     : 'bg-surface/80 shadow-sm backdrop-blur';
   const headerPadding = isCollapsed ? 'py-2' : 'py-3';
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.classList.toggle('has-bottom-nav', showBottomNav);
+    if (showBottomNav) {
+      document.documentElement.style.setProperty('--bottom-nav-h', '72px');
+    } else {
+      document.documentElement.style.removeProperty('--bottom-nav-h');
+    }
+  }, [showBottomNav]);
 
   return (
     <>
@@ -187,7 +199,7 @@ export default function AppNavigation({
         </div>
       </header>
       {showBottomNav ? (
-        <nav className={`fixed bottom-0 left-0 right-0 z-40 border-t border-borderSubtle bg-surface/95 backdrop-blur safe-bottom ${isNativeAndroid ? '' : 'md:hidden'}`}>
+        <nav className={`fixed bottom-0 left-0 right-0 z-40 border-t border-borderSubtle bg-surface/95 safe-bottom ${isNativeAndroid ? '' : 'md:hidden'}`}>
           <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between px-4 pb-2 pt-2">
             <div className="flex flex-1 items-center justify-between">
               {bottomTabs.slice(0, 2).map((tab) => {
@@ -212,8 +224,12 @@ export default function AppNavigation({
             </div>
             <Link
               href="/app/reminders/new"
-              className="absolute left-1/2 -translate-x-1/2 -translate-y-5 flex h-12 w-12 items-center justify-center rounded-full bg-sky-500 text-white shadow-float shadow-sky-500/30"
+              className="absolute left-1/2 -translate-x-1/2 -translate-y-5 flex h-12 w-12 items-center justify-center rounded-full bg-sky-500 text-white shadow-float shadow-sky-500/30 transition active:scale-95 pointer-events-auto"
               aria-label={navLabelByHref.get('/app/reminders/new') ?? 'Add'}
+              onClick={(event) => {
+                event.preventDefault();
+                setFabOpen(true);
+              }}
             >
               <Plus className="h-5 w-5" aria-hidden="true" />
             </Link>
@@ -240,6 +256,62 @@ export default function AppNavigation({
             </div>
           </div>
         </nav>
+      ) : null}
+      {fabOpen ? (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/40 px-4 pb-6 md:hidden"
+          onClick={() => setFabOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-4 shadow-float"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-label="Adaugă reminder"
+          >
+            <div className="text-sm font-semibold text-slate-900">Adaugă reminder</div>
+            <p className="mt-1 text-xs text-slate-500">Alege cum vrei să creezi.</p>
+            <div className="mt-4 grid gap-2">
+              <button
+                type="button"
+                className="btn btn-primary h-11 justify-center"
+                onClick={() => {
+                  setFabOpen(false);
+                  router.push('/app/reminders/new?voice=1');
+                }}
+              >
+                Creează cu voce
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary h-11 justify-center"
+                onClick={() => {
+                  setFabOpen(false);
+                  router.push('/app/reminders/new');
+                }}
+              >
+                Scrie simplu (AI recomandat)
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary h-11 justify-center"
+                onClick={() => {
+                  setFabOpen(false);
+                  router.push('/app/reminders/new?mode=manual');
+                }}
+              >
+                Completare manuală
+              </button>
+            </div>
+            <button
+              type="button"
+              className="mt-3 w-full text-xs font-semibold text-slate-500"
+              onClick={() => setFabOpen(false)}
+            >
+              Închide
+            </button>
+          </div>
+        </div>
       ) : null}
     </>
   );

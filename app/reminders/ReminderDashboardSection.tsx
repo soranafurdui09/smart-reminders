@@ -445,7 +445,7 @@ export default function ReminderDashboardSection({
                     </span>
                   </button>
                   {showOverdue ? (
-                    <div className="grid gap-3">
+                    <div className="grid gap-3 list-optimized">
                       {todayBuckets.overdue.map((occurrence) => (
                         <ReminderCard
                           key={occurrence.id}
@@ -493,7 +493,7 @@ export default function ReminderDashboardSection({
                     </span>
                   </button>
                   {showToday ? (
-                    <div className="grid gap-3">
+                    <div className="grid gap-3 list-optimized">
                       {todayItems.map((occurrence) => {
                         const compareDate = getCompareDate(occurrence, effectiveTimeZone);
                         const urgency = compareDate.getTime() <= new Date().getTime() + 2 * 60 * 60 * 1000
@@ -536,7 +536,7 @@ export default function ReminderDashboardSection({
                 }
               />
               {visibleDoses.length ? (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 list-optimized">
                   {visibleDoses.map((dose) => {
                     const details = dose.reminder?.medication_details || {};
                     const personLabel = details.personId ? memberLabels[details.personId] : null;
@@ -587,7 +587,7 @@ export default function ReminderDashboardSection({
                           </button>
                           <details className="relative">
                             <summary className="btn btn-secondary h-8 px-3 text-xs">...</summary>
-                            <div className="absolute right-0 z-20 mt-2 w-48 rounded-xl border border-borderSubtle bg-surface p-2 shadow-soft">
+                            <div className="absolute right-0 z-[1000] mt-2 w-48 max-h-[60vh] overflow-y-auto rounded-xl border border-borderSubtle bg-surface p-2 shadow-soft">
                               <button
                                 type="button"
                                 className="w-full rounded-lg px-3 py-2 text-left text-xs hover:bg-surfaceMuted"
@@ -663,7 +663,7 @@ export default function ReminderDashboardSection({
                           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                             {dayLabelFormatter.format(dayDate)}
                           </div>
-                          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 list-optimized">
                             {items.map((occurrence) => (
                               <ReminderCard
                                 key={occurrence.id}
@@ -695,7 +695,7 @@ export default function ReminderDashboardSection({
                 icon={<Users className="h-4 w-4 text-purple-500" aria-hidden="true" />}
               />
               {householdItems.length ? (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 list-optimized">
                   {householdItems.map((occurrence) => (
                     <ReminderCard
                       key={occurrence.id}
@@ -769,7 +769,7 @@ export default function ReminderDashboardSection({
                           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                             {monthLabelFormatter.format(labelDate)}
                           </div>
-                          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 list-optimized">
                             {items.map((occurrence) => (
                               <ReminderCard
                                 key={occurrence.id}
