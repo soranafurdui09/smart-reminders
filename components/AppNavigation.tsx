@@ -199,58 +199,63 @@ export default function AppNavigation({
         </div>
       </header>
       {showBottomNav ? (
-        <nav className={`fixed bottom-0 left-0 right-0 z-40 border-t border-borderSubtle bg-surface/95 safe-bottom ${isNativeAndroid ? '' : 'md:hidden'}`}>
+        <nav className={`fixed bottom-0 left-0 right-0 z-40 border-t border-borderSubtle bg-surface/95 safe-bottom pointer-events-auto ${isNativeAndroid ? '' : 'md:hidden'}`}>
           <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between px-4 pb-2 pt-2">
             <div className="flex flex-1 items-center justify-between">
               {bottomTabs.slice(0, 2).map((tab) => {
                 const active = isActive(tab.href);
                 const Icon = tab.icon;
                 return (
-                  <Link
+                  <button
                     key={tab.key}
-                    href={tab.href}
+                    type="button"
                     className={`flex flex-col items-center gap-1 rounded-2xl px-3 py-1 text-[11px] font-semibold transition ${
                       active ? 'text-sky-600' : 'text-slate-500 hover:text-slate-700'
                     }`}
                     aria-current={active ? 'page' : undefined}
+                    onClick={() => router.push(tab.href)}
                   >
                     <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${active ? 'bg-sky-100 text-sky-600' : 'bg-surfaceMuted text-slate-500'}`}>
                       <Icon className="h-5 w-5" aria-hidden="true" />
                     </span>
-                    <span>{navLabelByHref.get(tab.href) ?? tab.key}</span>
-                  </Link>
+                    <span className="whitespace-nowrap">{navLabelByHref.get(tab.href) ?? tab.key}</span>
+                  </button>
                 );
               })}
             </div>
-            <Link
-              href="/app/reminders/new"
+            <button
+              type="button"
               className="absolute left-1/2 -translate-x-1/2 -translate-y-5 flex h-12 w-12 items-center justify-center rounded-full bg-sky-500 text-white shadow-float shadow-sky-500/30 transition active:scale-95 pointer-events-auto"
               aria-label={navLabelByHref.get('/app/reminders/new') ?? 'Add'}
               onClick={(event) => {
                 event.preventDefault();
+                if (process.env.NODE_ENV !== 'production') {
+                  console.log('FAB clicked');
+                }
                 setFabOpen(true);
               }}
             >
               <Plus className="h-5 w-5" aria-hidden="true" />
-            </Link>
+            </button>
             <div className="flex flex-1 items-center justify-between">
               {bottomTabs.slice(2).map((tab) => {
                 const active = isActive(tab.href);
                 const Icon = tab.icon;
                 return (
-                  <Link
+                  <button
                     key={tab.key}
-                    href={tab.href}
+                    type="button"
                     className={`flex flex-col items-center gap-1 rounded-2xl px-3 py-1 text-[11px] font-semibold transition ${
                       active ? 'text-sky-600' : 'text-slate-500 hover:text-slate-700'
                     }`}
                     aria-current={active ? 'page' : undefined}
+                    onClick={() => router.push(tab.href)}
                   >
                     <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${active ? 'bg-sky-100 text-sky-600' : 'bg-surfaceMuted text-slate-500'}`}>
                       <Icon className="h-5 w-5" aria-hidden="true" />
                     </span>
-                    <span>{navLabelByHref.get(tab.href) ?? tab.key}</span>
-                  </Link>
+                    <span className="whitespace-nowrap">{navLabelByHref.get(tab.href) ?? tab.key}</span>
+                  </button>
                 );
               })}
             </div>

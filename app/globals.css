@@ -30,6 +30,12 @@
   --space-6: 24px;
 }
 
+html,
+body {
+  width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   @apply text-ink antialiased;
   background-color: rgb(var(--color-bg));
@@ -38,6 +44,12 @@ body {
     radial-gradient(900px 500px at 95% 0%, rgba(20, 184, 166, 0.18), transparent),
     linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0));
   background-attachment: fixed;
+}
+
+@media (max-width: 768px) {
+  body {
+    background-attachment: scroll;
+  }
 }
 
 html.native-android,
@@ -60,6 +72,7 @@ h3 {
 
 .page-wrap {
   @apply mx-auto w-full max-w-6xl px-4 py-8 sm:px-6;
+  min-width: 0;
 }
 
 .native-android .app-content {
@@ -70,13 +83,18 @@ h3 {
   padding-bottom: calc(var(--bottom-nav-h, 72px) + env(safe-area-inset-bottom) + 12px);
 }
 
+.app-content {
+  min-width: 0;
+  width: 100%;
+}
+
 .list-optimized {
   content-visibility: auto;
   contain-intrinsic-size: 1px 260px;
 }
 
 .card {
-  @apply rounded-2xl border border-borderSubtle bg-surface p-5 shadow-soft transition-all;
+  @apply rounded-2xl border border-borderSubtle bg-surface p-5 shadow-sm transition-all md:shadow-soft;
 }
 
 .btn {

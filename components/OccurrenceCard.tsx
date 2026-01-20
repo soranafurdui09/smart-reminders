@@ -1,14 +1,17 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
 import { formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
 import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import OccurrenceDateChip from '@/components/OccurrenceDateChip';
 import OccurrenceHighlightCard from '@/components/OccurrenceHighlightCard';
+import ReminderActionsSheet from '@/components/ReminderActionsSheet';
 import SmartSnoozeMenu from '@/components/SmartSnoozeMenu';
 import GoogleCalendarDeleteDialog from '@/components/GoogleCalendarDeleteDialog';
 import GoogleCalendarSyncButton from '@/components/GoogleCalendarSyncButton';
@@ -35,6 +38,8 @@ export default function OccurrenceCard({
   const copy = messages[locale];
   const reminder = occurrence.reminder;
   const reminderId = reminder?.id;
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 768px)');
   // Next due time comes from the occurrence, with snoozed_until overriding it when present.
   const displayAt = occurrence.snoozed_until ?? occurrence.occur_at;
   const resolvedTimeZone = resolveReminderTimeZone(reminder?.tz ?? null, userTimeZone ?? null);
@@ -65,6 +70,12 @@ export default function OccurrenceCard({
   });
   const category = getReminderCategory(categoryId);
   const categoryChipStyle = getCategoryChipStyle(category.color, true);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setActionsOpen(false);
+    }
+  }, [isMobile]);
 
   return (
     <OccurrenceHighlightCard
@@ -126,92 +137,103 @@ export default function OccurrenceCard({
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <details className="relative">
-            <summary
-              className="btn btn-secondary dropdown-summary h-9 w-9 p-0 text-lg leading-none"
+          {isMobile ? (
+            <button
+              type="button"
+              className="btn btn-secondary h-9 w-9 p-0 text-lg leading-none"
               aria-label={copy.common.moreActions}
+              onClick={() => setActionsOpen(true)}
             >
               <span aria-hidden="true">...</span>
-            </summary>
-            <div className="absolute left-0 z-[1000] mt-3 w-56 max-w-[calc(100vw-2rem)] max-h-[60vh] overflow-y-auto rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft sm:left-auto sm:right-0">
-              {reminderId ? (
-                <div className="space-y-1">
-                  <Link
-                    className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
-                    href={`/app/reminders/${reminderId}`}
-                    data-action-close="true"
-                  >
-                    {copy.common.details}
-                  </Link>
-                  <Link
-                    className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
-                    href={`/app/reminders/${reminderId}/edit`}
-                    data-action-close="true"
-                  >
-                    {copy.common.edit}
-                  </Link>
-                  <form action={cloneReminder}>
-                    <input type="hidden" name="reminderId" value={reminderId} />
-                    <ActionSubmitButton
-                      className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
-                      type="submit"
-                      data-action-feedback={copy.common.actionCloned}
+            </button>
+          ) : (
+            <details className="relative">
+              <summary
+                className="btn btn-secondary dropdown-summary h-9 w-9 p-0 text-lg leading-none"
+                aria-label={copy.common.moreActions}
+              >
+                <span aria-hidden="true">...</span>
+              </summary>
+              <div className="absolute left-0 z-[1000] mt-3 w-56 max-w-[calc(100vw-2rem)] max-h-[60vh] overflow-y-auto rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft sm:left-auto sm:right-0">
+                {reminderId ? (
+                  <div className="space-y-1">
+                    <Link
+                      className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
+                      href={`/app/reminders/${reminderId}`}
+                      data-action-close="true"
                     >
-                      {copy.reminderDetail.clone}
-                    </ActionSubmitButton>
-                  </form>
-                  <details className="mt-2 rounded-lg border border-dashed border-slate-200 p-2 text-xs font-semibold text-slate-700">
-                    <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-slate-400">
-                      {copy.actions.calendar}
-                    </summary>
-                    <div className="mt-2 space-y-1">
-                      <GoogleCalendarSyncButton
-                        reminderId={reminderId}
-                        connected={googleConnected}
-                        variant="menu"
-                        copy={{
-                          syncLabel: copy.actions.sendDirect,
-                          syncLoading: copy.reminderDetail.googleCalendarSyncing,
-                          syncSuccess: copy.reminderDetail.googleCalendarSyncSuccess,
-                          syncError: copy.reminderDetail.googleCalendarSyncError,
-                          connectFirst: copy.reminderDetail.googleCalendarConnectFirst,
-                          connectLink: copy.reminderDetail.googleCalendarConnectLink
-                        }}
-                      />
-                      <GoogleCalendarAutoBlockButton
-                        reminderId={reminderId}
-                        connected={googleConnected}
-                        hasDueDate={hasDueDate}
-                        variant="menu"
-                        copy={{
-                          label: copy.actions.schedule,
-                          loading: copy.reminderDetail.googleCalendarAutoBlocking,
-                          success: copy.reminderDetail.googleCalendarAutoBlockSuccess,
-                          error: copy.reminderDetail.googleCalendarAutoBlockError,
-                          connectHint: copy.reminderDetail.googleCalendarConnectFirst,
-                          connectLink: copy.reminderDetail.googleCalendarConnectLink,
-                          missingDueDate: copy.reminderDetail.googleCalendarAutoBlockMissingDueDate,
-                          confirmIfBusy: copy.reminderDetail.googleCalendarAutoBlockConfirmBusy
-                        }}
-                      />
-                    </div>
-                  </details>
-                  <GoogleCalendarDeleteDialog
-                    reminderId={reminderId}
-                    hasGoogleEvent={Boolean(reminder?.google_event_id)}
-                    copy={{
-                      label: copy.common.delete,
-                      dialogTitle: copy.reminderDetail.googleCalendarDeleteTitle,
-                      dialogHint: copy.reminderDetail.googleCalendarDeleteHint,
-                      justReminder: copy.reminderDetail.googleCalendarDeleteOnly,
-                      reminderAndCalendar: copy.reminderDetail.googleCalendarDeleteBoth,
-                      cancel: copy.reminderDetail.googleCalendarDeleteCancel
-                    }}
-                  />
-                </div>
-              ) : null}
-            </div>
-          </details>
+                      {copy.common.details}
+                    </Link>
+                    <Link
+                      className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
+                      href={`/app/reminders/${reminderId}/edit`}
+                      data-action-close="true"
+                    >
+                      {copy.common.edit}
+                    </Link>
+                    <form action={cloneReminder}>
+                      <input type="hidden" name="reminderId" value={reminderId} />
+                      <ActionSubmitButton
+                        className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
+                        type="submit"
+                        data-action-feedback={copy.common.actionCloned}
+                      >
+                        {copy.reminderDetail.clone}
+                      </ActionSubmitButton>
+                    </form>
+                    <details className="mt-2 rounded-lg border border-dashed border-slate-200 p-2 text-xs font-semibold text-slate-700">
+                      <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-slate-400">
+                        {copy.actions.calendar}
+                      </summary>
+                      <div className="mt-2 space-y-1">
+                        <GoogleCalendarSyncButton
+                          reminderId={reminderId}
+                          connected={googleConnected}
+                          variant="menu"
+                          copy={{
+                            syncLabel: copy.actions.sendDirect,
+                            syncLoading: copy.reminderDetail.googleCalendarSyncing,
+                            syncSuccess: copy.reminderDetail.googleCalendarSyncSuccess,
+                            syncError: copy.reminderDetail.googleCalendarSyncError,
+                            connectFirst: copy.reminderDetail.googleCalendarConnectFirst,
+                            connectLink: copy.reminderDetail.googleCalendarConnectLink
+                          }}
+                        />
+                        <GoogleCalendarAutoBlockButton
+                          reminderId={reminderId}
+                          connected={googleConnected}
+                          hasDueDate={hasDueDate}
+                          variant="menu"
+                          copy={{
+                            label: copy.actions.schedule,
+                            loading: copy.reminderDetail.googleCalendarAutoBlocking,
+                            success: copy.reminderDetail.googleCalendarAutoBlockSuccess,
+                            error: copy.reminderDetail.googleCalendarAutoBlockError,
+                            connectHint: copy.reminderDetail.googleCalendarConnectFirst,
+                            connectLink: copy.reminderDetail.googleCalendarConnectLink,
+                            missingDueDate: copy.reminderDetail.googleCalendarAutoBlockMissingDueDate,
+                            confirmIfBusy: copy.reminderDetail.googleCalendarAutoBlockConfirmBusy
+                          }}
+                        />
+                      </div>
+                    </details>
+                    <GoogleCalendarDeleteDialog
+                      reminderId={reminderId}
+                      hasGoogleEvent={Boolean(reminder?.google_event_id)}
+                      copy={{
+                        label: copy.common.delete,
+                        dialogTitle: copy.reminderDetail.googleCalendarDeleteTitle,
+                        dialogHint: copy.reminderDetail.googleCalendarDeleteHint,
+                        justReminder: copy.reminderDetail.googleCalendarDeleteOnly,
+                        reminderAndCalendar: copy.reminderDetail.googleCalendarDeleteBoth,
+                        cancel: copy.reminderDetail.googleCalendarDeleteCancel
+                      }}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </details>
+          )}
 
           <SmartSnoozeMenu
             occurrenceId={occurrence.id}
@@ -256,6 +278,102 @@ export default function OccurrenceCard({
           </form>
         </details>
       </div>
+
+      <ReminderActionsSheet
+        open={actionsOpen}
+        onClose={() => setActionsOpen(false)}
+        title={reminder?.title ?? copy.reminderDetail.title}
+        categoryLabel={category.label}
+        categoryClassName="bg-slate-100 text-slate-700"
+        categoryStyle={categoryChipStyle}
+      >
+        <div className="space-y-2">
+          <Link
+            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-50 whitespace-normal break-words"
+            href={`/app/reminders/${reminderId}`}
+            onClick={() => setActionsOpen(false)}
+          >
+            {copy.common.details}
+          </Link>
+          <Link
+            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-50 whitespace-normal break-words"
+            href={`/app/reminders/${reminderId}/edit`}
+            onClick={() => setActionsOpen(false)}
+          >
+            {copy.common.edit}
+          </Link>
+          <form action={cloneReminder}>
+            <input type="hidden" name="reminderId" value={reminderId} />
+            <ActionSubmitButton
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-50 whitespace-normal break-words"
+              type="submit"
+              onClick={() => setActionsOpen(false)}
+              data-action-feedback={copy.common.actionCloned}
+            >
+              {copy.reminderDetail.clone}
+            </ActionSubmitButton>
+          </form>
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-500">
+            {copy.actions.calendar}
+            <div className="mt-2 space-y-2 text-sm font-semibold text-slate-900">
+              <div onClickCapture={() => setActionsOpen(false)}>
+                <GoogleCalendarSyncButton
+                  reminderId={reminderId}
+                  connected={googleConnected}
+                  variant="menu"
+                  copy={{
+                    syncLabel: copy.actions.sendDirect,
+                    syncLoading: copy.reminderDetail.googleCalendarSyncing,
+                    syncSuccess: copy.reminderDetail.googleCalendarSyncSuccess,
+                    syncError: copy.reminderDetail.googleCalendarSyncError,
+                    connectFirst: copy.reminderDetail.googleCalendarConnectFirst,
+                    connectLink: copy.reminderDetail.googleCalendarConnectLink
+                  }}
+                />
+              </div>
+              <div onClickCapture={() => setActionsOpen(false)}>
+                <GoogleCalendarAutoBlockButton
+                  reminderId={reminderId}
+                  connected={googleConnected}
+                  hasDueDate={hasDueDate}
+                  variant="menu"
+                  copy={{
+                    label: copy.actions.schedule,
+                    loading: copy.reminderDetail.googleCalendarAutoBlocking,
+                    success: copy.reminderDetail.googleCalendarAutoBlockSuccess,
+                    error: copy.reminderDetail.googleCalendarAutoBlockError,
+                    connectHint: copy.reminderDetail.googleCalendarConnectFirst,
+                    connectLink: copy.reminderDetail.googleCalendarConnectLink,
+                    missingDueDate: copy.reminderDetail.googleCalendarAutoBlockMissingDueDate,
+                    confirmIfBusy: copy.reminderDetail.googleCalendarAutoBlockConfirmBusy
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+          <div onClickCapture={() => setActionsOpen(false)}>
+            <GoogleCalendarDeleteDialog
+              reminderId={reminderId}
+              hasGoogleEvent={Boolean(reminder?.google_event_id)}
+              copy={{
+                label: copy.common.delete,
+                dialogTitle: copy.reminderDetail.googleCalendarDeleteTitle,
+                dialogHint: copy.reminderDetail.googleCalendarDeleteHint,
+                justReminder: copy.reminderDetail.googleCalendarDeleteOnly,
+                reminderAndCalendar: copy.reminderDetail.googleCalendarDeleteBoth,
+                cancel: copy.reminderDetail.googleCalendarDeleteCancel
+              }}
+            />
+          </div>
+          <button
+            type="button"
+            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            onClick={() => setActionsOpen(false)}
+          >
+            {copy.common.back}
+          </button>
+        </div>
+      </ReminderActionsSheet>
     </OccurrenceHighlightCard>
   );
 }

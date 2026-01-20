@@ -378,7 +378,7 @@ export default function ReminderDashboardSection({
   return (
     <section className="space-y-6">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)] md:gap-8">
-        <aside className="order-3 space-y-4 lg:order-2">
+        <aside className="order-1 space-y-4 lg:order-2">
           <div className="rounded-3xl border border-gray-300 bg-white p-4 shadow-sm md:p-5">
             <SemanticSearch householdId={householdId} localeTag={localeTag} copy={copy.search} />
             <div className="mt-4">
@@ -405,7 +405,7 @@ export default function ReminderDashboardSection({
           </div>
         </aside>
 
-        <div className="order-1 space-y-6 lg:order-1">
+        <div className="order-2 space-y-6 lg:order-1">
           <div className="h-px bg-slate-200/70" />
           {kindFilter !== 'medications' ? (
             <section className="mt-8 space-y-5">

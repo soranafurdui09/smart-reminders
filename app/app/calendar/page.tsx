@@ -100,7 +100,7 @@ export default async function CalendarPage({
       });
       const category = getReminderCategory(categoryId);
       const displayTimeZone = resolveReminderTimeZone(occurrence.reminder?.tz ?? null, userTimeZone);
-      const resolvedTimeZone = displayTimeZone || undefined;
+      const resolvedTimeZone: string | undefined = displayTimeZone ?? undefined;
       const timeLabel = new Intl.DateTimeFormat(localeTag, {
         hour: '2-digit',
         minute: '2-digit',
@@ -153,7 +153,11 @@ export default async function CalendarPage({
           </div>
         </div>
 
-        <CalendarView days={dayCells} weekdays={copy.calendar.weekdays} emptyLabel={copy.calendar.empty} />
+        <CalendarView
+          days={dayCells}
+          weekdays={[...copy.calendar.weekdays]}
+          emptyLabel={copy.calendar.empty}
+        />
 
         {!hasOccurrences ? (
           <div className="card text-sm text-muted">{copy.calendar.empty}</div>

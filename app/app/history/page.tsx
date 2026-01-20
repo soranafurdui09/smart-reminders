@@ -117,8 +117,9 @@ export default async function HistoryPage({
           <Link className="btn btn-secondary" href="/app">{copy.common.back}</Link>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex flex-wrap gap-1 rounded-full border border-borderSubtle bg-surfaceMuted/70 p-1">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="w-full overflow-x-auto">
+            <div className="inline-flex min-w-max flex-nowrap gap-1 rounded-full border border-borderSubtle bg-surfaceMuted/70 p-1">
             {(['7', '30', 'all'] as const).map((key) => (
               <Link
                 key={key}
@@ -132,11 +133,12 @@ export default async function HistoryPage({
                 {rangeLabels[key]}
               </Link>
             ))}
+            </div>
           </div>
-          <form action="/app/history" method="get" className="flex flex-wrap items-center gap-2">
+          <form action="/app/history" method="get" className="flex w-full flex-wrap items-center gap-2 md:w-auto">
             <input type="hidden" name="range" value={range} />
             <label className="text-xs font-semibold text-muted">{copy.history.filterPerformerLabel}</label>
-            <select name="performer" className="input h-9" defaultValue={performerFilter}>
+            <select name="performer" className="input h-9 max-w-full" defaultValue={performerFilter}>
               <option value="all">{copy.history.filterAllMembers}</option>
               {members.map((member: any) => {
                 const label = member.profiles?.name || member.profiles?.email || member.user_id;
@@ -159,14 +161,14 @@ export default async function HistoryPage({
           {hasStats ? (
             <div className="grid gap-3 md:grid-cols-2">
               {statsRows.map((row) => (
-                <div key={row.id} className="flex items-center justify-between rounded-2xl border border-borderSubtle bg-surface p-3">
-                  <div className="flex items-center gap-3">
+                <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderSubtle bg-surface p-3">
+                  <div className="flex min-w-0 items-center gap-3">
                     <div className="flex h-9 w-9 items-center justify-center rounded-full bg-surfaceMuted text-sm font-semibold text-ink">
                       {row.initial}
                     </div>
-                    <div className="text-sm font-semibold text-ink">{row.label}</div>
+                    <div className="min-w-0 text-sm font-semibold text-ink truncate">{row.label}</div>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-muted">
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
                     <span className="inline-flex items-center gap-1">
                       <svg aria-hidden="true" className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24">
                         <path stroke="currentColor" strokeWidth="1.5" d="M5 13l4 4L19 7" />

@@ -125,8 +125,8 @@ export default function ReminderFiltersPanel({
             </span>
           ) : null}
         </span>
-        <span className="flex items-center gap-2 text-[11px] text-slate-500">
-          <span>{summaryText}</span>
+        <span className="flex min-w-0 items-center gap-2 text-[11px] text-slate-500">
+          <span className="truncate">{summaryText}</span>
           <ChevronDown className={`h-3.5 w-3.5 transition ${filtersOpen ? 'rotate-180' : ''}`} />
         </span>
       </button>
