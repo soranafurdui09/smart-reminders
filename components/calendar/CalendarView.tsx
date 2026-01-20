@@ -23,7 +23,7 @@ type CalendarDay = {
 
 type Props = {
   days: CalendarDay[];
-  weekdays: string[];
+  weekdays: readonly string[];
   emptyLabel: string;
 };
 
