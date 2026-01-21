@@ -4,8 +4,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Calendar, Pill, SunMedium, Users } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import SemanticSearch from '@/components/SemanticSearch';
+import QuickSearchBar from '@/components/mobile/QuickSearchBar';
+import ReminderRowMobile from '@/components/mobile/ReminderRowMobile';
 import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
 import ReminderCard from '@/components/dashboard/ReminderCard';
+import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { messages, type Locale } from '@/lib/i18n';
 import {
   diffDaysInTimeZone,
@@ -15,11 +18,12 @@ import {
   resolveReminderTimeZone
 } from '@/lib/dates';
 import { inferReminderCategoryId, type ReminderCategoryId } from '@/lib/categories';
+import { markDone } from '@/app/app/actions';
 
 type CreatedByOption = 'all' | 'me' | 'others';
 type AssignmentOption = 'all' | 'assigned_to_me';
 type CategoryOption = 'all' | ReminderCategoryId;
-type TabOption = 'today' | 'inbox';
+type TabOption = 'today' | 'overdue' | 'soon' | 'meds' | 'family' | 'inbox';
 
 type OccurrencePayload = {
   id: string;
@@ -177,6 +181,7 @@ export default function ReminderDashboardSection({
   const [autoExpanded, setAutoExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState<TabOption>(initialTab);
+  const [mobileInboxLimit, setMobileInboxLimit] = useState(30);
 
   const filteredOccurrences = useMemo(() => {
     const normalized = occurrences
@@ -276,6 +281,8 @@ export default function ReminderDashboardSection({
   const todayBuckets = grouped.todayBuckets;
   const todayItems = [...todayBuckets.soon, ...todayBuckets.today];
   const hasToday = todayBuckets.overdue.length + todayItems.length > 0;
+  const todayDoneCount = [...todayBuckets.overdue, ...todayItems].filter((item) => item.status === 'done').length;
+  const todayTotalCount = todayBuckets.overdue.length + todayItems.length;
   const upcomingEntries = grouped.upcomingEntries;
   const hasUpcoming = upcomingEntries.length > 0;
   const monthEntries = grouped.monthEntries;
@@ -308,11 +315,11 @@ export default function ReminderDashboardSection({
 
   useEffect(() => {
     const tabParam = searchParams?.get('tab');
-    if (tabParam === 'inbox' || tabParam === 'today') {
+    if (tabParam === 'today' || tabParam === 'overdue' || tabParam === 'soon' || tabParam === 'meds' || tabParam === 'family' || tabParam === 'inbox') {
       setActiveTab(tabParam);
-    } else {
-      setActiveTab('today');
+      return;
     }
+    setActiveTab('today');
   }, [searchParams]);
 
   const handleTabChange = (tab: TabOption) => {
@@ -398,6 +405,281 @@ export default function ReminderDashboardSection({
     }
   };
 
+  const upcomingCount = useMemo(
+    () => upcomingEntries.reduce((total, [, items]) => total + items.length, 0),
+    [upcomingEntries]
+  );
+
+  const nextOccurrence = useMemo(() => {
+    const now = new Date();
+    return filteredOccurrences.find((occurrence) => {
+      const compareDate = getCompareDate(occurrence, effectiveTimeZone);
+      return compareDate.getTime() >= now.getTime();
+    });
+  }, [effectiveTimeZone, filteredOccurrences]);
+
+  const nextOccurrenceLabel = useMemo(() => {
+    if (!nextOccurrence) return null;
+    const displayAt = nextOccurrence.snoozed_until ?? nextOccurrence.effective_at ?? nextOccurrence.occur_at;
+    if (!displayAt) return null;
+    const reminderTimeZone = resolveReminderTimeZone(nextOccurrence.reminder?.tz ?? null, effectiveTimeZone);
+    return nextOccurrence.snoozed_until
+      ? formatDateTimeWithTimeZone(displayAt, reminderTimeZone)
+      : formatReminderDateTime(displayAt, reminderTimeZone, effectiveTimeZone);
+  }, [effectiveTimeZone, nextOccurrence]);
+
+  if (isMobile) {
+    const progressLabel = `${copy.dashboard.groupToday}: ${todayDoneCount}/${todayTotalCount}`;
+    const mobileInboxItems = filteredOccurrences.slice(0, mobileInboxLimit);
+    return (
+      <section className="space-y-4">
+        <QuickSearchBar
+          householdId={householdId}
+          localeTag={localeTag}
+          copy={copy.search}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          progressLabel={progressLabel}
+          counts={{
+            overdue: todayBuckets.overdue.length,
+            soon: upcomingCount,
+            meds: visibleDoses.length,
+            family: householdItems.length,
+            today: todayTotalCount
+          }}
+        />
+
+        {activeTab === 'today' ? (
+          <div className="space-y-3">
+            {nextOccurrence && nextOccurrenceLabel ? (
+              <div className="rounded-2xl border border-slate-100 bg-white px-3 py-3 text-sm shadow-sm">
+                <div className="text-xs font-semibold text-slate-500">Următorul</div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate font-semibold text-slate-900">
+                      {nextOccurrence.reminder?.title ?? copy.dashboard.nextTitle}
+                    </div>
+                    <div className="text-xs text-slate-500">{nextOccurrenceLabel}</div>
+                  </div>
+                  <form action={markDone}>
+                    <input type="hidden" name="occurrenceId" value={nextOccurrence.id} />
+                    <input type="hidden" name="reminderId" value={nextOccurrence.reminder?.id ?? ''} />
+                    <input type="hidden" name="occurAt" value={nextOccurrence.occur_at ?? ''} />
+                    <input type="hidden" name="done_comment" value="" />
+                    <ActionSubmitButton
+                      className="inline-flex h-9 items-center justify-center rounded-full bg-sky-500 px-3 text-xs font-semibold text-white"
+                      type="submit"
+                      data-action-feedback={copy.common.actionDone}
+                    >
+                      {copy.common.doneAction}
+                    </ActionSubmitButton>
+                  </form>
+                </div>
+              </div>
+            ) : null}
+
+            {todayItems.length || todayBuckets.overdue.length ? (
+              <div className="space-y-2">
+                {todayBuckets.overdue.map((occurrence) => (
+                  <ReminderRowMobile
+                    key={occurrence.id}
+                    occurrence={occurrence}
+                    locale={locale}
+                    googleConnected={googleConnected}
+                    userTimeZone={effectiveTimeZone}
+                  />
+                ))}
+                {todayItems.map((occurrence) => (
+                  <ReminderRowMobile
+                    key={occurrence.id}
+                    occurrence={occurrence}
+                    locale={locale}
+                    googleConnected={googleConnected}
+                    userTimeZone={effectiveTimeZone}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+                {copy.dashboard.todayEmpty}
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {activeTab === 'overdue' ? (
+          todayBuckets.overdue.length ? (
+            <div className="space-y-2">
+              {todayBuckets.overdue.map((occurrence) => (
+                <ReminderRowMobile
+                  key={occurrence.id}
+                  occurrence={occurrence}
+                  locale={locale}
+                  googleConnected={googleConnected}
+                  userTimeZone={effectiveTimeZone}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+              {copy.dashboard.todayEmpty}
+            </div>
+          )
+        ) : null}
+
+        {activeTab === 'soon' ? (
+          upcomingEntries.length ? (
+            <div className="space-y-4">
+              {upcomingEntries.map(([dayKey, items]) => {
+                const [year, month, day] = dayKey.split('-').map(Number);
+                const dayDate = new Date(year, Math.max(0, month - 1), day);
+                return (
+                  <div key={dayKey} className="space-y-2">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {dayLabelFormatter.format(dayDate)}
+                    </div>
+                    <div className="space-y-2">
+                      {items.map((occurrence) => (
+                        <ReminderRowMobile
+                          key={occurrence.id}
+                          occurrence={occurrence}
+                          locale={locale}
+                          googleConnected={googleConnected}
+                          userTimeZone={effectiveTimeZone}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+              {copy.dashboard.upcomingEmpty}
+            </div>
+          )
+        ) : null}
+
+        {activeTab === 'meds' ? (
+          visibleDoses.length ? (
+            <div className="space-y-2">
+              {visibleDoses.map((dose) => {
+                const details = dose.reminder?.medication_details || {};
+                const personLabel = details.personId ? memberLabels[details.personId] : null;
+                return (
+                  <div key={dose.id} className="rounded-2xl border border-slate-100 bg-white p-3 text-sm shadow-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="font-semibold text-slate-900">{details.name || dose.reminder?.title}</div>
+                        {details.dose ? <div className="text-xs text-slate-500">{details.dose}</div> : null}
+                        {personLabel ? <div className="text-xs text-slate-500">{personLabel}</div> : null}
+                      </div>
+                      <div className="text-xs font-semibold text-slate-500">
+                        {new Date(dose.scheduled_at).toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-primary h-8 px-3 text-xs"
+                        onClick={() => handleDoseStatus(dose.id, 'taken')}
+                      >
+                        {copy.dashboard.medicationsTaken}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary h-8 px-3 text-xs"
+                        onClick={() => handleDoseStatus(dose.id, 'skipped')}
+                      >
+                        {copy.dashboard.medicationsSkip}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+              {copy.dashboard.medicationsEmpty}
+            </div>
+          )
+        ) : null}
+
+        {activeTab === 'family' ? (
+          householdItems.length ? (
+            <div className="space-y-2">
+              {householdItems.map((occurrence) => (
+                <ReminderRowMobile
+                  key={occurrence.id}
+                  occurrence={occurrence}
+                  locale={locale}
+                  googleConnected={googleConnected}
+                  userTimeZone={effectiveTimeZone}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+              {copy.dashboard.householdEmpty}
+            </div>
+          )
+        ) : null}
+
+        {activeTab === 'inbox' ? (
+          <div className="space-y-3">
+            <ReminderFiltersPanel
+              locale={locale}
+              kindFilter={kindFilter}
+              createdBy={createdBy}
+              assignment={assignment}
+              category={categoryFilter}
+              onChangeKind={(value) => setKindFilter(value)}
+              onChangeCreatedBy={(value) => {
+                if (CreatedOptions.includes(value)) {
+                  setCreatedBy(value);
+                }
+              }}
+              onChangeAssignment={(value) => {
+                if (AssignmentOptions.includes(value)) {
+                  setAssignment(value);
+                }
+              }}
+              onChangeCategory={(value) => setCategoryFilter(value)}
+            />
+            {mobileInboxItems.length ? (
+              <div className="space-y-2">
+                {mobileInboxItems.map((occurrence) => (
+                  <ReminderRowMobile
+                    key={occurrence.id}
+                    occurrence={occurrence}
+                    locale={locale}
+                    googleConnected={googleConnected}
+                    userTimeZone={effectiveTimeZone}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+                {copy.dashboard.empty}
+              </div>
+            )}
+            {filteredOccurrences.length > mobileInboxLimit ? (
+              <button
+                type="button"
+                className="text-xs font-semibold text-slate-500"
+                onClick={() => setMobileInboxLimit((prev) => prev + 20)}
+              >
+                {copy.dashboard.viewMoreMonths}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </section>
+    );
+  }
+
+  const desktopTab = activeTab === 'inbox' ? 'inbox' : 'today';
+
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-center gap-2 md:hidden">
@@ -453,7 +735,7 @@ export default function ReminderDashboardSection({
 
         <div className="order-2 space-y-6 lg:order-1">
           <div className="h-px bg-slate-200/70" />
-          {kindFilter !== 'medications' && activeTab === 'today' ? (
+          {kindFilter !== 'medications' && desktopTab === 'today' ? (
             <section className="mt-8 space-y-5">
               <SectionHeading
                 label={copy.dashboard.todayTitle}
@@ -570,7 +852,7 @@ export default function ReminderDashboardSection({
             </section>
           ) : null}
 
-          {kindFilter !== 'tasks' && activeTab === 'today' ? (
+          {kindFilter !== 'tasks' && desktopTab === 'today' ? (
             <section className="mt-8 space-y-4">
               <SectionHeading
                 label={copy.dashboard.medicationsTitle}
@@ -666,7 +948,7 @@ export default function ReminderDashboardSection({
             </section>
           ) : null}
 
-          {kindFilter !== 'medications' && activeTab === 'inbox' ? (
+          {kindFilter !== 'medications' && desktopTab === 'inbox' ? (
             <section className="mt-8 space-y-4">
               <button
                 type="button"
@@ -734,7 +1016,7 @@ export default function ReminderDashboardSection({
             </section>
           ) : null}
 
-          {kindFilter !== 'medications' && activeTab === 'inbox' ? (
+          {kindFilter !== 'medications' && desktopTab === 'inbox' ? (
             <section className="mt-8 space-y-4">
               <SectionHeading
                 label={copy.dashboard.householdTitle}
@@ -761,7 +1043,7 @@ export default function ReminderDashboardSection({
             </section>
           ) : null}
 
-          {kindFilter !== 'medications' && hasMonthGroups && activeTab === 'inbox' ? (
+          {kindFilter !== 'medications' && hasMonthGroups && desktopTab === 'inbox' ? (
             <section className="mt-8 space-y-4">
               <button
                 type="button"

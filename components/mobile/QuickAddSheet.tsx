@@ -32,7 +32,10 @@ export default function QuickAddSheet({
 
   const trimmed = text.trim();
   const canContinue = trimmed.length > 0;
-  const previewText = useMemo(() => trimmed || 'Scrie ceva simplu, iar noi îl transformăm într-un reminder.', [trimmed]);
+  const previewText = useMemo(
+    () => (trimmed ? `Se va salva: ${trimmed}` : 'Scrie ceva simplu, iar noi îl transformăm într-un reminder.'),
+    [trimmed]
+  );
 
   const handleNavigate = (mode?: 'medication') => {
     onClose();
@@ -77,12 +80,25 @@ export default function QuickAddSheet({
         </div>
 
         <div className="mt-4 space-y-3">
-          <textarea
-            className="input min-h-[96px]"
-            placeholder="ex: plătește chiria pe 1 la 9, lunar, cu 2 zile înainte"
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-          />
+          <div className="relative">
+            <textarea
+              className="input min-h-[84px] pr-12"
+              placeholder="ex: plătește chiria pe 1 la 9, lunar, cu 2 zile înainte"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+            />
+            <button
+              type="button"
+              className="absolute right-2 top-2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600"
+              aria-label="Dictează"
+              onClick={() => {
+                onClose();
+                router.push('/app/reminders/new?voice=1');
+              }}
+            >
+              <Mic className="h-4 w-4" />
+            </button>
+          </div>
           <div className="flex flex-wrap gap-2">
             {suggestions.map((item) => (
               <button
@@ -132,18 +148,14 @@ export default function QuickAddSheet({
             onClick={() => handleNavigate()}
             disabled={!canContinue}
           >
-            Creează reminder
+            Salvează
           </button>
           <button
             type="button"
-            className="btn btn-secondary h-11 justify-center"
-            onClick={() => {
-              onClose();
-              router.push('/app/reminders/new?voice=1');
-            }}
+            className="text-xs font-semibold text-slate-500"
+            onClick={() => handleNavigate()}
           >
-            <Mic className="h-4 w-4" />
-            Creează cu voce
+            Detalii
           </button>
         </div>
       </div>
