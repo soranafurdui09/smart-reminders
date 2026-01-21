@@ -8,6 +8,7 @@ import NativeNotificationSync from '@/components/NativeNotificationSync';
 import AppNavigation from '@/components/AppNavigation';
 import NativeAppChrome from '@/components/NativeAppChrome';
 import WebViewNotice from '@/components/WebViewNotice';
+import MobileShell from '@/components/mobile/MobileShell';
 
 export default function AppShell({
   children,
@@ -34,19 +35,30 @@ export default function AppShell({
   return (
     <div className="min-h-screen bg-slate-50 bg-[radial-gradient(circle_at_top,_#dbeafe_0,_transparent_55%)] dark:bg-[#05060a] dark:bg-[radial-gradient(circle_at_top,_#0b1326_0,_transparent_55%)]">
       <NativeAppChrome />
-      <AppNavigation
-        navLinks={navLinks}
-        activePath={activePath}
-        appName={copy.appName}
-        userInitial={userInitial}
-        userEmail={safeEmail}
-        voiceLabel={copy.remindersNew.voiceNavLabel}
-        profileLabel={copy.common.profile}
-        logoutLabel={copy.nav.logout}
-        comingSoonLabel={copy.common.comingSoon}
-      />
-      <WebViewNotice />
-      <main className="page-wrap app-content">{children}</main>
+      <MobileShell
+        header={
+          <AppNavigation
+            navLinks={navLinks}
+            activePath={activePath}
+            appName={copy.appName}
+            userInitial={userInitial}
+            userEmail={safeEmail}
+            voiceLabel={copy.remindersNew.voiceNavLabel}
+            profileLabel={copy.common.profile}
+            logoutLabel={copy.nav.logout}
+            comingSoonLabel={copy.common.comingSoon}
+          />
+        }
+        labels={{
+          today: copy.nav.today,
+          inbox: copy.nav.inbox,
+          calendar: copy.nav.calendar,
+          family: copy.nav.household
+        }}
+      >
+        <WebViewNotice />
+        {children}
+      </MobileShell>
       <TimeZoneSync />
       <NativeNotificationSync />
       <VoiceCreateToast copy={copy} locale={locale} undoAction={deleteReminder} />

@@ -15,7 +15,7 @@ import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId } fr
 export default async function DashboardPage({
   searchParams
 }: {
-  searchParams?: { created?: string; assigned?: string };
+  searchParams?: { created?: string; assigned?: string; tab?: string };
 }) {
   const user = await requireUser('/app');
   const locale = await getUserLocale(user.id);
@@ -100,6 +100,7 @@ export default async function DashboardPage({
       ? 'others'
       : 'all';
   const initialAssignment = searchParams?.assigned === 'me' ? 'assigned_to_me' : 'all';
+  const initialTab = searchParams?.tab === 'inbox' ? 'inbox' : 'today';
   const now = new Date();
   const nextOccurrence = sortedOccurrences.find((occurrence: any) => {
     const occurrenceAt = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
@@ -198,6 +199,7 @@ export default async function DashboardPage({
           memberLabels={memberLabels}
           initialCreatedBy={initialCreatedBy}
           initialAssignment={initialAssignment}
+          initialTab={initialTab}
           locale={locale}
           localeTag={getLocaleTag(locale)}
           userTimeZone={userTimeZone}

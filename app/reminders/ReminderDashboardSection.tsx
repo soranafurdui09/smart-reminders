@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Calendar, Pill, SunMedium, Users } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import SemanticSearch from '@/components/SemanticSearch';
 import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
 import ReminderCard from '@/components/dashboard/ReminderCard';
@@ -18,6 +19,7 @@ import { inferReminderCategoryId, type ReminderCategoryId } from '@/lib/categori
 type CreatedByOption = 'all' | 'me' | 'others';
 type AssignmentOption = 'all' | 'assigned_to_me';
 type CategoryOption = 'all' | ReminderCategoryId;
+type TabOption = 'today' | 'inbox';
 
 type OccurrencePayload = {
   id: string;
@@ -71,6 +73,7 @@ type Props = {
   householdId: string;
   initialCreatedBy?: CreatedByOption;
   initialAssignment?: AssignmentOption;
+  initialTab?: TabOption;
   locale: Locale;
   localeTag: string;
   userTimeZone?: string;
@@ -154,10 +157,13 @@ export default function ReminderDashboardSection({
   householdId,
   initialCreatedBy = 'all',
   initialAssignment = 'all',
+  initialTab = 'today',
   locale,
   localeTag,
   userTimeZone
 }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [createdBy, setCreatedBy] = useState<CreatedByOption>(initialCreatedBy);
   const [assignment, setAssignment] = useState<AssignmentOption>(initialAssignment);
   const [kindFilter, setKindFilter] = useState<'all' | 'tasks' | 'medications'>('all');
@@ -170,6 +176,7 @@ export default function ReminderDashboardSection({
   const [showMonths, setShowMonths] = useState(false);
   const [autoExpanded, setAutoExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabOption>(initialTab);
 
   const filteredOccurrences = useMemo(() => {
     const normalized = occurrences
@@ -300,9 +307,24 @@ export default function ReminderDashboardSection({
   }, []);
 
   useEffect(() => {
+    const tabParam = searchParams?.get('tab');
+    if (tabParam === 'inbox' || tabParam === 'today') {
+      setActiveTab(tabParam);
+    } else {
+      setActiveTab('today');
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (tab: TabOption) => {
+    const params = new URLSearchParams(searchParams?.toString());
+    params.set('tab', tab);
+    router.push(`/app?${params.toString()}`);
+  };
+
+  useEffect(() => {
     if (autoExpanded) return;
     if (isMobile) {
-      if (todayItems.length) {
+      if (todayItems.length && activeTab === 'today') {
         setShowToday(true);
       }
       setShowOverdue(false);
@@ -329,7 +351,8 @@ export default function ReminderDashboardSection({
     hasUpcoming,
     isMobile,
     todayBuckets.overdue.length,
-    todayItems.length
+    todayItems.length,
+    activeTab
   ]);
 
   const householdItems = useMemo(
@@ -377,37 +400,60 @@ export default function ReminderDashboardSection({
 
   return (
     <section className="space-y-6">
+      <div className="flex flex-wrap items-center gap-2 md:hidden">
+        <button
+          type="button"
+          className={`rounded-full px-4 py-2 text-xs font-semibold ${
+            activeTab === 'today' ? 'bg-sky-500 text-white shadow-sm' : 'bg-white text-slate-600'
+          }`}
+          onClick={() => handleTabChange('today')}
+        >
+          {copy.nav.today}
+        </button>
+        <button
+          type="button"
+          className={`rounded-full px-4 py-2 text-xs font-semibold ${
+            activeTab === 'inbox' ? 'bg-sky-500 text-white shadow-sm' : 'bg-white text-slate-600'
+          }`}
+          onClick={() => handleTabChange('inbox')}
+        >
+          {copy.nav.inbox}
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)] md:gap-8">
         <aside className="order-1 space-y-4 lg:order-2">
           <div className="rounded-3xl border border-gray-300 bg-white p-4 shadow-sm md:p-5">
             <SemanticSearch householdId={householdId} localeTag={localeTag} copy={copy.search} />
-            <div className="mt-4">
-              <ReminderFiltersPanel
-                locale={locale}
-                kindFilter={kindFilter}
-                createdBy={createdBy}
-                assignment={assignment}
-                category={categoryFilter}
-                onChangeKind={(value) => setKindFilter(value)}
-                onChangeCreatedBy={(value) => {
-                  if (CreatedOptions.includes(value)) {
-                    setCreatedBy(value);
-                  }
-                }}
-                onChangeAssignment={(value) => {
-                  if (AssignmentOptions.includes(value)) {
-                    setAssignment(value);
-                  }
-                }}
-                onChangeCategory={(value) => setCategoryFilter(value)}
-              />
-            </div>
+            {activeTab === 'inbox' ? (
+              <div className="mt-4">
+                <ReminderFiltersPanel
+                  locale={locale}
+                  kindFilter={kindFilter}
+                  createdBy={createdBy}
+                  assignment={assignment}
+                  category={categoryFilter}
+                  onChangeKind={(value) => setKindFilter(value)}
+                  onChangeCreatedBy={(value) => {
+                    if (CreatedOptions.includes(value)) {
+                      setCreatedBy(value);
+                    }
+                  }}
+                  onChangeAssignment={(value) => {
+                    if (AssignmentOptions.includes(value)) {
+                      setAssignment(value);
+                    }
+                  }}
+                  onChangeCategory={(value) => setCategoryFilter(value)}
+                />
+              </div>
+            ) : null}
           </div>
         </aside>
 
         <div className="order-2 space-y-6 lg:order-1">
           <div className="h-px bg-slate-200/70" />
-          {kindFilter !== 'medications' ? (
+          {kindFilter !== 'medications' && activeTab === 'today' ? (
             <section className="mt-8 space-y-5">
               <SectionHeading
                 label={copy.dashboard.todayTitle}
@@ -524,7 +570,7 @@ export default function ReminderDashboardSection({
             </section>
           ) : null}
 
-          {kindFilter !== 'tasks' ? (
+          {kindFilter !== 'tasks' && activeTab === 'today' ? (
             <section className="mt-8 space-y-4">
               <SectionHeading
                 label={copy.dashboard.medicationsTitle}
@@ -620,7 +666,7 @@ export default function ReminderDashboardSection({
             </section>
           ) : null}
 
-          {kindFilter !== 'medications' ? (
+          {kindFilter !== 'medications' && activeTab === 'inbox' ? (
             <section className="mt-8 space-y-4">
               <button
                 type="button"
@@ -688,7 +734,7 @@ export default function ReminderDashboardSection({
             </section>
           ) : null}
 
-          {kindFilter !== 'medications' ? (
+          {kindFilter !== 'medications' && activeTab === 'inbox' ? (
             <section className="mt-8 space-y-4">
               <SectionHeading
                 label={copy.dashboard.householdTitle}
@@ -715,7 +761,7 @@ export default function ReminderDashboardSection({
             </section>
           ) : null}
 
-          {kindFilter !== 'medications' && hasMonthGroups ? (
+          {kindFilter !== 'medications' && hasMonthGroups && activeTab === 'inbox' ? (
             <section className="mt-8 space-y-4">
               <button
                 type="button"

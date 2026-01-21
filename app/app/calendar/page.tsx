@@ -78,7 +78,7 @@ export default async function CalendarPage({
 
   const prevMonth = format(addMonths(monthStart, -1), 'yyyy-MM');
   const nextMonth = format(addMonths(monthStart, 1), 'yyyy-MM');
-  const localeTag = getLocaleTag(locale);
+  const localeTag = getLocaleTag(locale) || 'ro-RO';
   const monthLabel = monthStart.toLocaleDateString(localeTag, { month: 'long', year: 'numeric' });
   const dayLabelFormatter = new Intl.DateTimeFormat(localeTag, {
     weekday: 'long',

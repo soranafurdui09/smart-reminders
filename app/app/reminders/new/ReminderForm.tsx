@@ -366,6 +366,8 @@ type ReminderFormProps = {
   locale: string;
   googleConnected: boolean;
   autoVoice?: boolean;
+  prefillAiText?: string;
+  prefillMode?: 'ai' | 'manual' | 'medication';
   contextDefaults?: ContextSettings;
   onVoiceStateChange?: (payload: { status: SpeechStatus; supported: boolean }) => void;
 };
@@ -378,6 +380,8 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   locale,
   googleConnected,
   autoVoice = false,
+  prefillAiText,
+  prefillMode,
   contextDefaults,
   onVoiceStateChange
 }, ref) {
@@ -445,6 +449,8 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const autoCreateInFlightRef = useRef(false);
   const lastAutoCreateKeyRef = useRef<string | null>(null);
   const lastAiTextRef = useRef('');
+  const prefillAppliedRef = useRef(false);
+  const prefillModeAppliedRef = useRef(false);
   const titleRef = useRef<HTMLInputElement | null>(null);
   const dueAtRef = useRef<HTMLInputElement | null>(null);
   const aiCharCount = aiText.length;
@@ -939,6 +945,27 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
       setAiCreateError(null);
     }
   }, [aiStatus, aiText]);
+
+  useEffect(() => {
+    if (!prefillMode || prefillModeAppliedRef.current) return;
+    prefillModeAppliedRef.current = true;
+    setCreateModeAndKind(prefillMode);
+  }, [prefillMode, setCreateModeAndKind]);
+
+  useEffect(() => {
+    if (prefillAppliedRef.current) return;
+    if (!prefillAiText) return;
+    prefillAppliedRef.current = true;
+    if (prefillMode && prefillMode !== 'ai') {
+      return;
+    }
+    const runPrefill = async () => {
+      const data = await parseReminderText(prefillAiText, false);
+      if (!data) return;
+      applyParsedReminder(data);
+    };
+    void runPrefill();
+  }, [applyParsedReminder, parseReminderText, prefillAiText, prefillMode, setCreateModeAndKind]);
 
   const handleParse = useCallback(async () => {
     const data = await parseReminderText(aiText, true);

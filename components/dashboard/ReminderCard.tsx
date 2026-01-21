@@ -11,7 +11,7 @@
  */
 
 import Link from 'next/link';
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Calendar, Check, Clock, MoreVertical, User } from 'lucide-react';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
@@ -25,6 +25,7 @@ import {
   type ReminderUrgency
 } from '@/lib/ui/reminderStyles';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import { useSwipeActions } from '@/lib/hooks/useSwipeActions';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import OccurrenceDateChip from '@/components/OccurrenceDateChip';
 import OccurrenceHighlightCard from '@/components/OccurrenceHighlightCard';
@@ -88,6 +89,7 @@ function ReminderCard({
   const doneMenuRef = useRef<HTMLDetailsElement | null>(null);
   const [actionsOpen, setActionsOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const swipeLockRef = useRef(false);
   const copy = messages[locale];
   const reminder = occurrence.reminder;
   const reminderId = reminder?.id;
@@ -164,6 +166,56 @@ function ReminderCard({
   useCloseOnOutside(actionMenuRef);
   useCloseOnOutside(doneMenuRef);
 
+  const notifySwipeChange = useCallback(
+    (kind?: 'snooze' | 'done') => {
+      if (typeof window === 'undefined') return;
+      const payload = { id: occurrence.id, kind, ts: Date.now() };
+      window.sessionStorage.setItem('action-highlight', JSON.stringify(payload));
+      window.dispatchEvent(new CustomEvent('reminder:changed'));
+    },
+    [occurrence.id]
+  );
+
+  const handleSwipeAction = useCallback(
+    async (action: 'done' | 'snooze') => {
+      if (swipeLockRef.current) return;
+      if (occurrence.status === 'done') return;
+      swipeLockRef.current = true;
+      try {
+        if (action === 'done') {
+          if (!reminderId) return;
+          const occurAtValue = String(occurrence.occur_at ?? displayAt ?? '');
+          if (!occurAtValue) return;
+          const formData = new FormData();
+          formData.set('occurrenceId', occurrence.id);
+          formData.set('reminderId', reminderId);
+          formData.set('occurAt', occurAtValue);
+          formData.set('done_comment', '');
+          await markDone(formData);
+          notifySwipeChange('done');
+          return;
+        }
+        const formData = new FormData();
+        formData.set('occurrenceId', occurrence.id);
+        formData.set('mode', '30');
+        await snoozeOccurrence(formData);
+        notifySwipeChange('snooze');
+      } finally {
+        window.setTimeout(() => {
+          swipeLockRef.current = false;
+        }, 800);
+      }
+    },
+    [displayAt, notifySwipeChange, occurrence.id, occurrence.occur_at, occurrence.status, reminderId, markDone, snoozeOccurrence]
+  );
+
+  const swipeEnabled = isMobile && !actionsOpen && occurrence.status !== 'done';
+  const swipeHandlers = useSwipeActions({
+    enabled: swipeEnabled,
+    onSwipeLeft: () => void handleSwipeAction('snooze'),
+    onSwipeRight: () => void handleSwipeAction('done')
+  });
+
   useEffect(() => {
     if (!isMobile) {
       setActionsOpen(false);
@@ -172,9 +224,12 @@ function ReminderCard({
 
   return (
     <OccurrenceHighlightCard
-      className={`relative flex flex-col gap-3 p-4 ${cardClass} ${isPrimary ? 'md:flex-row md:items-center md:gap-4' : ''}`}
+      className={`relative flex flex-col gap-3 p-4 touch-pan-y ${cardClass} ${isPrimary ? 'md:flex-row md:items-center md:gap-4' : ''}`}
       occurrenceId={occurrence.id}
       highlightKey={displayAt}
+      onTouchStart={swipeHandlers.onTouchStart}
+      onTouchMove={swipeHandlers.onTouchMove}
+      onTouchEnd={swipeHandlers.onTouchEnd}
     >
       <span className={`absolute inset-y-0 left-0 w-[3px] rounded-l-xl ${urgencyClasses.strip}`} />
 

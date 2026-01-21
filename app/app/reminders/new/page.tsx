@@ -10,7 +10,7 @@ import { getUserGoogleConnection } from '@/lib/google/calendar';
 export default async function NewReminderPage({
   searchParams
 }: {
-  searchParams: { error?: string; voice?: string };
+  searchParams: { error?: string; voice?: string; quick?: string; mode?: string };
 }) {
   const user = await requireUser('/app/reminders/new');
   const locale = await getUserLocale(user.id);
@@ -48,6 +48,8 @@ export default async function NewReminderPage({
         googleConnected={Boolean(googleConnection)}
         error={searchParams.error}
         autoVoice={searchParams.voice === '1' || searchParams.voice === 'true'}
+        prefillAiText={searchParams.quick}
+        prefillMode={searchParams.mode === 'medication' ? 'medication' : searchParams.mode === 'manual' ? 'manual' : 'ai'}
         contextDefaults={contextDefaults}
       />
     </AppShell>

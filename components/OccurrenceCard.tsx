@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
 import { formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
 import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import { useSwipeActions } from '@/lib/hooks/useSwipeActions';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import OccurrenceDateChip from '@/components/OccurrenceDateChip';
 import OccurrenceHighlightCard from '@/components/OccurrenceHighlightCard';
@@ -40,6 +41,7 @@ export default function OccurrenceCard({
   const reminderId = reminder?.id;
   const [actionsOpen, setActionsOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const swipeLockRef = useRef(false);
   // Next due time comes from the occurrence, with snoozed_until overriding it when present.
   const displayAt = occurrence.snoozed_until ?? occurrence.occur_at;
   const resolvedTimeZone = resolveReminderTimeZone(reminder?.tz ?? null, userTimeZone ?? null);
@@ -71,6 +73,56 @@ export default function OccurrenceCard({
   const category = getReminderCategory(categoryId);
   const categoryChipStyle = getCategoryChipStyle(category.color, true);
 
+  const notifySwipeChange = useCallback(
+    (kind?: 'snooze' | 'done') => {
+      if (typeof window === 'undefined') return;
+      const payload = { id: occurrence.id, kind, ts: Date.now() };
+      window.sessionStorage.setItem('action-highlight', JSON.stringify(payload));
+      window.dispatchEvent(new CustomEvent('reminder:changed'));
+    },
+    [occurrence.id]
+  );
+
+  const handleSwipeAction = useCallback(
+    async (action: 'done' | 'snooze') => {
+      if (swipeLockRef.current) return;
+      if (occurrence.status === 'done') return;
+      swipeLockRef.current = true;
+      try {
+        if (action === 'done') {
+          if (!reminderId) return;
+          const occurAtValue = String(occurrence.occur_at ?? displayAt ?? '');
+          if (!occurAtValue) return;
+          const formData = new FormData();
+          formData.set('occurrenceId', occurrence.id);
+          formData.set('reminderId', reminderId);
+          formData.set('occurAt', occurAtValue);
+          formData.set('done_comment', '');
+          await markDone(formData);
+          notifySwipeChange('done');
+          return;
+        }
+        const formData = new FormData();
+        formData.set('occurrenceId', occurrence.id);
+        formData.set('mode', '30');
+        await snoozeOccurrence(formData);
+        notifySwipeChange('snooze');
+      } finally {
+        window.setTimeout(() => {
+          swipeLockRef.current = false;
+        }, 800);
+      }
+    },
+    [displayAt, notifySwipeChange, occurrence.id, occurrence.occur_at, occurrence.status, reminderId, markDone, snoozeOccurrence]
+  );
+
+  const swipeEnabled = isMobile && !actionsOpen && occurrence.status !== 'done';
+  const swipeHandlers = useSwipeActions({
+    enabled: swipeEnabled,
+    onSwipeLeft: () => void handleSwipeAction('snooze'),
+    onSwipeRight: () => void handleSwipeAction('done')
+  });
+
   useEffect(() => {
     if (!isMobile) {
       setActionsOpen(false);
@@ -79,10 +131,13 @@ export default function OccurrenceCard({
 
   return (
     <OccurrenceHighlightCard
-      className="rounded-2xl border border-borderSubtle bg-white/90 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md border-l-4"
+      className="rounded-2xl border border-borderSubtle bg-white/90 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md border-l-4 touch-pan-y"
       occurrenceId={occurrence.id}
       highlightKey={displayAt}
       style={{ borderLeftColor: category.color }}
+      onTouchStart={swipeHandlers.onTouchStart}
+      onTouchMove={swipeHandlers.onTouchMove}
+      onTouchEnd={swipeHandlers.onTouchEnd}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">

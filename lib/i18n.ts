@@ -7,6 +7,8 @@ export const messages = {
     appName: 'Reminder inteligent',
     nav: {
       dashboard: 'Acasă',
+      today: 'Azi',
+      inbox: 'Inbox',
       newReminder: 'Adaugă reminder',
       calendar: 'Calendar',
       history: 'Istoric remindere',
@@ -515,6 +517,8 @@ export const messages = {
     appName: 'Smart Reminder',
     nav: {
       dashboard: 'Home',
+      today: 'Today',
+      inbox: 'Inbox',
       newReminder: 'Add reminder',
       calendar: 'Calendar',
       history: 'Reminder history',
@@ -1023,6 +1027,8 @@ export const messages = {
     appName: 'Intelligente Erinnerungen',
     nav: {
       dashboard: 'Start',
+      today: 'Heute',
+      inbox: 'Posteingang',
       newReminder: 'Erinnerung hinzufügen',
       calendar: 'Kalender',
       history: 'Verlauf',
