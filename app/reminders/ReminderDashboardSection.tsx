@@ -378,29 +378,22 @@ export default function ReminderDashboardSection({
     return { overdue, today, soon, todayAll, doneCount, totalCount: todayAll.length };
   }, [effectiveTimeZone, filteredOccurrences]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const media = window.matchMedia('(max-width: 768px)');
-    const handleChange = () => setIsMobile(media.matches);
-    handleChange();
-    if (typeof media.addEventListener === 'function') {
-      media.addEventListener('change', handleChange);
-      return () => media.removeEventListener('change', handleChange);
-    }
-    media.addListener(handleChange);
-    return () => media.removeListener(handleChange);
-  }, []);
+  const householdItems = useMemo(
+    () =>
+      filteredOccurrences.filter((occurrence) => {
+        const reminder = occurrence.reminder;
+        if (!reminder) return false;
+        const assignedId = reminder.assigned_member_id;
+        const createdByUser = reminder.created_by;
+        return (createdByUser && createdByUser !== userId) || (assignedId && assignedId !== membershipId);
+      }),
+    [filteredOccurrences, membershipId, userId]
+  );
 
-  useEffect(() => {
-    const tabParam = searchParams?.get('tab');
-    setActiveTab(tabParam === 'inbox' ? 'inbox' : 'today');
-  }, [searchParams]);
-
-  const handleTabChange = (tab: TabOption) => {
-    const params = new URLSearchParams(searchParams?.toString());
-    params.set('tab', tab);
-    router.push(`/app?${params.toString()}`);
-  };
+  const visibleDoses = useMemo(
+    () => doseState.filter((dose) => dose.status === 'pending').slice(0, 5),
+    [doseState]
+  );
 
   useEffect(() => {
     if (autoExpanded) return;
@@ -438,22 +431,29 @@ export default function ReminderDashboardSection({
     visibleDoses.length
   ]);
 
-  const householdItems = useMemo(
-    () =>
-      filteredOccurrences.filter((occurrence) => {
-        const reminder = occurrence.reminder;
-        if (!reminder) return false;
-        const assignedId = reminder.assigned_member_id;
-        const createdByUser = reminder.created_by;
-        return (createdByUser && createdByUser !== userId) || (assignedId && assignedId !== membershipId);
-      }),
-    [filteredOccurrences, membershipId, userId]
-  );
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(max-width: 768px)');
+    const handleChange = () => setIsMobile(media.matches);
+    handleChange();
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', handleChange);
+      return () => media.removeEventListener('change', handleChange);
+    }
+    media.addListener(handleChange);
+    return () => media.removeListener(handleChange);
+  }, []);
 
-  const visibleDoses = useMemo(
-    () => doseState.filter((dose) => dose.status === 'pending').slice(0, 5),
-    [doseState]
-  );
+  useEffect(() => {
+    const tabParam = searchParams?.get('tab');
+    setActiveTab(tabParam === 'inbox' ? 'inbox' : 'today');
+  }, [searchParams]);
+
+  const handleTabChange = (tab: TabOption) => {
+    const params = new URLSearchParams(searchParams?.toString());
+    params.set('tab', tab);
+    router.push(`/app?${params.toString()}`);
+  };
 
   const handleDoseStatus = async (doseId: string, status: 'taken' | 'skipped', skippedReason?: string) => {
     try {
