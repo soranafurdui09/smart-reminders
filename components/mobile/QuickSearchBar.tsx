@@ -143,8 +143,9 @@ export default function QuickSearchBar({
             type="button"
             className="whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-slate-600"
             onClick={() => {
-              if (!chip.text) return;
-              setQuery((current) => (current ? `${current} ${chip.text}` : chip.text));
+              const text = chip.text;
+              if (!text) return;
+              setQuery((current) => (current ? `${current} ${text}` : text));
             }}
           >
             {chip.label}
