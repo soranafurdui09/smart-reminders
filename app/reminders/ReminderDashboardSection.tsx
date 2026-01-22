@@ -497,25 +497,39 @@ export default function ReminderDashboardSection({
     };
     return (
       <section className="space-y-4 text-slate-100">
-        <QuickAddCard />
+        <div
+          className={
+            activeTab === 'inbox'
+              ? 'space-y-4'
+              : 'space-y-4 rounded-3xl bg-[radial-gradient(650px_280px_at_20%_-10%,rgba(76,201,240,0.2),transparent)] p-4'
+          }
+        >
+          <QuickAddCard />
 
-        <StatusTiles
-          tiles={[
-            { id: 'overdue', label: copy.dashboard.todayOverdue, count: overdueItems.length, accentClass: 'border-rose-400/40' },
-            { id: 'today', label: copy.dashboard.todayTitle, count: todayOpenItems.length, accentClass: 'border-amber-400/40' },
-            { id: 'soon', label: copy.dashboard.todaySoon, count: soonItems.length, accentClass: 'border-sky-400/40' },
-            { id: 'meds', label: copy.dashboard.medicationsTitle, count: visibleDoses.length, accentClass: 'border-emerald-400/40' }
-          ]}
-          onSelect={(id) => {
-            if (id === 'overdue') scrollToSection(overdueRef);
-            if (id === 'today') scrollToSection(todayRef);
-            if (id === 'soon') scrollToSection(soonRef);
-            if (id === 'meds') scrollToSection(medsRef);
-          }}
-        />
+          <StatusTiles
+            tiles={[
+              { id: 'overdue', label: copy.dashboard.todayOverdue, count: overdueItems.length, accentClass: 'border-rose-400/40' },
+              { id: 'today', label: copy.dashboard.todayTitle, count: todayOpenItems.length, accentClass: 'border-amber-400/40' },
+              { id: 'soon', label: copy.dashboard.todaySoon, count: soonItems.length, accentClass: 'border-sky-400/40' },
+              { id: 'meds', label: copy.dashboard.medicationsTitle, count: visibleDoses.length, accentClass: 'border-emerald-400/40' }
+            ]}
+            onSelect={(id) => {
+              if (id === 'overdue') scrollToSection(overdueRef);
+              if (id === 'today') scrollToSection(todayRef);
+              if (id === 'soon') scrollToSection(soonRef);
+              if (id === 'meds') scrollToSection(medsRef);
+            }}
+          />
+        </div>
 
         {activeTab === 'inbox' ? (
           <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-slate-100">Inbox</div>
+              <div className="text-xs text-slate-400">
+                {filteredOccurrences.length} {copy.dashboard.reminderCountLabel}
+              </div>
+            </div>
             <ReminderFiltersPanel
               locale={locale}
               kindFilter={kindFilter}

@@ -1,11 +1,25 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 import QuickAddSheet from '@/components/mobile/QuickAddSheet';
 
 export default function MobileFab() {
   const [open, setOpen] = useState(false);
+  const [prefillText, setPrefillText] = useState('');
+  const [autoVoice, setAutoVoice] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleOpen = (event: Event) => {
+      const detail = (event as CustomEvent<{ text?: string; voice?: boolean }>).detail;
+      setPrefillText(detail?.text ?? '');
+      setAutoVoice(Boolean(detail?.voice));
+      setOpen(true);
+    };
+    window.addEventListener('quickadd:open', handleOpen as EventListener);
+    return () => window.removeEventListener('quickadd:open', handleOpen as EventListener);
+  }, []);
 
   return (
     <>
@@ -18,12 +32,23 @@ export default function MobileFab() {
           if (process.env.NODE_ENV !== 'production') {
             console.log('FAB clicked');
           }
+          setPrefillText('');
+          setAutoVoice(false);
           setOpen(true);
         }}
       >
         <Plus className="h-6 w-6" aria-hidden="true" />
       </button>
-      <QuickAddSheet open={open} onClose={() => setOpen(false)} />
+      <QuickAddSheet
+        open={open}
+        initialText={prefillText}
+        autoVoice={autoVoice}
+        onClose={() => {
+          setOpen(false);
+          setPrefillText('');
+          setAutoVoice(false);
+        }}
+      />
     </>
   );
 }

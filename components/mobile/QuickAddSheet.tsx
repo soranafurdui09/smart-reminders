@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mic, Sparkles, X } from 'lucide-react';
 import { reminderCategories } from '@/lib/categories';
@@ -39,10 +39,14 @@ const templates = [
 
 export default function QuickAddSheet({
   open,
-  onClose
+  onClose,
+  initialText = '',
+  autoVoice = false
 }: {
   open: boolean;
   onClose: () => void;
+  initialText?: string;
+  autoVoice?: boolean;
 }) {
   const router = useRouter();
   const [text, setText] = useState('');
@@ -218,7 +222,23 @@ export default function QuickAddSheet({
     }
   });
 
-  const voiceActive = ['starting', 'listening', 'transcribing', 'processing', 'parsing'].includes(voice.status);
+  const { start: startVoice, reset: resetVoice, status: voiceStatus } = voice;
+  const voiceActive = ['starting', 'listening', 'transcribing', 'processing', 'parsing'].includes(voiceStatus);
+
+  useEffect(() => {
+    if (!open) return;
+    if (initialText) {
+      setText(initialText);
+    }
+    if (autoVoice && voiceStatus === 'idle') {
+      startVoice();
+    }
+  }, [autoVoice, initialText, open, startVoice, voiceStatus]);
+
+  useEffect(() => {
+    if (open) return;
+    resetVoice();
+  }, [open, resetVoice]);
 
   const parsePreReminder = () => {
     if (!remindBeforeValue) return '';
@@ -324,6 +344,22 @@ export default function QuickAddSheet({
         </div>
 
         <div className="mt-4 space-y-3">
+          <Card className="p-3 text-xs text-slate-300">
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
+              Preview
+              {parsedResult ? (
+                <Pill className="ml-auto bg-white/10 text-slate-200">AI completat</Pill>
+              ) : null}
+            </div>
+            <div className="mt-2 text-sm font-semibold text-slate-100">{previewTitle}</div>
+            <div className="mt-1 text-xs text-slate-400">{previewDate}</div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Pill className="border border-white/10 bg-white/5 text-slate-300">Activ · Reminder nou</Pill>
+              <Pill className="bg-cyan-500/15 text-cyan-200">{previewCategory}</Pill>
+            </div>
+            <div className="mt-2">{previewText}</div>
+          </Card>
           {voiceActive ? (
             <div className="flex items-center justify-between text-xs text-cyan-300">
               <div className="flex items-center gap-2">
@@ -362,10 +398,10 @@ export default function QuickAddSheet({
           </div>
           <div className="flex flex-wrap gap-2">
             {suggestions.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className="premium-chip"
+            <button
+              key={item.id}
+              type="button"
+              className="premium-chip"
                 onClick={() => {
                   if (item.mode === 'medication') {
                     handleNavigate('medication');
@@ -400,30 +436,13 @@ export default function QuickAddSheet({
           </div>
         </div>
 
-        <Card className="mt-4 p-3 text-xs text-slate-300">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-            <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
-            Preview
-            {parsedResult ? (
-              <Pill className="ml-auto bg-white/10 text-slate-200">AI completat</Pill>
-            ) : null}
-          </div>
-          <div className="mt-2 text-sm font-semibold text-slate-100">{previewTitle}</div>
-          <div className="mt-1 text-xs text-slate-400">{previewDate}</div>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Pill className="border border-white/10 bg-white/5 text-slate-300">Activ · Reminder nou</Pill>
-          <Pill className="bg-cyan-500/15 text-cyan-200">{previewCategory}</Pill>
-          </div>
-          <div className="mt-2">{previewText}</div>
-        </Card>
-
         <div className="mt-4">
           <button
             type="button"
             className="text-xs font-semibold text-slate-300"
             onClick={() => setDetailsOpen((prev) => !prev)}
           >
-            {detailsOpen ? 'Ascunde detalii' : 'Detalii'}
+            {detailsOpen ? 'Ascunde detalii avansate' : 'Detalii avansate'}
           </button>
           {detailsOpen ? (
             <div className="mt-3 space-y-3">
@@ -510,7 +529,7 @@ export default function QuickAddSheet({
           ) : null}
         </div>
 
-        <div className="mt-4 grid gap-2 sticky bottom-0 bg-[rgba(10,14,22,0.95)] pt-2 pb-2">
+        <div className="mt-4 grid gap-2 sticky bottom-0 bg-[rgba(10,14,22,0.95)] pt-2 pb-[calc(env(safe-area-inset-bottom)_+_12px)]">
           <button
             type="button"
             className="premium-btn-primary inline-flex items-center justify-center px-4 text-sm"
