@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { AlertTriangle, Calendar, Pill, SunMedium, Users } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
 import SemanticSearch from '@/components/SemanticSearch';
 import QuickAddCard from '@/components/mobile/QuickAddCard';
 import StatusTiles from '@/components/mobile/StatusTiles';
@@ -169,8 +168,6 @@ export default function ReminderDashboardSection({
   localeTag,
   userTimeZone
 }: Props) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const [createdBy, setCreatedBy] = useState<CreatedByOption>(initialCreatedBy);
   const [assignment, setAssignment] = useState<AssignmentOption>(initialAssignment);
   const [kindFilter, setKindFilter] = useState<'all' | 'tasks' | 'medications'>('all');
@@ -371,6 +368,11 @@ export default function ReminderDashboardSection({
       .slice(0, 5);
   }, [doseState, effectiveTimeZone]);
 
+  const mobileInboxItems = useMemo(
+    () => filteredOccurrences.slice(0, mobileInboxLimit),
+    [filteredOccurrences, mobileInboxLimit]
+  );
+
   useEffect(() => {
     if (autoExpanded) return;
     if (isMobile) {
@@ -421,9 +423,16 @@ export default function ReminderDashboardSection({
   }, []);
 
   useEffect(() => {
-    const tabParam = searchParams?.get('tab');
-    setActiveTab(tabParam === 'inbox' ? 'inbox' : 'today');
-  }, [searchParams]);
+    if (typeof window === 'undefined') return;
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      setActiveTab(tabParam === 'inbox' ? 'inbox' : 'today');
+    };
+    window.addEventListener('popstate', handlePopState);
+    handlePopState();
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -433,9 +442,12 @@ export default function ReminderDashboardSection({
   }, [householdId]);
 
   const handleTabChange = (tab: TabOption) => {
-    const params = new URLSearchParams(searchParams?.toString());
+    setActiveTab(tab);
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
     params.set('tab', tab);
-    router.push(`/app?${params.toString()}`);
+    const nextUrl = `/app?${params.toString()}`;
+    window.history.replaceState(null, '', nextUrl);
   };
 
   const handleDoseStatus = async (doseId: string, status: 'taken' | 'skipped', skippedReason?: string) => {
@@ -490,7 +502,6 @@ export default function ReminderDashboardSection({
     const overdueItems = mobileBuckets.overdue;
     const todayOpenItems = mobileBuckets.today;
     const soonItems = mobileBuckets.soon;
-    const mobileInboxItems = filteredOccurrences.slice(0, mobileInboxLimit);
 
     const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
       ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });

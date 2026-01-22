@@ -1,8 +1,8 @@
 export const colors = {
-  bgGradient: 'bg-gradient-to-b from-[#0b1220] via-[#0a111d] to-[#06070b]',
-  textPrimary: 'text-[color:var(--text-primary)]',
-  textSecondary: 'text-[color:var(--text-secondary)]',
-  textMuted: 'text-[color:var(--text-muted)]',
+  bgGradient: 'bg-gradient-to-b from-[color:var(--bg-top)] via-[color:var(--bg-base)] to-[color:var(--bg-bottom)]',
+  textPrimary: 'text-[color:var(--text-1)]',
+  textSecondary: 'text-[color:var(--text-2)]',
+  textMuted: 'text-[color:var(--text-3)]',
   accent: 'text-[color:var(--accent)]',
   overdue: 'text-[color:var(--danger)]'
 } as const;

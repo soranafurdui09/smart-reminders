@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { useMemo, useRef, useState } from 'react';
+import { memo, useMemo, useRef, useState } from 'react';
 import { Check, MoreHorizontal, User } from 'lucide-react';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
@@ -22,7 +22,7 @@ type Props = {
   userTimeZone?: string;
 };
 
-export default function ReminderRowMobile({
+const ReminderRowMobile = memo(function ReminderRowMobile({
   occurrence,
   locale = defaultLocale,
   googleConnected = false,
@@ -279,4 +279,6 @@ export default function ReminderRowMobile({
       </ReminderActionsSheet>
     </>
   );
-}
+});
+
+export default ReminderRowMobile;

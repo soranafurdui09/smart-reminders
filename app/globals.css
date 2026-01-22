@@ -29,27 +29,28 @@
   --space-4: 16px;
   --space-6: 24px;
 
-  --bg-base: #0b1324;
-  --bg-top: #123a5a;
-  --bg-bottom: #070b14;
-  --surface-1: #121f33;
-  --surface-2: #162844;
-  --sheet: #0e1a2c;
-  --border: rgba(255, 255, 255, 0.06);
-  --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --bg-base: #101b2a;
+  --bg-top: #1a2e3f;
+  --bg-bottom: #0b1420;
+  --surface-1: #162636;
+  --surface-2: #1c3146;
+  --sheet: #132234;
+  --border: rgba(255, 255, 255, 0.08);
+  --shadow: 0 8px 22px rgba(0, 0, 0, 0.32);
   --text-1: rgba(255, 255, 255, 0.92);
-  --text-2: rgba(255, 255, 255, 0.68);
-  --text-3: rgba(255, 255, 255, 0.5);
-  --accent: #4cc9f0;
-  --accent-muted: rgba(76, 201, 240, 0.14);
-  --accent-glow: rgba(76, 201, 240, 0.25);
+  --text-2: rgba(255, 255, 255, 0.7);
+  --text-3: rgba(255, 255, 255, 0.55);
+  --accent-strong: #48a7d0;
+  --accent: #6bb9d8;
+  --accent-muted: rgba(107, 185, 216, 0.16);
+  --accent-glow: rgba(72, 167, 208, 0.22);
   --danger: #fb7185;
   --radius-card: 20px;
   --radius-input: 16px;
   --radius-pill: 999px;
-  --shadow-soft: 0 24px 60px rgba(6, 12, 24, 0.45);
-  --shadow-lift: 0 30px 70px rgba(6, 12, 24, 0.55);
-  --glass-blur: blur(14px);
+  --shadow-soft: 0 18px 36px rgba(6, 12, 24, 0.35);
+  --shadow-lift: 0 22px 42px rgba(6, 12, 24, 0.4);
+  --glass-blur: blur(10px);
 }
 
 html,
@@ -62,8 +63,8 @@ body {
   @apply text-ink antialiased;
   background-color: var(--bg-base);
   background-image:
-    radial-gradient(900px 560px at 15% -10%, rgba(18, 58, 90, 0.9), transparent),
-    radial-gradient(820px 420px at 85% 0%, rgba(18, 58, 90, 0.6), transparent),
+    radial-gradient(880px 520px at 12% -12%, rgba(26, 46, 63, 0.7), transparent),
+    radial-gradient(760px 420px at 88% 0%, rgba(22, 38, 54, 0.45), transparent),
     linear-gradient(180deg, var(--bg-top), var(--bg-base), var(--bg-bottom));
   background-attachment: fixed;
   color: var(--text-1);
@@ -74,8 +75,8 @@ body {
     background-attachment: scroll;
     background-color: var(--bg-base);
     background-image:
-      radial-gradient(700px 420px at 20% -10%, rgba(18, 58, 90, 0.9), transparent),
-      radial-gradient(600px 360px at 85% 0%, rgba(18, 58, 90, 0.6), transparent),
+      radial-gradient(620px 360px at 20% -10%, rgba(26, 46, 63, 0.6), transparent),
+      radial-gradient(520px 300px at 85% 0%, rgba(22, 38, 54, 0.4), transparent),
       linear-gradient(180deg, var(--bg-top), var(--bg-base), var(--bg-bottom));
     color: var(--text-1);
   }
@@ -87,7 +88,7 @@ body {
   border: 1px solid var(--border);
   box-shadow: var(--shadow-soft);
   backdrop-filter: var(--glass-blur);
-  transition: transform 200ms ease-out, box-shadow 200ms ease-out;
+  transition: transform 160ms ease-out, box-shadow 160ms ease-out;
 }
 
 .premium-card:hover {
@@ -121,11 +122,11 @@ body {
 .premium-btn-primary {
   height: 46px;
   border-radius: var(--radius-input);
-  background: linear-gradient(135deg, var(--accent), rgba(76, 201, 240, 0.7));
-  color: #021017;
+  background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+  color: #071321;
   font-weight: 600;
   transition: transform 200ms ease-out, box-shadow 200ms ease-out, filter 200ms ease-out;
-  box-shadow: 0 14px 30px var(--accent-glow);
+  box-shadow: 0 10px 22px var(--accent-glow);
 }
 
 .premium-btn-primary:hover {
@@ -165,7 +166,7 @@ body {
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-2);
-  transition: background 200ms ease-out, transform 200ms ease-out;
+  transition: background 160ms ease-out, transform 160ms ease-out;
 }
 
 .premium-icon-btn:hover {
@@ -219,6 +220,28 @@ h3 {
 .list-optimized {
   content-visibility: auto;
   contain-intrinsic-size: 1px 260px;
+}
+
+@media (max-width: 768px) {
+  .premium-card,
+  .premium-sheet {
+    backdrop-filter: none;
+    box-shadow: var(--shadow);
+  }
+
+  .premium-card:hover {
+    transform: none;
+    box-shadow: var(--shadow);
+  }
+
+  .premium-btn-primary {
+    box-shadow: 0 6px 14px var(--accent-glow);
+  }
+
+  .list-optimized {
+    content-visibility: visible;
+    contain-intrinsic-size: auto;
+  }
 }
 
 .card {

@@ -49,7 +49,7 @@ export default function ReminderActionsSheet({
       role="presentation"
     >
       <div
-        className="w-full max-w-lg rounded-3xl border border-white/10 bg-[rgba(10,14,22,0.94)] p-4 shadow-[0_24px_60px_rgba(6,12,24,0.6)] backdrop-blur-xl"
+        className="w-full max-w-lg rounded-3xl border border-white/10 bg-[rgba(12,18,28,0.95)] p-4 shadow-[0_18px_40px_rgba(6,12,24,0.45)] md:backdrop-blur-xl"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
