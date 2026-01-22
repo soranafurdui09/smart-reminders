@@ -21,7 +21,7 @@ export default async function HouseholdPage({
   if (!household) {
     return (
       <AppShell locale={locale} activePath="/app/household" userEmail={user.email}>
-        <div className="space-y-6">
+        <div className="space-y-6 pb-24">
           <SectionHeader title={copy.household.title} description={copy.household.subtitleCreate} />
           <form action={createHousehold} className="card space-y-4 max-w-lg">
             <div>
@@ -53,7 +53,7 @@ export default async function HouseholdPage({
 
   return (
     <AppShell locale={locale} activePath="/app/household" userEmail={user.email}>
-      <div className="space-y-8">
+      <div className="space-y-8 pb-24">
         <SectionHeader title={copy.household.title} description={copy.household.subtitleManage} />
 
         {searchParams.invite ? (
@@ -82,7 +82,7 @@ export default async function HouseholdPage({
           </div>
         ) : null}
 
-        <section className="grid gap-6 lg:grid-cols-2">
+        <section className="grid gap-6 lg:grid-cols-2 min-w-0">
           <div className="card space-y-4">
             <div>
               <div className="text-lg font-semibold text-ink">{copy.household.membersTitle}</div>
@@ -94,12 +94,12 @@ export default async function HouseholdPage({
                 const initial = String(label || 'U').charAt(0).toUpperCase();
                 return (
                   <div key={member.user_id} className="flex items-center justify-between rounded-2xl border border-borderSubtle bg-surface p-3">
-                    <div className="flex items-center gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primarySoft text-sm font-semibold text-primaryStrong">
                         {initial}
                       </div>
-                      <div>
-                        <div className="text-sm font-semibold text-ink">{label}</div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-ink truncate">{label}</div>
                         <div className="text-xs text-muted">{formatRole(member.role)}</div>
                       </div>
                     </div>
@@ -162,12 +162,12 @@ export default async function HouseholdPage({
                 const initial = String(invite.email || 'U').charAt(0).toUpperCase();
                 return (
                   <div key={invite.id} className="flex items-center justify-between rounded-2xl border border-borderSubtle bg-surface p-3">
-                    <div className="flex items-center gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surfaceMuted text-sm font-semibold text-ink">
                         {initial}
                       </div>
-                      <div>
-                        <div className="text-sm font-semibold text-ink">{invite.email}</div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-ink truncate">{invite.email}</div>
                         <div className="text-xs text-muted">
                           {formatRole(invite.role)} - {invite.accepted_at ? copy.household.inviteAccepted : copy.household.invitePending}
                         </div>

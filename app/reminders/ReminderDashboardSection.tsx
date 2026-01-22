@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Calendar, Pill, SunMedium, Users } from 'lucide-react';
+import { AlertTriangle, Calendar, ChevronDown, Pill, SunMedium, Users } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import SemanticSearch from '@/components/SemanticSearch';
 import QuickSearchBar from '@/components/mobile/QuickSearchBar';
@@ -24,7 +24,7 @@ import { markDone } from '@/app/app/actions';
 type CreatedByOption = 'all' | 'me' | 'others';
 type AssignmentOption = 'all' | 'assigned_to_me';
 type CategoryOption = 'all' | ReminderCategoryId;
-type TabOption = 'today' | 'overdue' | 'soon' | 'meds' | 'family' | 'inbox';
+type TabOption = 'today' | 'inbox';
 
 type OccurrencePayload = {
   id: string;
@@ -151,6 +151,44 @@ const SectionHeading = ({
   </div>
 );
 
+const MobileSection = ({
+  icon,
+  label,
+  count,
+  open,
+  onToggle,
+  children
+}: {
+  icon: React.ReactNode;
+  label: string;
+  count: number;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) => {
+  if (!count) return null;
+  return (
+    <section className="space-y-2">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-left shadow-sm"
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+          {icon}
+          <span>{label}</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <span>{count}</span>
+          <ChevronDown className={`h-4 w-4 transition ${open ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
+      {open ? <div className="space-y-2">{children}</div> : null}
+    </section>
+  );
+};
+
 export default function ReminderDashboardSection({
   occurrences,
   copy,
@@ -178,6 +216,7 @@ export default function ReminderDashboardSection({
   const [showOverdue, setShowOverdue] = useState(false);
   const [showToday, setShowToday] = useState(false);
   const [showUpcoming, setShowUpcoming] = useState(false);
+  const [showMeds, setShowMeds] = useState(false);
   const [showMonths, setShowMonths] = useState(false);
   const [autoExpanded, setAutoExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -282,8 +321,6 @@ export default function ReminderDashboardSection({
   const todayBuckets = grouped.todayBuckets;
   const todayItems = [...todayBuckets.soon, ...todayBuckets.today];
   const hasToday = todayBuckets.overdue.length + todayItems.length > 0;
-  const todayDoneCount = [...todayBuckets.overdue, ...todayItems].filter((item) => item.status === 'done').length;
-  const todayTotalCount = todayBuckets.overdue.length + todayItems.length;
   const upcomingEntries = grouped.upcomingEntries;
   const hasUpcoming = upcomingEntries.length > 0;
   const monthEntries = grouped.monthEntries;
@@ -301,6 +338,46 @@ export default function ReminderDashboardSection({
     [localeTag]
   );
 
+  const mobileBuckets = useMemo(() => {
+    const now = new Date();
+    const overdue: OccurrencePayload[] = [];
+    const today: OccurrencePayload[] = [];
+    const soon: OccurrencePayload[] = [];
+    const todayAll: OccurrencePayload[] = [];
+
+    filteredOccurrences.forEach((occurrence) => {
+      const rawDate = occurrence.effective_at ?? occurrence.occur_at;
+      const reminderTimeZone = resolveReminderTimeZone(occurrence.reminder?.tz ?? null, effectiveTimeZone);
+      const compareDate = occurrence.snoozed_until
+        ? new Date(rawDate)
+        : coerceDateForTimeZone(rawDate, reminderTimeZone);
+      if (Number.isNaN(compareDate.getTime())) return;
+      const bucketTimeZone = reminderTimeZone || effectiveTimeZone;
+      const dayDiff = diffDaysInTimeZone(compareDate, now, bucketTimeZone);
+      const isDone = occurrence.status === 'done';
+      if (dayDiff < 0) {
+        if (!isDone) overdue.push(occurrence);
+        return;
+      }
+      if (dayDiff === 0) {
+        todayAll.push(occurrence);
+        if (isDone) return;
+        if (compareDate.getTime() < now.getTime()) {
+          overdue.push(occurrence);
+        } else {
+          today.push(occurrence);
+        }
+        return;
+      }
+      if (dayDiff <= 7 && !isDone) {
+        soon.push(occurrence);
+      }
+    });
+
+    const doneCount = todayAll.filter((item) => item.status === 'done').length;
+    return { overdue, today, soon, todayAll, doneCount, totalCount: todayAll.length };
+  }, [effectiveTimeZone, filteredOccurrences]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const media = window.matchMedia('(max-width: 768px)');
@@ -316,11 +393,7 @@ export default function ReminderDashboardSection({
 
   useEffect(() => {
     const tabParam = searchParams?.get('tab');
-    if (tabParam === 'today' || tabParam === 'overdue' || tabParam === 'soon' || tabParam === 'meds' || tabParam === 'family' || tabParam === 'inbox') {
-      setActiveTab(tabParam);
-      return;
-    }
-    setActiveTab('today');
+    setActiveTab(tabParam === 'inbox' ? 'inbox' : 'today');
   }, [searchParams]);
 
   const handleTabChange = (tab: TabOption) => {
@@ -332,11 +405,10 @@ export default function ReminderDashboardSection({
   useEffect(() => {
     if (autoExpanded) return;
     if (isMobile) {
-      if (todayItems.length && activeTab === 'today') {
-        setShowToday(true);
-      }
-      setShowOverdue(false);
-      setShowUpcoming(false);
+      setShowOverdue(mobileBuckets.overdue.length > 0);
+      setShowToday(mobileBuckets.today.length > 0);
+      setShowUpcoming(mobileBuckets.soon.length > 0);
+      setShowMeds(visibleDoses.length > 0);
       setAutoExpanded(true);
       return;
     }
@@ -358,9 +430,12 @@ export default function ReminderDashboardSection({
     hasToday,
     hasUpcoming,
     isMobile,
+    mobileBuckets.overdue.length,
+    mobileBuckets.today.length,
+    mobileBuckets.soon.length,
     todayBuckets.overdue.length,
     todayItems.length,
-    activeTab
+    visibleDoses.length
   ]);
 
   const householdItems = useMemo(
@@ -406,11 +481,6 @@ export default function ReminderDashboardSection({
     }
   };
 
-  const upcomingCount = useMemo(
-    () => upcomingEntries.reduce((total, [, items]) => total + items.length, 0),
-    [upcomingEntries]
-  );
-
   const nextOccurrence = useMemo(() => {
     const now = new Date();
     return filteredOccurrences.find((occurrence) => {
@@ -430,7 +500,12 @@ export default function ReminderDashboardSection({
   }, [effectiveTimeZone, nextOccurrence]);
 
   if (isMobile) {
-    const progressLabel = `${copy.dashboard.groupToday}: ${todayDoneCount}/${todayTotalCount}`;
+    const overdueItems = mobileBuckets.overdue;
+    const todayOpenItems = mobileBuckets.today;
+    const soonItems = mobileBuckets.soon;
+    const progressLabel = activeTab === 'inbox'
+      ? `${copy.nav.inbox}: ${filteredOccurrences.length}`
+      : `${copy.dashboard.groupToday}: ${mobileBuckets.doneCount}/${mobileBuckets.totalCount} făcute`;
     const mobileInboxItems = filteredOccurrences.slice(0, mobileInboxLimit);
     return (
       <section className="space-y-4">
@@ -438,193 +513,8 @@ export default function ReminderDashboardSection({
           householdId={householdId}
           localeTag={localeTag}
           copy={copy.search}
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          progressLabel={progressLabel}
-          counts={{
-            overdue: todayBuckets.overdue.length,
-            soon: upcomingCount,
-            meds: visibleDoses.length,
-            family: householdItems.length,
-            today: todayTotalCount
-          }}
+          summaryLabel={progressLabel}
         />
-
-        {activeTab === 'today' ? (
-          <div className="space-y-3">
-            {nextOccurrence && nextOccurrenceLabel ? (
-              <div className="rounded-2xl border border-slate-100 bg-white px-3 py-3 text-sm shadow-sm">
-                <div className="text-xs font-semibold text-slate-500">Următorul</div>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="truncate font-semibold text-slate-900">
-                      {nextOccurrence.reminder?.title ?? copy.dashboard.nextTitle}
-                    </div>
-                    <div className="text-xs text-slate-500">{nextOccurrenceLabel}</div>
-                  </div>
-                  <form action={markDone}>
-                    <input type="hidden" name="occurrenceId" value={nextOccurrence.id} />
-                    <input type="hidden" name="reminderId" value={nextOccurrence.reminder?.id ?? ''} />
-                    <input type="hidden" name="occurAt" value={nextOccurrence.occur_at ?? ''} />
-                    <input type="hidden" name="done_comment" value="" />
-                    <ActionSubmitButton
-                      className="inline-flex h-9 items-center justify-center rounded-full bg-sky-500 px-3 text-xs font-semibold text-white"
-                      type="submit"
-                      data-action-feedback={copy.common.actionDone}
-                    >
-                      {copy.common.doneAction}
-                    </ActionSubmitButton>
-                  </form>
-                </div>
-              </div>
-            ) : null}
-
-            {todayItems.length || todayBuckets.overdue.length ? (
-              <div className="space-y-2">
-                {todayBuckets.overdue.map((occurrence) => (
-                  <ReminderRowMobile
-                    key={occurrence.id}
-                    occurrence={occurrence}
-                    locale={locale}
-                    googleConnected={googleConnected}
-                    userTimeZone={effectiveTimeZone}
-                  />
-                ))}
-                {todayItems.map((occurrence) => (
-                  <ReminderRowMobile
-                    key={occurrence.id}
-                    occurrence={occurrence}
-                    locale={locale}
-                    googleConnected={googleConnected}
-                    userTimeZone={effectiveTimeZone}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
-                {copy.dashboard.todayEmpty}
-              </div>
-            )}
-          </div>
-        ) : null}
-
-        {activeTab === 'overdue' ? (
-          todayBuckets.overdue.length ? (
-            <div className="space-y-2">
-              {todayBuckets.overdue.map((occurrence) => (
-                <ReminderRowMobile
-                  key={occurrence.id}
-                  occurrence={occurrence}
-                  locale={locale}
-                  googleConnected={googleConnected}
-                  userTimeZone={effectiveTimeZone}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
-              {copy.dashboard.todayEmpty}
-            </div>
-          )
-        ) : null}
-
-        {activeTab === 'soon' ? (
-          upcomingEntries.length ? (
-            <div className="space-y-4">
-              {upcomingEntries.map(([dayKey, items]) => {
-                const [year, month, day] = dayKey.split('-').map(Number);
-                const dayDate = new Date(year, Math.max(0, month - 1), day);
-                return (
-                  <div key={dayKey} className="space-y-2">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      {dayLabelFormatter.format(dayDate)}
-                    </div>
-                    <div className="space-y-2">
-                      {items.map((occurrence) => (
-                        <ReminderRowMobile
-                          key={occurrence.id}
-                          occurrence={occurrence}
-                          locale={locale}
-                          googleConnected={googleConnected}
-                          userTimeZone={effectiveTimeZone}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
-              {copy.dashboard.upcomingEmpty}
-            </div>
-          )
-        ) : null}
-
-        {activeTab === 'meds' ? (
-          visibleDoses.length ? (
-            <div className="space-y-2">
-              {visibleDoses.map((dose) => {
-                const details = dose.reminder?.medication_details || {};
-                const personLabel = details.personId ? memberLabels[details.personId] : null;
-                return (
-                  <div key={dose.id} className="rounded-2xl border border-slate-100 bg-white p-3 text-sm shadow-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="font-semibold text-slate-900">{details.name || dose.reminder?.title}</div>
-                        {details.dose ? <div className="text-xs text-slate-500">{details.dose}</div> : null}
-                        {personLabel ? <div className="text-xs text-slate-500">{personLabel}</div> : null}
-                      </div>
-                      <div className="text-xs font-semibold text-slate-500">
-                        {new Date(dose.scheduled_at).toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        className="btn btn-primary h-8 px-3 text-xs"
-                        onClick={() => handleDoseStatus(dose.id, 'taken')}
-                      >
-                        {copy.dashboard.medicationsTaken}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-secondary h-8 px-3 text-xs"
-                        onClick={() => handleDoseStatus(dose.id, 'skipped')}
-                      >
-                        {copy.dashboard.medicationsSkip}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
-              {copy.dashboard.medicationsEmpty}
-            </div>
-          )
-        ) : null}
-
-        {activeTab === 'family' ? (
-          householdItems.length ? (
-            <div className="space-y-2">
-              {householdItems.map((occurrence) => (
-                <ReminderRowMobile
-                  key={occurrence.id}
-                  occurrence={occurrence}
-                  locale={locale}
-                  googleConnected={googleConnected}
-                  userTimeZone={effectiveTimeZone}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
-              {copy.dashboard.householdEmpty}
-            </div>
-          )
-        ) : null}
 
         {activeTab === 'inbox' ? (
           <div className="space-y-3">
@@ -674,7 +564,139 @@ export default function ReminderDashboardSection({
               </button>
             ) : null}
           </div>
-        ) : null}
+        ) : (
+          <div className="space-y-4">
+            {nextOccurrence && nextOccurrenceLabel ? (
+              <div className="rounded-2xl border border-slate-100 bg-white px-3 py-3 text-sm shadow-sm">
+                <div className="text-xs font-semibold text-slate-500">Următorul</div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate font-semibold text-slate-900">
+                      {nextOccurrence.reminder?.title ?? copy.dashboard.nextTitle}
+                    </div>
+                    <div className="text-xs text-slate-500">{nextOccurrenceLabel}</div>
+                  </div>
+                  <form action={markDone}>
+                    <input type="hidden" name="occurrenceId" value={nextOccurrence.id} />
+                    <input type="hidden" name="reminderId" value={nextOccurrence.reminder?.id ?? ''} />
+                    <input type="hidden" name="occurAt" value={nextOccurrence.occur_at ?? ''} />
+                    <input type="hidden" name="done_comment" value="" />
+                    <ActionSubmitButton
+                      className="inline-flex h-9 items-center justify-center rounded-full bg-sky-500 px-3 text-xs font-semibold text-white"
+                      type="submit"
+                      data-action-feedback={copy.common.actionDone}
+                    >
+                      {copy.common.doneAction}
+                    </ActionSubmitButton>
+                  </form>
+                </div>
+              </div>
+            ) : null}
+
+            <MobileSection
+              icon={<AlertTriangle className="h-4 w-4 text-red-500" aria-hidden="true" />}
+              label={copy.dashboard.todayOverdue}
+              count={overdueItems.length}
+              open={showOverdue}
+              onToggle={() => setShowOverdue((prev) => !prev)}
+            >
+              {overdueItems.map((occurrence) => (
+                <ReminderRowMobile
+                  key={occurrence.id}
+                  occurrence={occurrence}
+                  locale={locale}
+                  googleConnected={googleConnected}
+                  userTimeZone={effectiveTimeZone}
+                />
+              ))}
+            </MobileSection>
+
+            <MobileSection
+              icon={<SunMedium className="h-4 w-4 text-amber-500" aria-hidden="true" />}
+              label={copy.dashboard.todayTitle}
+              count={todayOpenItems.length}
+              open={showToday}
+              onToggle={() => setShowToday((prev) => !prev)}
+            >
+              {todayOpenItems.map((occurrence) => (
+                <ReminderRowMobile
+                  key={occurrence.id}
+                  occurrence={occurrence}
+                  locale={locale}
+                  googleConnected={googleConnected}
+                  userTimeZone={effectiveTimeZone}
+                />
+              ))}
+            </MobileSection>
+
+            <MobileSection
+              icon={<Calendar className="h-4 w-4 text-sky-500" aria-hidden="true" />}
+              label={copy.dashboard.todaySoon}
+              count={soonItems.length}
+              open={showUpcoming}
+              onToggle={() => setShowUpcoming((prev) => !prev)}
+            >
+              {soonItems.map((occurrence) => (
+                <ReminderRowMobile
+                  key={occurrence.id}
+                  occurrence={occurrence}
+                  locale={locale}
+                  googleConnected={googleConnected}
+                  userTimeZone={effectiveTimeZone}
+                />
+              ))}
+            </MobileSection>
+
+            <MobileSection
+              icon={<Pill className="h-4 w-4 text-emerald-500" aria-hidden="true" />}
+              label={copy.dashboard.medicationsTitle}
+              count={visibleDoses.length}
+              open={showMeds}
+              onToggle={() => setShowMeds((prev) => !prev)}
+            >
+              {visibleDoses.map((dose) => {
+                const details = dose.reminder?.medication_details || {};
+                const personLabel = details.personId ? memberLabels[details.personId] : null;
+                return (
+                  <div key={dose.id} className="rounded-2xl border border-slate-100 bg-white p-3 text-sm shadow-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="font-semibold text-slate-900">{details.name || dose.reminder?.title}</div>
+                        {details.dose ? <div className="text-xs text-slate-500">{details.dose}</div> : null}
+                        {personLabel ? <div className="text-xs text-slate-500">{personLabel}</div> : null}
+                      </div>
+                      <div className="text-xs font-semibold text-slate-500">
+                        {new Date(dose.scheduled_at).toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-primary h-8 px-3 text-xs"
+                        onClick={() => handleDoseStatus(dose.id, 'taken')}
+                      >
+                        {copy.dashboard.medicationsTaken}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary h-8 px-3 text-xs"
+                        onClick={() => handleDoseStatus(dose.id, 'skipped')}
+                      >
+                        {copy.dashboard.medicationsSkip}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </MobileSection>
+
+            {!overdueItems.length && !todayOpenItems.length && !soonItems.length && !visibleDoses.length ? (
+              <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+                {copy.dashboard.todayEmpty}
+              </div>
+            ) : null}
+          </div>
+        )}
       </section>
     );
   }

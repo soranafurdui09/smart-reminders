@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Check, MoreHorizontal, User } from 'lucide-react';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
@@ -66,48 +66,42 @@ export default function ReminderRowMobile({
     return rtf.format(diffDays, 'day');
   }, [displayAt, locale]);
 
-  const notifySwipeChange = useCallback(
-    (kind?: 'snooze' | 'done') => {
-      if (typeof window === 'undefined') return;
-      const payload = { id: occurrence.id, kind, ts: Date.now() };
-      window.sessionStorage.setItem('action-highlight', JSON.stringify(payload));
-      window.dispatchEvent(new CustomEvent('reminder:changed'));
-    },
-    [occurrence.id]
-  );
+  const notifySwipeChange = (kind?: 'snooze' | 'done') => {
+    if (typeof window === 'undefined') return;
+    const payload = { id: occurrence.id, kind, ts: Date.now() };
+    window.sessionStorage.setItem('action-highlight', JSON.stringify(payload));
+    window.dispatchEvent(new CustomEvent('reminder:changed'));
+  };
 
-  const handleSwipeAction = useCallback(
-    async (action: 'done' | 'snooze') => {
-      if (swipeLockRef.current) return;
-      if (occurrence.status === 'done') return;
-      swipeLockRef.current = true;
-      try {
-        if (action === 'done') {
-          if (!reminderId) return;
-          const occurAtValue = String(occurrence.occur_at ?? displayAt ?? '');
-          if (!occurAtValue) return;
-          const formData = new FormData();
-          formData.set('occurrenceId', occurrence.id);
-          formData.set('reminderId', reminderId);
-          formData.set('occurAt', occurAtValue);
-          formData.set('done_comment', '');
-          await markDone(formData);
-          notifySwipeChange('done');
-          return;
-        }
+  const handleSwipeAction = async (action: 'done' | 'snooze') => {
+    if (swipeLockRef.current) return;
+    if (occurrence.status === 'done') return;
+    swipeLockRef.current = true;
+    try {
+      if (action === 'done') {
+        if (!reminderId) return;
+        const occurAtValue = String(occurrence.occur_at ?? displayAt ?? '');
+        if (!occurAtValue) return;
         const formData = new FormData();
         formData.set('occurrenceId', occurrence.id);
-        formData.set('mode', '30');
-        await snoozeOccurrence(formData);
-        notifySwipeChange('snooze');
-      } finally {
-        window.setTimeout(() => {
-          swipeLockRef.current = false;
-        }, 800);
+        formData.set('reminderId', reminderId);
+        formData.set('occurAt', occurAtValue);
+        formData.set('done_comment', '');
+        await markDone(formData);
+        notifySwipeChange('done');
+        return;
       }
-    },
-    [displayAt, notifySwipeChange, occurrence.id, occurrence.occur_at, occurrence.status, reminderId]
-  );
+      const formData = new FormData();
+      formData.set('occurrenceId', occurrence.id);
+      formData.set('mode', '30');
+      await snoozeOccurrence(formData);
+      notifySwipeChange('snooze');
+    } finally {
+      window.setTimeout(() => {
+        swipeLockRef.current = false;
+      }, 800);
+    }
+  };
 
   const swipeHandlers = useSwipeActions({
     enabled: !actionsOpen && occurrence.status !== 'done',

@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mic, X } from 'lucide-react';
+import { reminderCategories } from '@/lib/categories';
 
 const suggestions = [
   { id: 'today', label: 'Azi', text: 'Azi la 18:00' },
@@ -29,13 +30,48 @@ export default function QuickAddSheet({
 }) {
   const router = useRouter();
   const [text, setText] = useState('');
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [dateValue, setDateValue] = useState('');
+  const [timeValue, setTimeValue] = useState('');
+  const [recurrenceValue, setRecurrenceValue] = useState('');
+  const [remindBeforeValue, setRemindBeforeValue] = useState('');
+  const [categoryValue, setCategoryValue] = useState('');
 
   const trimmed = text.trim();
   const canContinue = trimmed.length > 0;
-  const previewText = useMemo(
-    () => (trimmed ? `Se va salva: ${trimmed}` : 'Scrie ceva simplu, iar noi îl transformăm într-un reminder.'),
-    [trimmed]
-  );
+  const categoryLabel = reminderCategories.find((category) => category.id === categoryValue)?.label ?? '';
+  const previewText = useMemo(() => {
+    if (!trimmed) return 'Scrie ceva simplu, iar noi îl transformăm într-un reminder.';
+    const parts = [
+      trimmed,
+      dateValue ? `${dateValue}${timeValue ? ` ${timeValue}` : ''}` : null,
+      recurrenceValue ? recurrenceValue : null,
+      remindBeforeValue ? `cu ${remindBeforeValue}` : null,
+      categoryLabel ? `categorie ${categoryLabel}` : null
+    ].filter(Boolean);
+    return `Se va salva: ${parts.join(' · ')}`;
+  }, [categoryLabel, dateValue, recurrenceValue, remindBeforeValue, timeValue, trimmed]);
+
+  const buildFullText = () => {
+    if (!trimmed) return '';
+    let fullText = trimmed;
+    if (dateValue) {
+      fullText += ` pe ${dateValue}`;
+    }
+    if (timeValue) {
+      fullText += ` la ${timeValue}`;
+    }
+    if (recurrenceValue) {
+      fullText += `, ${recurrenceValue}`;
+    }
+    if (remindBeforeValue) {
+      fullText += `, amintește-mă cu ${remindBeforeValue}`;
+    }
+    if (categoryLabel) {
+      fullText += `, categorie ${categoryLabel}`;
+    }
+    return fullText;
+  };
 
   const handleNavigate = (mode?: 'medication') => {
     onClose();
@@ -43,11 +79,12 @@ export default function QuickAddSheet({
       router.push('/app/reminders/new?mode=medication');
       return;
     }
-    if (!trimmed) {
+    const fullText = buildFullText();
+    if (!fullText) {
       router.push('/app/reminders/new');
       return;
     }
-    router.push(`/app/reminders/new?quick=${encodeURIComponent(trimmed)}`);
+    router.push(`/app/reminders/new?quick=${encodeURIComponent(fullText)}`);
   };
 
   if (!open) return null;
@@ -141,6 +178,84 @@ export default function QuickAddSheet({
           {previewText}
         </div>
 
+        <div className="mt-4">
+          <button
+            type="button"
+            className="text-xs font-semibold text-slate-500"
+            onClick={() => setDetailsOpen((prev) => !prev)}
+          >
+            {detailsOpen ? 'Ascunde detalii' : 'Detalii'}
+          </button>
+          {detailsOpen ? (
+            <div className="mt-3 space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-600">Data</label>
+                  <input
+                    type="date"
+                    className="input h-9"
+                    value={dateValue}
+                    onChange={(event) => setDateValue(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-600">Ora</label>
+                  <input
+                    type="time"
+                    className="input h-9"
+                    value={timeValue}
+                    onChange={(event) => setTimeValue(event.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-600">Recurență</label>
+                  <select
+                    className="input h-9"
+                    value={recurrenceValue}
+                    onChange={(event) => setRecurrenceValue(event.target.value)}
+                  >
+                    <option value="">Fără recurență</option>
+                    <option value="repetă zilnic">Zilnic</option>
+                    <option value="repetă săptămânal">Săptămânal</option>
+                    <option value="repetă lunar">Lunar</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-600">Înainte</label>
+                  <select
+                    className="input h-9"
+                    value={remindBeforeValue}
+                    onChange={(event) => setRemindBeforeValue(event.target.value)}
+                  >
+                    <option value="">Fără notificare</option>
+                    <option value="10 minute înainte">10 minute</option>
+                    <option value="30 minute înainte">30 minute</option>
+                    <option value="1 oră înainte">1 oră</option>
+                    <option value="1 zi înainte">1 zi</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-600">Categorie</label>
+                <select
+                  className="input h-9"
+                  value={categoryValue}
+                  onChange={(event) => setCategoryValue(event.target.value)}
+                >
+                  <option value="">Fără categorie</option>
+                  {reminderCategories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
         <div className="mt-4 grid gap-2">
           <button
             type="button"
@@ -153,9 +268,13 @@ export default function QuickAddSheet({
           <button
             type="button"
             className="text-xs font-semibold text-slate-500"
-            onClick={() => handleNavigate()}
+            onClick={() => {
+              onClose();
+              const fullText = buildFullText();
+              router.push(fullText ? `/app/reminders/new?quick=${encodeURIComponent(fullText)}` : '/app/reminders/new');
+            }}
           >
-            Detalii
+            Editare completă
           </button>
         </div>
       </div>

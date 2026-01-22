@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Mic, Search, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -13,16 +13,18 @@ type SearchResult = {
   similarity?: number | null;
 };
 
-type TabOption = 'today' | 'overdue' | 'soon' | 'meds' | 'family' | 'inbox';
+type QuickChip = {
+  id: string;
+  label: string;
+  text?: string;
+  mode?: 'medication';
+};
 
 export default function QuickSearchBar({
   householdId,
   localeTag,
   copy,
-  activeTab,
-  onTabChange,
-  progressLabel,
-  counts
+  summaryLabel
 }: {
   householdId: string;
   localeTag: string;
@@ -35,16 +37,7 @@ export default function QuickSearchBar({
     scoreLabel: string;
     example: string;
   };
-  activeTab: TabOption;
-  onTabChange: (tab: TabOption) => void;
-  progressLabel: string;
-  counts: {
-    overdue: number;
-    soon: number;
-    meds: number;
-    family: number;
-    today: number;
-  };
+  summaryLabel: string;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState('');
@@ -53,20 +46,13 @@ export default function QuickSearchBar({
   const [results, setResults] = useState<SearchResult[]>([]);
 
   const trimmed = query.trim();
-  const activeSummary = useMemo(() => {
-    switch (activeTab) {
-      case 'overdue':
-        return `Întârziate: ${counts.overdue}`;
-      case 'soon':
-        return `În curând: ${counts.soon}`;
-      case 'meds':
-        return `Medicamente: ${counts.meds}`;
-      case 'family':
-        return `Familie: ${counts.family}`;
-      default:
-        return progressLabel;
-    }
-  }, [activeTab, counts.family, counts.meds, counts.overdue, counts.soon, progressLabel]);
+  const quickChips: QuickChip[] = [
+    { id: 'today', label: 'Azi', text: 'Azi la' },
+    { id: 'tomorrow', label: 'Mâine', text: 'Mâine la' },
+    { id: 'in1h', label: 'În 1h', text: 'Peste o oră' },
+    { id: 'weekly', label: 'Săptămânal', text: 'În fiecare săptămână' },
+    { id: 'meds', label: 'Medicamente', text: 'Medicament' }
+  ];
 
   const handleSearch = useCallback(
     async (event?: React.FormEvent) => {
@@ -111,14 +97,6 @@ export default function QuickSearchBar({
     router.push(`/app/reminders/new?quick=${encodeURIComponent(trimmed)}`);
   }, [router, trimmed]);
 
-  const chips = [
-    { id: 'today' as const, label: 'Azi' },
-    { id: 'overdue' as const, label: 'Întârziate' },
-    { id: 'soon' as const, label: 'În curând' },
-    { id: 'meds' as const, label: 'Medicamente' },
-    { id: 'family' as const, label: 'Familie' }
-  ];
-
   return (
     <div className="sticky top-[72px] z-20 space-y-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur md:static md:border-0 md:bg-transparent md:p-0 md:shadow-none">
       <form onSubmit={handleSearch} className="flex items-center gap-2">
@@ -141,33 +119,34 @@ export default function QuickSearchBar({
             <Mic className="h-4 w-4" />
           </button>
         </div>
-        <button
-          type="button"
-          className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-sky-500 px-3 text-xs font-semibold text-white shadow-sm"
-          onClick={handleAdd}
-          disabled={!trimmed}
-        >
-          <Plus className="h-4 w-4" />
-          Adaugă
-        </button>
-      </form>
+          <button
+            type="button"
+            className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-sky-500 px-3 text-xs font-semibold text-white shadow-sm"
+            onClick={handleAdd}
+            disabled={!trimmed}
+          >
+            <Plus className="h-4 w-4" />
+            Adaugă
+          </button>
+        </form>
 
       <div className="flex gap-2 overflow-x-auto pb-1 text-xs font-semibold text-slate-600">
-        {chips.map((chip) => (
+        {quickChips.map((chip) => (
           <button
             key={chip.id}
             type="button"
-            className={`whitespace-nowrap rounded-full px-3 py-1 ${
-              activeTab === chip.id ? 'bg-sky-500 text-white' : 'bg-slate-100 text-slate-600'
-            }`}
-            onClick={() => onTabChange(chip.id)}
+            className="whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-slate-600"
+            onClick={() => {
+              if (!chip.text) return;
+              setQuery((current) => (current ? `${current} ${chip.text}` : chip.text));
+            }}
           >
             {chip.label}
           </button>
         ))}
       </div>
 
-      <div className="text-xs font-semibold text-slate-500">{activeSummary}</div>
+      <div className="text-xs font-semibold text-slate-500">{summaryLabel}</div>
 
       {loading ? (
         <div className="text-xs text-slate-500">{copy.loading}</div>

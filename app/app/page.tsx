@@ -100,8 +100,8 @@ export default async function DashboardPage({
       ? 'others'
       : 'all';
   const initialAssignment = searchParams?.assigned === 'me' ? 'assigned_to_me' : 'all';
-  const initialTab = searchParams?.tab === 'inbox' || searchParams?.tab === 'overdue' || searchParams?.tab === 'soon' || searchParams?.tab === 'meds' || searchParams?.tab === 'family'
-    ? (searchParams.tab as 'inbox' | 'overdue' | 'soon' | 'meds' | 'family')
+  const initialTab = searchParams?.tab === 'inbox'
+    ? 'inbox'
     : 'today';
   const now = new Date();
   const nextOccurrence = sortedOccurrences.find((occurrence: any) => {
