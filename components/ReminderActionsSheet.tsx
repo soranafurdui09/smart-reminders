@@ -40,6 +40,7 @@ export default function ReminderActionsSheet({
   }, [open, onClose]);
 
   if (!open) return null;
+  const badgeStyle = categoryStyle ?? undefined;
 
   return (
     <div
@@ -62,7 +63,7 @@ export default function ReminderActionsSheet({
             {categoryLabel ? (
               <span
                 className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${categoryClassName ?? 'bg-slate-100 text-slate-700'}`}
-                style={categoryStyle}
+                style={badgeStyle}
               >
                 {categoryLabel}
               </span>

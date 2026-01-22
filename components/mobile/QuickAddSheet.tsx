@@ -46,6 +46,7 @@ export default function QuickAddSheet({
   const [timeValue, setTimeValue] = useState('');
   const [recurrenceValue, setRecurrenceValue] = useState('');
   const [remindBeforeValue, setRemindBeforeValue] = useState('');
+  const [endDateValue, setEndDateValue] = useState('');
   const [categoryValue, setCategoryValue] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +65,11 @@ export default function QuickAddSheet({
     ].filter(Boolean);
     return `Se va salva: ${parts.join(' · ')}`;
   }, [categoryLabel, dateValue, recurrenceValue, remindBeforeValue, timeValue, trimmed]);
+
+  const previewTitle = trimmed || 'Titlul reminderului';
+  const previewDate = dateValue
+    ? `${dateValue}${timeValue ? ` · ${timeValue}` : ''}`
+    : 'Data și ora';
 
   const buildFullText = () => {
     if (!trimmed) return '';
@@ -225,7 +231,7 @@ export default function QuickAddSheet({
       role="presentation"
     >
       <div
-        className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-4 shadow-float"
+        className="w-full max-w-lg max-h-[85vh] rounded-2xl border border-slate-200 bg-white p-4 shadow-float overflow-y-auto"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-label="Adaugă reminder"
@@ -303,8 +309,21 @@ export default function QuickAddSheet({
           </div>
         </div>
 
-        <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-600">
-          {previewText}
+        <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-600">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Preview</div>
+          <div className="mt-2 text-sm font-semibold text-slate-900">{previewTitle}</div>
+          <div className="mt-1 text-xs text-slate-500">{previewDate}</div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] text-slate-500">
+              Activ · Reminder nou
+            </span>
+            {categoryLabel ? (
+              <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                {categoryLabel}
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-2">{previewText}</div>
         </div>
 
         <div className="mt-4">
@@ -367,6 +386,15 @@ export default function QuickAddSheet({
                 </div>
               </div>
               <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-600">Dată final</label>
+                <input
+                  type="date"
+                  className="input h-9"
+                  value={endDateValue}
+                  onChange={(event) => setEndDateValue(event.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-600">Categorie</label>
                 <select
                   className="input h-9"
@@ -381,11 +409,17 @@ export default function QuickAddSheet({
                   ))}
                 </select>
               </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-600">Familie</label>
+                <select className="input h-9" disabled>
+                  <option>Disponibil în editare completă</option>
+                </select>
+              </div>
             </div>
           ) : null}
         </div>
 
-        <div className="mt-4 grid gap-2">
+        <div className="mt-4 grid gap-2 sticky bottom-0 bg-white/95 pt-2 pb-1">
           <button
             type="button"
             className="btn btn-primary h-11 justify-center"

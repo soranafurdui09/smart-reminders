@@ -6,7 +6,7 @@ import { Check, MoreHorizontal, User } from 'lucide-react';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
-import { formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
+import { diffDaysInTimeZone, formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
 import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
 import { useSwipeActions } from '@/lib/hooks/useSwipeActions';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
@@ -48,6 +48,17 @@ export default function ReminderRowMobile({
   });
   const category = getReminderCategory(categoryId);
   const categoryChipStyle = getCategoryChipStyle(category.color, true);
+
+  const statusColor = useMemo(() => {
+    const now = new Date();
+    const compareDate = new Date(displayAt);
+    if (Number.isNaN(compareDate.getTime())) return 'border-sky-400';
+    const dayDiff = diffDaysInTimeZone(compareDate, now, resolvedTimeZone || userTimeZone || 'UTC');
+    if (occurrence.status === 'done') return 'border-slate-300';
+    if (dayDiff < 0 || (dayDiff === 0 && compareDate.getTime() < now.getTime())) return 'border-red-500';
+    if (dayDiff === 0) return 'border-amber-400';
+    return 'border-blue-400';
+  }, [displayAt, occurrence.status, resolvedTimeZone, userTimeZone]);
 
   const relativeLabel = useMemo(() => {
     const parsed = new Date(displayAt);
@@ -112,7 +123,7 @@ export default function ReminderRowMobile({
   return (
     <>
       <div
-        className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white px-3 py-3 shadow-sm touch-pan-y"
+        className={`flex items-center gap-3 rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-sm touch-pan-y border-l-4 ${statusColor}`}
         onTouchStart={swipeHandlers.onTouchStart}
         onTouchMove={swipeHandlers.onTouchMove}
         onTouchEnd={swipeHandlers.onTouchEnd}

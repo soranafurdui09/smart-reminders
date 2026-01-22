@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Calendar, ChevronDown, Pill, SunMedium, Users } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { AlertTriangle, Calendar, Pill, SunMedium, Users } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import SemanticSearch from '@/components/SemanticSearch';
-import QuickSearchBar from '@/components/mobile/QuickSearchBar';
+import QuickAddCard from '@/components/mobile/QuickAddCard';
+import StatusTiles from '@/components/mobile/StatusTiles';
+import CollapsibleSection from '@/components/mobile/CollapsibleSection';
 import ReminderRowMobile from '@/components/mobile/ReminderRowMobile';
 import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
 import ReminderCard from '@/components/dashboard/ReminderCard';
@@ -150,44 +152,6 @@ const SectionHeading = ({
     <span className="h-px flex-1 bg-slate-200" />
   </div>
 );
-
-const MobileSection = ({
-  icon,
-  label,
-  count,
-  open,
-  onToggle,
-  children
-}: {
-  icon: React.ReactNode;
-  label: string;
-  count: number;
-  open: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}) => {
-  if (!count) return null;
-  return (
-    <section className="space-y-2">
-      <button
-        type="button"
-        className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-left shadow-sm"
-        aria-expanded={open}
-        onClick={onToggle}
-      >
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-          {icon}
-          <span>{label}</span>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <span>{count}</span>
-          <ChevronDown className={`h-4 w-4 transition ${open ? 'rotate-180' : ''}`} />
-        </div>
-      </button>
-      {open ? <div className="space-y-2">{children}</div> : null}
-    </section>
-  );
-};
 
 export default function ReminderDashboardSection({
   occurrences,
@@ -337,6 +301,10 @@ export default function ReminderDashboardSection({
     () => new Intl.DateTimeFormat(localeTag, { weekday: 'short', day: 'numeric', month: 'short' }),
     [localeTag]
   );
+  const overdueRef = useRef<HTMLDivElement>(null);
+  const todayRef = useRef<HTMLDivElement>(null);
+  const soonRef = useRef<HTMLDivElement>(null);
+  const medsRef = useRef<HTMLDivElement>(null);
 
   const mobileBuckets = useMemo(() => {
     const now = new Date();
@@ -390,10 +358,18 @@ export default function ReminderDashboardSection({
     [filteredOccurrences, membershipId, userId]
   );
 
-  const visibleDoses = useMemo(
-    () => doseState.filter((dose) => dose.status === 'pending').slice(0, 5),
-    [doseState]
-  );
+  const visibleDoses = useMemo(() => {
+    const now = new Date();
+    return doseState
+      .filter((dose) => {
+        if (dose.status !== 'pending') return false;
+        const scheduled = new Date(dose.scheduled_at);
+        if (Number.isNaN(scheduled.getTime())) return false;
+        const dayDiff = diffDaysInTimeZone(scheduled, now, effectiveTimeZone);
+        return dayDiff === 0;
+      })
+      .slice(0, 5);
+  }, [doseState, effectiveTimeZone]);
 
   useEffect(() => {
     if (autoExpanded) return;
@@ -449,6 +425,13 @@ export default function ReminderDashboardSection({
     setActiveTab(tabParam === 'inbox' ? 'inbox' : 'today');
   }, [searchParams]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (householdId) {
+      window.localStorage.setItem('smart-reminder-household', householdId);
+    }
+  }, [householdId]);
+
   const handleTabChange = (tab: TabOption) => {
     const params = new URLSearchParams(searchParams?.toString());
     params.set('tab', tab);
@@ -481,6 +464,10 @@ export default function ReminderDashboardSection({
     }
   };
 
+  const scrollToSection = (ref: RefObject<HTMLDivElement>) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   const nextOccurrence = useMemo(() => {
     const now = new Date();
     return filteredOccurrences.find((occurrence) => {
@@ -503,17 +490,28 @@ export default function ReminderDashboardSection({
     const overdueItems = mobileBuckets.overdue;
     const todayOpenItems = mobileBuckets.today;
     const soonItems = mobileBuckets.soon;
-    const progressLabel = activeTab === 'inbox'
-      ? `${copy.nav.inbox}: ${filteredOccurrences.length}`
-      : `${copy.dashboard.groupToday}: ${mobileBuckets.doneCount}/${mobileBuckets.totalCount} făcute`;
     const mobileInboxItems = filteredOccurrences.slice(0, mobileInboxLimit);
+
+    const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
+      ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
     return (
       <section className="space-y-4">
-        <QuickSearchBar
-          householdId={householdId}
-          localeTag={localeTag}
-          copy={copy.search}
-          summaryLabel={progressLabel}
+        <QuickAddCard />
+
+        <StatusTiles
+          tiles={[
+            { id: 'overdue', label: copy.dashboard.todayOverdue, count: overdueItems.length, accentClass: 'border-rose-200' },
+            { id: 'today', label: copy.dashboard.todayTitle, count: todayOpenItems.length, accentClass: 'border-amber-200' },
+            { id: 'soon', label: copy.dashboard.todaySoon, count: soonItems.length, accentClass: 'border-sky-200' },
+            { id: 'meds', label: copy.dashboard.medicationsTitle, count: visibleDoses.length, accentClass: 'border-emerald-200' }
+          ]}
+          onSelect={(id) => {
+            if (id === 'overdue') scrollToSection(overdueRef);
+            if (id === 'today') scrollToSection(todayRef);
+            if (id === 'soon') scrollToSection(soonRef);
+            if (id === 'meds') scrollToSection(medsRef);
+          }}
         />
 
         {activeTab === 'inbox' ? (
@@ -593,102 +591,112 @@ export default function ReminderDashboardSection({
               </div>
             ) : null}
 
-            <MobileSection
-              icon={<AlertTriangle className="h-4 w-4 text-red-500" aria-hidden="true" />}
-              label={copy.dashboard.todayOverdue}
-              count={overdueItems.length}
-              open={showOverdue}
-              onToggle={() => setShowOverdue((prev) => !prev)}
-            >
-              {overdueItems.map((occurrence) => (
-                <ReminderRowMobile
-                  key={occurrence.id}
-                  occurrence={occurrence}
-                  locale={locale}
-                  googleConnected={googleConnected}
-                  userTimeZone={effectiveTimeZone}
-                />
-              ))}
-            </MobileSection>
+            <div ref={overdueRef}>
+              <CollapsibleSection
+                title={copy.dashboard.todayOverdue}
+                count={overdueItems.length}
+                open={showOverdue}
+                onToggle={() => setShowOverdue((prev) => !prev)}
+                accentClassName="bg-rose-500"
+                viewAllHref="/app?tab=inbox"
+              >
+                {overdueItems.map((occurrence) => (
+                  <ReminderRowMobile
+                    key={occurrence.id}
+                    occurrence={occurrence}
+                    locale={locale}
+                    googleConnected={googleConnected}
+                    userTimeZone={effectiveTimeZone}
+                  />
+                ))}
+              </CollapsibleSection>
+            </div>
 
-            <MobileSection
-              icon={<SunMedium className="h-4 w-4 text-amber-500" aria-hidden="true" />}
-              label={copy.dashboard.todayTitle}
-              count={todayOpenItems.length}
-              open={showToday}
-              onToggle={() => setShowToday((prev) => !prev)}
-            >
-              {todayOpenItems.map((occurrence) => (
-                <ReminderRowMobile
-                  key={occurrence.id}
-                  occurrence={occurrence}
-                  locale={locale}
-                  googleConnected={googleConnected}
-                  userTimeZone={effectiveTimeZone}
-                />
-              ))}
-            </MobileSection>
+            <div ref={todayRef}>
+              <CollapsibleSection
+                title={copy.dashboard.todayTitle}
+                count={todayOpenItems.length}
+                open={showToday}
+                onToggle={() => setShowToday((prev) => !prev)}
+                accentClassName="bg-amber-400"
+              >
+                {todayOpenItems.map((occurrence) => (
+                  <ReminderRowMobile
+                    key={occurrence.id}
+                    occurrence={occurrence}
+                    locale={locale}
+                    googleConnected={googleConnected}
+                    userTimeZone={effectiveTimeZone}
+                  />
+                ))}
+              </CollapsibleSection>
+            </div>
 
-            <MobileSection
-              icon={<Calendar className="h-4 w-4 text-sky-500" aria-hidden="true" />}
-              label={copy.dashboard.todaySoon}
-              count={soonItems.length}
-              open={showUpcoming}
-              onToggle={() => setShowUpcoming((prev) => !prev)}
-            >
-              {soonItems.map((occurrence) => (
-                <ReminderRowMobile
-                  key={occurrence.id}
-                  occurrence={occurrence}
-                  locale={locale}
-                  googleConnected={googleConnected}
-                  userTimeZone={effectiveTimeZone}
-                />
-              ))}
-            </MobileSection>
+            <div ref={soonRef}>
+              <CollapsibleSection
+                title={copy.dashboard.todaySoon}
+                count={soonItems.length}
+                open={showUpcoming}
+                onToggle={() => setShowUpcoming((prev) => !prev)}
+                accentClassName="bg-sky-500"
+                viewAllHref="/app?tab=inbox"
+              >
+                {soonItems.map((occurrence) => (
+                  <ReminderRowMobile
+                    key={occurrence.id}
+                    occurrence={occurrence}
+                    locale={locale}
+                    googleConnected={googleConnected}
+                    userTimeZone={effectiveTimeZone}
+                  />
+                ))}
+              </CollapsibleSection>
+            </div>
 
-            <MobileSection
-              icon={<Pill className="h-4 w-4 text-emerald-500" aria-hidden="true" />}
-              label={copy.dashboard.medicationsTitle}
-              count={visibleDoses.length}
-              open={showMeds}
-              onToggle={() => setShowMeds((prev) => !prev)}
-            >
-              {visibleDoses.map((dose) => {
-                const details = dose.reminder?.medication_details || {};
-                const personLabel = details.personId ? memberLabels[details.personId] : null;
-                return (
-                  <div key={dose.id} className="rounded-2xl border border-slate-100 bg-white p-3 text-sm shadow-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="font-semibold text-slate-900">{details.name || dose.reminder?.title}</div>
-                        {details.dose ? <div className="text-xs text-slate-500">{details.dose}</div> : null}
-                        {personLabel ? <div className="text-xs text-slate-500">{personLabel}</div> : null}
+            <div ref={medsRef}>
+              <CollapsibleSection
+                title={copy.dashboard.medicationsTitle}
+                count={visibleDoses.length}
+                open={showMeds}
+                onToggle={() => setShowMeds((prev) => !prev)}
+                accentClassName="bg-emerald-500"
+              >
+                {visibleDoses.map((dose) => {
+                  const details = dose.reminder?.medication_details || {};
+                  const personLabel = details.personId ? memberLabels[details.personId] : null;
+                  return (
+                    <div key={dose.id} className="rounded-2xl border border-slate-100 bg-white p-3 text-sm shadow-sm">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="font-semibold text-slate-900">{details.name || dose.reminder?.title}</div>
+                          {details.dose ? <div className="text-xs text-slate-500">{details.dose}</div> : null}
+                          {personLabel ? <div className="text-xs text-slate-500">{personLabel}</div> : null}
+                        </div>
+                        <div className="text-xs font-semibold text-slate-500">
+                          {new Date(dose.scheduled_at).toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' })}
+                        </div>
                       </div>
-                      <div className="text-xs font-semibold text-slate-500">
-                        {new Date(dose.scheduled_at).toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' })}
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-primary h-8 px-3 text-xs"
+                          onClick={() => handleDoseStatus(dose.id, 'taken')}
+                        >
+                          {copy.dashboard.medicationsTaken}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary h-8 px-3 text-xs"
+                          onClick={() => handleDoseStatus(dose.id, 'skipped')}
+                        >
+                          {copy.dashboard.medicationsSkip}
+                        </button>
                       </div>
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        className="btn btn-primary h-8 px-3 text-xs"
-                        onClick={() => handleDoseStatus(dose.id, 'taken')}
-                      >
-                        {copy.dashboard.medicationsTaken}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-secondary h-8 px-3 text-xs"
-                        onClick={() => handleDoseStatus(dose.id, 'skipped')}
-                      >
-                        {copy.dashboard.medicationsSkip}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </MobileSection>
+                  );
+                })}
+              </CollapsibleSection>
+            </div>
 
             {!overdueItems.length && !todayOpenItems.length && !soonItems.length && !visibleDoses.length ? (
               <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
