@@ -3,23 +3,35 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
-  --color-bg: 245 247 251;
-  --color-surface: 255 255 255;
-  --color-surface-muted: 241 246 250;
-  --color-surface-2: 248 250 252;
-  --color-surface-3: 241 245 249;
-  --color-border: 226 232 240;
-  --color-border-subtle: 234 240 246;
-  --color-text: 15 23 42;
-  --color-text-muted: 100 116 139;
-  --color-primary: 56 189 248;
-  --color-primary-strong: 2 132 199;
-  --color-primary-soft: 224 242 254;
-  --color-accent: 20 184 166;
+  color-scheme: dark;
+  --bg0: #0b1c2c;
+  --bg1: #0e3a4a;
+  --bg2: #0a2a3f;
+  --surface1: #141e2a;
+  --surface2: #182433;
+  --border-ui: rgba(255, 255, 255, 0.1);
+  --text1: rgba(255, 255, 255, 0.92);
+  --text2: rgba(255, 255, 255, 0.7);
+  --text3: rgba(255, 255, 255, 0.55);
+  --accent: #63c7e6;
+  --accent-strong: #35b6dd;
+  --accent-soft-bg: rgba(99, 199, 230, 0.18);
+  --color-bg: 11 28 44;
+  --color-surface: 20 30 42;
+  --color-surface-muted: 24 36 51;
+  --color-surface-2: 24 36 51;
+  --color-surface-3: 20 30 42;
+  --color-border: 255 255 255;
+  --color-border-subtle: 255 255 255;
+  --color-text: 255 255 255;
+  --color-text-muted: 180 196 210;
+  --color-primary: 99 199 230;
+  --color-primary-strong: 53 182 221;
+  --color-primary-soft: 99 199 230;
+  --color-accent: 99 199 230;
   --color-success: 16 185 129;
   --color-warning: 245 158 11;
-  --color-danger: 244 63 94;
+  --color-danger: 239 68 68;
   --radius-lg: 16px;
   --radius-xl: 20px;
   --shadow-card: 0 12px 24px -20px rgba(15, 23, 42, 0.35);
@@ -29,21 +41,19 @@
   --space-4: 16px;
   --space-6: 24px;
 
-  --bg-base: #101b2a;
-  --bg-top: #1a2e3f;
-  --bg-bottom: #0b1420;
-  --surface-1: #162636;
-  --surface-2: #1c3146;
-  --sheet: #132234;
-  --border: rgba(255, 255, 255, 0.08);
-  --shadow: 0 8px 22px rgba(0, 0, 0, 0.32);
-  --text-1: rgba(255, 255, 255, 0.92);
-  --text-2: rgba(255, 255, 255, 0.7);
-  --text-3: rgba(255, 255, 255, 0.55);
-  --accent-strong: #48a7d0;
-  --accent: #6bb9d8;
-  --accent-muted: rgba(107, 185, 216, 0.16);
-  --accent-glow: rgba(72, 167, 208, 0.22);
+  --bg-base: var(--bg0);
+  --bg-top: var(--bg1);
+  --bg-bottom: var(--bg2);
+  --surface-1: var(--surface1);
+  --surface-2: var(--surface2);
+  --sheet: var(--surface2);
+  --border: var(--border-ui);
+  --shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  --text-1: var(--text1);
+  --text-2: var(--text2);
+  --text-3: var(--text3);
+  --accent-muted: var(--accent-soft-bg);
+  --accent-glow: rgba(53, 182, 221, 0.2);
   --danger: #fb7185;
   --radius-card: 20px;
   --radius-input: 16px;
@@ -87,7 +97,6 @@ body {
   background: var(--surface-1);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-soft);
-  backdrop-filter: var(--glass-blur);
   transition: transform 160ms ease-out, box-shadow 160ms ease-out;
 }
 
@@ -101,7 +110,6 @@ body {
   background: var(--sheet);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-lift);
-  backdrop-filter: var(--glass-blur);
 }
 
 .premium-input {
@@ -122,15 +130,15 @@ body {
 .premium-btn-primary {
   height: 46px;
   border-radius: var(--radius-input);
-  background: linear-gradient(135deg, var(--accent-strong), var(--accent));
-  color: #071321;
+  background: var(--accent-strong);
+  color: #04131b;
   font-weight: 600;
   transition: transform 200ms ease-out, box-shadow 200ms ease-out, filter 200ms ease-out;
-  box-shadow: 0 10px 22px var(--accent-glow);
+  box-shadow: 0 6px 16px var(--accent-glow);
 }
 
 .premium-btn-primary:hover {
-  filter: brightness(1.05);
+  filter: brightness(1.04);
 }
 
 .premium-btn-secondary {
@@ -181,6 +189,49 @@ body {
   }
 }
 
+@layer utilities {
+  .bg-app {
+    background-color: var(--bg-base);
+    background-image: linear-gradient(180deg, var(--bg-top), var(--bg-base), var(--bg-bottom));
+  }
+
+  .bg-surface {
+    background-color: var(--surface1);
+  }
+
+  .bg-sheet {
+    background-color: var(--surface2);
+  }
+
+  .border-ui {
+    border-color: var(--border-ui);
+  }
+
+  .text-primary {
+    color: var(--text1);
+  }
+
+  .text-secondary {
+    color: var(--text2);
+  }
+
+  .text-tertiary {
+    color: var(--text3);
+  }
+
+  .text-accent {
+    color: var(--accent);
+  }
+
+  .text-accent-strong {
+    color: var(--accent-strong);
+  }
+
+  .bg-accent-soft {
+    background-color: var(--accent-soft-bg);
+  }
+}
+
 html.native-android,
 body.native-android {
   overscroll-behavior: none;
@@ -225,10 +276,8 @@ h3 {
 @media (max-width: 768px) {
   .premium-card,
   .premium-sheet {
-    backdrop-filter: none;
     box-shadow: var(--shadow);
   }
-
   .premium-card:hover {
     transform: none;
     box-shadow: var(--shadow);

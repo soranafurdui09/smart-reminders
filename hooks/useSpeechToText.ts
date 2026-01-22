@@ -170,20 +170,30 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
       setListening(false);
     };
     recognition.onresult = (event) => {
+      // Rebuild final transcript on each event to avoid duplication when resultIndex resets.
       let interim = '';
-      let finalText = finalTranscriptRef.current;
+      let finalText = '';
       const startIndex = event.resultIndex ?? 0;
-      for (let i = startIndex; i < event.results.length; i += 1) {
+      for (let i = 0; i < event.results.length; i += 1) {
         const result = event.results[i];
         const text = result?.[0]?.transcript ?? '';
         if (result?.isFinal) {
           finalText += text + ' ';
-        } else {
-          interim += text;
+        } else if (i >= startIndex) {
+          interim = text;
         }
       }
       finalTranscriptRef.current = finalText;
       interimTranscriptRef.current = interim;
+      if (process.env.NODE_ENV !== 'production') {
+        // Debugging duplication: inspect resultIndex and transcripts.
+        console.debug('[speech] result', {
+          resultIndex: event.resultIndex,
+          results: event.results.length,
+          finalText: finalText.trim(),
+          interim
+        });
+      }
       setTranscript(`${finalText}${interim}`.trim());
       if (noSpeechTimerRef.current) {
         window.clearTimeout(noSpeechTimerRef.current);

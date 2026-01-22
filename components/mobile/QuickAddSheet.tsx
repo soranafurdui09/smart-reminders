@@ -529,7 +529,7 @@ export default function QuickAddSheet({
           ) : null}
         </div>
 
-        <div className="mt-4 grid gap-2 sticky bottom-0 bg-[rgba(10,14,22,0.95)] pt-2 pb-[calc(env(safe-area-inset-bottom)_+_12px)]">
+      <div className="mt-4 grid gap-2 sticky bottom-0 bg-sheet pt-2 pb-[calc(env(safe-area-inset-bottom)_+_12px)]">
           <button
             type="button"
             className="premium-btn-primary inline-flex items-center justify-center px-4 text-sm"
