@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Mic, Search, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -46,6 +46,12 @@ export default function QuickSearchBar({
   const [results, setResults] = useState<SearchResult[]>([]);
 
   const trimmed = query.trim();
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (householdId) {
+      window.localStorage.setItem('smart-reminder-household', householdId);
+    }
+  }, [householdId]);
   const quickChips: QuickChip[] = [
     { id: 'today', label: 'Azi', text: 'Azi la' },
     { id: 'tomorrow', label: 'Mâine', text: 'Mâine la' },

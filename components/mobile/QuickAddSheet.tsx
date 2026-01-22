@@ -4,6 +4,17 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mic, X } from 'lucide-react';
 import { reminderCategories } from '@/lib/categories';
+import { createReminder } from '@/app/app/reminders/new/actions';
+
+type AiResult = {
+  title: string;
+  description: string | null;
+  dueAt: string;
+  recurrenceRule: string | null;
+  preReminderMinutes: number | null;
+  assignedMemberId: string | null;
+  categoryId: string | null;
+};
 
 const suggestions = [
   { id: 'today', label: 'Azi', text: 'Azi la 18:00' },
@@ -36,6 +47,8 @@ export default function QuickAddSheet({
   const [recurrenceValue, setRecurrenceValue] = useState('');
   const [remindBeforeValue, setRemindBeforeValue] = useState('');
   const [categoryValue, setCategoryValue] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const trimmed = text.trim();
   const canContinue = trimmed.length > 0;
@@ -73,6 +86,63 @@ export default function QuickAddSheet({
     return fullText;
   };
 
+  const toLocalInputValue = (value: Date) => {
+    const pad = (num: number) => String(num).padStart(2, '0');
+    return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
+  };
+
+  const toLocalInputFromIso = (iso: string) => {
+    const parsed = new Date(iso);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return toLocalInputValue(parsed);
+  };
+
+  const toIsoFromLocalInput = (localInput: string) => {
+    if (!localInput) return '';
+    const parsed = new Date(localInput);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return parsed.toISOString();
+  };
+
+  const buildLocalFallback = () => {
+    if (dateValue && timeValue) {
+      return `${dateValue}T${timeValue}`;
+    }
+    if (dateValue) {
+      return `${dateValue}T09:00`;
+    }
+    const fallback = new Date();
+    fallback.setMinutes(fallback.getMinutes() + 60);
+    return toLocalInputValue(fallback);
+  };
+
+  const buildRecurrenceRule = () => {
+    if (!recurrenceValue) return '';
+    if (recurrenceValue.includes('zilnic')) return 'FREQ=DAILY';
+    if (recurrenceValue.includes('săptămânal')) return 'FREQ=WEEKLY';
+    if (recurrenceValue.includes('lunar')) return 'FREQ=MONTHLY';
+    return '';
+  };
+
+  const parsePreReminder = () => {
+    if (!remindBeforeValue) return '';
+    if (remindBeforeValue.includes('10')) return '10';
+    if (remindBeforeValue.includes('30')) return '30';
+    if (remindBeforeValue.includes('1 oră')) return '60';
+    if (remindBeforeValue.includes('1 zi')) return '1440';
+    return '';
+  };
+
+  const deriveScheduleType = (rule?: string | null) => {
+    if (!rule) return 'once';
+    const normalized = rule.toUpperCase();
+    if (normalized.includes('FREQ=DAILY')) return 'daily';
+    if (normalized.includes('FREQ=WEEKLY')) return 'weekly';
+    if (normalized.includes('FREQ=MONTHLY')) return 'monthly';
+    if (normalized.includes('FREQ=YEARLY')) return 'yearly';
+    return 'once';
+  };
+
   const handleNavigate = (mode?: 'medication') => {
     onClose();
     if (mode === 'medication') {
@@ -85,6 +155,65 @@ export default function QuickAddSheet({
       return;
     }
     router.push(`/app/reminders/new?quick=${encodeURIComponent(fullText)}`);
+  };
+
+  const handleSave = async () => {
+    if (!trimmed || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const householdId = typeof window !== 'undefined'
+        ? window.localStorage.getItem('smart-reminder-household')
+        : null;
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+      const clientNow = new Date().toISOString();
+      let parsed: AiResult | null = null;
+
+      if (householdId) {
+        const response = await fetch('/api/ai/parse-reminder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: buildFullText(), timezone, householdId, clientNow })
+        });
+        if (response.ok) {
+          parsed = (await response.json()) as AiResult;
+        }
+      }
+
+      const formData = new FormData();
+      formData.set('kind', 'generic');
+      formData.set('title', parsed?.title || trimmed);
+      formData.set('notes', parsed?.description || '');
+      const fallbackRule = buildRecurrenceRule();
+      formData.set('recurrence_rule', parsed?.recurrenceRule || fallbackRule);
+      formData.set('schedule_type', deriveScheduleType(parsed?.recurrenceRule || fallbackRule));
+      formData.set(
+        'pre_reminder_minutes',
+        parsed?.preReminderMinutes !== null && parsed?.preReminderMinutes !== undefined
+          ? String(parsed.preReminderMinutes)
+          : parsePreReminder()
+      );
+      formData.set('assigned_member_id', parsed?.assignedMemberId || '');
+      formData.set('context_category', parsed?.categoryId || categoryValue || '');
+      const localDueAt = parsed?.dueAt
+        ? toLocalInputFromIso(parsed.dueAt)
+        : buildLocalFallback();
+      formData.set('due_at', localDueAt);
+      formData.set('due_at_iso', toIsoFromLocalInput(localDueAt));
+      formData.set('tz', timezone);
+
+      await createReminder(formData);
+      onClose();
+    } catch (err) {
+      const digest = (err as { digest?: string } | null)?.digest;
+      if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) {
+        return;
+      }
+      console.error('[quick-add] save failed', err);
+      setError('Nu am reușit să salvăm reminderul.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!open) return null;
@@ -260,10 +389,10 @@ export default function QuickAddSheet({
           <button
             type="button"
             className="btn btn-primary h-11 justify-center"
-            onClick={() => handleNavigate()}
-            disabled={!canContinue}
+            onClick={handleSave}
+            disabled={!canContinue || saving}
           >
-            Salvează
+            {saving ? 'Se salvează...' : 'Salvează'}
           </button>
           <button
             type="button"
@@ -277,6 +406,8 @@ export default function QuickAddSheet({
             Editare completă
           </button>
         </div>
+
+        {error ? <p className="mt-3 text-xs text-rose-600">{error}</p> : null}
       </div>
     </div>
   );
