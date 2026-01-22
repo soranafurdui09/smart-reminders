@@ -106,7 +106,7 @@ export default function ReminderRowMobile({
         }, 800);
       }
     },
-    [displayAt, notifySwipeChange, occurrence.id, occurrence.occur_at, occurrence.status, reminderId, markDone, snoozeOccurrence]
+    [displayAt, notifySwipeChange, occurrence.id, occurrence.occur_at, occurrence.status, reminderId]
   );
 
   const swipeHandlers = useSwipeActions({
