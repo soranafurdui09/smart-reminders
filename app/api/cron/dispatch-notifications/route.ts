@@ -12,6 +12,7 @@ import { buildCronWindow, isJobDue } from '@/lib/notifications/scheduling';
 import { DEFAULT_MAX_RETRIES, getNextRetryAt, shouldRetry } from '@/lib/notifications/retry';
 import { computePostponeUntil, findBusyIntervalAt, FREEBUSY_CACHE_WINDOW_MS } from '@/lib/google/freebusy-cache';
 import { formatDateTimeWithTimeZone, resolveReminderTimeZone } from '@/lib/dates';
+import { buildMedicationDoseInstances, type MedicationRecord, type MedicationScheduleInput } from '@/lib/reminders/medication';
 
 export const runtime = 'nodejs';
 
@@ -68,6 +69,105 @@ export async function GET() {
     windowEnd: windowEndIso
   });
 
+  const horizonDays = 7;
+  const seedMedicationDoses = async () => {
+    const { data: schedules, error: scheduleError } = await admin
+      .from('medication_schedules')
+      .select(
+        'id, schedule_type, days_of_week, times_local, start_date, end_date, interval_hours, dose_amount, dose_unit, reminder_window_minutes, allow_snooze, medication:medications!inner(id, reminder_id, household_id, created_by, patient_member_id, timezone, is_active)'
+      )
+      .eq('medication.is_active', true);
+
+    if (scheduleError) {
+      console.error('[cron] load medication schedules failed', scheduleError);
+      return;
+    }
+
+    for (const row of schedules ?? []) {
+      const medication = Array.isArray(row.medication) ? row.medication[0] : row.medication;
+      if (!medication?.id || !medication.reminder_id) continue;
+      const schedule: MedicationScheduleInput = {
+        schedule_type: row.schedule_type,
+        days_of_week: row.days_of_week,
+        times_local: row.times_local,
+        start_date: row.start_date,
+        end_date: row.end_date,
+        interval_hours: row.interval_hours,
+        dose_amount: row.dose_amount,
+        dose_unit: row.dose_unit,
+        reminder_window_minutes: row.reminder_window_minutes,
+        allow_snooze: row.allow_snooze
+      };
+
+      const tz = medication.timezone ?? 'UTC';
+      const localToday = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' })
+        .format(now)
+        .replace(/\//g, '-');
+      const startDate = schedule.start_date < localToday ? localToday : schedule.start_date;
+      if (schedule.end_date && schedule.end_date < startDate) {
+        continue;
+      }
+      const effectiveSchedule: MedicationScheduleInput = {
+        ...schedule,
+        start_date: startDate
+      };
+
+      const planned = buildMedicationDoseInstances({
+        medication: medication as MedicationRecord,
+        schedule: effectiveSchedule,
+        horizonDays,
+        timeZone: tz
+      });
+      if (!planned.length) continue;
+      const start = planned[0].scheduled_at;
+      const end = planned[planned.length - 1].scheduled_at;
+      const { data: existing, error: existingError } = await admin
+        .from('medication_doses')
+        .select('scheduled_at')
+        .eq('medication_id', medication.id)
+        .gte('scheduled_at', start)
+        .lte('scheduled_at', end);
+      if (existingError) {
+        console.error('[cron] load medication doses failed', existingError);
+        continue;
+      }
+      const existingSet = new Set((existing ?? []).map((item: any) => item.scheduled_at));
+      const inserts = planned
+        .filter((dose) => !existingSet.has(dose.scheduled_at))
+        .map((dose) => ({
+          reminder_id: medication.reminder_id,
+          medication_id: medication.id,
+          household_id: medication.household_id,
+          patient_member_id: medication.patient_member_id ?? null,
+          scheduled_at: dose.scheduled_at,
+          scheduled_local_date: dose.scheduled_local_date,
+          scheduled_local_time: dose.scheduled_local_time,
+          confirmation_deadline: dose.confirmation_deadline,
+          status: 'pending',
+          stock_decremented: false
+        }));
+      if (!inserts.length) continue;
+      const { error: insertError } = await admin.from('medication_doses').insert(inserts);
+      if (insertError) {
+        console.error('[cron] insert medication doses failed', insertError);
+      }
+    }
+  };
+
+  const markMissedDoses = async () => {
+    const { error } = await admin
+      .from('medication_doses')
+      .update({ status: 'missed', missed_at: nowIso })
+      .eq('status', 'pending')
+      .lt('confirmation_deadline', nowIso);
+    if (error) {
+      console.error('[cron] mark missed doses failed', error);
+    }
+  };
+
+  await seedMedicationDoses();
+  await markMissedDoses();
+
   const seedKeySet = new Set<string>();
   const addSeedKey = (key: string) => {
     if (seedKeySet.has(key)) return false;
@@ -103,20 +203,26 @@ export async function GET() {
           entity_id: reminder.id,
           occurrence_at_utc: effectiveAt
         }))
-        .filter((job) => addSeedKey(buildNotificationJobKey({
-          entityType: job.entity_type,
-          entityId: job.entity_id,
-          occurrenceAtUtc: job.occurrence_at_utc,
-          channel: job.channel
-        })));
+        .filter((job) =>
+          addSeedKey(
+            buildNotificationJobKey({
+              entityType: job.entity_type,
+              entityId: job.entity_id,
+              occurrenceAtUtc: job.occurrence_at_utc,
+              channel: job.channel,
+              userId: job.user_id
+            })
+          )
+        );
     });
 
   const { data: medicationSeeds } = await admin
     .from('medication_doses')
-    .select('id, scheduled_at, reminder:reminders!inner(id, created_by, is_active)')
+    .select('id, scheduled_at, snoozed_until, confirmation_deadline, reminder:reminders!inner(id, created_by, is_active)')
     .eq('status', 'pending')
-    .gte('scheduled_at', windowStartIso)
-    .lte('scheduled_at', windowEndIso);
+    .or(
+      `and(snoozed_until.gte.${windowStartIso},snoozed_until.lte.${windowEndIso}),and(snoozed_until.is.null,scheduled_at.gte.${windowStartIso},scheduled_at.lte.${windowEndIso})`
+    );
 
   const medicationInserts = (medicationSeeds ?? [])
     .flatMap((dose: any) => {
@@ -124,23 +230,49 @@ export async function GET() {
       if (!reminder?.id || !reminder?.created_by || reminder.is_active === false) {
         return [];
       }
-      return seedChannels
-        .map((channel) => ({
-          reminder_id: reminder.id,
-          user_id: reminder.created_by,
-          notify_at: dose.scheduled_at,
-          channel,
-          status: 'pending' as const,
-          entity_type: 'medication_dose' as const,
-          entity_id: dose.id,
-          occurrence_at_utc: dose.scheduled_at
-        }))
-        .filter((job) => addSeedKey(buildNotificationJobKey({
-          entityType: job.entity_type,
-          entityId: job.entity_id,
-          occurrenceAtUtc: job.occurrence_at_utc,
-          channel: job.channel
-        })));
+      const effectiveAt = dose.snoozed_until ?? dose.scheduled_at;
+      const followUpAt = dose.confirmation_deadline
+        ? new Date(new Date(effectiveAt).getTime() + 10 * 60000)
+        : null;
+      const followUpIso =
+        followUpAt && new Date(dose.confirmation_deadline).getTime() > followUpAt.getTime()
+          ? followUpAt.toISOString()
+          : null;
+
+      const baseJobs = seedChannels.map((channel) => ({
+        reminder_id: reminder.id,
+        user_id: reminder.created_by,
+        notify_at: effectiveAt,
+        channel,
+        status: 'pending' as const,
+        entity_type: 'medication_dose' as const,
+        entity_id: dose.id,
+        occurrence_at_utc: effectiveAt
+      }));
+      const followUpJobs = followUpIso
+        ? seedChannels.map((channel) => ({
+            reminder_id: reminder.id,
+            user_id: reminder.created_by,
+            notify_at: followUpIso,
+            channel,
+            status: 'pending' as const,
+            entity_type: 'medication_dose' as const,
+            entity_id: dose.id,
+            occurrence_at_utc: followUpIso
+          }))
+        : [];
+
+      return [...baseJobs, ...followUpJobs].filter((job) =>
+        addSeedKey(
+          buildNotificationJobKey({
+            entityType: job.entity_type,
+            entityId: job.entity_id,
+            occurrenceAtUtc: job.occurrence_at_utc,
+            channel: job.channel,
+            userId: job.user_id
+          })
+        )
+      );
     });
 
   const seedInserts = [...occurrenceInserts, ...medicationInserts];
@@ -152,13 +284,157 @@ export async function GET() {
     const { error: seedError } = await admin
       .from('notification_jobs')
       .upsert(seedInserts, {
-        onConflict: 'entity_type,entity_id,occurrence_at_utc,channel',
+        onConflict: 'entity_type,entity_id,occurrence_at_utc,channel,user_id',
         ignoreDuplicates: true
       });
     if (seedError) {
       console.error('[notifications] seed jobs failed', seedError);
     }
   }
+
+  const seedCaregiverEscalations = async () => {
+    const escalationStart = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: doses, error: dosesError } = await admin
+      .from('medication_doses')
+      .select('id, medication_id, reminder_id, scheduled_at, snoozed_until, escalation_notified_at, patient_member_id, medication:medications!inner(id, name, household_id, created_by)')
+      .eq('status', 'pending')
+      .is('escalation_notified_at', null)
+      .not('patient_member_id', 'is', null)
+      .gte('scheduled_at', escalationStart)
+      .lte('scheduled_at', nowIso);
+
+    if (dosesError) {
+      console.error('[cron] load escalation doses failed', dosesError);
+      return;
+    }
+    if (!doses?.length) return;
+
+    const patientIds = Array.from(new Set(doses.map((dose: any) => dose.patient_member_id).filter(Boolean)));
+    const { data: caregivers, error: caregiversError } = await admin
+      .from('medication_caregivers')
+      .select('patient_member_id, caregiver_member_id, escalation_after_minutes, escalation_channels, escalation_enabled')
+      .in('patient_member_id', patientIds)
+      .eq('escalation_enabled', true);
+
+    if (caregiversError) {
+      console.error('[cron] load caregivers failed', caregiversError);
+      return;
+    }
+
+    const caregiverIds = Array.from(
+      new Set((caregivers ?? []).map((row: any) => row.caregiver_member_id).filter(Boolean))
+    );
+    const { data: caregiverMembers } = await admin
+      .from('household_members')
+      .select('id, user_id')
+      .in('id', caregiverIds);
+    const caregiverUserMap = new Map((caregiverMembers ?? []).map((row: any) => [row.id, row.user_id]));
+
+    const inserts: any[] = [];
+    const notifiedDoseIds: string[] = [];
+    const doseMetaMap = new Map(
+      doses.map((dose: any) => [
+        dose.id,
+        {
+          householdId: dose.medication?.household_id ?? null,
+          medicationId: dose.medication_id,
+          actorId: dose.medication?.created_by ?? null
+        }
+      ])
+    );
+
+    doses.forEach((dose: any) => {
+      const caregiversForPatient = (caregivers ?? []).filter(
+        (row: any) => row.patient_member_id === dose.patient_member_id
+      );
+      if (!caregiversForPatient.length) return;
+
+      const effectiveAt = new Date(dose.snoozed_until ?? dose.scheduled_at);
+      let insertedForDose = false;
+      caregiversForPatient.forEach((row: any) => {
+        const delayMinutes = Math.max(5, Number(row.escalation_after_minutes || 30));
+        const escalationAt = new Date(effectiveAt.getTime() + delayMinutes * 60000);
+        if (escalationAt.getTime() > now.getTime()) return;
+
+        const caregiverUserId = caregiverUserMap.get(row.caregiver_member_id);
+        if (!caregiverUserId) return;
+        const channels = Array.isArray(row.escalation_channels) && row.escalation_channels.length
+          ? row.escalation_channels
+          : ['push'];
+
+        channels.forEach((channel: string) => {
+          if (!['email', 'push'].includes(channel)) return;
+          const job = {
+            reminder_id: dose.reminder_id,
+            user_id: caregiverUserId,
+            notify_at: escalationAt.toISOString(),
+            channel,
+            status: 'pending' as const,
+            entity_type: 'medication_dose' as const,
+            entity_id: dose.id,
+            occurrence_at_utc: escalationAt.toISOString()
+          };
+          if (
+            addSeedKey(
+              buildNotificationJobKey({
+                entityType: job.entity_type,
+                entityId: job.entity_id,
+                occurrenceAtUtc: job.occurrence_at_utc,
+                channel: job.channel,
+                userId: job.user_id
+              })
+            )
+          ) {
+            inserts.push(job);
+            insertedForDose = true;
+          }
+        });
+      });
+
+      if (insertedForDose) {
+        notifiedDoseIds.push(dose.id);
+      }
+    });
+
+    if (inserts.length) {
+      const { error: insertError } = await admin
+        .from('notification_jobs')
+        .upsert(inserts, {
+          onConflict: 'entity_type,entity_id,occurrence_at_utc,channel,user_id',
+          ignoreDuplicates: true
+        });
+      if (insertError) {
+        console.error('[cron] caregiver job insert failed', insertError);
+      }
+    }
+
+    if (notifiedDoseIds.length) {
+      await admin
+        .from('medication_doses')
+        .update({ escalation_notified_at: nowIso })
+        .in('id', notifiedDoseIds);
+
+      const events = notifiedDoseIds
+        .map((doseId) => {
+          const meta = doseMetaMap.get(doseId);
+          if (!meta?.householdId || !meta?.medicationId || !meta?.actorId) return null;
+          return {
+            household_id: meta.householdId,
+            medication_id: meta.medicationId,
+            dose_instance_id: doseId,
+            actor_profile_id: meta.actorId,
+            event_type: 'caregiver_notified',
+            payload: { reason: 'unconfirmed' }
+          };
+        })
+        .filter(Boolean);
+      if (events.length) {
+        await admin.from('medication_events').insert(events);
+      }
+    }
+  };
+
+  await seedCaregiverEscalations();
 
   const claimToken = crypto.randomBytes(16).toString('hex');
   const { data: jobs, error } = await admin.rpc('claim_notification_jobs', {
@@ -245,12 +521,12 @@ export async function GET() {
 
   const { data: medicationDoses } = await admin
     .from('medication_doses')
-    .select('id, reminder_id, scheduled_at, status')
+    .select('id, reminder_id, scheduled_at, snoozed_until, confirmation_deadline, status')
     .in('reminder_id', reminderIds)
     .eq('status', 'pending')
     .gte('scheduled_at', windowStartIso)
     .lte('scheduled_at', windowEndIso);
-  const medicationDoseMap = new Map<string, { id: string; scheduled_at: string; reminder_id: string }>();
+  const medicationDoseMap = new Map<string, { id: string; scheduled_at: string; reminder_id: string; status: string; snoozed_until?: string | null; confirmation_deadline?: string | null }>();
   (medicationDoses ?? []).forEach((dose: any) => {
     medicationDoseMap.set(`${dose.reminder_id}:${dose.scheduled_at}`, dose);
     medicationDoseMap.set(dose.id, dose);
@@ -274,6 +550,7 @@ export async function GET() {
       .update({
         status: 'sent',
         last_error: null,
+        delivered_at: nowIso,
         updated_at: nowIso
       })
       .eq('id', jobId);
@@ -365,11 +642,12 @@ export async function GET() {
     return { skip: false, id: data?.id ?? null };
   };
 
-  const insertMedicationLog = async (options: { doseId: string; channel: 'email' | 'push' }) => {
+  const insertMedicationLog = async (options: { doseId: string; channel: 'email' | 'push'; userId: string }) => {
     const { data, error: insertError } = await admin
       .from('medication_notification_log')
       .insert({
         medication_dose_id: options.doseId,
+        user_id: options.userId,
         channel: options.channel,
         status: 'sent',
         sent_at: nowIso
@@ -494,6 +772,30 @@ export async function GET() {
       continue;
     }
 
+    const isMedication = reminder.kind === 'medication';
+    const doseRecord = isMedication
+      ? (job.entity_type === 'medication_dose'
+          ? medicationDoseMap.get(job.entity_id ?? '')
+          : medicationDoseMap.get(`${reminder.id}:${job.notify_at}`))
+      : null;
+    if (isMedication) {
+      if (!doseRecord) {
+        await markJobFailed(job, 'dose_missing');
+        failedCount += 1;
+        continue;
+      }
+      if (doseRecord.status !== 'pending') {
+        await markJobSkipped(job.id, 'dose_not_pending');
+        skippedCount += 1;
+        continue;
+      }
+      const effectiveAt = doseRecord.snoozed_until ?? doseRecord.scheduled_at;
+      if (new Date(job.notify_at).getTime() < new Date(effectiveAt).getTime()) {
+        await rescheduleNotificationJob({ jobId: job.id, notifyAt: new Date(effectiveAt) });
+        continue;
+      }
+    }
+
     const profile = profileMap.get(job.user_id);
     const userTimeZone = profile?.timeZone || 'UTC';
     const displayTimeZone = resolveReminderTimeZone(reminder.tz ?? null, userTimeZone);
@@ -557,7 +859,6 @@ export async function GET() {
       continue;
     }
 
-    const isMedication = reminder.kind === 'medication';
     const details = reminder.medication_details || {};
     const medicationLabel = details.name ? `💊 ${details.name}` : `💊 ${reminder.title}`;
     const doseLabel = details.dose ? ` – ${details.dose}` : '';
@@ -585,11 +886,9 @@ export async function GET() {
       let logId: string | null = null;
       let skip = false;
       if (isMedication) {
-        const doseId = (job.entity_type === 'medication_dose' ? job.entity_id : null)
-          || medicationDoseMap.get(job.entity_id ?? '')?.id
-          || medicationDoseMap.get(`${reminder.id}:${job.notify_at}`)?.id;
+        const doseId = doseRecord?.id ?? (job.entity_type === 'medication_dose' ? job.entity_id : null);
         if (doseId) {
-          const logResult = await insertMedicationLog({ doseId, channel: 'email' });
+          const logResult = await insertMedicationLog({ doseId, channel: 'email', userId: job.user_id });
           skip = logResult.skip;
           logId = logResult.id;
           if (logResult.error) {
@@ -672,11 +971,9 @@ export async function GET() {
       let logId: string | null = null;
       let skip = false;
       if (isMedication) {
-        const doseId = (job.entity_type === 'medication_dose' ? job.entity_id : null)
-          || medicationDoseMap.get(job.entity_id ?? '')?.id
-          || medicationDoseMap.get(`${reminder.id}:${job.notify_at}`)?.id;
+        const doseId = doseRecord?.id ?? (job.entity_type === 'medication_dose' ? job.entity_id : null);
         if (doseId) {
-          const logResult = await insertMedicationLog({ doseId, channel: 'push' });
+          const logResult = await insertMedicationLog({ doseId, channel: 'push', userId: job.user_id });
           skip = logResult.skip;
           logId = logResult.id;
           if (logResult.error) {

@@ -452,10 +452,13 @@ export default function ReminderDashboardSection({
 
   const handleDoseStatus = async (doseId: string, status: 'taken' | 'skipped', skippedReason?: string) => {
     try {
+      const resolvedReason = status === 'skipped'
+        ? (skippedReason ?? copy.dashboard.medicationsReasonForgot)
+        : undefined;
       const response = await fetch(`/api/medications/dose/${doseId}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, skippedReason })
+        body: JSON.stringify({ status, skippedReason: resolvedReason })
       });
       if (!response.ok) {
         return;

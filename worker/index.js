@@ -484,11 +484,12 @@ async function insertReminderLog({ occurrenceId, reminderId, occurrenceAtUtc, ch
   return { skip: false, id: data?.id ?? null };
 }
 
-async function insertMedicationLog({ doseId, channel, nowIso }) {
+async function insertMedicationLog({ doseId, channel, nowIso, userId }) {
   const { data, error } = await supabase
     .from('medication_notification_log')
     .insert({
       medication_dose_id: doseId,
+      user_id: userId,
       channel,
       status: 'sent',
       sent_at: nowIso
@@ -657,6 +658,20 @@ async function processBatch(now) {
     });
   });
 
+  const medicationDoseIds = Array.from(
+    new Set(jobs.filter((job) => job.entity_type === 'medication_dose').map((job) => job.entity_id).filter(Boolean))
+  );
+  const medicationDoseMap = new Map();
+  if (medicationDoseIds.length) {
+    const { data: medicationDoses } = await supabase
+      .from('medication_doses')
+      .select('id, reminder_id, scheduled_at, snoozed_until, confirmation_deadline, status')
+      .in('id', medicationDoseIds);
+    (medicationDoses ?? []).forEach((dose) => {
+      medicationDoseMap.set(dose.id, dose);
+    });
+  }
+
   const settingsMap = new Map();
   const calendarBusyUsers = new Set();
   (reminders ?? []).forEach((reminder) => {
@@ -697,6 +712,26 @@ async function processBatch(now) {
       await markJobFailed(job, now, nowIso, 'reminder_inactive');
       failed += 1;
       return;
+    }
+
+    const isMedication = reminder.kind === 'medication';
+    const doseRecord = isMedication ? medicationDoseMap.get(job.entity_id) : null;
+    if (isMedication) {
+      if (!doseRecord) {
+        await markJobFailed(job, now, nowIso, 'dose_missing');
+        failed += 1;
+        return;
+      }
+      if (doseRecord.status !== 'pending') {
+        await markJobSkipped(job.id, nowIso, 'dose_not_pending');
+        skipped += 1;
+        return;
+      }
+      const effectiveAt = doseRecord.snoozed_until ?? doseRecord.scheduled_at;
+      if (new Date(job.notify_at).getTime() < new Date(effectiveAt).getTime()) {
+        await rescheduleJob(job.id, new Date(effectiveAt), nowIso);
+        return;
+      }
     }
 
     const profile = profileMap.get(job.user_id);
@@ -756,27 +791,27 @@ async function processBatch(now) {
 
     const occurrenceAtUtc = job.occurrence_at_utc ?? job.notify_at;
     const actionToken = await ensureActionToken(job);
-    const title = reminder.kind === 'medication'
+    const title = isMedication
       ? `💊 ${(reminder.medication_details?.name ?? reminder.title)}`
       : reminder.title;
     const occurLabel = formatDateTime(notifyAt, displayTimeZone);
-    const body = reminder.kind === 'medication'
+    const body = isMedication
       ? `Este timpul pentru medicament • ${occurLabel}`
       : `Scadenta: ${occurLabel}`;
-    const url = reminder.kind === 'medication'
+    const url = isMedication
       ? `${APP_URL}/app`
       : `${APP_URL}/app/reminders/${reminder.id}`;
 
     let logId = null;
     let skip = false;
-    if (reminder.kind === 'medication') {
-      const doseId = job.entity_type === 'medication_dose' ? job.entity_id : null;
+    if (isMedication) {
+      const doseId = doseRecord?.id ?? (job.entity_type === 'medication_dose' ? job.entity_id : null);
       if (!doseId) {
         await markJobFailed(job, now, nowIso, 'dose_missing');
         failed += 1;
         return;
       }
-      const logResult = await insertMedicationLog({ doseId, channel: 'push', nowIso });
+      const logResult = await insertMedicationLog({ doseId, channel: 'push', nowIso, userId: job.user_id });
       skip = logResult.skip;
       logId = logResult.id;
       if (logResult.error) {
@@ -840,13 +875,13 @@ async function processBatch(now) {
       return;
     }
 
-    if (logId && reminder.kind === 'medication') {
+    if (logId && isMedication) {
       await supabase
         .from('medication_notification_log')
         .update({ status: 'sent' })
         .eq('id', logId);
     }
-    if (logId && reminder.kind !== 'medication') {
+    if (logId && !isMedication) {
       await supabase
         .from('notification_log')
         .update({ status: 'sent' })

@@ -5,6 +5,8 @@ export function buildNotificationJobKey(options: {
   entityId: string;
   occurrenceAtUtc: string;
   channel: NotificationChannel;
+  userId?: string;
 }) {
-  return `${options.entityType}:${options.entityId}:${options.occurrenceAtUtc}:${options.channel}`;
+  const userPart = options.userId ? `:${options.userId}` : '';
+  return `${options.entityType}:${options.entityId}:${options.occurrenceAtUtc}:${options.channel}${userPart}`;
 }

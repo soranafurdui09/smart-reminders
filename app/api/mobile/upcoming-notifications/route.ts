@@ -74,7 +74,8 @@ export async function GET(request: Request) {
       entityType: 'reminder',
       entityId: reminder.id,
       occurrenceAtUtc: occurrenceAt,
-      channel: 'push'
+      channel: 'push',
+      userId: user.id
     });
     if (seen.has(jobKey)) {
       return [];
@@ -108,7 +109,8 @@ export async function GET(request: Request) {
       entityType: 'medication_dose',
       entityId: dose.id,
       occurrenceAtUtc: occurrenceAt,
-      channel: 'push'
+      channel: 'push',
+      userId: user.id
     });
     if (seen.has(jobKey)) {
       return [];

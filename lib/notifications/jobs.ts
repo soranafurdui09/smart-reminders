@@ -134,7 +134,7 @@ export async function scheduleNotificationJobsForMedication(options: {
 
   const { data: doses, error } = await admin
     .from('medication_doses')
-    .select('id, scheduled_at')
+    .select('id, scheduled_at, snoozed_until')
     .eq('reminder_id', reminderId)
     .eq('status', 'pending')
     .gte('scheduled_at', now.toISOString())
@@ -154,7 +154,10 @@ export async function scheduleNotificationJobsForMedication(options: {
   const inserts = buildMedicationJobInserts({
     reminderId,
     userId,
-    doses: doses ?? [],
+    doses: (doses ?? []).map((dose: any) => ({
+      id: dose.id,
+      scheduled_at: dose.snoozed_until ?? dose.scheduled_at
+    })),
     channel
   });
   if (!inserts.length) return;
