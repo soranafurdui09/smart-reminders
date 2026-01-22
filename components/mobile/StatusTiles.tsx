@@ -22,7 +22,7 @@ export default function StatusTiles({
         <button
           key={tile.id}
           type="button"
-          className={`rounded-3xl border border-white/10 bg-[rgba(14,20,33,0.88)] p-4 text-left shadow-[0_20px_45px_rgba(6,12,24,0.35)] ${tile.accentClass}`}
+          className={`premium-card p-4 text-left ${tile.accentClass}`}
           onClick={() => onSelect(tile.id)}
         >
           <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{tile.label}</div>

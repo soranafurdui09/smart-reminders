@@ -36,14 +36,14 @@ export default function QuickAddCard() {
       <div className="mt-3 flex items-center gap-2">
         <div className="relative flex-1">
           <input
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 pr-11 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+            className="premium-input w-full px-3 pr-11 text-sm placeholder:text-slate-400"
             placeholder="Scrie un reminder…"
             value={value}
             onChange={(event) => setValue(event.target.value)}
           />
           <button
             type="button"
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-200"
+            className="premium-icon-btn absolute right-1.5 top-1/2 -translate-y-1/2"
             aria-label="Dictează"
             onClick={() => router.push('/app/reminders/new?voice=1')}
           >
@@ -52,7 +52,7 @@ export default function QuickAddCard() {
         </div>
         <button
           type="button"
-          className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-cyan-400/90 px-3 text-xs font-semibold text-slate-950 shadow-sm shadow-cyan-500/30 transition hover:bg-cyan-300"
+          className="premium-btn-primary inline-flex items-center justify-center gap-1 px-4 text-xs"
           onClick={handleAdd}
           disabled={!trimmed}
         >
@@ -60,12 +60,12 @@ export default function QuickAddCard() {
           Adaugă
         </button>
       </div>
-      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 text-xs font-semibold text-slate-300">
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
         {chips.map((chip) => (
           <button
             key={chip.id}
             type="button"
-            className="whitespace-nowrap rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-200"
+            className="premium-chip whitespace-nowrap"
             onClick={() => setValue((current) => (current ? `${current} ${chip.text}` : chip.text))}
           >
             {chip.label}

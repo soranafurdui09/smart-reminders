@@ -123,7 +123,7 @@ export default function ReminderRowMobile({
   return (
     <>
       <div
-        className={`flex items-center gap-3 rounded-3xl border border-white/10 bg-[rgba(14,20,33,0.88)] px-4 py-4 shadow-[0_20px_45px_rgba(6,12,24,0.35)] touch-pan-y border-l-4 ${statusColor}`}
+        className={`premium-card flex items-center gap-3 px-4 py-4 touch-pan-y border-l-4 ${statusColor}`}
         onTouchStart={swipeHandlers.onTouchStart}
         onTouchMove={swipeHandlers.onTouchMove}
         onTouchEnd={swipeHandlers.onTouchEnd}
@@ -134,7 +134,7 @@ export default function ReminderRowMobile({
           <input type="hidden" name="occurAt" value={occurrence.occur_at ?? ''} />
           <input type="hidden" name="done_comment" value="" />
           <ActionSubmitButton
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-100 shadow-sm"
+            className="premium-icon-btn flex h-11 w-11 items-center justify-center text-slate-100 shadow-sm"
             type="submit"
             aria-label={copy.common.doneAction}
             data-action-feedback={copy.common.actionDone}
@@ -164,7 +164,7 @@ export default function ReminderRowMobile({
 
         <button
           type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-200"
+          className="premium-icon-btn flex h-10 w-10 items-center justify-center text-slate-200"
           aria-label={copy.common.moreActions}
           onClick={() => setActionsOpen(true)}
         >

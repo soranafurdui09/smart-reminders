@@ -22,7 +22,7 @@ export default function CollapsibleSection({
 }) {
   if (!count) return null;
   return (
-    <section className="rounded-3xl border border-white/10 bg-[rgba(14,20,33,0.88)] p-3 shadow-[0_20px_45px_rgba(6,12,24,0.35)]">
+    <section className="premium-card p-3">
       <button
         type="button"
         className="flex w-full items-center justify-between gap-2"

@@ -183,18 +183,35 @@ export default function QuickAddSheet({
     []
   );
 
+  const normalizeTranscript = (input: string) => {
+    const words = input.trim().split(/\s+/);
+    const normalized: string[] = [];
+    for (const word of words) {
+      const last = normalized[normalized.length - 1];
+      if (last && last.toLowerCase() === word.toLowerCase()) {
+        continue;
+      }
+      normalized.push(word);
+    }
+    while (normalized.length > 1 && normalized[0].toLowerCase() === 'reminder') {
+      normalized.shift();
+    }
+    return normalized.join(' ');
+  };
+
   const voice = useSpeechToReminder<AiResult>({
     useAi: true,
     parseText: async (inputText) => {
-      setText(inputText);
+      const cleaned = normalizeTranscript(inputText);
+      setText(cleaned);
       setParsedResult(null);
-      return await parseReminderText(inputText);
+      return await parseReminderText(cleaned);
     },
     onParsed: (parsed) => {
       setParsedResult(parsed);
     },
     onFallback: (inputText) => {
-      setText(inputText);
+      setText(normalizeTranscript(inputText));
     },
     onError: () => {
       setError('Nu am putut porni dictarea.');
@@ -291,7 +308,7 @@ export default function QuickAddSheet({
       role="presentation"
     >
       <div
-        className="w-full max-w-lg max-h-[85vh] rounded-3xl border border-white/10 bg-[rgba(10,14,22,0.94)] p-4 shadow-[0_24px_60px_rgba(6,12,24,0.6)] backdrop-blur-xl overflow-y-auto"
+        className="premium-sheet w-full max-w-lg max-h-[85vh] p-4 overflow-y-auto overscroll-contain"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-label="Adaugă reminder"
@@ -315,7 +332,7 @@ export default function QuickAddSheet({
               </div>
               <button
                 type="button"
-                className="rounded-full border border-cyan-400/30 px-3 py-1 text-[11px] font-semibold text-cyan-200"
+                className="premium-chip border-cyan-400/30 text-cyan-200"
                 onClick={voice.stop}
               >
                 Oprește
@@ -327,7 +344,7 @@ export default function QuickAddSheet({
           ) : null}
           <div className="relative">
             <textarea
-              className="min-h-[84px] w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 pr-12 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+              className="premium-input min-h-[84px] w-full px-3 py-3 pr-12 text-sm placeholder:text-slate-400"
               placeholder="ex: plătește chiria pe 1 la 9, lunar, cu 2 zile înainte"
               value={text}
               onChange={(event) => {
@@ -348,7 +365,7 @@ export default function QuickAddSheet({
               <button
                 key={item.id}
                 type="button"
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200"
+                className="premium-chip"
                 onClick={() => {
                   if (item.mode === 'medication') {
                     handleNavigate('medication');
@@ -367,7 +384,7 @@ export default function QuickAddSheet({
               <button
                 key={template.id}
                 type="button"
-                className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left text-xs font-semibold text-slate-200"
+                className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left text-xs font-semibold text-slate-200 transition hover:bg-white/10"
                 onClick={() => {
                   if (template.mode === 'medication') {
                     handleNavigate('medication');
@@ -388,14 +405,14 @@ export default function QuickAddSheet({
             <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
             Preview
             {parsedResult ? (
-              <Pill className="ml-auto bg-cyan-500/15 text-cyan-200">AI completat</Pill>
+              <Pill className="ml-auto bg-white/10 text-slate-200">AI completat</Pill>
             ) : null}
           </div>
           <div className="mt-2 text-sm font-semibold text-slate-100">{previewTitle}</div>
           <div className="mt-1 text-xs text-slate-400">{previewDate}</div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Pill className="border border-white/10 bg-white/5 text-slate-300">Activ · Reminder nou</Pill>
-            <Pill className="bg-cyan-500/15 text-cyan-200">{previewCategory}</Pill>
+          <Pill className="border border-white/10 bg-white/5 text-slate-300">Activ · Reminder nou</Pill>
+          <Pill className="bg-cyan-500/15 text-cyan-200">{previewCategory}</Pill>
           </div>
           <div className="mt-2">{previewText}</div>
         </Card>
@@ -415,7 +432,7 @@ export default function QuickAddSheet({
                   <label className="text-xs font-semibold text-slate-300">Data</label>
                   <input
                     type="date"
-                    className="h-9 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-slate-100"
+                    className="premium-input w-full px-3 text-sm"
                     value={dateValue}
                     onChange={(event) => setDateValue(event.target.value)}
                   />
@@ -424,7 +441,7 @@ export default function QuickAddSheet({
                   <label className="text-xs font-semibold text-slate-300">Ora</label>
                   <input
                     type="time"
-                    className="h-9 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-slate-100"
+                    className="premium-input w-full px-3 text-sm"
                     value={timeValue}
                     onChange={(event) => setTimeValue(event.target.value)}
                   />
@@ -434,7 +451,7 @@ export default function QuickAddSheet({
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-300">Recurență</label>
                   <select
-                    className="h-9 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-slate-100"
+                    className="premium-input w-full px-3 text-sm"
                     value={recurrenceValue}
                     onChange={(event) => setRecurrenceValue(event.target.value)}
                   >
@@ -447,7 +464,7 @@ export default function QuickAddSheet({
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-300">Înainte</label>
                   <select
-                    className="h-9 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-slate-100"
+                    className="premium-input w-full px-3 text-sm"
                     value={remindBeforeValue}
                     onChange={(event) => setRemindBeforeValue(event.target.value)}
                   >
@@ -463,7 +480,7 @@ export default function QuickAddSheet({
                 <label className="text-xs font-semibold text-slate-300">Dată final</label>
                 <input
                   type="date"
-                  className="h-9 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-slate-100"
+                  className="premium-input w-full px-3 text-sm"
                   value={endDateValue}
                   onChange={(event) => setEndDateValue(event.target.value)}
                 />
@@ -471,7 +488,7 @@ export default function QuickAddSheet({
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-300">Categorie</label>
                 <select
-                  className="h-9 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-slate-100"
+                  className="premium-input w-full px-3 text-sm"
                   value={categoryValue}
                   onChange={(event) => setCategoryValue(event.target.value)}
                 >
@@ -485,7 +502,7 @@ export default function QuickAddSheet({
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-300">Familie</label>
-                <select className="h-9 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-slate-400" disabled>
+                <select className="premium-input w-full px-3 text-sm text-slate-400" disabled>
                   <option>Disponibil în editare completă</option>
                 </select>
               </div>
@@ -493,10 +510,10 @@ export default function QuickAddSheet({
           ) : null}
         </div>
 
-        <div className="mt-4 grid gap-2 sticky bottom-0 bg-[#0a0f18]/95 pt-2 pb-2">
+        <div className="mt-4 grid gap-2 sticky bottom-0 bg-[rgba(10,14,22,0.95)] pt-2 pb-2">
           <button
             type="button"
-            className="inline-flex h-11 items-center justify-center rounded-2xl bg-cyan-300 px-4 text-sm font-semibold text-slate-950 shadow-[0_10px_25px_rgba(34,211,238,0.35)]"
+            className="premium-btn-primary inline-flex items-center justify-center px-4 text-sm"
             onClick={handleSave}
             disabled={!canContinue || saving}
           >
