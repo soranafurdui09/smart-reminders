@@ -22,11 +22,11 @@ export default function StatusTiles({
         <button
           key={tile.id}
           type="button"
-          className={`rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm ${tile.accentClass}`}
+          className={`rounded-3xl border border-white/10 bg-[rgba(14,20,33,0.88)] p-4 text-left shadow-[0_20px_45px_rgba(6,12,24,0.35)] ${tile.accentClass}`}
           onClick={() => onSelect(tile.id)}
         >
-          <div className="text-xs font-semibold uppercase text-slate-500">{tile.label}</div>
-          <div className="mt-1 text-2xl font-semibold text-slate-900">{tile.count}</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{tile.label}</div>
+          <div className="mt-1 text-2xl font-semibold text-slate-100">{tile.count}</div>
         </button>
       ))}
     </div>

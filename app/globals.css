@@ -49,6 +49,12 @@ body {
 @media (max-width: 768px) {
   body {
     background-attachment: scroll;
+    background-color: #06070b;
+    background-image:
+      radial-gradient(900px 500px at 20% -10%, rgba(34, 211, 238, 0.18), transparent),
+      radial-gradient(800px 400px at 80% 0%, rgba(59, 130, 246, 0.12), transparent),
+      linear-gradient(180deg, rgba(6, 8, 12, 0.9), rgba(6, 8, 12, 0.98));
+    color: rgb(226, 232, 240);
   }
 }
 

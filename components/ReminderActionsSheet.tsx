@@ -44,12 +44,12 @@ export default function ReminderActionsSheet({
 
   return (
     <div
-      className="fixed inset-0 z-[1000] flex items-end justify-center bg-slate-900/40 px-4 pb-[calc(env(safe-area-inset-bottom)_+_16px)]"
+      className="fixed inset-0 z-[1000] flex items-end justify-center bg-[#02040a]/70 px-4 pb-[calc(env(safe-area-inset-bottom)_+_16px)]"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-4 shadow-float"
+        className="w-full max-w-lg rounded-3xl border border-white/10 bg-[rgba(10,14,22,0.94)] p-4 shadow-[0_24px_60px_rgba(6,12,24,0.6)] backdrop-blur-xl"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -57,12 +57,12 @@ export default function ReminderActionsSheet({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div id={titleId} className="text-sm font-semibold text-slate-900 line-clamp-2">
+            <div id={titleId} className="text-sm font-semibold text-slate-100 line-clamp-2">
               {title}
             </div>
             {categoryLabel ? (
               <span
-                className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${categoryClassName ?? 'bg-slate-100 text-slate-700'}`}
+                className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${categoryClassName ?? 'bg-white/10 text-slate-200'}`}
                 style={badgeStyle}
               >
                 {categoryLabel}
@@ -71,14 +71,14 @@ export default function ReminderActionsSheet({
           </div>
           <button
             type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300"
             onClick={onClose}
             aria-label="Închide"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="mt-4 max-h-[70vh] overflow-y-auto pr-1">
+        <div className="mt-4 max-h-[70vh] overflow-y-auto pr-1 text-slate-200">
           {children}
         </div>
       </div>

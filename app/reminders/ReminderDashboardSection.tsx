@@ -496,15 +496,15 @@ export default function ReminderDashboardSection({
       ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
     return (
-      <section className="space-y-4">
+      <section className="space-y-4 text-slate-100">
         <QuickAddCard />
 
         <StatusTiles
           tiles={[
-            { id: 'overdue', label: copy.dashboard.todayOverdue, count: overdueItems.length, accentClass: 'border-rose-200' },
-            { id: 'today', label: copy.dashboard.todayTitle, count: todayOpenItems.length, accentClass: 'border-amber-200' },
-            { id: 'soon', label: copy.dashboard.todaySoon, count: soonItems.length, accentClass: 'border-sky-200' },
-            { id: 'meds', label: copy.dashboard.medicationsTitle, count: visibleDoses.length, accentClass: 'border-emerald-200' }
+            { id: 'overdue', label: copy.dashboard.todayOverdue, count: overdueItems.length, accentClass: 'border-rose-400/40' },
+            { id: 'today', label: copy.dashboard.todayTitle, count: todayOpenItems.length, accentClass: 'border-amber-400/40' },
+            { id: 'soon', label: copy.dashboard.todaySoon, count: soonItems.length, accentClass: 'border-sky-400/40' },
+            { id: 'meds', label: copy.dashboard.medicationsTitle, count: visibleDoses.length, accentClass: 'border-emerald-400/40' }
           ]}
           onSelect={(id) => {
             if (id === 'overdue') scrollToSection(overdueRef);
@@ -548,14 +548,14 @@ export default function ReminderDashboardSection({
                 ))}
               </div>
             ) : (
-              <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-4 text-sm text-slate-400">
                 {copy.dashboard.empty}
               </div>
             )}
             {filteredOccurrences.length > mobileInboxLimit ? (
               <button
                 type="button"
-                className="text-xs font-semibold text-slate-500"
+                className="text-xs font-semibold text-slate-300"
                 onClick={() => setMobileInboxLimit((prev) => prev + 20)}
               >
                 {copy.dashboard.viewMoreMonths}
@@ -565,14 +565,14 @@ export default function ReminderDashboardSection({
         ) : (
           <div className="space-y-4">
             {nextOccurrence && nextOccurrenceLabel ? (
-              <div className="rounded-2xl border border-slate-100 bg-white px-3 py-3 text-sm shadow-sm">
-                <div className="text-xs font-semibold text-slate-500">Următorul</div>
+              <div className="rounded-3xl border border-white/10 bg-[rgba(14,20,33,0.88)] px-3 py-3 text-sm shadow-[0_20px_45px_rgba(6,12,24,0.35)]">
+                <div className="text-xs font-semibold text-slate-400">Următorul</div>
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="truncate font-semibold text-slate-900">
+                    <div className="truncate font-semibold text-slate-100">
                       {nextOccurrence.reminder?.title ?? copy.dashboard.nextTitle}
                     </div>
-                    <div className="text-xs text-slate-500">{nextOccurrenceLabel}</div>
+                    <div className="text-xs text-slate-400">{nextOccurrenceLabel}</div>
                   </div>
                   <form action={markDone}>
                     <input type="hidden" name="occurrenceId" value={nextOccurrence.id} />
@@ -580,7 +580,7 @@ export default function ReminderDashboardSection({
                     <input type="hidden" name="occurAt" value={nextOccurrence.occur_at ?? ''} />
                     <input type="hidden" name="done_comment" value="" />
                     <ActionSubmitButton
-                      className="inline-flex h-9 items-center justify-center rounded-full bg-sky-500 px-3 text-xs font-semibold text-white"
+                      className="inline-flex h-9 items-center justify-center rounded-full bg-cyan-300 px-3 text-xs font-semibold text-slate-950 shadow-[0_10px_25px_rgba(34,211,238,0.35)]"
                       type="submit"
                       data-action-feedback={copy.common.actionDone}
                     >
@@ -659,34 +659,34 @@ export default function ReminderDashboardSection({
                 count={visibleDoses.length}
                 open={showMeds}
                 onToggle={() => setShowMeds((prev) => !prev)}
-                accentClassName="bg-emerald-500"
+                accentClassName="bg-emerald-400"
               >
                 {visibleDoses.map((dose) => {
                   const details = dose.reminder?.medication_details || {};
                   const personLabel = details.personId ? memberLabels[details.personId] : null;
                   return (
-                    <div key={dose.id} className="rounded-2xl border border-slate-100 bg-white p-3 text-sm shadow-sm">
+                    <div key={dose.id} className="rounded-3xl border border-white/10 bg-[rgba(14,20,33,0.88)] p-3 text-sm shadow-[0_20px_45px_rgba(6,12,24,0.35)]">
                       <div className="flex items-center justify-between gap-3">
                         <div className="space-y-1">
-                          <div className="font-semibold text-slate-900">{details.name || dose.reminder?.title}</div>
-                          {details.dose ? <div className="text-xs text-slate-500">{details.dose}</div> : null}
-                          {personLabel ? <div className="text-xs text-slate-500">{personLabel}</div> : null}
+                          <div className="font-semibold text-slate-100">{details.name || dose.reminder?.title}</div>
+                          {details.dose ? <div className="text-xs text-slate-400">{details.dose}</div> : null}
+                          {personLabel ? <div className="text-xs text-slate-400">{personLabel}</div> : null}
                         </div>
-                        <div className="text-xs font-semibold text-slate-500">
+                        <div className="text-xs font-semibold text-slate-400">
                           {new Date(dose.scheduled_at).toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
                       <div className="mt-2 flex flex-wrap gap-2">
                         <button
                           type="button"
-                          className="btn btn-primary h-8 px-3 text-xs"
+                          className="inline-flex h-8 items-center justify-center rounded-full bg-cyan-300 px-3 text-xs font-semibold text-slate-950"
                           onClick={() => handleDoseStatus(dose.id, 'taken')}
                         >
                           {copy.dashboard.medicationsTaken}
                         </button>
                         <button
                           type="button"
-                          className="btn btn-secondary h-8 px-3 text-xs"
+                          className="inline-flex h-8 items-center justify-center rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200"
                           onClick={() => handleDoseStatus(dose.id, 'skipped')}
                         >
                           {copy.dashboard.medicationsSkip}
@@ -699,7 +699,7 @@ export default function ReminderDashboardSection({
             </div>
 
             {!overdueItems.length && !todayOpenItems.length && !soonItems.length && !visibleDoses.length ? (
-              <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-4 text-sm text-slate-400">
                 {copy.dashboard.todayEmpty}
               </div>
             ) : null}

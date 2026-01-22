@@ -1,10 +1,15 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mic, X } from 'lucide-react';
+import { Mic, Sparkles, X } from 'lucide-react';
 import { reminderCategories } from '@/lib/categories';
 import { createReminder } from '@/app/app/reminders/new/actions';
+import { useSpeechToReminder } from '@/hooks/useSpeechToReminder';
+import Card from '@/components/ui/Card';
+import Pill from '@/components/ui/Pill';
+import IconButton from '@/components/ui/IconButton';
+import { classTextPrimary, classTextSecondary } from '@/styles/tokens';
 
 type AiResult = {
   title: string;
@@ -48,13 +53,27 @@ export default function QuickAddSheet({
   const [remindBeforeValue, setRemindBeforeValue] = useState('');
   const [endDateValue, setEndDateValue] = useState('');
   const [categoryValue, setCategoryValue] = useState('');
+  const [parsedResult, setParsedResult] = useState<AiResult | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const trimmed = text.trim();
   const canContinue = trimmed.length > 0;
   const categoryLabel = reminderCategories.find((category) => category.id === categoryValue)?.label ?? '';
+  const parsedCategoryLabel = parsedResult?.categoryId
+    ? reminderCategories.find((category) => category.id === parsedResult.categoryId)?.label ?? ''
+    : '';
   const previewText = useMemo(() => {
+    if (parsedResult) {
+      const parts = [
+        parsedResult.title,
+        parsedResult.dueAt ? toLocalInputFromIso(parsedResult.dueAt).replace('T', ' ') : null,
+        parsedResult.recurrenceRule ? 'recurent' : null,
+        parsedResult.preReminderMinutes ? `cu ${parsedResult.preReminderMinutes} min înainte` : null,
+        parsedCategoryLabel ? `categorie ${parsedCategoryLabel}` : null
+      ].filter(Boolean);
+      return `Se va salva: ${parts.join(' · ')}`;
+    }
     if (!trimmed) return 'Scrie ceva simplu, iar noi îl transformăm într-un reminder.';
     const parts = [
       trimmed,
@@ -64,12 +83,25 @@ export default function QuickAddSheet({
       categoryLabel ? `categorie ${categoryLabel}` : null
     ].filter(Boolean);
     return `Se va salva: ${parts.join(' · ')}`;
-  }, [categoryLabel, dateValue, recurrenceValue, remindBeforeValue, timeValue, trimmed]);
+  }, [
+    categoryLabel,
+    dateValue,
+    parsedCategoryLabel,
+    parsedResult,
+    recurrenceValue,
+    remindBeforeValue,
+    timeValue,
+    trimmed
+  ]);
 
-  const previewTitle = trimmed || 'Titlul reminderului';
-  const previewDate = dateValue
-    ? `${dateValue}${timeValue ? ` · ${timeValue}` : ''}`
-    : 'Data și ora';
+  const previewTitle = parsedResult?.title || trimmed || 'Titlul reminderului';
+  const parsedDate = parsedResult?.dueAt ? toLocalInputFromIso(parsedResult.dueAt) : '';
+  const previewDate = parsedDate
+    ? parsedDate.replace('T', ' · ')
+    : dateValue
+      ? `${dateValue}${timeValue ? ` · ${timeValue}` : ''}`
+      : 'Data și ora';
+  const previewCategory = parsedCategoryLabel || categoryLabel || 'Fără categorie';
 
   const buildFullText = () => {
     if (!trimmed) return '';
@@ -130,6 +162,47 @@ export default function QuickAddSheet({
     return '';
   };
 
+  const parseReminderText = useCallback(
+    async (inputText: string) => {
+      const trimmedText = inputText.trim();
+      if (!trimmedText) return null;
+      const householdId = typeof window !== 'undefined'
+        ? window.localStorage.getItem('smart-reminder-household')
+        : null;
+      if (!householdId) return null;
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+      const clientNow = new Date().toISOString();
+      const response = await fetch('/api/ai/parse-reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: trimmedText, timezone, householdId, clientNow })
+      });
+      if (!response.ok) return null;
+      return (await response.json()) as AiResult;
+    },
+    []
+  );
+
+  const voice = useSpeechToReminder<AiResult>({
+    useAi: true,
+    parseText: async (inputText) => {
+      setText(inputText);
+      setParsedResult(null);
+      return await parseReminderText(inputText);
+    },
+    onParsed: (parsed) => {
+      setParsedResult(parsed);
+    },
+    onFallback: (inputText) => {
+      setText(inputText);
+    },
+    onError: () => {
+      setError('Nu am putut porni dictarea.');
+    }
+  });
+
+  const voiceActive = ['starting', 'listening', 'transcribing', 'processing', 'parsing'].includes(voice.status);
+
   const parsePreReminder = () => {
     if (!remindBeforeValue) return '';
     if (remindBeforeValue.includes('10')) return '10';
@@ -168,23 +241,10 @@ export default function QuickAddSheet({
     setSaving(true);
     setError(null);
     try {
-      const householdId = typeof window !== 'undefined'
-        ? window.localStorage.getItem('smart-reminder-household')
-        : null;
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-      const clientNow = new Date().toISOString();
       let parsed: AiResult | null = null;
 
-      if (householdId) {
-        const response = await fetch('/api/ai/parse-reminder', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: buildFullText(), timezone, householdId, clientNow })
-        });
-        if (response.ok) {
-          parsed = (await response.json()) as AiResult;
-        }
-      }
+      parsed = await parseReminderText(buildFullText());
 
       const formData = new FormData();
       formData.set('kind', 'generic');
@@ -226,62 +286,75 @@ export default function QuickAddSheet({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/40 px-4 pb-6"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-[#02040a]/70 px-4 pb-6"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="w-full max-w-lg max-h-[85vh] rounded-2xl border border-slate-200 bg-white p-4 shadow-float overflow-y-auto"
+        className="w-full max-w-lg max-h-[85vh] rounded-3xl border border-white/10 bg-[rgba(10,14,22,0.94)] p-4 shadow-[0_24px_60px_rgba(6,12,24,0.6)] backdrop-blur-xl overflow-y-auto"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-label="Adaugă reminder"
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-sm font-semibold text-slate-900">Adaugă rapid</div>
-            <p className="mt-1 text-xs text-slate-500">Scrie sau dictează un reminder scurt.</p>
+            <div className={`text-sm font-semibold ${classTextPrimary}`}>Adaugă rapid</div>
+            <p className={`mt-1 text-xs ${classTextSecondary}`}>Scrie sau dictează un reminder scurt.</p>
           </div>
-          <button
-            type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500"
-            onClick={onClose}
-            aria-label="Închide"
-          >
+          <IconButton aria-label="Închide" onClick={onClose}>
             <X className="h-4 w-4" />
-          </button>
+          </IconButton>
         </div>
 
         <div className="mt-4 space-y-3">
+          {voiceActive ? (
+            <div className="flex items-center justify-between text-xs text-cyan-300">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-300" aria-hidden="true" />
+                Ascult…
+              </div>
+              <button
+                type="button"
+                className="rounded-full border border-cyan-400/30 px-3 py-1 text-[11px] font-semibold text-cyan-200"
+                onClick={voice.stop}
+              >
+                Oprește
+              </button>
+            </div>
+          ) : null}
+          {voice.status === 'processing' || voice.status === 'parsing' ? (
+            <div className="text-xs text-slate-300">Procesez dictarea…</div>
+          ) : null}
           <div className="relative">
             <textarea
-              className="input min-h-[84px] pr-12"
+              className="min-h-[84px] w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 pr-12 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
               placeholder="ex: plătește chiria pe 1 la 9, lunar, cu 2 zile înainte"
               value={text}
-              onChange={(event) => setText(event.target.value)}
-            />
-            <button
-              type="button"
-              className="absolute right-2 top-2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600"
-              aria-label="Dictează"
-              onClick={() => {
-                onClose();
-                router.push('/app/reminders/new?voice=1');
+              onChange={(event) => {
+                setParsedResult(null);
+                setText(event.target.value);
               }}
+            />
+            <IconButton
+              className="absolute right-2 top-2"
+              aria-label={voiceActive ? 'Oprește dictarea' : 'Dictează'}
+              onClick={voice.toggle}
             >
               <Mic className="h-4 w-4" />
-            </button>
+            </IconButton>
           </div>
           <div className="flex flex-wrap gap-2">
             {suggestions.map((item) => (
               <button
                 key={item.id}
                 type="button"
-                className="chip px-3 py-1 text-xs"
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200"
                 onClick={() => {
                   if (item.mode === 'medication') {
                     handleNavigate('medication');
                     return;
                   }
+                  setParsedResult(null);
                   setText(item.text ?? '');
                 }}
               >
@@ -294,12 +367,13 @@ export default function QuickAddSheet({
               <button
                 key={template.id}
                 type="button"
-                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-semibold text-slate-700"
+                className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left text-xs font-semibold text-slate-200"
                 onClick={() => {
                   if (template.mode === 'medication') {
                     handleNavigate('medication');
                     return;
                   }
+                  setParsedResult(null);
                   setText(template.text ?? '');
                 }}
               >
@@ -309,27 +383,27 @@ export default function QuickAddSheet({
           </div>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-600">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Preview</div>
-          <div className="mt-2 text-sm font-semibold text-slate-900">{previewTitle}</div>
-          <div className="mt-1 text-xs text-slate-500">{previewDate}</div>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] text-slate-500">
-              Activ · Reminder nou
-            </span>
-            {categoryLabel ? (
-              <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-                {categoryLabel}
-              </span>
+        <Card className="mt-4 p-3 text-xs text-slate-300">
+          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
+            Preview
+            {parsedResult ? (
+              <Pill className="ml-auto bg-cyan-500/15 text-cyan-200">AI completat</Pill>
             ) : null}
           </div>
+          <div className="mt-2 text-sm font-semibold text-slate-100">{previewTitle}</div>
+          <div className="mt-1 text-xs text-slate-400">{previewDate}</div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Pill className="border border-white/10 bg-white/5 text-slate-300">Activ · Reminder nou</Pill>
+            <Pill className="bg-cyan-500/15 text-cyan-200">{previewCategory}</Pill>
+          </div>
           <div className="mt-2">{previewText}</div>
-        </div>
+        </Card>
 
         <div className="mt-4">
           <button
             type="button"
-            className="text-xs font-semibold text-slate-500"
+            className="text-xs font-semibold text-slate-300"
             onClick={() => setDetailsOpen((prev) => !prev)}
           >
             {detailsOpen ? 'Ascunde detalii' : 'Detalii'}
@@ -338,19 +412,19 @@ export default function QuickAddSheet({
             <div className="mt-3 space-y-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-600">Data</label>
+                  <label className="text-xs font-semibold text-slate-300">Data</label>
                   <input
                     type="date"
-                    className="input h-9"
+                    className="h-9 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-slate-100"
                     value={dateValue}
                     onChange={(event) => setDateValue(event.target.value)}
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-600">Ora</label>
+                  <label className="text-xs font-semibold text-slate-300">Ora</label>
                   <input
                     type="time"
-                    className="input h-9"
+                    className="h-9 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-slate-100"
                     value={timeValue}
                     onChange={(event) => setTimeValue(event.target.value)}
                   />
@@ -358,9 +432,9 @@ export default function QuickAddSheet({
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-600">Recurență</label>
+                  <label className="text-xs font-semibold text-slate-300">Recurență</label>
                   <select
-                    className="input h-9"
+                    className="h-9 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-slate-100"
                     value={recurrenceValue}
                     onChange={(event) => setRecurrenceValue(event.target.value)}
                   >
@@ -371,9 +445,9 @@ export default function QuickAddSheet({
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-600">Înainte</label>
+                  <label className="text-xs font-semibold text-slate-300">Înainte</label>
                   <select
-                    className="input h-9"
+                    className="h-9 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-slate-100"
                     value={remindBeforeValue}
                     onChange={(event) => setRemindBeforeValue(event.target.value)}
                   >
@@ -386,18 +460,18 @@ export default function QuickAddSheet({
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-600">Dată final</label>
+                <label className="text-xs font-semibold text-slate-300">Dată final</label>
                 <input
                   type="date"
-                  className="input h-9"
+                  className="h-9 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-slate-100"
                   value={endDateValue}
                   onChange={(event) => setEndDateValue(event.target.value)}
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-600">Categorie</label>
+                <label className="text-xs font-semibold text-slate-300">Categorie</label>
                 <select
-                  className="input h-9"
+                  className="h-9 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-slate-100"
                   value={categoryValue}
                   onChange={(event) => setCategoryValue(event.target.value)}
                 >
@@ -410,8 +484,8 @@ export default function QuickAddSheet({
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-600">Familie</label>
-                <select className="input h-9" disabled>
+                <label className="text-xs font-semibold text-slate-300">Familie</label>
+                <select className="h-9 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-slate-400" disabled>
                   <option>Disponibil în editare completă</option>
                 </select>
               </div>
@@ -419,10 +493,10 @@ export default function QuickAddSheet({
           ) : null}
         </div>
 
-        <div className="mt-4 grid gap-2 sticky bottom-0 bg-white/95 pt-2 pb-1">
+        <div className="mt-4 grid gap-2 sticky bottom-0 bg-[#0a0f18]/95 pt-2 pb-2">
           <button
             type="button"
-            className="btn btn-primary h-11 justify-center"
+            className="inline-flex h-11 items-center justify-center rounded-2xl bg-cyan-300 px-4 text-sm font-semibold text-slate-950 shadow-[0_10px_25px_rgba(34,211,238,0.35)]"
             onClick={handleSave}
             disabled={!canContinue || saving}
           >
@@ -430,7 +504,7 @@ export default function QuickAddSheet({
           </button>
           <button
             type="button"
-            className="text-xs font-semibold text-slate-500"
+            className="text-xs font-semibold text-slate-300"
             onClick={() => {
               onClose();
               const fullText = buildFullText();
@@ -441,7 +515,7 @@ export default function QuickAddSheet({
           </button>
         </div>
 
-        {error ? <p className="mt-3 text-xs text-rose-600">{error}</p> : null}
+        {error ? <p className="mt-3 text-xs text-rose-300">{error}</p> : null}
       </div>
     </div>
   );

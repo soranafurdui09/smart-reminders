@@ -135,8 +135,8 @@ function ReminderCard({
         : Calendar;
   const isPrimary = variant === 'row';
   const cardClass = isPrimary
-    ? 'rounded-2xl border border-slate-100 bg-white text-gray-900 shadow-card transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-[#0b0d14] dark:text-gray-200 dark:hover:bg-[#111523]'
-    : 'rounded-2xl border border-slate-100 bg-white text-gray-700 shadow-card transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-[#0b0d14] dark:text-gray-200 dark:hover:bg-[#111523]';
+    ? 'rounded-3xl border border-white/10 bg-[rgba(14,20,33,0.88)] text-slate-100 shadow-[0_24px_60px_rgba(6,12,24,0.45)] backdrop-blur transition-colors hover:bg-[rgba(18,24,38,0.92)]'
+    : 'rounded-3xl border border-white/10 bg-[rgba(14,20,33,0.88)] text-slate-200 shadow-[0_24px_60px_rgba(6,12,24,0.45)] backdrop-blur transition-colors hover:bg-[rgba(18,24,38,0.92)]';
   const statusTextClass = urgencyKey === 'overdue'
     ? 'text-red-600'
     : urgencyKey === 'today'
@@ -247,11 +247,11 @@ function ReminderCard({
           </span>
         </div>
 
-        <h3 className={`text-sm font-semibold text-gray-900 leading-snug line-clamp-2 ${isPrimary ? 'md:text-base' : ''} dark:text-gray-200`}>
+        <h3 className={`text-sm font-semibold text-slate-100 leading-snug line-clamp-2 ${isPrimary ? 'md:text-base' : ''}`}>
           {reminder?.title}
         </h3>
 
-        <div className={`flex flex-wrap items-center gap-2 text-xs ${isPrimary ? 'text-gray-600' : 'text-gray-500'} dark:text-gray-300`}>
+        <div className={`flex flex-wrap items-center gap-2 text-xs ${isPrimary ? 'text-slate-300' : 'text-slate-400'}`}>
           <div className="flex items-center gap-1.5">
             <Calendar className="h-3.5 w-3.5" />
             <OccurrenceDateChip
@@ -285,7 +285,7 @@ function ReminderCard({
           {isMobile ? (
             <button
               type="button"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50 dark:border-slate-600 dark:text-gray-200"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-200 transition hover:bg-white/10"
               aria-label={copy.common.moreActions}
               onClick={() => setActionsOpen(true)}
             >
@@ -294,23 +294,23 @@ function ReminderCard({
           ) : (
             <details ref={actionMenuRef} className="relative">
               <summary
-                className="dropdown-summary inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50 dark:border-slate-600 dark:text-gray-200"
+                className="dropdown-summary inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-200 transition hover:bg-white/10"
                 aria-label={copy.common.moreActions}
               >
                 <MoreVertical className="h-4 w-4" />
               </summary>
-              <div className="absolute right-0 z-[1000] mt-3 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-lg max-h-[60vh] overflow-y-auto dark:border-slate-700 dark:bg-slate-900">
+              <div className="absolute right-0 z-[1000] mt-3 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 bg-[rgba(10,14,22,0.96)] p-2 shadow-[0_20px_45px_rgba(6,12,24,0.5)] max-h-[60vh] overflow-y-auto">
                 {reminderId ? (
                   <div className="space-y-1">
                     <Link
-                      className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
+                      className="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-100 hover:bg-white/10"
                       href={`/app/reminders/${reminderId}`}
                       data-action-close="true"
                     >
                       {copy.common.details}
                     </Link>
                     <Link
-                      className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
+                      className="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-100 hover:bg-white/10"
                       href={`/app/reminders/${reminderId}/edit`}
                       data-action-close="true"
                     >
@@ -319,14 +319,14 @@ function ReminderCard({
                     <form action={cloneReminder}>
                       <input type="hidden" name="reminderId" value={reminderId} />
                       <ActionSubmitButton
-                        className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surfaceMuted"
+                        className="w-full rounded-lg px-3 py-2 text-left text-sm text-slate-100 hover:bg-white/10"
                         type="submit"
                         data-action-feedback={copy.common.actionCloned}
                       >
                         {copy.reminderDetail.clone}
                       </ActionSubmitButton>
                     </form>
-                    <details className="mt-2 rounded-lg border border-dashed border-slate-200 p-2 text-xs font-semibold text-slate-700">
+                    <details className="mt-2 rounded-lg border border-dashed border-white/10 p-2 text-xs font-semibold text-slate-300">
                       <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-slate-400">
                         {copy.actions.calendar}
                       </summary>
@@ -400,16 +400,16 @@ function ReminderCard({
             </summary>
             <form
               action={markDone}
-              className="mt-3 space-y-2 rounded-2xl border border-slate-100 bg-white p-3 sm:w-72 dark:border-slate-700 dark:bg-slate-900"
+              className="mt-3 space-y-2 rounded-2xl border border-white/10 bg-[rgba(10,14,22,0.96)] p-3 sm:w-72"
             >
               <input type="hidden" name="occurrenceId" value={occurrence.id} />
               <input type="hidden" name="reminderId" value={reminderId} />
               <input type="hidden" name="occurAt" value={occurrence.occur_at} />
-              <label className="text-xs font-semibold text-muted">{copy.common.commentOptional}</label>
+              <label className="text-xs font-semibold text-slate-300">{copy.common.commentOptional}</label>
               <textarea
                 name="done_comment"
                 rows={2}
-                className="input"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100"
                 placeholder={copy.common.commentPlaceholder}
                 aria-label={copy.common.commentLabel}
               />
@@ -434,14 +434,14 @@ function ReminderCard({
       >
         <div className="space-y-2">
           <Link
-            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-50 whitespace-normal break-words"
+            className="block w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-white/10 whitespace-normal break-words"
             href={`/app/reminders/${reminderId}`}
             onClick={() => setActionsOpen(false)}
           >
             {copy.common.details}
           </Link>
           <Link
-            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-50 whitespace-normal break-words"
+            className="block w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-white/10 whitespace-normal break-words"
             href={`/app/reminders/${reminderId}/edit`}
             onClick={() => setActionsOpen(false)}
           >
@@ -450,7 +450,7 @@ function ReminderCard({
           <form action={cloneReminder}>
             <input type="hidden" name="reminderId" value={reminderId} />
             <ActionSubmitButton
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-50 whitespace-normal break-words"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-white/10 whitespace-normal break-words"
               type="submit"
               onClick={() => setActionsOpen(false)}
               data-action-feedback={copy.common.actionCloned}
@@ -458,9 +458,9 @@ function ReminderCard({
               {copy.reminderDetail.clone}
             </ActionSubmitButton>
           </form>
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-500">
+          <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-semibold text-slate-400">
             {copy.actions.calendar}
-            <div className="mt-2 space-y-2 text-sm font-semibold text-slate-900">
+            <div className="mt-2 space-y-2 text-sm font-semibold text-slate-100">
               <div onClickCapture={() => setActionsOpen(false)}>
                 <GoogleCalendarSyncButton
                   reminderId={reminderId}
@@ -512,7 +512,7 @@ function ReminderCard({
           </div>
           <button
             type="button"
-            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-slate-200 shadow-sm transition hover:bg-white/10"
             onClick={() => setActionsOpen(false)}
           >
             {copy.common.back}

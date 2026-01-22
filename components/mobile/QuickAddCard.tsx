@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Mic, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Card from '@/components/ui/Card';
+import { classTextPrimary, classTextSecondary } from '@/styles/tokens';
 
 const chips = [
   { id: 'today', label: 'Azi', text: 'azi' },
@@ -26,22 +28,22 @@ export default function QuickAddCard() {
   };
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="text-sm font-semibold text-slate-900">Adaugă rapid</div>
-      <p className="mt-1 text-xs text-slate-500">
+    <Card className="p-4">
+      <div className={`text-sm font-semibold ${classTextPrimary}`}>Adaugă rapid</div>
+      <p className={`mt-1 text-xs ${classTextSecondary}`}>
         Scrie un reminder simplu. Exemplu: „mâine la 9 plătește chiria”.
       </p>
       <div className="mt-3 flex items-center gap-2">
         <div className="relative flex-1">
           <input
-            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 pr-11 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-200"
+            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 pr-11 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
             placeholder="Scrie un reminder…"
             value={value}
             onChange={(event) => setValue(event.target.value)}
           />
           <button
             type="button"
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-200"
             aria-label="Dictează"
             onClick={() => router.push('/app/reminders/new?voice=1')}
           >
@@ -50,7 +52,7 @@ export default function QuickAddCard() {
         </div>
         <button
           type="button"
-          className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-sky-500 px-3 text-xs font-semibold text-white shadow-sm"
+          className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-cyan-400/90 px-3 text-xs font-semibold text-slate-950 shadow-sm shadow-cyan-500/30 transition hover:bg-cyan-300"
           onClick={handleAdd}
           disabled={!trimmed}
         >
@@ -58,18 +60,18 @@ export default function QuickAddCard() {
           Adaugă
         </button>
       </div>
-      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 text-xs font-semibold text-slate-600">
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 text-xs font-semibold text-slate-300">
         {chips.map((chip) => (
           <button
             key={chip.id}
             type="button"
-            className="whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-slate-600"
+            className="whitespace-nowrap rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-200"
             onClick={() => setValue((current) => (current ? `${current} ${chip.text}` : chip.text))}
           >
             {chip.label}
           </button>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }

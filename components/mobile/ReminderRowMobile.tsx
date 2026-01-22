@@ -123,7 +123,7 @@ export default function ReminderRowMobile({
   return (
     <>
       <div
-        className={`flex items-center gap-3 rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-sm touch-pan-y border-l-4 ${statusColor}`}
+        className={`flex items-center gap-3 rounded-3xl border border-white/10 bg-[rgba(14,20,33,0.88)] px-4 py-4 shadow-[0_20px_45px_rgba(6,12,24,0.35)] touch-pan-y border-l-4 ${statusColor}`}
         onTouchStart={swipeHandlers.onTouchStart}
         onTouchMove={swipeHandlers.onTouchMove}
         onTouchEnd={swipeHandlers.onTouchEnd}
@@ -134,7 +134,7 @@ export default function ReminderRowMobile({
           <input type="hidden" name="occurAt" value={occurrence.occur_at ?? ''} />
           <input type="hidden" name="done_comment" value="" />
           <ActionSubmitButton
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-slate-500 shadow-sm"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-100 shadow-sm"
             type="submit"
             aria-label={copy.common.doneAction}
             data-action-feedback={copy.common.actionDone}
@@ -144,17 +144,17 @@ export default function ReminderRowMobile({
         </form>
 
         <div className="min-w-0 flex-1 space-y-1">
-          <div className="text-sm font-semibold text-slate-900 line-clamp-2">{reminder?.title}</div>
-          <div className="text-xs text-slate-500">
+          <div className="text-sm font-semibold text-slate-100 line-clamp-2">{reminder?.title}</div>
+          <div className="text-xs text-slate-300">
             {displayLabel}
             {relativeLabel ? <span className="text-slate-400"> · {relativeLabel}</span> : null}
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase text-slate-600">
+          <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase text-slate-300">
             <span className="chip px-2 py-0.5" style={categoryChipStyle}>
               {category.label}
             </span>
             {assigneeLabel ? (
-              <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
+              <span className="inline-flex items-center gap-1 text-[11px] text-slate-400">
                 <User className="h-3.5 w-3.5" />
                 {assigneeLabel}
               </span>
@@ -164,7 +164,7 @@ export default function ReminderRowMobile({
 
         <button
           type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500"
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-200"
           aria-label={copy.common.moreActions}
           onClick={() => setActionsOpen(true)}
         >
@@ -177,19 +177,19 @@ export default function ReminderRowMobile({
         onClose={() => setActionsOpen(false)}
         title={reminder?.title ?? copy.reminderDetail.title}
         categoryLabel={category.label}
-        categoryClassName="bg-slate-100 text-slate-700"
+        categoryClassName="bg-white/10 text-slate-200"
         categoryStyle={categoryChipStyle}
       >
         <div className="space-y-2">
           <Link
-            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-50 whitespace-normal break-words"
+            className="block w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-white/10 whitespace-normal break-words"
             href={`/app/reminders/${reminderId}`}
             onClick={() => setActionsOpen(false)}
           >
             {copy.common.details}
           </Link>
           <Link
-            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-50 whitespace-normal break-words"
+            className="block w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-white/10 whitespace-normal break-words"
             href={`/app/reminders/${reminderId}/edit`}
             onClick={() => setActionsOpen(false)}
           >
@@ -198,7 +198,7 @@ export default function ReminderRowMobile({
           <form action={cloneReminder}>
             <input type="hidden" name="reminderId" value={reminderId} />
             <ActionSubmitButton
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-50 whitespace-normal break-words"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-white/10 whitespace-normal break-words"
               type="submit"
               onClick={() => setActionsOpen(false)}
               data-action-feedback={copy.common.actionCloned}
@@ -208,7 +208,7 @@ export default function ReminderRowMobile({
           </form>
           <button
             type="button"
-            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-50"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-white/10"
             onClick={() => {
               setActionsOpen(false);
               void handleSwipeAction('snooze');
@@ -216,9 +216,9 @@ export default function ReminderRowMobile({
           >
             {copy.common.snooze} 30m
           </button>
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-500">
+          <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-semibold text-slate-400">
             {copy.actions.calendar}
-            <div className="mt-2 space-y-2 text-sm font-semibold text-slate-900">
+            <div className="mt-2 space-y-2 text-sm font-semibold text-slate-100">
               <div onClickCapture={() => setActionsOpen(false)}>
                 <GoogleCalendarSyncButton
                   reminderId={reminderId}
@@ -270,7 +270,7 @@ export default function ReminderRowMobile({
           </div>
           <button
             type="button"
-            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-slate-200 shadow-sm transition hover:bg-white/10"
             onClick={() => setActionsOpen(false)}
           >
             {copy.common.back}

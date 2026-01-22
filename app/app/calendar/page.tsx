@@ -129,22 +129,22 @@ export default async function CalendarPage({
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-lg font-semibold text-slate-900 md:text-2xl">{copy.calendar.title}</h1>
-            <p className="text-xs text-slate-500 md:text-sm">{copy.calendar.subtitle}</p>
+            <h1 className="text-lg font-semibold text-slate-100 md:text-2xl">{copy.calendar.title}</h1>
+            <p className="text-xs text-slate-400 md:text-sm">{copy.calendar.subtitle}</p>
           </div>
           <div className="flex items-center gap-2">
             <Link
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
               href={`/app/calendar?month=${prevMonth}`}
               aria-label={copy.calendar.prev}
             >
               <ChevronLeft className="h-4 w-4" />
             </Link>
-            <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">
+            <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200">
               {monthLabel}
             </div>
             <Link
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
               href={`/app/calendar?month=${nextMonth}`}
               aria-label={copy.calendar.next}
             >
@@ -160,7 +160,9 @@ export default async function CalendarPage({
         />
 
         {!hasOccurrences ? (
-          <div className="card text-sm text-muted">{copy.calendar.empty}</div>
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-4 text-sm text-slate-400 shadow-[0_20px_45px_rgba(6,12,24,0.35)]">
+            {copy.calendar.empty}
+          </div>
         ) : null}
       </div>
     </AppShell>
