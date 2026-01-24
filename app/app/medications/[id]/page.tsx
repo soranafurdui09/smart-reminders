@@ -67,6 +67,20 @@ export default async function MedicationDetailPage({ params }: { params: { id: s
       ? Math.floor(Number(stock.quantity_on_hand) / Math.max(1, Number(stock.decrement_per_dose || 1)) / dailyDoseCount)
       : null
     : null;
+  const scheduleTypeLabels: Record<string, string> = {
+    daily: copy.medicationsHub.schedule_daily,
+    weekdays: copy.medicationsHub.schedule_weekdays,
+    custom_days: copy.medicationsHub.schedule_custom_days,
+    interval: copy.medicationsHub.schedule_interval,
+    prn: copy.medicationsHub.schedule_prn
+  };
+  const statusLabels: Record<string, string> = {
+    pending: copy.medicationsHub.status_pending,
+    taken: copy.medicationsHub.status_taken,
+    skipped: copy.medicationsHub.status_skipped,
+    snoozed: copy.medicationsHub.status_snoozed,
+    missed: copy.medicationsHub.status_missed
+  };
 
   return (
     <AppShell locale={locale} activePath="/app/medications" userEmail={user.email}>
@@ -97,7 +111,7 @@ export default async function MedicationDetailPage({ params }: { params: { id: s
           <div className="text-lg font-semibold text-ink">{copy.medicationsHub.scheduleTitle}</div>
           {schedule ? (
             <div className="space-y-2 text-sm text-muted">
-              <div>{copy.medicationsHub.scheduleTypeLabel}: {copy.medicationsHub[`schedule_${schedule.schedule_type}`]}</div>
+              <div>{copy.medicationsHub.scheduleTypeLabel}: {scheduleTypeLabels[schedule.schedule_type] ?? schedule.schedule_type}</div>
               <div>{copy.medicationsHub.timesLabel}: {(schedule.times_local || []).join(', ')}</div>
               <div>{copy.medicationsHub.startDateLabel}: {schedule.start_date}</div>
               {schedule.end_date ? <div>{copy.medicationsHub.endDateLabel}: {schedule.end_date}</div> : null}
@@ -229,7 +243,7 @@ export default async function MedicationDetailPage({ params }: { params: { id: s
                     </div>
                     {dose.skipped_reason ? <div className="text-xs text-muted">{dose.skipped_reason}</div> : null}
                   </div>
-                  <span className="chip">{copy.medicationsHub[`status_${dose.status}`]}</span>
+                  <span className="chip">{statusLabels[dose.status] ?? dose.status}</span>
                 </div>
               ))}
             </div>
