@@ -8,6 +8,7 @@ import {
   buildMedicationDoseInstances,
   ensureMedicationScheduleDoses,
   shouldTriggerRefill,
+  type MedicationForm,
   type MedicationRecord,
   type MedicationScheduleInput
 } from '@/lib/reminders/medication';
@@ -15,6 +16,13 @@ import { scheduleNotificationJobsForMedication, scheduleNotificationJobsForRemin
 import { resolveTimeZone } from '@/lib/time/schedule';
 
 const DEFAULT_FORM = 'pill';
+
+function parseMedicationForm(value: string): MedicationForm | null {
+  if (value === 'pill' || value === 'capsule' || value === 'drops' || value === 'injection' || value === 'other') {
+    return value;
+  }
+  return null;
+}
 
 function parseTimes(raw: FormDataEntryValue[] | string[]) {
   return raw
@@ -61,7 +69,7 @@ export async function createMedication(formData: FormData) {
 
   const userTimeZone = await getUserTimeZone(user.id);
   const tz = resolveTimeZone(String(formData.get('timezone') || '').trim() || userTimeZone || 'UTC');
-  const form = String(formData.get('form') || DEFAULT_FORM).trim();
+  const form = parseMedicationForm(String(formData.get('form') || DEFAULT_FORM).trim()) ?? DEFAULT_FORM;
   const strength = String(formData.get('strength') || '').trim() || null;
   const notes = String(formData.get('notes') || '').trim() || null;
   const patientMemberId = String(formData.get('patient_member_id') || '').trim() || null;
@@ -238,7 +246,7 @@ export async function updateMedication(medicationId: string, formData: FormData)
 
   const tz = resolveTimeZone(String(formData.get('timezone') || '').trim() || medication.timezone || 'UTC');
   const name = String(formData.get('name') || medication.name).trim();
-  const form = String(formData.get('form') || medication.form || DEFAULT_FORM).trim();
+  const form = parseMedicationForm(String(formData.get('form') || medication.form || DEFAULT_FORM).trim()) ?? DEFAULT_FORM;
   const strength = String(formData.get('strength') || '').trim() || null;
   const notes = String(formData.get('notes') || '').trim() || null;
   const patientMemberId = String(formData.get('patient_member_id') || '').trim() || null;
