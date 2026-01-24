@@ -255,7 +255,7 @@ export default async function MedicationDetailPage({ params }: { params: { id: s
                 <div key={dose.id} className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-sm text-ink">
-                      {formatDateTimeWithTimeZone(dose.scheduled_at, medication.timezone || 'UTC', locale)}
+                      {formatDateTimeWithTimeZone(dose.scheduled_at, medication.timezone || 'UTC')}
                     </div>
                     {dose.skipped_reason ? <div className="text-xs text-muted">{dose.skipped_reason}</div> : null}
                   </div>
