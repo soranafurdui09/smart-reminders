@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Calendar, Home, Inbox, Users } from 'lucide-react';
+import { Calendar, Home, Inbox, User } from 'lucide-react';
 
 export default function MobileBottomNav({
   labels
@@ -11,7 +11,7 @@ export default function MobileBottomNav({
     today: string;
     inbox: string;
     calendar: string;
-    family: string;
+    you: string;
   };
 }) {
   const router = useRouter();
@@ -46,11 +46,11 @@ export default function MobileBottomNav({
       active: pathname?.startsWith('/app/calendar') ?? false
     },
     {
-      key: 'family',
-      href: '/app/household',
-      icon: Users,
-      label: labels.family,
-      active: pathname?.startsWith('/app/household') ?? false
+      key: 'you',
+      href: '/app/you',
+      icon: User,
+      label: labels.you,
+      active: pathname?.startsWith('/app/you') ?? false
     }
   ];
 

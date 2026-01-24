@@ -9,6 +9,7 @@ export const messages = {
       dashboard: 'Acasă',
       today: 'Azi',
       inbox: 'Inbox',
+      you: 'Eu',
       newReminder: 'Adaugă reminder',
       calendar: 'Calendar',
       history: 'Istoric remindere',
@@ -156,6 +157,14 @@ export const messages = {
       groupNextWeek: 'Saptamana urmatoare',
       groupNextMonth: 'Luna urmatoare',
       viewMoreMonths: 'Vezi mai multe luni'
+    },
+    you: {
+      title: 'Eu',
+      subtitle: 'Profil și acces rapid la setări.',
+      medications: 'Medicamente',
+      household: 'Familie',
+      history: 'Istoric',
+      settings: 'Setări'
     },
     search: {
       title: 'Caută cu AI',
@@ -604,6 +613,7 @@ export const messages = {
       dashboard: 'Home',
       today: 'Today',
       inbox: 'Inbox',
+      you: 'You',
       newReminder: 'Add reminder',
       calendar: 'Calendar',
       history: 'Reminder history',
@@ -751,6 +761,14 @@ export const messages = {
       groupNextWeek: 'Next week',
       groupNextMonth: 'Next month',
       viewMoreMonths: 'View more months'
+    },
+    you: {
+      title: 'You',
+      subtitle: 'Profile and quick access.',
+      medications: 'Medications',
+      household: 'Family',
+      history: 'History',
+      settings: 'Settings'
     },
     search: {
       title: 'Search with AI',
@@ -1199,6 +1217,7 @@ export const messages = {
       dashboard: 'Start',
       today: 'Heute',
       inbox: 'Posteingang',
+      you: 'Du',
       newReminder: 'Erinnerung hinzufügen',
       calendar: 'Kalender',
       history: 'Verlauf',
@@ -1346,6 +1365,14 @@ export const messages = {
       groupNextWeek: 'Nächste Woche',
       groupNextMonth: 'Nächster Monat',
       viewMoreMonths: 'Mehr Monate anzeigen'
+    },
+    you: {
+      title: 'Du',
+      subtitle: 'Profil und Schnellzugriff.',
+      medications: 'Medikamente',
+      household: 'Haushalt',
+      history: 'Verlauf',
+      settings: 'Einstellungen'
     },
     search: {
       title: 'Suche mit KI',

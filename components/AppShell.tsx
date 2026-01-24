@@ -27,7 +27,7 @@ export default function AppShell({
     { href: '/app/reminders/new', label: copy.nav.newReminder },
     { href: '/app/calendar', label: copy.nav.calendar },
     { href: '/app/history', label: copy.nav.history },
-    { href: '/app/household', label: copy.nav.household },
+    { href: '/app/you', label: copy.nav.you },
     { href: '/app/settings', label: copy.nav.settings }
   ];
   const safeEmail = userEmail || '';
@@ -53,7 +53,7 @@ export default function AppShell({
           today: copy.nav.today,
           inbox: copy.nav.inbox,
           calendar: copy.nav.calendar,
-          family: copy.nav.household
+          you: copy.nav.you
         }}
       >
         <WebViewNotice />

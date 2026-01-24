@@ -17,7 +17,7 @@ export default function MobileShell({
     today: string;
     inbox: string;
     calendar: string;
-    family: string;
+    you: string;
   };
 }) {
   const isMobile = useMediaQuery('(max-width: 768px)');
