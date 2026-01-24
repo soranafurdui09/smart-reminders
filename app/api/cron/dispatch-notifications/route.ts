@@ -364,7 +364,7 @@ export async function GET() {
 
         channels.forEach((channel: string) => {
           if (!['email', 'push'].includes(channel)) return;
-          const channelValue = channel === 'email' ? 'email' : 'push';
+          const channelValue: NotificationJob['channel'] = channel === 'email' ? 'email' : 'push';
           const job = {
             reminder_id: dose.reminder_id,
             user_id: caregiverUserId,

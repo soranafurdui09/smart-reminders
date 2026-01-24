@@ -74,7 +74,7 @@ export default function NativeAppChrome() {
       window.clearTimeout(timer);
       removeListener.then((handler) => handler.remove());
     };
-  }, []);
+  }, [router]);
 
   return null;
 }
