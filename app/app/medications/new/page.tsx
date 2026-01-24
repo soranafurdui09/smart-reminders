@@ -14,13 +14,16 @@ export default async function MedicationNewPage() {
   const membership = await getUserHousehold(user.id);
   const members = membership?.households ? await getHouseholdMembers(membership.households.id) : [];
   const timeZone = (await getUserTimeZone(user.id)) || 'UTC';
+  const createMedicationAction = async (formData: FormData) => {
+    await createMedication(formData);
+  };
 
   return (
     <AppShell locale={locale} activePath="/app/medications" userEmail={user.email}>
       <div className="space-y-8 pb-24">
         <SectionHeader title={copy.medicationsHub.createTitle} description={copy.medicationsHub.createSubtitle} />
 
-        <form action={createMedication} className="card space-y-6">
+        <form action={createMedicationAction} className="card space-y-6">
           <input type="hidden" name="timezone" value={timeZone} />
 
           <div className="grid gap-4 md:grid-cols-2">
