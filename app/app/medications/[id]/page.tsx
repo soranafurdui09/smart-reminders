@@ -82,6 +82,10 @@ export default async function MedicationDetailPage({ params }: { params: { id: s
     missed: copy.medicationsHub.status_missed
   };
 
+  const updateStockAction = async (formData: FormData) => {
+    await updateMedicationStock(medication.id, formData);
+  };
+
   return (
     <AppShell locale={locale} activePath="/app/medications" userEmail={user.email}>
       <div className="space-y-8 pb-24">
@@ -132,7 +136,7 @@ export default async function MedicationDetailPage({ params }: { params: { id: s
           ) : (
             <div className="text-sm text-muted">{copy.medicationsHub.stockMissing}</div>
           )}
-          <form action={updateMedicationStock.bind(null, medication.id)} className="grid gap-3 md:grid-cols-2">
+          <form action={updateStockAction} className="grid gap-3 md:grid-cols-2">
             <div>
               <label className="text-xs font-semibold text-muted">{copy.medicationsHub.stockQuantityLabel}</label>
               <input name="quantity" type="number" min={0} className="input" defaultValue={stock?.quantity_on_hand ?? 0} />
