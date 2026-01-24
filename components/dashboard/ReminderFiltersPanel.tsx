@@ -109,10 +109,10 @@ export default function ReminderFiltersPanel({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 text-primary">
       <button
         type="button"
-        className="flex w-full items-center justify-between gap-3 rounded-full border border-gray-300 bg-white px-3 py-2 text-left text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+        className="flex w-full items-center justify-between gap-3 rounded-full border border-white/10 bg-surface px-3 py-2 text-left text-xs font-semibold text-secondary shadow-sm hover:bg-surfaceMuted"
         onClick={() => setFiltersOpen((prev) => !prev)}
         aria-expanded={filtersOpen}
       >
@@ -120,22 +120,22 @@ export default function ReminderFiltersPanel({
           <SlidersHorizontal className="h-4 w-4" />
           <span>{copy.dashboard.filtersTitle}</span>
           {activeFilterCount > 0 ? (
-            <span className="rounded-full bg-sky-500 px-2 py-0.5 text-[11px] font-semibold text-white">
+            <span className="rounded-full bg-[color:var(--accent-soft-bg)] px-2 py-0.5 text-[11px] font-semibold text-ink">
               {activeFilterCount}
             </span>
           ) : null}
         </span>
-        <span className="flex min-w-0 items-center gap-2 text-[11px] text-slate-500">
+        <span className="flex min-w-0 items-center gap-2 text-[11px] text-tertiary">
           <span className="truncate">{summaryText}</span>
           <ChevronDown className={`h-3.5 w-3.5 transition ${filtersOpen ? 'rotate-180' : ''}`} />
         </span>
       </button>
 
       {filtersOpen ? (
-        <div className="space-y-4 rounded-2xl border border-gray-300 bg-white p-4">
+        <div className="space-y-4 rounded-2xl border border-white/10 bg-surface p-4">
           {showKindFilter ? (
             <div className="space-y-2">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">
                 {copy.dashboard.filtersKindLabel}
               </div>
               <SegmentedControl
@@ -151,7 +151,7 @@ export default function ReminderFiltersPanel({
           ) : null}
 
           <div className="space-y-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">
               {copy.dashboard.filtersCreatedLabel}
             </div>
             <SegmentedControl
@@ -166,7 +166,7 @@ export default function ReminderFiltersPanel({
           </div>
 
           <div className="space-y-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">
               {copy.dashboard.filtersAssignedLabel}
             </div>
             <SegmentedControl
@@ -182,12 +182,12 @@ export default function ReminderFiltersPanel({
           <div className="space-y-2">
             <button
               type="button"
-              className="flex w-full items-center justify-between text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600"
+              className="flex w-full items-center justify-between text-left text-[11px] font-semibold uppercase tracking-wide text-tertiary"
               onClick={() => setCategoriesOpen((prev) => !prev)}
               aria-expanded={categoriesOpen}
             >
               <span>{copy.dashboard.filtersCategoryLabel}</span>
-              <span className="flex items-center gap-2 text-[11px] font-medium text-slate-400">
+              <span className="flex items-center gap-2 text-[11px] font-medium text-tertiary">
                 {category === 'all' ? copy.dashboard.filtersCategoryAll : copy.dashboard.filtersCategorySelected}
                 <ChevronDown className={`h-3.5 w-3.5 transition ${categoriesOpen ? 'rotate-180' : ''}`} />
               </span>
@@ -217,7 +217,7 @@ export default function ReminderFiltersPanel({
           <div className="flex justify-end">
             <button
               type="button"
-              className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+              className="text-xs font-semibold text-tertiary hover:text-ink"
               onClick={handleReset}
             >
               {copy.dashboard.filtersResetLabel}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Mic, Plus } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import { classTextPrimary, classTextSecondary } from '@/styles/tokens';
@@ -14,13 +15,16 @@ const chips = [
 ];
 
 export default function QuickAddCard() {
+  const router = useRouter();
   const [value, setValue] = useState('');
   const trimmed = value.trim();
 
   const handleAdd = () => {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('quickadd:open', { detail: { text: trimmed } }));
+    if (!trimmed) {
+      router.push('/app/reminders/new');
+      return;
     }
+    router.push(`/app/reminders/new?quick=${encodeURIComponent(trimmed)}`);
   };
 
   return (
@@ -32,7 +36,7 @@ export default function QuickAddCard() {
       <div className="mt-3 flex items-center gap-2">
         <div className="relative flex-1">
           <input
-            className="premium-input w-full px-3 pr-11 text-sm placeholder:text-slate-400"
+            className="premium-input w-full px-3 pr-11 text-sm placeholder:text-[color:var(--text-3)]"
             placeholder="Scrie un reminder…"
             value={value}
             onChange={(event) => setValue(event.target.value)}
@@ -42,9 +46,7 @@ export default function QuickAddCard() {
             className="premium-icon-btn absolute right-1.5 top-1/2 -translate-y-1/2"
             aria-label="Dictează"
             onClick={() => {
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('quickadd:open', { detail: { voice: true } }));
-              }
+              router.push('/app/reminders/new?voice=1');
             }}
           >
             <Mic className="h-4 w-4" />

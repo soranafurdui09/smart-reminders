@@ -134,7 +134,7 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
           <input type="hidden" name="occurAt" value={occurrence.occur_at ?? ''} />
           <input type="hidden" name="done_comment" value="" />
           <ActionSubmitButton
-            className="premium-icon-btn flex h-11 w-11 items-center justify-center text-slate-100 shadow-sm"
+            className="premium-icon-btn flex h-11 w-11 items-center justify-center text-primary shadow-sm"
             type="submit"
             aria-label={copy.common.doneAction}
             data-action-feedback={copy.common.actionDone}
@@ -144,17 +144,17 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
         </form>
 
         <div className="min-w-0 flex-1 space-y-1">
-          <div className="text-sm font-semibold text-slate-100 line-clamp-2">{reminder?.title}</div>
-          <div className="text-xs text-slate-300">
+          <div className="text-sm font-semibold text-primary line-clamp-2">{reminder?.title}</div>
+          <div className="text-xs text-secondary">
             {displayLabel}
-            {relativeLabel ? <span className="text-slate-400"> · {relativeLabel}</span> : null}
+            {relativeLabel ? <span className="text-tertiary"> · {relativeLabel}</span> : null}
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase text-slate-300">
+          <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase text-secondary">
             <span className="chip px-2 py-0.5" style={categoryChipStyle}>
               {category.label}
             </span>
             {assigneeLabel ? (
-              <span className="inline-flex items-center gap-1 text-[11px] text-slate-400">
+              <span className="inline-flex items-center gap-1 text-[11px] text-tertiary">
                 <User className="h-3.5 w-3.5" />
                 {assigneeLabel}
               </span>
@@ -164,7 +164,7 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
 
         <button
           type="button"
-          className="premium-icon-btn flex h-10 w-10 items-center justify-center text-slate-200"
+          className="premium-icon-btn flex h-10 w-10 items-center justify-center text-secondary"
           aria-label={copy.common.moreActions}
           onClick={() => setActionsOpen(true)}
         >

@@ -64,12 +64,12 @@ export default function MobileBottomNav({
               key={tab.key}
               type="button"
               className={`flex min-h-[44px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-1 text-[11px] font-semibold transition ${
-                tab.active ? 'text-sky-600' : 'text-slate-500 hover:text-slate-700'
+                tab.active ? 'text-[color:var(--accent)]' : 'text-tertiary hover:text-secondary'
               }`}
               aria-current={tab.active ? 'page' : undefined}
               onClick={() => router.push(tab.href)}
             >
-              <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${tab.active ? 'bg-sky-100 text-sky-600' : 'bg-surfaceMuted text-slate-500'}`}>
+              <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${tab.active ? 'bg-[color:var(--accent-soft-bg)] text-[color:var(--accent)]' : 'bg-surfaceMuted text-tertiary'}`}>
                 <Icon className="h-5 w-5" aria-hidden="true" />
               </span>
               <span className="whitespace-nowrap">{tab.label}</span>

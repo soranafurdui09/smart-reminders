@@ -33,7 +33,7 @@ export default function AppShell({
   const safeEmail = userEmail || '';
   const userInitial = safeEmail.trim().charAt(0).toUpperCase() || 'U';
   return (
-    <div className="min-h-screen bg-slate-50 bg-[radial-gradient(circle_at_top,_#dbeafe_0,_transparent_55%)] dark:bg-[#05060a] dark:bg-[radial-gradient(circle_at_top,_#0b1326_0,_transparent_55%)]">
+    <div className="min-h-screen bg-app text-ink">
       <NativeAppChrome />
       <MobileShell
         header={

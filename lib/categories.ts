@@ -107,6 +107,6 @@ export function getCategoryChipStyle(color: string, active: boolean) {
   return {
     borderColor: color,
     backgroundColor: active ? hexToRgba(color, 0.25) : hexToRgba(color, 0.12),
-    color: '#1f2937'
+    color: 'var(--text-1)'
   };
 }

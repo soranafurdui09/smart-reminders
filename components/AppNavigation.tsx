@@ -81,9 +81,7 @@ export default function AppNavigation({
   const navLabelByHref = useMemo(() => new Map(navLinks.map((link) => [link.href, link.label])), [navLinks]);
   const showBottomNav = isNativeAndroid || isMobile;
   const showTopNav = !showBottomNav;
-  const headerClass = showBottomNav
-    ? 'bg-white/95 shadow-sm'
-    : 'bg-surface/80 shadow-sm backdrop-blur';
+  const headerClass = 'bg-surface/90 shadow-sm backdrop-blur';
   const headerPadding = isCollapsed ? 'py-2' : 'py-3';
 
   return (
@@ -98,7 +96,7 @@ export default function AppNavigation({
           </Link>
           <div className="flex flex-1 items-center justify-end gap-3 md:justify-between">
             {showTopNav ? (
-              <nav className="hidden flex-wrap items-center gap-1 rounded-full border border-borderSubtle bg-surfaceMuted/80 p-1 text-sm md:flex">
+              <nav className="hidden flex-wrap items-center gap-1 rounded-full border border-borderSubtle bg-surfaceMuted/70 p-1 text-sm md:flex">
                 {navLinks.map((link) => {
                   const active = isActive(link.href);
                   if (link.href === '/app/reminders/new') {
@@ -108,15 +106,15 @@ export default function AppNavigation({
                           href={link.href}
                           className={`rounded-full px-4 py-2 transition-all ${
                             active
-                              ? 'bg-sky-500 text-white shadow-sm'
-                              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                              ? 'bg-[color:var(--accent-soft-bg)] text-ink shadow-sm'
+                              : 'text-muted hover:bg-surface hover:text-ink'
                           }`}
                         >
                           {link.label}
                         </Link>
                         <VoiceNavButton
                           href="/app/reminders/new?voice=1"
-                          className="flex h-9 w-9 items-center justify-center rounded-full border border-borderSubtle bg-surface text-ink transition hover:border-primary/30 hover:bg-white"
+                          className="flex h-9 w-9 items-center justify-center rounded-full border border-borderSubtle bg-surface text-ink transition hover:border-primary/30 hover:bg-surfaceMuted"
                           label={voiceLabel}
                           title={voiceLabel}
                         >
@@ -137,8 +135,8 @@ export default function AppNavigation({
                       href={link.href}
                       className={`rounded-full px-4 py-2 transition-all ${
                         active
-                          ? 'bg-sky-500 text-white shadow-sm'
-                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                          ? 'bg-[color:var(--accent-soft-bg)] text-ink shadow-sm'
+                          : 'text-muted hover:bg-surface hover:text-ink'
                       }`}
                     >
                       {link.label}

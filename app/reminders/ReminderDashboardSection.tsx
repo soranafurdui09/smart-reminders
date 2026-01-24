@@ -1,5 +1,6 @@
 "use client";
 
+import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { AlertTriangle, Calendar, Pill, SunMedium, Users } from 'lucide-react';
 import SemanticSearch from '@/components/SemanticSearch';
@@ -141,11 +142,11 @@ const SectionHeading = ({
 }) => (
   <div className="flex items-center gap-3">
     <span className="h-px flex-1 bg-slate-200" />
-    <span className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-500">
+    <span className="flex items-center gap-2 text-xs font-semibold uppercase text-tertiary">
       {icon}
       <span>{label}</span>
       {countLabel ? (
-        <span className="text-[11px] font-semibold text-slate-500 normal-case">{countLabel}</span>
+        <span className="text-[11px] font-semibold text-tertiary normal-case">{countLabel}</span>
       ) : null}
     </span>
     <span className="h-px flex-1 bg-slate-200" />
@@ -368,6 +369,19 @@ export default function ReminderDashboardSection({
       .slice(0, 5);
   }, [doseState, effectiveTimeZone]);
 
+  const medsTodayStats = useMemo(() => {
+    const now = new Date();
+    const inToday = (dose: MedicationDose) => {
+      const scheduled = new Date(dose.scheduled_at);
+      if (Number.isNaN(scheduled.getTime())) return false;
+      const dayDiff = diffDaysInTimeZone(scheduled, now, effectiveTimeZone);
+      return dayDiff === 0;
+    };
+    const todayItems = doseState.filter(inToday);
+    const takenCount = todayItems.filter((dose) => dose.status === 'taken').length;
+    return { total: todayItems.length, taken: takenCount };
+  }, [doseState, effectiveTimeZone]);
+
   const mobileInboxItems = useMemo(
     () => filteredOccurrences.slice(0, mobileInboxLimit),
     [filteredOccurrences, mobileInboxLimit]
@@ -510,12 +524,12 @@ export default function ReminderDashboardSection({
       ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
     return (
-      <section className="space-y-4 text-slate-100">
+      <section className="space-y-4 text-primary">
         <div
           className={
             activeTab === 'inbox'
               ? 'space-y-4'
-              : 'space-y-4 rounded-3xl bg-[radial-gradient(650px_280px_at_20%_-10%,rgba(76,201,240,0.2),transparent)] p-4'
+              : 'space-y-4 rounded-[var(--radius-card)] border border-white/10 bg-surface/70 p-4'
           }
         >
           <QuickAddCard />
@@ -539,8 +553,8 @@ export default function ReminderDashboardSection({
         {activeTab === 'inbox' ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold text-slate-100">Inbox</div>
-              <div className="text-xs text-slate-400">
+              <div className="text-sm font-semibold text-primary">Inbox</div>
+              <div className="text-xs text-tertiary">
                 {filteredOccurrences.length} {copy.dashboard.reminderCountLabel}
               </div>
             </div>
@@ -563,6 +577,28 @@ export default function ReminderDashboardSection({
               }}
               onChangeCategory={(value) => setCategoryFilter(value)}
             />
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: 'rent', label: 'Plată chirie', text: 'Plata chiriei pe 1 ale lunii la 9:00' },
+                { id: 'itp', label: 'RCA/ITP', text: 'ITP mașină pe 1 iunie la 10:00' },
+                { id: 'meds', label: 'Medicament zilnic', href: '/app/medications/new' },
+                { id: 'appointment', label: 'Programare', text: 'Programare la dentist mâine la 12:00' }
+              ].map((chip) =>
+                chip.href ? (
+                  <Link key={chip.id} href={chip.href} className="premium-chip">
+                    {chip.label}
+                  </Link>
+                ) : (
+                  <Link
+                    key={chip.id}
+                    href={`/app/reminders/new?quick=${encodeURIComponent(chip.text ?? '')}`}
+                    className="premium-chip"
+                  >
+                    {chip.label}
+                  </Link>
+                )
+              )}
+            </div>
             {mobileInboxItems.length ? (
               <div className="space-y-2">
                 {mobileInboxItems.map((occurrence) => (
@@ -576,14 +612,14 @@ export default function ReminderDashboardSection({
                 ))}
               </div>
             ) : (
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-4 text-sm text-slate-400">
+              <div className="premium-card p-4 text-sm text-tertiary">
                 {copy.dashboard.empty}
               </div>
             )}
             {filteredOccurrences.length > mobileInboxLimit ? (
               <button
                 type="button"
-                className="text-xs font-semibold text-slate-300"
+                className="text-xs font-semibold text-secondary"
                 onClick={() => setMobileInboxLimit((prev) => prev + 20)}
               >
                 {copy.dashboard.viewMoreMonths}
@@ -593,14 +629,14 @@ export default function ReminderDashboardSection({
         ) : (
           <div className="space-y-4">
             {nextOccurrence && nextOccurrenceLabel ? (
-              <div className="rounded-3xl border border-white/10 bg-[rgba(14,20,33,0.88)] px-3 py-3 text-sm shadow-[0_20px_45px_rgba(6,12,24,0.35)]">
-                <div className="text-xs font-semibold text-slate-400">Următorul</div>
+              <div className="premium-card p-3 text-sm">
+                <div className="text-xs font-semibold text-tertiary">Următorul</div>
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="truncate font-semibold text-slate-100">
+                    <div className="truncate font-semibold text-primary">
                       {nextOccurrence.reminder?.title ?? copy.dashboard.nextTitle}
                     </div>
-                    <div className="text-xs text-slate-400">{nextOccurrenceLabel}</div>
+                    <div className="text-xs text-tertiary">{nextOccurrenceLabel}</div>
                   </div>
                   <form action={markDone}>
                     <input type="hidden" name="occurrenceId" value={nextOccurrence.id} />
@@ -608,7 +644,7 @@ export default function ReminderDashboardSection({
                     <input type="hidden" name="occurAt" value={nextOccurrence.occur_at ?? ''} />
                     <input type="hidden" name="done_comment" value="" />
                     <ActionSubmitButton
-                      className="inline-flex h-9 items-center justify-center rounded-full bg-cyan-300 px-3 text-xs font-semibold text-slate-950 shadow-[0_10px_25px_rgba(34,211,238,0.35)]"
+                      className="inline-flex h-9 items-center justify-center rounded-full bg-[color:var(--accent-strong)] px-3 text-xs font-semibold text-[#04131b] shadow-[0_10px_25px_rgba(53,182,221,0.35)]"
                       type="submit"
                       data-action-feedback={copy.common.actionDone}
                     >
@@ -618,6 +654,34 @@ export default function ReminderDashboardSection({
                 </div>
               </div>
             ) : null}
+
+            <div className="premium-card p-4">
+              {visibleDoses.length ? (
+                <div className="space-y-1">
+                  <div className="text-xs font-semibold text-tertiary">{copy.dashboard.medicationsTitle}</div>
+                  <div className="text-sm font-semibold text-primary">
+                    {visibleDoses[0]?.reminder?.medication_details?.name || visibleDoses[0]?.reminder?.title}
+                  </div>
+                  <div className="text-xs text-tertiary">
+                    {new Date(visibleDoses[0].scheduled_at).toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' })}{' '}
+                    · {medsTodayStats.taken}/{medsTodayStats.total} {copy.dashboard.doseCountLabel}
+                  </div>
+                  <div className="mt-2">
+                    <Link href="/app/medications" className="text-xs font-semibold text-[color:var(--accent)]">
+                      {copy.medicationsHub.viewDetails}
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2 text-sm">
+                  <div className="text-xs font-semibold text-tertiary">{copy.dashboard.medicationsTitle}</div>
+                  <div className="text-primary">{copy.dashboard.medicationsEmpty}</div>
+                  <Link href="/app/medications/new" className="text-xs font-semibold text-[color:var(--accent)]">
+                    {copy.medicationsHub.createTitle}
+                  </Link>
+                </div>
+              )}
+            </div>
 
             <div ref={overdueRef}>
               <CollapsibleSection
@@ -693,28 +757,28 @@ export default function ReminderDashboardSection({
                   const details = dose.reminder?.medication_details || {};
                   const personLabel = details.personId ? memberLabels[details.personId] : null;
                   return (
-                    <div key={dose.id} className="rounded-3xl border border-white/10 bg-[rgba(14,20,33,0.88)] p-3 text-sm shadow-[0_20px_45px_rgba(6,12,24,0.35)]">
+                    <div key={dose.id} className="premium-card p-3 text-sm">
                       <div className="flex items-center justify-between gap-3">
                         <div className="space-y-1">
-                          <div className="font-semibold text-slate-100">{details.name || dose.reminder?.title}</div>
-                          {details.dose ? <div className="text-xs text-slate-400">{details.dose}</div> : null}
-                          {personLabel ? <div className="text-xs text-slate-400">{personLabel}</div> : null}
+                          <div className="font-semibold text-primary">{details.name || dose.reminder?.title}</div>
+                          {details.dose ? <div className="text-xs text-tertiary">{details.dose}</div> : null}
+                          {personLabel ? <div className="text-xs text-tertiary">{personLabel}</div> : null}
                         </div>
-                        <div className="text-xs font-semibold text-slate-400">
+                        <div className="text-xs font-semibold text-tertiary">
                           {new Date(dose.scheduled_at).toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
                       <div className="mt-2 flex flex-wrap gap-2">
                         <button
                           type="button"
-                          className="inline-flex h-8 items-center justify-center rounded-full bg-cyan-300 px-3 text-xs font-semibold text-slate-950"
+                          className="inline-flex h-8 items-center justify-center rounded-full bg-[color:var(--accent-strong)] px-3 text-xs font-semibold text-[#04131b]"
                           onClick={() => handleDoseStatus(dose.id, 'taken')}
                         >
                           {copy.dashboard.medicationsTaken}
                         </button>
                         <button
                           type="button"
-                          className="inline-flex h-8 items-center justify-center rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200"
+                          className="inline-flex h-8 items-center justify-center rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-secondary"
                           onClick={() => handleDoseStatus(dose.id, 'skipped')}
                         >
                           {copy.dashboard.medicationsSkip}
@@ -727,7 +791,7 @@ export default function ReminderDashboardSection({
             </div>
 
             {!overdueItems.length && !todayOpenItems.length && !soonItems.length && !visibleDoses.length ? (
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-4 text-sm text-slate-400">
+              <div className="premium-card p-4 text-sm text-tertiary">
                 {copy.dashboard.todayEmpty}
               </div>
             ) : null}
@@ -745,7 +809,7 @@ export default function ReminderDashboardSection({
         <button
           type="button"
           className={`rounded-full px-4 py-2 text-xs font-semibold ${
-            activeTab === 'today' ? 'bg-sky-500 text-white shadow-sm' : 'bg-white text-slate-600'
+            activeTab === 'today' ? 'bg-[color:var(--accent-soft-bg)] text-ink shadow-sm' : 'bg-surface text-muted'
           }`}
           onClick={() => handleTabChange('today')}
         >
@@ -754,7 +818,7 @@ export default function ReminderDashboardSection({
         <button
           type="button"
           className={`rounded-full px-4 py-2 text-xs font-semibold ${
-            activeTab === 'inbox' ? 'bg-sky-500 text-white shadow-sm' : 'bg-white text-slate-600'
+            activeTab === 'inbox' ? 'bg-[color:var(--accent-soft-bg)] text-ink shadow-sm' : 'bg-surface text-muted'
           }`}
           onClick={() => handleTabChange('inbox')}
         >
@@ -764,7 +828,7 @@ export default function ReminderDashboardSection({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)] md:gap-8">
         <aside className="order-1 space-y-4 lg:order-2">
-          <div className="rounded-3xl border border-gray-300 bg-white p-4 shadow-sm md:p-5">
+          <div className="rounded-3xl border border-white/10 bg-surface p-4 shadow-soft md:p-5">
             <SemanticSearch householdId={householdId} localeTag={localeTag} copy={copy.search} />
             {activeTab === 'inbox' ? (
               <div className="mt-4">
@@ -793,7 +857,7 @@ export default function ReminderDashboardSection({
         </aside>
 
         <div className="order-2 space-y-6 lg:order-1">
-          <div className="h-px bg-slate-200/70" />
+          <div className="h-px bg-white/10" />
           {kindFilter !== 'medications' && desktopTab === 'today' ? (
             <section className="mt-8 space-y-5">
               <SectionHeading
@@ -809,11 +873,11 @@ export default function ReminderDashboardSection({
                     onClick={() => setShowOverdue((prev) => !prev)}
                     aria-expanded={showOverdue}
                   >
-                    <div className="flex items-center gap-2 text-xs font-semibold uppercase text-gray-700">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase text-secondary">
                       <AlertTriangle className="h-4 w-4 text-red-500" aria-hidden="true" />
                       {copy.dashboard.todayOverdue}
                     </div>
-                    <span className="flex items-center gap-2 text-xs text-slate-500">
+                    <span className="flex items-center gap-2 text-xs text-tertiary">
                       {todayBuckets.overdue.length} {copy.dashboard.reminderCountLabel}
                       <svg
                         aria-hidden="true"
@@ -857,11 +921,11 @@ export default function ReminderDashboardSection({
                     onClick={() => setShowToday((prev) => !prev)}
                     aria-expanded={showToday}
                   >
-                    <div className="flex items-center gap-2 text-xs font-semibold uppercase text-gray-700">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase text-secondary">
                       <SunMedium className="h-4 w-4 text-emerald-500" aria-hidden="true" />
                       {copy.dashboard.todayRest}
                     </div>
-                    <span className="flex items-center gap-2 text-xs text-slate-500">
+                    <span className="flex items-center gap-2 text-xs text-tertiary">
                       {todayItems.length} {copy.dashboard.reminderCountLabel}
                       <svg
                         aria-hidden="true"
@@ -903,7 +967,7 @@ export default function ReminderDashboardSection({
                 </div>
               ) : (
                 !todayBuckets.overdue.length ? (
-                  <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+                  <div className="card text-sm text-muted">
                     {copy.dashboard.todayEmpty}
                   </div>
                 ) : null
@@ -933,16 +997,16 @@ export default function ReminderDashboardSection({
                         ? copy.dashboard.medicationsSkipped
                         : copy.common.statusOpen;
                     const statusClass = dose.status === 'taken'
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                      ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200'
                       : dose.status === 'skipped'
-                        ? 'border-amber-200 bg-amber-50 text-amber-700'
-                        : 'border-slate-200 bg-slate-50 text-slate-600';
+                        ? 'border-amber-400/40 bg-amber-500/15 text-amber-200'
+                        : 'border-white/10 bg-white/5 text-tertiary';
                     return (
-                      <div key={dose.id} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                      <div key={dose.id} className="premium-card p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                              <svg aria-hidden="true" className="h-4 w-4 text-emerald-600" viewBox="0 0 24 24" fill="none">
+                            <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                              <svg aria-hidden="true" className="h-4 w-4 text-emerald-300" viewBox="0 0 24 24" fill="none">
                                 <path
                                   d="M6.5 17.5l11-11a4 4 0 00-5.66-5.66l-11 11a4 4 0 105.66 5.66z"
                                   stroke="currentColor"
@@ -952,11 +1016,11 @@ export default function ReminderDashboardSection({
                               </svg>
                               <span>{details.name || dose.reminder?.title}</span>
                             </div>
-                            {details.dose ? <div className="text-xs text-slate-500">{details.dose}</div> : null}
-                            {personLabel ? <div className="text-xs text-slate-500">{personLabel}</div> : null}
+                            {details.dose ? <div className="text-xs text-tertiary">{details.dose}</div> : null}
+                            {personLabel ? <div className="text-xs text-tertiary">{personLabel}</div> : null}
                           </div>
                           <div className="flex flex-col items-end gap-2">
-                            <div className="text-xs font-semibold text-slate-500">
+                            <div className="text-xs font-semibold text-tertiary">
                               {new Date(dose.scheduled_at).toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' })}
                             </div>
                             <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusClass}`}>
@@ -986,7 +1050,7 @@ export default function ReminderDashboardSection({
                                 <button
                                   key={reason}
                                   type="button"
-                                  className="w-full rounded-lg px-3 py-2 text-left text-xs text-slate-500 hover:bg-surfaceMuted"
+                                  className="w-full rounded-lg px-3 py-2 text-left text-xs text-tertiary hover:bg-surfaceMuted"
                                   onClick={() => handleDoseStatus(dose.id, 'skipped', reason)}
                                 >
                                   {reason}
@@ -1000,7 +1064,7 @@ export default function ReminderDashboardSection({
                   })}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+                <div className="card text-sm text-muted">
                   {copy.dashboard.medicationsEmpty}
                 </div>
               )}
@@ -1016,10 +1080,10 @@ export default function ReminderDashboardSection({
                 aria-expanded={showUpcoming}
               >
                 <span className="h-px flex-1 bg-slate-200" />
-                <span className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-500">
+                <span className="flex items-center gap-2 text-xs font-semibold uppercase text-tertiary">
                   <Calendar className="h-4 w-4 text-sky-500" aria-hidden="true" />
                   <span>{copy.dashboard.upcomingTitle}</span>
-                  <span className="text-[11px] font-semibold text-slate-500 normal-case">
+                  <span className="text-[11px] font-semibold text-tertiary normal-case">
                     {hasUpcoming ? upcomingEntries.length : 0} {copy.dashboard.reminderCountLabel}
                   </span>
                   <svg
@@ -1047,7 +1111,7 @@ export default function ReminderDashboardSection({
                       const dayDate = new Date(year, Math.max(0, month - 1), day);
                       return (
                         <div key={dayKey} className="space-y-3">
-                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-tertiary">
                             {dayLabelFormatter.format(dayDate)}
                           </div>
                           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 list-optimized">
@@ -1067,9 +1131,9 @@ export default function ReminderDashboardSection({
                     })}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
-                    {copy.dashboard.upcomingEmpty}
-                  </div>
+                <div className="card text-sm text-muted">
+                  {copy.dashboard.upcomingEmpty}
+                </div>
                 )
               ) : null}
             </section>
@@ -1095,7 +1159,7 @@ export default function ReminderDashboardSection({
                   ))}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+                <div className="card text-sm text-muted">
                   {copy.dashboard.householdEmpty}
                 </div>
               )}
@@ -1111,10 +1175,10 @@ export default function ReminderDashboardSection({
                 aria-expanded={showMonths}
               >
                 <span className="h-px flex-1 bg-slate-200" />
-                <span className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-500">
-                  <Calendar className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                <span className="flex items-center gap-2 text-xs font-semibold uppercase text-tertiary">
+                  <Calendar className="h-4 w-4 text-tertiary" aria-hidden="true" />
                   <span>{copy.dashboard.groupNextMonth}</span>
-                  <span className="text-[11px] font-semibold text-slate-500 normal-case">
+                  <span className="text-[11px] font-semibold text-tertiary normal-case">
                     {visibleMonthEntries.length} {copy.dashboard.reminderCountLabel}
                   </span>
                   <svg
@@ -1140,7 +1204,7 @@ export default function ReminderDashboardSection({
                     <div className="flex justify-end">
                       <button
                         type="button"
-                        className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                        className="text-xs font-semibold text-tertiary hover:text-ink"
                         onClick={() => setVisibleMonthGroups((prev) => prev + 2)}
                       >
                         {copy.dashboard.viewMoreMonths}
@@ -1153,7 +1217,7 @@ export default function ReminderDashboardSection({
                       const labelDate = new Date(year, Math.max(0, month - 1), 1);
                       return (
                         <div key={monthKey} className="space-y-3">
-                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-tertiary">
                             {monthLabelFormatter.format(labelDate)}
                           </div>
                           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 list-optimized">
@@ -1174,10 +1238,10 @@ export default function ReminderDashboardSection({
                   </div>
                 </>
               ) : (
-                <div className="rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500">
+                <div className="card text-sm text-muted">
                   {previewMonthEntry ? (
                     <div className="space-y-3">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-tertiary">
                         {monthLabelFormatter.format(new Date(Number(previewMonthEntry[0].split('-')[0]), Math.max(0, Number(previewMonthEntry[0].split('-')[1]) - 1), 1))}
                       </div>
                       <div className="space-y-2">
@@ -1185,9 +1249,9 @@ export default function ReminderDashboardSection({
                           const reminderTimeZone = resolveReminderTimeZone(occurrence.reminder?.tz ?? null, effectiveTimeZone);
                           const displayAt = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
                           return (
-                            <div key={occurrence.id} className="flex items-center justify-between text-xs text-slate-500">
+                            <div key={occurrence.id} className="flex items-center justify-between text-xs text-tertiary">
                               <span className="truncate">{occurrence.reminder?.title ?? copy.dashboard.nextTitle}</span>
-                              <span className="whitespace-nowrap text-slate-400">
+                              <span className="whitespace-nowrap text-tertiary">
                                 {formatReminderDateTime(displayAt, reminderTimeZone, effectiveTimeZone)}
                               </span>
                             </div>
@@ -1196,7 +1260,7 @@ export default function ReminderDashboardSection({
                       </div>
                       <button
                         type="button"
-                        className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                        className="text-xs font-semibold text-tertiary hover:text-ink"
                         onClick={() => setShowMonths(true)}
                       >
                         {copy.dashboard.viewMoreMonths}

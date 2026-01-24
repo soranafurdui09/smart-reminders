@@ -21,10 +21,10 @@ export default function SegmentedControl({ options, value, onChange, className }
           <button
             key={option.value}
             type="button"
-            className={`rounded-full border px-3 py-1 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-300 ${
+            className={`rounded-full border px-3 py-1 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400 ${
               selected
-                ? 'border-sky-500 bg-sky-500 text-white shadow-sm'
-                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft-bg)] text-ink shadow-sm'
+                : 'border-white/10 bg-surfaceMuted text-secondary hover:bg-surface'
             }`}
             aria-pressed={selected}
             onClick={() => onChange(option.value)}

@@ -129,22 +129,22 @@ export default async function CalendarPage({
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-lg font-semibold text-slate-100 md:text-2xl">{copy.calendar.title}</h1>
-            <p className="text-xs text-slate-400 md:text-sm">{copy.calendar.subtitle}</p>
+            <h1 className="text-lg font-semibold text-primary md:text-2xl">{copy.calendar.title}</h1>
+            <p className="text-xs text-tertiary md:text-sm">{copy.calendar.subtitle}</p>
           </div>
           <div className="flex items-center gap-2">
             <Link
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+              className="premium-icon-btn inline-flex h-9 w-9 items-center justify-center"
               href={`/app/calendar?month=${prevMonth}`}
               aria-label={copy.calendar.prev}
             >
               <ChevronLeft className="h-4 w-4" />
             </Link>
-            <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200">
+            <div className="rounded-full border border-white/10 bg-surface px-4 py-2 text-sm font-semibold text-secondary">
               {monthLabel}
             </div>
             <Link
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+              className="premium-icon-btn inline-flex h-9 w-9 items-center justify-center"
               href={`/app/calendar?month=${nextMonth}`}
               aria-label={copy.calendar.next}
             >
@@ -160,7 +160,7 @@ export default async function CalendarPage({
         />
 
         {!hasOccurrences ? (
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-4 text-sm text-slate-400 shadow-[0_20px_45px_rgba(6,12,24,0.35)]">
+          <div className="premium-card p-4 text-sm text-tertiary">
             {copy.calendar.empty}
           </div>
         ) : null}

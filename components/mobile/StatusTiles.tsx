@@ -25,8 +25,8 @@ export default function StatusTiles({
           className={`premium-card p-4 text-left ${tile.accentClass}`}
           onClick={() => onSelect(tile.id)}
         >
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{tile.label}</div>
-          <div className="mt-1 text-2xl font-semibold text-slate-100">{tile.count}</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">{tile.label}</div>
+          <div className="mt-1 text-2xl font-semibold text-primary">{tile.count}</div>
         </button>
       ))}
     </div>

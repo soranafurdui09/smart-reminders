@@ -104,44 +104,44 @@ export default function QuickSearchBar({
   }, [router, trimmed]);
 
   return (
-    <div className="sticky top-[72px] z-20 space-y-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur md:static md:border-0 md:bg-transparent md:p-0 md:shadow-none">
+    <div className="sticky top-[72px] z-20 space-y-3 rounded-[var(--radius-card)] border border-white/10 bg-surface/85 p-3 shadow-sm md:static md:border-0 md:bg-transparent md:p-0 md:shadow-none">
       <form onSubmit={handleSearch} className="flex items-center gap-2">
         <div className="relative flex-1">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
             <Search className="h-4 w-4" />
           </span>
           <input
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-12 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-200"
+            className="premium-input w-full pl-9 pr-12 text-sm placeholder:text-[color:var(--text-3)]"
             placeholder={`Adaugă sau caută… ${copy.example}`}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
           <button
             type="button"
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600"
+            className="premium-icon-btn absolute right-1.5 top-1/2 -translate-y-1/2"
             aria-label="Dictează"
             onClick={() => router.push('/app/reminders/new?voice=1')}
           >
             <Mic className="h-4 w-4" />
           </button>
         </div>
-          <button
-            type="button"
-            className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-sky-500 px-3 text-xs font-semibold text-white shadow-sm"
-            onClick={handleAdd}
-            disabled={!trimmed}
-          >
-            <Plus className="h-4 w-4" />
-            Adaugă
-          </button>
-        </form>
+        <button
+          type="button"
+          className="premium-btn-primary inline-flex items-center justify-center gap-1 px-3 text-xs"
+          onClick={handleAdd}
+          disabled={!trimmed}
+        >
+          <Plus className="h-4 w-4" />
+          Adaugă
+        </button>
+      </form>
 
-      <div className="flex gap-2 overflow-x-auto pb-1 text-xs font-semibold text-slate-600">
+      <div className="flex gap-2 overflow-x-auto pb-1 text-xs font-semibold text-secondary">
         {quickChips.map((chip) => (
           <button
             key={chip.id}
             type="button"
-            className="whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-slate-600"
+            className="premium-chip whitespace-nowrap"
             onClick={() => {
               const text = chip.text;
               if (!text) return;
@@ -153,13 +153,13 @@ export default function QuickSearchBar({
         ))}
       </div>
 
-      <div className="text-xs font-semibold text-slate-500">{summaryLabel}</div>
+      <div className="text-xs font-semibold text-tertiary">{summaryLabel}</div>
 
       {loading ? (
-        <div className="text-xs text-slate-500">{copy.loading}</div>
+        <div className="text-xs text-tertiary">{copy.loading}</div>
       ) : null}
       {error ? (
-        <div className="text-xs text-rose-600">{error}</div>
+        <div className="text-xs text-rose-300">{error}</div>
       ) : null}
       {trimmed ? (
         results.length ? (
@@ -168,17 +168,17 @@ export default function QuickSearchBar({
               <Link
                 key={item.id}
                 href={`/app/reminders/${item.id}`}
-                className="rounded-xl border border-slate-100 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm"
+                className="rounded-2xl border border-white/10 bg-surface px-3 py-2 text-xs text-secondary shadow-sm"
               >
-                <div className="text-[11px] text-slate-500">
+                <div className="text-[11px] text-tertiary">
                   {item.dueAt ? new Date(item.dueAt).toLocaleString(localeTag) : null}
                 </div>
-                <div className="font-semibold text-slate-900">{item.title}</div>
+                <div className="font-semibold text-primary">{item.title}</div>
               </Link>
             ))}
           </div>
         ) : (
-          <div className="text-xs text-slate-500">{copy.empty}</div>
+          <div className="text-xs text-tertiary">{copy.empty}</div>
         )
       ) : null}
     </div>
