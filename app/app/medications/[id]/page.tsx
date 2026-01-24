@@ -81,6 +81,17 @@ export default async function MedicationDetailPage({ params }: { params: { id: s
     snoozed: copy.medicationsHub.status_snoozed,
     missed: copy.medicationsHub.status_missed
   };
+  const triggerRefillAction = async () => {
+    await maybeTriggerRefill(medication.id);
+  };
+  const removeCaregiverAction = async (formData: FormData) => {
+    const caregiverId = String(formData.get('caregiver_id') || '').trim();
+    if (!caregiverId) return;
+    await removeMedicationCaregiver(medication.id, caregiverId);
+  };
+  const addCaregiverAction = async (formData: FormData) => {
+    await addMedicationCaregiver(medication.id, formData);
+  };
 
   const updateStockAction = async (formData: FormData) => {
     await updateMedicationStock(medication.id, formData);
@@ -95,7 +106,7 @@ export default async function MedicationDetailPage({ params }: { params: { id: s
           <Link href="/app/medications" className="btn btn-secondary">
             {copy.common.back}
           </Link>
-          <form action={maybeTriggerRefill.bind(null, medication.id)}>
+          <form action={triggerRefillAction}>
             <ActionSubmitButton className="btn btn-primary" type="submit" data-action-feedback={copy.common.actionCreated}>
               {copy.medicationsHub.refillTrigger}
             </ActionSubmitButton>
@@ -176,7 +187,8 @@ export default async function MedicationDetailPage({ params }: { params: { id: s
                   <div className="text-sm text-ink">
                     {memberLabels.get(caregiver.caregiver_member_id) || caregiver.caregiver_member_id}
                   </div>
-                  <form action={removeMedicationCaregiver.bind(null, medication.id, caregiver.id)}>
+                  <form action={removeCaregiverAction}>
+                    <input type="hidden" name="caregiver_id" value={caregiver.id} />
                     <button type="submit" className="btn btn-secondary h-9">{copy.common.delete}</button>
                   </form>
                 </div>
@@ -186,7 +198,7 @@ export default async function MedicationDetailPage({ params }: { params: { id: s
             <div className="text-sm text-muted">{copy.medicationsHub.caregiversEmpty}</div>
           )}
 
-          <form action={addMedicationCaregiver.bind(null, medication.id)} className="grid gap-3 md:grid-cols-2">
+          <form action={addCaregiverAction} className="grid gap-3 md:grid-cols-2">
             <div>
               <label className="text-xs font-semibold text-muted">{copy.medicationsHub.patientLabel}</label>
               <select name="patient_member_id" className="input">
