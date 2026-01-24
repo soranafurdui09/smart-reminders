@@ -364,11 +364,12 @@ export async function GET() {
 
         channels.forEach((channel: string) => {
           if (!['email', 'push'].includes(channel)) return;
+          const channelValue = channel === 'email' ? 'email' : 'push';
           const job = {
             reminder_id: dose.reminder_id,
             user_id: caregiverUserId,
             notify_at: escalationAt.toISOString(),
-            channel,
+            channel: channelValue,
             status: 'pending' as const,
             entity_type: 'medication_dose' as const,
             entity_id: dose.id,

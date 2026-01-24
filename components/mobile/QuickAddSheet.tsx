@@ -68,16 +68,19 @@ export default function QuickAddSheet({
     ? reminderCategories.find((category) => category.id === parsedResult.categoryId)?.label ?? ''
     : '';
 
-  const toLocalInputValue = (value: Date) => {
+  const toLocalInputValue = useCallback((value: Date) => {
     const pad = (num: number) => String(num).padStart(2, '0');
     return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
-  };
+  }, []);
 
-  const toLocalInputFromIso = (iso: string) => {
-    const parsed = new Date(iso);
-    if (Number.isNaN(parsed.getTime())) return '';
-    return toLocalInputValue(parsed);
-  };
+  const toLocalInputFromIso = useCallback(
+    (iso: string) => {
+      const parsed = new Date(iso);
+      if (Number.isNaN(parsed.getTime())) return '';
+      return toLocalInputValue(parsed);
+    },
+    [toLocalInputValue]
+  );
   const previewText = useMemo(() => {
     if (parsedResult) {
       const parts = [
@@ -106,7 +109,8 @@ export default function QuickAddSheet({
     recurrenceValue,
     remindBeforeValue,
     timeValue,
-    trimmed
+    trimmed,
+    toLocalInputFromIso
   ]);
 
   const previewTitle = parsedResult?.title || trimmed || 'Titlul reminderului';
