@@ -80,7 +80,7 @@ export default function MedicationDoseList({
   const rows = useMemo(
     () =>
       items.map((dose) => {
-        const timeLabel = formatDateTimeWithTimeZone(dose.scheduled_at, timeZone, locale);
+        const timeLabel = formatDateTimeWithTimeZone(dose.scheduled_at, timeZone);
         const statusLabel =
           dose.status === 'taken'
             ? labels.taken
