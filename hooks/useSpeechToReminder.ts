@@ -50,7 +50,7 @@ export function useSpeechToReminder<TParsed>({
   } = useSpeechToText(lang);
   const [status, setStatus] = useState<SpeechStatus>('idle');
   const [error, setError] = useState<string | null>(null);
-  const lastTranscriptRef = useRef('');
+  const committedTranscriptRef = useRef('');
   const autoStartedRef = useRef(false);
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export function useSpeechToReminder<TParsed>({
       resetSpeech();
       setError(null);
       setStatus('starting');
-      lastTranscriptRef.current = '';
+      committedTranscriptRef.current = '';
       startSpeech();
     };
     const hasActivation =
@@ -112,13 +112,13 @@ export function useSpeechToReminder<TParsed>({
     if (listening) return;
     if (speechError) return;
     const finalTranscript = transcript.trim();
-    if (!finalTranscript || finalTranscript === lastTranscriptRef.current) {
+    if (!finalTranscript || finalTranscript === committedTranscriptRef.current) {
       if (status === 'listening' || status === 'transcribing' || status === 'processing') {
         setStatus('idle');
       }
       return;
     }
-    lastTranscriptRef.current = finalTranscript;
+    committedTranscriptRef.current = finalTranscript;
 
     setStatus('processing');
     if (!useAi || !parseText) {
@@ -172,7 +172,7 @@ export function useSpeechToReminder<TParsed>({
     resetSpeech();
     setError(null);
     setStatus('starting');
-    lastTranscriptRef.current = '';
+    committedTranscriptRef.current = '';
     startSpeech();
   }, [listening, onError, resetSpeech, startSpeech, supported]);
 
@@ -185,7 +185,7 @@ export function useSpeechToReminder<TParsed>({
     resetSpeech();
     setError(null);
     setStatus('idle');
-    lastTranscriptRef.current = '';
+    committedTranscriptRef.current = '';
   }, [resetSpeech]);
 
   const toggle = useCallback(() => {

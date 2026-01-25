@@ -44,6 +44,8 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
   const manualStopRef = useRef(false);
   const finalTranscriptRef = useRef('');
   const interimTranscriptRef = useRef('');
+  const lastFinalIndexRef = useRef(0);
+  const startingRef = useRef(false);
   const [supported, setSupported] = useState(false);
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -133,6 +135,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
     recognition.continuous = true;
     recognition.onstart = () => {
       setListening(true);
+      startingRef.current = false;
       playReadyTone();
       if (noSpeechTimerRef.current) {
         window.clearTimeout(noSpeechTimerRef.current);
@@ -153,7 +156,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
       }
       setListening(false);
       playStopTone();
-      const combined = `${finalTranscriptRef.current} ${interimTranscriptRef.current}`.trim();
+      const combined = `${finalTranscriptRef.current}`.replace(/\s+/g, ' ').trim();
       const wordCount = combined.split(/\s+/).filter(Boolean).length;
       if (!manualStopRef.current && wordCount > 0 && wordCount < minWords) {
         setError('too-short');
@@ -164,37 +167,41 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
       setTranscript(combined);
       manualStopRef.current = false;
       interimTranscriptRef.current = '';
+      startingRef.current = false;
     };
     recognition.onerror = (event) => {
       setError(event?.error || 'unknown');
       setListening(false);
+      startingRef.current = false;
     };
     recognition.onresult = (event) => {
-      // Rebuild final transcript on each event to avoid duplication when resultIndex resets.
       let interim = '';
-      let finalText = '';
       const startIndex = event.resultIndex ?? 0;
-      for (let i = 0; i < event.results.length; i += 1) {
+      for (let i = startIndex; i < event.results.length; i += 1) {
         const result = event.results[i];
-        const text = result?.[0]?.transcript ?? '';
+        const text = (result?.[0]?.transcript ?? '').trim();
+        if (!text) continue;
         if (result?.isFinal) {
-          finalText += text + ' ';
-        } else if (i >= startIndex) {
+          if (i >= lastFinalIndexRef.current) {
+            finalTranscriptRef.current = `${finalTranscriptRef.current} ${text}`.trim();
+            lastFinalIndexRef.current = i + 1;
+          }
+        } else {
           interim = text;
         }
       }
-      finalTranscriptRef.current = finalText;
       interimTranscriptRef.current = interim;
       if (process.env.NODE_ENV !== 'production') {
         // Debugging duplication: inspect resultIndex and transcripts.
         console.debug('[speech] result', {
           resultIndex: event.resultIndex,
           results: event.results.length,
-          finalText: finalText.trim(),
+          finalText: finalTranscriptRef.current,
           interim
         });
       }
-      setTranscript(`${finalText}${interim}`.trim());
+      const combined = `${finalTranscriptRef.current} ${interim}`.replace(/\s+/g, ' ').trim();
+      setTranscript(combined);
       if (noSpeechTimerRef.current) {
         window.clearTimeout(noSpeechTimerRef.current);
         noSpeechTimerRef.current = null;
@@ -246,7 +253,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
   }, []);
 
   const start = useCallback(() => {
-    if (!supported || listening) {
+    if (!supported || listening || startingRef.current) {
       if (!supported) {
         setError('not-supported');
       }
@@ -261,7 +268,9 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
     setTranscript('');
     finalTranscriptRef.current = '';
     interimTranscriptRef.current = '';
+    lastFinalIndexRef.current = 0;
     manualStopRef.current = false;
+    startingRef.current = true;
     try {
       recognition.start();
     } catch (err) {
@@ -272,9 +281,10 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
       if (errorName === 'NotAllowedError' || errorName === 'SecurityError') {
         setError('not-allowed');
       } else {
-        setError('start-failed');
+      setError('start-failed');
       }
       setListening(false);
+      startingRef.current = false;
       return;
     }
     void warmUpMicrophone();
@@ -282,6 +292,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
 
   const stop = useCallback(() => {
     manualStopRef.current = true;
+    interimTranscriptRef.current = '';
     recognitionRef.current?.stop();
   }, []);
 
@@ -290,6 +301,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
     setError(null);
     finalTranscriptRef.current = '';
     interimTranscriptRef.current = '';
+    lastFinalIndexRef.current = 0;
   }, []);
 
   return { supported, listening, transcript, error, start, stop, reset };
