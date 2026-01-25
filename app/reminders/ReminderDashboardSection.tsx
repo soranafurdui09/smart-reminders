@@ -1,12 +1,16 @@
 "use client";
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Calendar, Pill, SunMedium, Users } from 'lucide-react';
 import SemanticSearch from '@/components/SemanticSearch';
-import QuickAddCard from '@/components/mobile/QuickAddCard';
-import StatusTiles from '@/components/mobile/StatusTiles';
-import CollapsibleSection from '@/components/mobile/CollapsibleSection';
+import HomeHeader from '@/components/home/HomeHeader';
+import NextUpCard from '@/components/home/NextUpCard';
+import QuickAddBar from '@/components/home/QuickAddBar';
+import AtAGlanceRow from '@/components/home/AtAGlanceRow';
+import SegmentedTabs from '@/components/home/SegmentedTabs';
+import FilteredTaskList from '@/components/home/FilteredTaskList';
+import MedsTeaserCard from '@/components/home/MedsTeaserCard';
 import ReminderRowMobile from '@/components/mobile/ReminderRowMobile';
 import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
 import ReminderCard from '@/components/dashboard/ReminderCard';
@@ -20,8 +24,8 @@ import {
   getMonthKeyInTimeZone,
   resolveReminderTimeZone
 } from '@/lib/dates';
-import { inferReminderCategoryId, type ReminderCategoryId } from '@/lib/categories';
-import { markDone } from '@/app/app/actions';
+import { getReminderCategory, inferReminderCategoryId, type ReminderCategoryId } from '@/lib/categories';
+import { markDone, snoozeOccurrence } from '@/app/app/actions';
 
 type CreatedByOption = 'all' | 'me' | 'others';
 type AssignmentOption = 'all' | 'assigned_to_me';
@@ -184,6 +188,7 @@ export default function ReminderDashboardSection({
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState<TabOption>(initialTab);
   const [mobileInboxLimit, setMobileInboxLimit] = useState(30);
+  const [homeSegment, setHomeSegment] = useState<'today' | 'overdue' | 'soon'>('today');
 
   const filteredOccurrences = useMemo(() => {
     const normalized = occurrences
@@ -309,10 +314,6 @@ export default function ReminderDashboardSection({
     () => new Intl.DateTimeFormat(localeTag, { weekday: 'short', day: 'numeric', month: 'short' }),
     [localeTag]
   );
-  const overdueRef = useRef<HTMLDivElement>(null);
-  const todayRef = useRef<HTMLDivElement>(null);
-  const soonRef = useRef<HTMLDivElement>(null);
-  const medsRef = useRef<HTMLDivElement>(null);
 
   const mobileBuckets = useMemo(() => {
     const now = new Date();
@@ -514,10 +515,6 @@ export default function ReminderDashboardSection({
     }
   };
 
-  const scrollToSection = (ref: RefObject<HTMLDivElement>) => {
-    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
   const nextOccurrence = useMemo(() => {
     const now = new Date();
     return datedOccurrences.find((occurrence) => {
@@ -541,36 +538,8 @@ export default function ReminderDashboardSection({
     const todayOpenItems = mobileBuckets.today;
     const soonItems = mobileBuckets.soon;
 
-    const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
-      ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
     return (
-      <section className="space-y-4 text-primary">
-        <div
-          className={
-            activeTab === 'inbox'
-              ? 'space-y-4'
-              : 'space-y-4 rounded-[var(--radius-card)] border border-white/10 bg-surface/70 p-4'
-          }
-        >
-          <QuickAddCard />
-
-          <StatusTiles
-            tiles={[
-              { id: 'overdue', label: copy.dashboard.todayOverdue, count: overdueItems.length, accentClass: 'border-rose-400/40' },
-              { id: 'today', label: copy.dashboard.todayTitle, count: todayOpenItems.length, accentClass: 'border-amber-400/40' },
-              { id: 'soon', label: copy.dashboard.todaySoon, count: soonItems.length, accentClass: 'border-sky-400/40' },
-              { id: 'meds', label: copy.dashboard.medicationsTitle, count: visibleDoses.length, accentClass: 'border-emerald-400/40' }
-            ]}
-            onSelect={(id) => {
-              if (id === 'overdue') scrollToSection(overdueRef);
-              if (id === 'today') scrollToSection(todayRef);
-              if (id === 'soon') scrollToSection(soonRef);
-              if (id === 'meds') scrollToSection(medsRef);
-            }}
-          />
-        </div>
-
+      <section className="space-y-4">
         {activeTab === 'inbox' ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -648,174 +617,98 @@ export default function ReminderDashboardSection({
             ) : null}
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 rounded-3xl bg-gradient-to-b from-amber-50/70 via-white to-white p-4">
+            <HomeHeader title={copy.dashboard.todayTitle} />
+
             {nextOccurrence && nextOccurrenceLabel ? (
-              <div className="premium-card p-3 text-sm">
-                <div className="text-xs font-semibold text-tertiary">Următorul</div>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="truncate font-semibold text-primary">
-                      {nextOccurrence.reminder?.title ?? copy.dashboard.nextTitle}
-                    </div>
-                    <div className="text-xs text-tertiary">{nextOccurrenceLabel}</div>
+              <NextUpCard
+                title={copy.dashboard.nextTitle}
+                taskTitle={nextOccurrence.reminder?.title ?? copy.dashboard.nextTitle}
+                timeLabel={nextOccurrenceLabel}
+                badge={nextCategory?.label}
+                subtext={`+${todayOpenItems.length} ${copy.dashboard.reminderCountLabel}`}
+                actions={
+                  <div className="flex flex-col gap-2">
+                    <form action={markDone}>
+                      <input type="hidden" name="occurrenceId" value={nextOccurrence.id} />
+                      <input type="hidden" name="reminderId" value={nextOccurrence.reminder?.id ?? ''} />
+                      <input type="hidden" name="occurAt" value={nextOccurrence.occur_at ?? ''} />
+                      <input type="hidden" name="done_comment" value="" />
+                      <ActionSubmitButton
+                        className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm"
+                        type="submit"
+                        data-action-feedback={copy.common.actionDone}
+                      >
+                        {copy.common.doneAction}
+                      </ActionSubmitButton>
+                    </form>
+                    <form action={snoozeOccurrence}>
+                      <input type="hidden" name="occurrenceId" value={nextOccurrence.id} />
+                      <input type="hidden" name="mode" value="30" />
+                      <ActionSubmitButton
+                        className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700"
+                        type="submit"
+                        data-action-feedback={copy.common.snooze}
+                      >
+                        {copy.common.snooze}
+                      </ActionSubmitButton>
+                    </form>
                   </div>
-                  <form action={markDone}>
-                    <input type="hidden" name="occurrenceId" value={nextOccurrence.id} />
-                    <input type="hidden" name="reminderId" value={nextOccurrence.reminder?.id ?? ''} />
-                    <input type="hidden" name="occurAt" value={nextOccurrence.occur_at ?? ''} />
-                    <input type="hidden" name="done_comment" value="" />
-                    <ActionSubmitButton
-                      className="inline-flex h-9 items-center justify-center rounded-full bg-[color:var(--accent-strong)] px-3 text-xs font-semibold text-[#04131b] shadow-[0_10px_25px_rgba(53,182,221,0.35)]"
-                      type="submit"
-                      data-action-feedback={copy.common.actionDone}
-                    >
-                      {copy.common.doneAction}
-                    </ActionSubmitButton>
-                  </form>
-                </div>
-              </div>
+                }
+              />
             ) : null}
 
-            <div className="premium-card p-4">
-              {visibleDoses.length ? (
-                <div className="space-y-1">
-                  <div className="text-xs font-semibold text-tertiary">{copy.dashboard.medicationsTitle}</div>
-                  <div className="text-sm font-semibold text-primary">
-                    {visibleDoses[0]?.reminder?.medication_details?.name || visibleDoses[0]?.reminder?.title}
-                  </div>
-                  <div className="text-xs text-tertiary">
-                    {new Date(visibleDoses[0].scheduled_at).toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' })}{' '}
-                    · {medsTodayStats.taken}/{medsTodayStats.total} {copy.dashboard.doseCountLabel}
-                  </div>
-                  <div className="mt-2">
-                    <Link href="/app/medications" className="text-xs font-semibold text-[color:var(--accent)]">
-                      {copy.medicationsHub.viewDetails}
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2 text-sm">
-                  <div className="text-xs font-semibold text-tertiary">{copy.dashboard.medicationsTitle}</div>
-                  <div className="text-primary">{copy.dashboard.medicationsEmpty}</div>
-                  <Link href="/app/medications/new" className="text-xs font-semibold text-[color:var(--accent)]">
-                    {copy.medicationsHub.createTitle}
-                  </Link>
-                </div>
-              )}
-            </div>
+            <QuickAddBar />
 
-            <div ref={overdueRef}>
-              <CollapsibleSection
-                title={copy.dashboard.todayOverdue}
-                count={overdueItems.length}
-                open={showOverdue}
-                onToggle={() => setShowOverdue((prev) => !prev)}
-                accentClassName="bg-rose-500"
-                viewAllHref="/app?tab=inbox"
-              >
-                {overdueItems.map((occurrence) => (
-                  <ReminderRowMobile
-                    key={occurrence.id}
-                    occurrence={occurrence}
-                    locale={locale}
-                    googleConnected={googleConnected}
-                    userTimeZone={effectiveTimeZone}
-                  />
-                ))}
-              </CollapsibleSection>
-            </div>
+            <AtAGlanceRow
+              metrics={[
+                { id: 'overdue', label: copy.dashboard.todayOverdue, count: overdueItems.length, accentClass: 'text-rose-600' },
+                { id: 'today', label: copy.dashboard.todayTitle, count: todayOpenItems.length, accentClass: 'text-amber-600' },
+                { id: 'soon', label: copy.dashboard.todaySoon, count: soonItems.length, accentClass: 'text-sky-600' },
+                { id: 'meds', label: copy.dashboard.medicationsTitle, count: visibleDoses.length, accentClass: 'text-emerald-600' }
+              ]}
+              onSelect={(id) => {
+                if (id === 'overdue') setHomeSegment('overdue');
+                if (id === 'today') setHomeSegment('today');
+                if (id === 'soon') setHomeSegment('soon');
+              }}
+            />
 
-            <div ref={todayRef}>
-              <CollapsibleSection
-                title={copy.dashboard.todayTitle}
-                count={todayOpenItems.length}
-                open={showToday}
-                onToggle={() => setShowToday((prev) => !prev)}
-                accentClassName="bg-amber-400"
-              >
-                {todayOpenItems.map((occurrence) => (
-                  <ReminderRowMobile
-                    key={occurrence.id}
-                    occurrence={occurrence}
-                    locale={locale}
-                    googleConnected={googleConnected}
-                    userTimeZone={effectiveTimeZone}
-                  />
-                ))}
-              </CollapsibleSection>
-            </div>
-
-            <div ref={soonRef}>
-              <CollapsibleSection
-                title={copy.dashboard.todaySoon}
-                count={soonItems.length}
-                open={showUpcoming}
-                onToggle={() => setShowUpcoming((prev) => !prev)}
-                accentClassName="bg-sky-500"
-                viewAllHref="/app?tab=inbox"
-              >
-                {soonItems.map((occurrence) => (
-                  <ReminderRowMobile
-                    key={occurrence.id}
-                    occurrence={occurrence}
-                    locale={locale}
-                    googleConnected={googleConnected}
-                    userTimeZone={effectiveTimeZone}
-                  />
-                ))}
-              </CollapsibleSection>
-            </div>
-
-            <div ref={medsRef}>
-              <CollapsibleSection
+            {visibleDoses.length ? (
+              <MedsTeaserCard
                 title={copy.dashboard.medicationsTitle}
-                count={visibleDoses.length}
-                open={showMeds}
-                onToggle={() => setShowMeds((prev) => !prev)}
-                accentClassName="bg-emerald-400"
-              >
-                {visibleDoses.map((dose) => {
-                  const details = dose.reminder?.medication_details || {};
-                  const personLabel = details.personId ? memberLabels[details.personId] : null;
-                  return (
-                    <div key={dose.id} className="premium-card p-3 text-sm">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="font-semibold text-primary">{details.name || dose.reminder?.title}</div>
-                          {details.dose ? <div className="text-xs text-tertiary">{details.dose}</div> : null}
-                          {personLabel ? <div className="text-xs text-tertiary">{personLabel}</div> : null}
-                        </div>
-                        <div className="text-xs font-semibold text-tertiary">
-                          {new Date(dose.scheduled_at).toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className="inline-flex h-8 items-center justify-center rounded-full bg-[color:var(--accent-strong)] px-3 text-xs font-semibold text-[#04131b]"
-                          onClick={() => handleDoseStatus(dose.id, 'taken')}
-                        >
-                          {copy.dashboard.medicationsTaken}
-                        </button>
-                        <button
-                          type="button"
-                          className="inline-flex h-8 items-center justify-center rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-secondary"
-                          onClick={() => handleDoseStatus(dose.id, 'skipped')}
-                        >
-                          {copy.dashboard.medicationsSkip}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </CollapsibleSection>
-            </div>
+                subtitle={`Următoarea doză: ${new Date(visibleDoses[0].scheduled_at).toLocaleTimeString(localeTag, {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}`}
+                actionLabel={copy.dashboard.medicationsViewPlan}
+                onAction={() => {
+                  if (typeof window !== 'undefined') {
+                    window.location.href = '/app/medications';
+                  }
+                }}
+              />
+            ) : (
+              <MedsTeaserCard title={copy.dashboard.medicationsTitle} subtitle={copy.dashboard.medicationsEmpty} />
+            )}
 
-            {!overdueItems.length && !todayOpenItems.length && !soonItems.length && !visibleDoses.length ? (
-              <div className="premium-card p-4 text-sm text-tertiary">
-                {copy.dashboard.todayEmpty}
-              </div>
-            ) : null}
+            <SegmentedTabs
+              tabs={[
+                { id: 'today', label: copy.dashboard.todayTitle },
+                { id: 'overdue', label: copy.dashboard.todayOverdue },
+                { id: 'soon', label: copy.dashboard.todaySoon }
+              ]}
+              value={homeSegment}
+              onChange={(value) => setHomeSegment(value as 'today' | 'overdue' | 'soon')}
+            />
+
+            <FilteredTaskList
+              items={segmentItems}
+              locale={locale}
+              googleConnected={googleConnected}
+              userTimeZone={effectiveTimeZone}
+              emptyLabel={copy.dashboard.todayEmpty}
+            />
           </div>
         )}
       </section>
