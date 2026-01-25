@@ -3,6 +3,11 @@
 @tailwind utilities;
 
 :root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --bottom-nav-h: 72px;
+  --fab-clearance: 72px;
+  --keyboard-offset: 0px;
   color-scheme: light;
   --bg0: 12 18 28;
   --bg1: 10 80 92;
@@ -257,12 +262,17 @@ h3 {
   min-width: 0;
 }
 
+.today-shell {
+  padding-top: calc(var(--safe-top) + 4px);
+  padding-bottom: calc(var(--bottom-nav-h, 72px) + var(--safe-bottom) + var(--fab-clearance, 72px));
+}
+
 .native-android .app-content {
   padding-bottom: calc(env(safe-area-inset-bottom) + 5rem);
 }
 
 .has-bottom-nav .app-content {
-  padding-bottom: calc(var(--bottom-nav-h, 72px) + env(safe-area-inset-bottom) + 12px);
+  padding-bottom: calc(var(--bottom-nav-h, 72px) + var(--safe-bottom) + 12px + var(--keyboard-offset));
 }
 
 .app-content {

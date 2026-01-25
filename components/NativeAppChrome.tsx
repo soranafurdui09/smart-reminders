@@ -69,10 +69,33 @@ export default function NativeAppChrome() {
     };
 
     const removeListener = App.addListener('appUrlOpen', handleAppUrlOpen);
+    const focusHandler = (event: FocusEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
+      const scrollContainer = document.querySelector('.app-content');
+      if (!scrollContainer) return;
+      window.setTimeout(() => {
+        target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, 180);
+    };
+
+    const keyboardShow = Keyboard.addListener('keyboardWillShow', (event) => {
+      document.documentElement.style.setProperty('--keyboard-offset', `${event.keyboardHeight}px`);
+    });
+
+    const keyboardHide = Keyboard.addListener('keyboardWillHide', () => {
+      document.documentElement.style.setProperty('--keyboard-offset', '0px');
+    });
+
+    document.addEventListener('focusin', focusHandler);
 
     return () => {
       window.clearTimeout(timer);
       removeListener.then((handler) => handler.remove());
+      keyboardShow.then((handler) => handler.remove());
+      keyboardHide.then((handler) => handler.remove());
+      document.removeEventListener('focusin', focusHandler);
     };
   }, [router]);
 
