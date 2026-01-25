@@ -227,6 +227,16 @@ export default function ReminderDashboardSection({
     return normalized;
   }, [occurrences, createdBy, assignment, membershipId, userId, kindFilter, categoryFilter]);
 
+  const inboxOccurrences = useMemo(
+    () => filteredOccurrences.filter((occurrence) => !occurrence.reminder?.due_at),
+    [filteredOccurrences]
+  );
+
+  const datedOccurrences = useMemo(
+    () => filteredOccurrences.filter((occurrence) => Boolean(occurrence.reminder?.due_at)),
+    [filteredOccurrences]
+  );
+
   const effectiveTimeZone = userTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   const urgencyStyles = useMemo(() => getUrgencyStyles(copy), [copy]);
 
@@ -241,7 +251,7 @@ export default function ReminderDashboardSection({
     const upcomingByDay = new Map<string, OccurrencePayload[]>();
     const monthBuckets = new Map<string, OccurrencePayload[]>();
 
-    filteredOccurrences.forEach((occurrence) => {
+    datedOccurrences.forEach((occurrence) => {
       const rawDate = occurrence.effective_at ?? occurrence.occur_at;
       const reminderTimeZone = resolveReminderTimeZone(occurrence.reminder?.tz ?? null, effectiveTimeZone);
       const compareDate = occurrence.snoozed_until
@@ -278,7 +288,7 @@ export default function ReminderDashboardSection({
     const monthEntries = Array.from(monthBuckets.entries()).sort(([a], [b]) => a.localeCompare(b));
     const upcomingEntries = Array.from(upcomingByDay.entries()).sort(([a], [b]) => a.localeCompare(b));
     return { todayBuckets, upcomingEntries, monthEntries };
-  }, [effectiveTimeZone, filteredOccurrences]);
+  }, [effectiveTimeZone, datedOccurrences]);
 
   const todayBuckets = grouped.todayBuckets;
   const todayItems = [...todayBuckets.soon, ...todayBuckets.today];
@@ -311,7 +321,7 @@ export default function ReminderDashboardSection({
     const soon: OccurrencePayload[] = [];
     const todayAll: OccurrencePayload[] = [];
 
-    filteredOccurrences.forEach((occurrence) => {
+    datedOccurrences.forEach((occurrence) => {
       const rawDate = occurrence.effective_at ?? occurrence.occur_at;
       const reminderTimeZone = resolveReminderTimeZone(occurrence.reminder?.tz ?? null, effectiveTimeZone);
       const compareDate = occurrence.snoozed_until
@@ -342,18 +352,18 @@ export default function ReminderDashboardSection({
 
     const doneCount = todayAll.filter((item) => item.status === 'done').length;
     return { overdue, today, soon, todayAll, doneCount, totalCount: todayAll.length };
-  }, [effectiveTimeZone, filteredOccurrences]);
+  }, [effectiveTimeZone, datedOccurrences]);
 
   const householdItems = useMemo(
     () =>
-      filteredOccurrences.filter((occurrence) => {
+      datedOccurrences.filter((occurrence) => {
         const reminder = occurrence.reminder;
         if (!reminder) return false;
         const assignedId = reminder.assigned_member_id;
         const createdByUser = reminder.created_by;
         return (createdByUser && createdByUser !== userId) || (assignedId && assignedId !== membershipId);
       }),
-    [filteredOccurrences, membershipId, userId]
+    [datedOccurrences, membershipId, userId]
   );
 
   const visibleDoses = useMemo(() => {
@@ -383,8 +393,8 @@ export default function ReminderDashboardSection({
   }, [doseState, effectiveTimeZone]);
 
   const mobileInboxItems = useMemo(
-    () => filteredOccurrences.slice(0, mobileInboxLimit),
-    [filteredOccurrences, mobileInboxLimit]
+    () => inboxOccurrences.slice(0, mobileInboxLimit),
+    [inboxOccurrences, mobileInboxLimit]
   );
 
   useEffect(() => {
@@ -499,11 +509,11 @@ export default function ReminderDashboardSection({
 
   const nextOccurrence = useMemo(() => {
     const now = new Date();
-    return filteredOccurrences.find((occurrence) => {
+    return datedOccurrences.find((occurrence) => {
       const compareDate = getCompareDate(occurrence, effectiveTimeZone);
       return compareDate.getTime() >= now.getTime();
     });
-  }, [effectiveTimeZone, filteredOccurrences]);
+  }, [effectiveTimeZone, datedOccurrences]);
 
   const nextOccurrenceLabel = useMemo(() => {
     if (!nextOccurrence) return null;
@@ -555,7 +565,7 @@ export default function ReminderDashboardSection({
             <div className="flex items-center justify-between">
               <div className="text-sm font-semibold text-primary">Inbox</div>
               <div className="text-xs text-tertiary">
-                {filteredOccurrences.length} {copy.dashboard.reminderCountLabel}
+                {inboxOccurrences.length} {copy.dashboard.reminderCountLabel}
               </div>
             </div>
             <ReminderFiltersPanel
@@ -616,7 +626,7 @@ export default function ReminderDashboardSection({
                 {copy.dashboard.empty}
               </div>
             )}
-            {filteredOccurrences.length > mobileInboxLimit ? (
+            {inboxOccurrences.length > mobileInboxLimit ? (
               <button
                 type="button"
                 className="text-xs font-semibold text-secondary"
@@ -858,6 +868,33 @@ export default function ReminderDashboardSection({
 
         <div className="order-2 space-y-6 lg:order-1">
           <div className="h-px bg-white/10" />
+          {desktopTab === 'inbox' ? (
+            <section className="mt-8 space-y-4">
+              <SectionHeading
+                label="Inbox"
+                icon={<Calendar className="h-4 w-4 text-sky-500" aria-hidden="true" />}
+              />
+              {inboxOccurrences.length ? (
+                <div className="grid gap-3 list-optimized">
+                  {inboxOccurrences.map((occurrence) => (
+                    <ReminderCard
+                      key={occurrence.id}
+                      occurrence={occurrence}
+                      locale={locale}
+                      googleConnected={googleConnected}
+                      userTimeZone={effectiveTimeZone}
+                      urgency={urgencyStyles.scheduled}
+                      variant="row"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="card text-sm text-muted">
+                  {copy.dashboard.empty}
+                </div>
+              )}
+            </section>
+          ) : null}
           {kindFilter !== 'medications' && desktopTab === 'today' ? (
             <section className="mt-8 space-y-5">
               <SectionHeading
@@ -1071,7 +1108,7 @@ export default function ReminderDashboardSection({
             </section>
           ) : null}
 
-          {kindFilter !== 'medications' && desktopTab === 'inbox' ? (
+          {kindFilter !== 'medications' && desktopTab === 'today' ? (
             <section className="mt-8 space-y-4">
               <button
                 type="button"
@@ -1139,7 +1176,7 @@ export default function ReminderDashboardSection({
             </section>
           ) : null}
 
-          {kindFilter !== 'medications' && desktopTab === 'inbox' ? (
+          {kindFilter !== 'medications' && desktopTab === 'today' ? (
             <section className="mt-8 space-y-4">
               <SectionHeading
                 label={copy.dashboard.householdTitle}
@@ -1166,7 +1203,7 @@ export default function ReminderDashboardSection({
             </section>
           ) : null}
 
-          {kindFilter !== 'medications' && hasMonthGroups && desktopTab === 'inbox' ? (
+          {kindFilter !== 'medications' && hasMonthGroups && desktopTab === 'today' ? (
             <section className="mt-8 space-y-4">
               <button
                 type="button"

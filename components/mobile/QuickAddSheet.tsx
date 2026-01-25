@@ -41,12 +41,14 @@ export default function QuickAddSheet({
   open,
   onClose,
   initialText = '',
-  autoVoice = false
+  autoVoice = false,
+  mode = 'ai'
 }: {
   open: boolean;
   onClose: () => void;
   initialText?: string;
   autoVoice?: boolean;
+  mode?: 'ai' | 'task' | 'list';
 }) {
   const router = useRouter();
   const [text, setText] = useState('');
@@ -60,6 +62,8 @@ export default function QuickAddSheet({
   const [parsedResult, setParsedResult] = useState<AiResult | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [listName, setListName] = useState('');
+  const [activeMode, setActiveMode] = useState<'ai' | 'task' | 'list'>(mode);
 
   const trimmed = text.trim();
   const canContinue = trimmed.length > 0;
@@ -208,16 +212,20 @@ export default function QuickAddSheet({
   };
 
   const voice = useSpeechToReminder<AiResult>({
-    useAi: true,
-    parseText: async (inputText) => {
-      const cleaned = normalizeTranscript(inputText);
-      setText(cleaned);
-      setParsedResult(null);
-      return await parseReminderText(cleaned);
-    },
-    onParsed: (parsed) => {
-      setParsedResult(parsed);
-    },
+    useAi: activeMode === 'ai',
+    parseText: activeMode === 'ai'
+      ? async (inputText) => {
+          const cleaned = normalizeTranscript(inputText);
+          setText(cleaned);
+          setParsedResult(null);
+          return await parseReminderText(cleaned);
+        }
+      : undefined,
+    onParsed: activeMode === 'ai'
+      ? (parsed) => {
+          setParsedResult(parsed);
+        }
+      : undefined,
     onFallback: (inputText) => {
       setText(normalizeTranscript(inputText));
     },
@@ -231,13 +239,14 @@ export default function QuickAddSheet({
 
   useEffect(() => {
     if (!open) return;
+    setActiveMode(mode);
     if (initialText) {
       setText(initialText);
     }
     if (autoVoice && voiceStatus === 'idle') {
       startVoice();
     }
-  }, [autoVoice, initialText, open, startVoice, voiceStatus]);
+  }, [autoVoice, initialText, mode, open, startVoice, voiceStatus]);
 
   useEffect(() => {
     if (open) return;
@@ -266,7 +275,7 @@ export default function QuickAddSheet({
   const handleNavigate = (mode?: 'medication') => {
     onClose();
     if (mode === 'medication') {
-      router.push('/app/reminders/new?mode=medication');
+      router.push('/app/medications/new');
       return;
     }
     const fullText = buildFullText();
@@ -284,13 +293,18 @@ export default function QuickAddSheet({
     try {
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
       let parsed: AiResult | null = null;
-
-      parsed = await parseReminderText(buildFullText());
+      if (activeMode === 'ai') {
+        parsed = await parseReminderText(buildFullText());
+      }
 
       const formData = new FormData();
       formData.set('kind', 'generic');
       formData.set('title', parsed?.title || trimmed);
-      formData.set('notes', parsed?.description || '');
+      const baseNotes = parsed?.description || '';
+      const listSuffix = activeMode === 'list' && listName
+        ? `${baseNotes ? `${baseNotes}\n` : ''}Listă: ${listName}`
+        : baseNotes;
+      formData.set('notes', listSuffix);
       const fallbackRule = buildRecurrenceRule();
       formData.set('recurrence_rule', parsed?.recurrenceRule || fallbackRule);
       formData.set('schedule_type', deriveScheduleType(parsed?.recurrenceRule || fallbackRule));
@@ -325,6 +339,13 @@ export default function QuickAddSheet({
 
   if (!open) return null;
 
+  const isAiMode = activeMode === 'ai';
+  const sheetTitle = activeMode === 'task'
+    ? 'Task rapid'
+    : activeMode === 'list'
+      ? 'Adaugă în listă'
+      : 'Adaugă rapid';
+
   return (
     <div
       className="fixed inset-0 z-[60] flex items-end justify-center bg-[#02040a]/70 px-4 pb-6"
@@ -339,8 +360,14 @@ export default function QuickAddSheet({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className={`text-sm font-semibold ${classTextPrimary}`}>Adaugă rapid</div>
-            <p className={`mt-1 text-xs ${classTextSecondary}`}>Scrie sau dictează un reminder scurt.</p>
+            <div className={`text-sm font-semibold ${classTextPrimary}`}>{sheetTitle}</div>
+            <p className={`mt-1 text-xs ${classTextSecondary}`}>
+              {activeMode === 'ai'
+                ? 'Scrie sau dictează un reminder scurt.'
+                : activeMode === 'task'
+                  ? 'Adaugă un task rapid și opțional o dată.'
+                  : 'Adaugă un element într-o listă simplă.'}
+            </p>
           </div>
           <IconButton aria-label="Închide" onClick={onClose}>
             <X className="h-4 w-4" />
@@ -348,6 +375,30 @@ export default function QuickAddSheet({
         </div>
 
         <div className="mt-4 space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: 'ai', label: 'AI Reminder', mode: 'ai' as const },
+              { id: 'task', label: 'Quick Task', mode: 'task' as const },
+              { id: 'list', label: 'List Item', mode: 'list' as const },
+              { id: 'meds', label: 'Medication', mode: 'medication' as const }
+            ].map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`premium-chip ${activeMode === item.mode ? 'border-[color:var(--accent)] text-ink bg-[color:var(--accent-soft-bg)]' : ''}`}
+                onClick={() => {
+                  if (item.mode === 'medication') {
+                    handleNavigate('medication');
+                    return;
+                  }
+                  setActiveMode(item.mode);
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
           <Card className="p-3 text-xs text-slate-300">
             <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
               <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
@@ -385,7 +436,13 @@ export default function QuickAddSheet({
           <div className="relative">
             <textarea
               className="premium-input min-h-[84px] w-full px-3 py-3 pr-12 text-sm placeholder:text-slate-400"
-              placeholder="ex: plătește chiria pe 1 la 9, lunar, cu 2 zile înainte"
+              placeholder={
+                activeMode === 'task'
+                  ? 'ex: trimite email către bancă'
+                  : activeMode === 'list'
+                    ? 'ex: cumpără lapte'
+                    : 'ex: plătește chiria pe 1 la 9, lunar, cu 2 zile înainte'
+              }
               value={text}
               onChange={(event) => {
                 setParsedResult(null);
@@ -400,44 +457,59 @@ export default function QuickAddSheet({
               <Mic className="h-4 w-4" />
             </IconButton>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {suggestions.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className="premium-chip"
-                onClick={() => {
-                  if (item.mode === 'medication') {
-                    handleNavigate('medication');
-                    return;
-                  }
-                  setParsedResult(null);
-                  setText(item.text ?? '');
-                }}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {templates.map((template) => (
-              <button
-                key={template.id}
-                type="button"
-                className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left text-xs font-semibold text-slate-200 transition hover:bg-white/10"
-                onClick={() => {
-                  if (template.mode === 'medication') {
-                    handleNavigate('medication');
-                    return;
-                  }
-                  setParsedResult(null);
-                  setText(template.text ?? '');
-                }}
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
+          {activeMode === 'list' ? (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-300">Listă</label>
+              <input
+                className="premium-input w-full px-3 text-sm"
+                value={listName}
+                onChange={(event) => setListName(event.target.value)}
+                placeholder="ex: Cumpărături"
+              />
+            </div>
+          ) : null}
+          {isAiMode ? (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {suggestions.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="premium-chip"
+                    onClick={() => {
+                      if (item.mode === 'medication') {
+                        handleNavigate('medication');
+                        return;
+                      }
+                      setParsedResult(null);
+                      setText(item.text ?? '');
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {templates.map((template) => (
+                  <button
+                    key={template.id}
+                    type="button"
+                    className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left text-xs font-semibold text-slate-200 transition hover:bg-white/10"
+                    onClick={() => {
+                      if (template.mode === 'medication') {
+                        handleNavigate('medication');
+                        return;
+                      }
+                      setParsedResult(null);
+                      setText(template.text ?? '');
+                    }}
+                  >
+                    {template.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : null}
         </div>
 
         <div className="mt-4">
@@ -448,8 +520,19 @@ export default function QuickAddSheet({
           >
             {detailsOpen ? 'Ascunde detalii avansate' : 'Detalii avansate'}
           </button>
-          {detailsOpen ? (
+            {detailsOpen ? (
             <div className="mt-3 space-y-3">
+              {activeMode === 'list' ? (
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-300">Listă</label>
+                  <input
+                    className="premium-input w-full px-3 text-sm"
+                    value={listName}
+                    onChange={(event) => setListName(event.target.value)}
+                    placeholder="Ex: Cumpărături"
+                  />
+                </div>
+              ) : null}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-300">Data</label>

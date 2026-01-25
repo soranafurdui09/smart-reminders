@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Mic, Plus } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import { classTextPrimary, classTextSecondary } from '@/styles/tokens';
@@ -15,16 +14,12 @@ const chips = [
 ];
 
 export default function QuickAddCard() {
-  const router = useRouter();
   const [value, setValue] = useState('');
   const trimmed = value.trim();
 
   const handleAdd = () => {
-    if (!trimmed) {
-      router.push('/app/reminders/new');
-      return;
-    }
-    router.push(`/app/reminders/new?quick=${encodeURIComponent(trimmed)}`);
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent('quickadd:open', { detail: { text: trimmed, mode: 'ai' } }));
   };
 
   return (
@@ -46,7 +41,9 @@ export default function QuickAddCard() {
             className="premium-icon-btn absolute right-1.5 top-1/2 -translate-y-1/2"
             aria-label="Dictează"
             onClick={() => {
-              router.push('/app/reminders/new?voice=1');
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('quickadd:open', { detail: { voice: true, mode: 'ai' } }));
+              }
             }}
           >
             <Mic className="h-4 w-4" />

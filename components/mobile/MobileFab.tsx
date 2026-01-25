@@ -2,14 +2,25 @@
 
 import { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
-import FabMenu from '@/components/navigation/FabMenu';
+import QuickAddSheet from '@/components/mobile/QuickAddSheet';
 
 export default function MobileFab() {
   const [open, setOpen] = useState(false);
+  const [initialText, setInitialText] = useState<string | undefined>(undefined);
+  const [autoVoice, setAutoVoice] = useState(false);
+  const [mode, setMode] = useState<'ai' | 'task' | 'list'>('ai');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const handleOpen = () => {
+    const handleOpen = (event: Event) => {
+      const detail = (event as CustomEvent<{ text?: string; voice?: boolean; mode?: 'ai' | 'task' | 'list' }>).detail;
+      if (detail?.text) {
+        setInitialText(detail.text);
+      } else {
+        setInitialText(undefined);
+      }
+      setAutoVoice(Boolean(detail?.voice));
+      setMode(detail?.mode ?? 'ai');
       setOpen(true);
     };
     window.addEventListener('quickadd:open', handleOpen as EventListener);
@@ -27,16 +38,20 @@ export default function MobileFab() {
           if (process.env.NODE_ENV !== 'production') {
             console.log('FAB clicked');
           }
+          setMode('ai');
+          setInitialText(undefined);
+          setAutoVoice(false);
           setOpen(true);
         }}
       >
         <Plus className="h-6 w-6" aria-hidden="true" />
       </button>
-      <FabMenu
+      <QuickAddSheet
         open={open}
-        onClose={() => {
-          setOpen(false);
-        }}
+        onClose={() => setOpen(false)}
+        initialText={initialText}
+        autoVoice={autoVoice}
+        mode={mode}
       />
     </>
   );
