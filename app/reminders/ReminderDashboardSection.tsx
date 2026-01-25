@@ -533,6 +533,18 @@ export default function ReminderDashboardSection({
       : formatReminderDateTime(displayAt, reminderTimeZone, effectiveTimeZone);
   }, [effectiveTimeZone, nextOccurrence]);
 
+  const nextCategory = useMemo(() => {
+    if (!nextOccurrence) return null;
+    const categoryId = inferReminderCategoryId({
+      title: nextOccurrence.reminder?.title,
+      notes: nextOccurrence.reminder?.notes,
+      kind: nextOccurrence.reminder?.kind,
+      category: nextOccurrence.reminder?.category,
+      medicationDetails: nextOccurrence.reminder?.medication_details
+    });
+    return getReminderCategory(categoryId);
+  }, [nextOccurrence]);
+
   if (isMobile) {
     const overdueItems = mobileBuckets.overdue;
     const todayOpenItems = mobileBuckets.today;
