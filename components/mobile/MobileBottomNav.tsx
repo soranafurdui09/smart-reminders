@@ -67,7 +67,14 @@ export default function MobileBottomNav({
                 tab.active ? 'text-[color:var(--accent)]' : 'text-tertiary hover:text-secondary'
               }`}
               aria-current={tab.active ? 'page' : undefined}
-              onClick={() => router.push(tab.href)}
+              onClick={() => {
+                if (typeof window !== 'undefined' && pathname === '/app' && (tab.key === 'today' || tab.key === 'inbox')) {
+                  window.history.replaceState(null, '', tab.href);
+                  window.dispatchEvent(new CustomEvent('dashboard:tab', { detail: { tab: tab.key } }));
+                  return;
+                }
+                router.push(tab.href);
+              }}
             >
               <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${tab.active ? 'bg-[color:var(--accent-soft-bg)] text-[color:var(--accent)]' : 'bg-surfaceMuted text-tertiary'}`}>
                 <Icon className="h-5 w-5" aria-hidden="true" />

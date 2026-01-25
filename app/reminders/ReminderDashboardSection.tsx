@@ -460,6 +460,17 @@ export default function ReminderDashboardSection({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    const handleTabEvent = (event: Event) => {
+      const detail = (event as CustomEvent<{ tab?: TabOption }>).detail;
+      if (!detail?.tab) return;
+      setActiveTab(detail.tab);
+    };
+    window.addEventListener('dashboard:tab', handleTabEvent as EventListener);
+    return () => window.removeEventListener('dashboard:tab', handleTabEvent as EventListener);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
     if (householdId) {
       window.localStorage.setItem('smart-reminder-household', householdId);
     }
