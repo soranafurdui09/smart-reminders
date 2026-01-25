@@ -21,6 +21,7 @@ const config: Config = {
         textPrimary: 'var(--text-1)',
         textSecondary: 'var(--text-2)',
         textTertiary: 'var(--text-3)',
+        textInv: 'rgb(var(--text-inv) / <alpha-value>)',
         border: 'rgb(var(--color-border) / <alpha-value>)',
         borderSubtle: 'rgb(var(--color-border-subtle) / <alpha-value>)',
         ink: 'rgb(var(--color-text) / <alpha-value>)',

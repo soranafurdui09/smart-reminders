@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import QuickAddSheet from '@/components/mobile/QuickAddSheet';
+import QuickActionsSheet from '@/components/mobile/QuickActionsSheet';
 
 export default function MobileFab() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [initialText, setInitialText] = useState<string | undefined>(undefined);
   const [autoVoice, setAutoVoice] = useState(false);
   const [mode, setMode] = useState<'ai' | 'task' | 'list'>('ai');
@@ -38,14 +42,25 @@ export default function MobileFab() {
           if (process.env.NODE_ENV !== 'production') {
             console.log('FAB clicked');
           }
-          setMode('ai');
-          setInitialText(undefined);
-          setAutoVoice(false);
-          setOpen(true);
+          setActionsOpen(true);
         }}
       >
         <Plus className="h-6 w-6" aria-hidden="true" />
       </button>
+      <QuickActionsSheet
+        open={actionsOpen}
+        onClose={() => setActionsOpen(false)}
+        onSelect={(key) => {
+          if (key === 'medication') {
+            router.push('/app/medications/new');
+            return;
+          }
+          setMode(key === 'task' ? 'task' : key === 'list' ? 'list' : 'ai');
+          setInitialText(undefined);
+          setAutoVoice(false);
+          setOpen(true);
+        }}
+      />
       <QuickAddSheet
         open={open}
         onClose={() => setOpen(false)}

@@ -9,9 +9,9 @@ type Props = {
 
 export default function MedsTeaserCard({ title, subtitle, actionLabel, onAction }: Props) {
   return (
-    <div className="rounded-2xl border border-emerald-100/70 bg-white/90 p-4 text-sm text-slate-700 shadow-sm">
+    <div className="premium-card border-[color:rgba(16,185,129,0.18)] p-4 text-sm text-muted">
       <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600">{title}</div>
-      <div className="mt-1 text-sm font-semibold text-slate-900">{subtitle}</div>
+      <div className="mt-1 text-sm font-semibold text-ink">{subtitle}</div>
       {actionLabel ? (
         <button
           type="button"

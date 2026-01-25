@@ -19,7 +19,7 @@ export default function FilteredTaskList({
 }: Props) {
   if (!items.length) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 text-sm text-slate-500 shadow-sm">
+      <div className="premium-card p-4 text-sm text-muted">
         {emptyLabel}
       </div>
     );

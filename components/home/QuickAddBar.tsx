@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Mic, Sparkles, Plus } from 'lucide-react';
+import { Mic, Sparkles } from 'lucide-react';
 
 const chips = [
   { id: 'today', label: 'Azi', text: 'azi la 18:00' },
@@ -20,23 +20,25 @@ export default function QuickAddBar() {
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-sm">
+    <div className="premium-card p-3">
       <div className="flex items-center gap-2">
-        <input
-          className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-200"
-          placeholder="ex: mâine la 9 plătește chiria"
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              if (trimmed) openQuickAdd({ text: trimmed });
-            }
-          }}
-        />
+        <div className="flex h-11 flex-1 items-center rounded-[14px] border border-border bg-surface px-3">
+          <input
+            className="h-full w-full bg-transparent text-sm text-ink placeholder:text-muted focus:outline-none"
+            placeholder="Adaugă sau caută… (ex: chirie pe 1 la 9)"
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                if (trimmed) openQuickAdd({ text: trimmed });
+              }
+            }}
+          />
+        </div>
         <button
           type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600"
+          className="premium-icon-btn h-11 w-11 text-[color:rgb(var(--accent-2))]"
           aria-label="Dictează"
           onClick={() => openQuickAdd({ voice: true })}
         >
@@ -44,36 +46,25 @@ export default function QuickAddBar() {
         </button>
         <button
           type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600"
+          className="premium-icon-btn h-11 w-11 text-[color:rgb(var(--accent-2))]"
           aria-label="AI"
           onClick={() => openQuickAdd({ text: trimmed || undefined })}
         >
           <Sparkles className="h-4 w-4" />
         </button>
-        <button
-          type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500 text-white shadow-sm"
-          aria-label="Adaugă"
-          onClick={() => {
-            if (trimmed) openQuickAdd({ text: trimmed });
-          }}
-          disabled={!trimmed}
-        >
-          <Plus className="h-4 w-4" />
-        </button>
       </div>
-        <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-          {chips.map((chip) => (
-            <button
-              key={chip.id}
-              type="button"
-              className="whitespace-nowrap rounded-full border border-slate-200 bg-amber-50/70 px-3 py-1 text-xs font-semibold text-amber-700"
-              onClick={() => setValue((current) => (current ? `${current} ${chip.text}` : chip.text))}
-            >
-              {chip.label}
-            </button>
-          ))}
-        </div>
+      <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+        {chips.map((chip) => (
+          <button
+            key={chip.id}
+            type="button"
+            className="premium-chip whitespace-nowrap"
+            onClick={() => setValue((current) => (current ? `${current} ${chip.text}` : chip.text))}
+          >
+            {chip.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

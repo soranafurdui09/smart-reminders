@@ -3,8 +3,8 @@ export const colors = {
   textPrimary: 'text-[color:var(--text-1)]',
   textSecondary: 'text-[color:var(--text-2)]',
   textMuted: 'text-[color:var(--text-3)]',
-  accent: 'text-[color:var(--accent)]',
-  overdue: 'text-[color:var(--danger)]'
+  accent: 'text-[color:rgb(var(--accent))]',
+  overdue: 'text-[color:rgb(var(--danger))]'
 } as const;
 
 export const radii = {

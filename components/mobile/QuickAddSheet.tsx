@@ -9,6 +9,7 @@ import { useSpeechToReminder } from '@/hooks/useSpeechToReminder';
 import Card from '@/components/ui/Card';
 import Pill from '@/components/ui/Pill';
 import IconButton from '@/components/ui/IconButton';
+import BottomSheet from '@/components/ui/BottomSheet';
 import { classTextPrimary, classTextSecondary } from '@/styles/tokens';
 
 type AiResult = {
@@ -347,17 +348,7 @@ export default function QuickAddSheet({
       : 'Adaugă rapid';
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-[#02040a]/70 px-4 pb-6"
-      onClick={onClose}
-      role="presentation"
-    >
-      <div
-        className="premium-sheet w-full max-w-lg max-h-[85vh] p-4 overflow-y-auto overscroll-contain"
-        onClick={(event) => event.stopPropagation()}
-        role="dialog"
-        aria-label="Adaugă reminder"
-      >
+    <BottomSheet open={open} onClose={onClose} className="pb-[calc(env(safe-area-inset-bottom)_+_6px)]" ariaLabel="Adaugă reminder">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className={`text-sm font-semibold ${classTextPrimary}`}>{sheetTitle}</div>
@@ -375,55 +366,31 @@ export default function QuickAddSheet({
         </div>
 
         <div className="mt-4 space-y-3">
-          <div className="flex flex-wrap gap-2">
-            {[
-              { id: 'ai', label: 'AI Reminder', mode: 'ai' as const },
-              { id: 'task', label: 'Quick Task', mode: 'task' as const },
-              { id: 'list', label: 'List Item', mode: 'list' as const },
-              { id: 'meds', label: 'Medication', mode: 'medication' as const }
-            ].map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={`premium-chip ${activeMode === item.mode ? 'border-[color:var(--accent)] text-ink bg-[color:var(--accent-soft-bg)]' : ''}`}
-                onClick={() => {
-                  if (item.mode === 'medication') {
-                    handleNavigate('medication');
-                    return;
-                  }
-                  setActiveMode(item.mode);
-                }}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-
-          <Card className="p-3 text-xs text-slate-300">
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-              <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
+          <Card className="p-3 text-xs text-muted">
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
+              <Sparkles className="h-3.5 w-3.5 text-[color:rgb(var(--accent-2))]" />
               Preview
               {parsedResult ? (
-                <Pill className="ml-auto bg-white/10 text-slate-200">AI completat</Pill>
+                <Pill className="ml-auto bg-[color:rgba(14,165,233,0.12]) text-[color:rgb(var(--accent-2))]">AI completat</Pill>
               ) : null}
             </div>
-            <div className="mt-2 text-sm font-semibold text-slate-100">{previewTitle}</div>
-            <div className="mt-1 text-xs text-slate-400">{previewDate}</div>
+            <div className="mt-2 text-sm font-semibold text-ink">{previewTitle}</div>
+            <div className="mt-1 text-xs text-muted">{previewDate}</div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Pill className="border border-white/10 bg-white/5 text-slate-300">Activ · Reminder nou</Pill>
-              <Pill className="bg-cyan-500/15 text-cyan-200">{previewCategory}</Pill>
+              <Pill className="border border-border bg-surfaceMuted text-muted">Activ · Reminder nou</Pill>
+              <Pill className="bg-[color:rgba(14,165,233,0.14)] text-[color:rgb(var(--accent-2))]">{previewCategory}</Pill>
             </div>
             <div className="mt-2">{previewText}</div>
           </Card>
           {voiceActive ? (
-            <div className="flex items-center justify-between text-xs text-cyan-300">
+            <div className="flex items-center justify-between text-xs text-[color:rgb(var(--accent-2))]">
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-300" aria-hidden="true" />
+                <span className="h-2 w-2 animate-pulse rounded-full bg-[color:rgb(var(--accent-2))]" aria-hidden="true" />
                 Ascult…
               </div>
               <button
                 type="button"
-                className="premium-chip border-cyan-400/30 text-cyan-200"
+                className="premium-chip border-[color:rgba(14,165,233,0.3)] text-[color:rgb(var(--accent-2))]"
                 onClick={voice.stop}
               >
                 Oprește
@@ -431,11 +398,11 @@ export default function QuickAddSheet({
             </div>
           ) : null}
           {voice.status === 'processing' || voice.status === 'parsing' ? (
-            <div className="text-xs text-slate-300">Procesez dictarea…</div>
+            <div className="text-xs text-muted">Procesez dictarea…</div>
           ) : null}
           <div className="relative">
             <textarea
-              className="premium-input min-h-[84px] w-full px-3 py-3 pr-12 text-sm placeholder:text-slate-400"
+              className="premium-input min-h-[84px] w-full px-3 py-3 pr-12 text-sm placeholder:text-muted"
               placeholder={
                 activeMode === 'task'
                   ? 'ex: trimite email către bancă'
@@ -459,7 +426,7 @@ export default function QuickAddSheet({
           </div>
           {activeMode === 'list' ? (
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-300">Listă</label>
+              <label className="text-xs font-semibold text-muted">Listă</label>
               <input
                 className="premium-input w-full px-3 text-sm"
                 value={listName}
@@ -494,7 +461,7 @@ export default function QuickAddSheet({
                   <button
                     key={template.id}
                     type="button"
-                    className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left text-xs font-semibold text-slate-200 transition hover:bg-white/10"
+                    className="rounded-2xl border border-border bg-surfaceMuted px-3 py-2 text-left text-xs font-semibold text-ink transition hover:bg-surface"
                     onClick={() => {
                       if (template.mode === 'medication') {
                         handleNavigate('medication');
@@ -515,7 +482,7 @@ export default function QuickAddSheet({
         <div className="mt-4">
           <button
             type="button"
-            className="text-xs font-semibold text-slate-300"
+            className="text-xs font-semibold text-muted"
             onClick={() => setDetailsOpen((prev) => !prev)}
           >
             {detailsOpen ? 'Ascunde detalii avansate' : 'Detalii avansate'}
@@ -524,7 +491,7 @@ export default function QuickAddSheet({
             <div className="mt-3 space-y-3">
               {activeMode === 'list' ? (
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Listă</label>
+                  <label className="text-xs font-semibold text-muted">Listă</label>
                   <input
                     className="premium-input w-full px-3 text-sm"
                     value={listName}
@@ -535,7 +502,7 @@ export default function QuickAddSheet({
               ) : null}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Data</label>
+                  <label className="text-xs font-semibold text-muted">Data</label>
                   <input
                     type="date"
                     className="premium-input w-full px-3 text-sm"
@@ -544,7 +511,7 @@ export default function QuickAddSheet({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Ora</label>
+                  <label className="text-xs font-semibold text-muted">Ora</label>
                   <input
                     type="time"
                     className="premium-input w-full px-3 text-sm"
@@ -555,7 +522,7 @@ export default function QuickAddSheet({
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Recurență</label>
+                  <label className="text-xs font-semibold text-muted">Recurență</label>
                   <select
                     className="premium-input w-full px-3 text-sm"
                     value={recurrenceValue}
@@ -568,7 +535,7 @@ export default function QuickAddSheet({
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Înainte</label>
+                  <label className="text-xs font-semibold text-muted">Înainte</label>
                   <select
                     className="premium-input w-full px-3 text-sm"
                     value={remindBeforeValue}
@@ -583,7 +550,7 @@ export default function QuickAddSheet({
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300">Dată final</label>
+                <label className="text-xs font-semibold text-muted">Dată final</label>
                 <input
                   type="date"
                   className="premium-input w-full px-3 text-sm"
@@ -592,7 +559,7 @@ export default function QuickAddSheet({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300">Categorie</label>
+                <label className="text-xs font-semibold text-muted">Categorie</label>
                 <select
                   className="premium-input w-full px-3 text-sm"
                   value={categoryValue}
@@ -607,8 +574,8 @@ export default function QuickAddSheet({
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300">Familie</label>
-                <select className="premium-input w-full px-3 text-sm text-slate-400" disabled>
+                <label className="text-xs font-semibold text-muted">Familie</label>
+                <select className="premium-input w-full px-3 text-sm text-muted" disabled>
                   <option>Disponibil în editare completă</option>
                 </select>
               </div>
@@ -627,7 +594,7 @@ export default function QuickAddSheet({
           </button>
           <button
             type="button"
-            className="text-xs font-semibold text-slate-300"
+            className="text-xs font-semibold text-muted"
             onClick={() => {
               onClose();
               const fullText = buildFullText();
@@ -638,8 +605,7 @@ export default function QuickAddSheet({
           </button>
         </div>
 
-        {error ? <p className="mt-3 text-xs text-rose-300">{error}</p> : null}
-      </div>
-    </div>
+        {error ? <p className="mt-3 text-xs text-rose-600">{error}</p> : null}
+    </BottomSheet>
   );
 }

@@ -635,7 +635,7 @@ export default function ReminderDashboardSection({
             ) : null}
           </div>
         ) : (
-          <div className="space-y-4 rounded-3xl bg-gradient-to-b from-amber-50/70 via-white to-white p-4">
+          <div className="space-y-4">
             <HomeHeader title={copy.dashboard.todayTitle} />
 
             {nextOccurrence && nextOccurrenceLabel ? (
@@ -653,7 +653,7 @@ export default function ReminderDashboardSection({
                       <input type="hidden" name="occurAt" value={nextOccurrence.occur_at ?? ''} />
                       <input type="hidden" name="done_comment" value="" />
                       <ActionSubmitButton
-                        className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm"
+                        className="btn btn-secondary h-9 rounded-full px-3 text-xs"
                         type="submit"
                         data-action-feedback={copy.common.actionDone}
                       >
@@ -664,7 +664,7 @@ export default function ReminderDashboardSection({
                       <input type="hidden" name="occurrenceId" value={nextOccurrence.id} />
                       <input type="hidden" name="mode" value="30" />
                       <ActionSubmitButton
-                        className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700"
+                        className="btn btn-secondary h-9 rounded-full px-3 text-xs"
                         type="submit"
                         data-action-feedback={copy.common.snooze}
                       >
