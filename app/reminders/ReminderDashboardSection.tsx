@@ -549,6 +549,12 @@ export default function ReminderDashboardSection({
     const overdueItems = mobileBuckets.overdue;
     const todayOpenItems = mobileBuckets.today;
     const soonItems = mobileBuckets.soon;
+    const segmentItems =
+      homeSegment === 'overdue'
+        ? overdueItems
+        : homeSegment === 'soon'
+          ? soonItems
+          : todayOpenItems;
 
     return (
       <section className="space-y-4">
