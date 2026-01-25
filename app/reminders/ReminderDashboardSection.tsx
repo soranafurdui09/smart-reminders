@@ -693,7 +693,7 @@ export default function ReminderDashboardSection({
                   hour: '2-digit',
                   minute: '2-digit'
                 })}`}
-                actionLabel={copy.dashboard.medicationsViewPlan}
+                actionLabel={copy.medicationsHub.viewDetails}
                 onAction={() => {
                   if (typeof window !== 'undefined') {
                     window.location.href = '/app/medications';
