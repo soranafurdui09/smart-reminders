@@ -14,12 +14,18 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Verificăm doar dacă există un cookie Supabase de tip auth
+  // Verificăm doar dacă există un cookie Supabase de tip auth.
+  // Acceptă atât cookie chunked (auth-token.0) cât și nechunked (auth-token).
   const hasSupabaseAuthCookie = request.cookies
     .getAll()
-    .some((cookie) =>
-      cookie.name.startsWith('sb-') && cookie.name.endsWith('auth-token.0')
-    );
+    .some((cookie) => {
+      if (!cookie.name.startsWith('sb-')) return false;
+      return (
+        cookie.name.endsWith('auth-token') ||
+        cookie.name.endsWith('auth-token.0') ||
+        cookie.name.includes('auth-token.')
+      );
+    });
 
   if (!hasSupabaseAuthCookie) {
     // Nu pare logat -> redirect la /auth, cu parametru next=...
