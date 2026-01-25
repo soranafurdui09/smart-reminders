@@ -24,7 +24,7 @@ create table if not exists households (
 create table if not exists household_members (
   id uuid primary key default gen_random_uuid(),
   household_id uuid not null references households(id) on delete cascade,
-  user_id uuid not null references auth.users(id) on delete cascade,
+  user_id uuid not null,
   role household_role not null default 'MEMBER',
   created_at timestamptz not null default now(),
   unique (household_id, user_id)
