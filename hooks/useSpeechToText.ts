@@ -37,6 +37,7 @@ export interface UseSpeechToTextResult {
 
 export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const recognitionCtorRef = useRef<SpeechRecognitionConstructor | null>(null);
   const silenceTimerRef = useRef<number | null>(null);
   const noSpeechTimerRef = useRef<number | null>(null);
   const warmupRef = useRef(false);
@@ -44,6 +45,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
   const manualStopRef = useRef(false);
   const finalTranscriptRef = useRef('');
   const interimTranscriptRef = useRef('');
+  const finalByIndexRef = useRef<Map<number, string>>(new Map());
   const lastFinalIndexRef = useRef(0);
   const startingRef = useRef(false);
   const [supported, setSupported] = useState(false);
@@ -118,18 +120,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
     oscillator.stop(now + 0.2);
   }, []);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const SpeechRecognitionCtor = (window as unknown as { SpeechRecognition?: SpeechRecognitionConstructor }).SpeechRecognition
-      || (window as unknown as { webkitSpeechRecognition?: SpeechRecognitionConstructor }).webkitSpeechRecognition;
-
-    if (!SpeechRecognitionCtor) {
-      setSupported(false);
-      return;
-    }
-
-    setSupported(true);
-    const recognition = new SpeechRecognitionCtor();
+  const attachRecognitionHandlers = useCallback((recognition: SpeechRecognitionInstance) => {
     recognition.lang = lang;
     recognition.interimResults = true;
     recognition.continuous = true;
@@ -156,23 +147,30 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
       }
       setListening(false);
       playStopTone();
-      const combined = `${finalTranscriptRef.current}`.replace(/\s+/g, ' ').trim();
-      const wordCount = combined.split(/\s+/).filter(Boolean).length;
+      const finalText = Array.from(finalByIndexRef.current.entries())
+        .sort(([a], [b]) => a - b)
+        .map(([, text]) => text)
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const wordCount = finalText.split(/\s+/).filter(Boolean).length;
       if (!manualStopRef.current && wordCount > 0 && wordCount < minWords) {
         setError('too-short');
       }
-      if (!combined && !manualStopRef.current) {
+      if (!finalText && !manualStopRef.current) {
         setError('no-speech');
       }
-      setTranscript(combined);
+      setTranscript(finalText);
       manualStopRef.current = false;
       interimTranscriptRef.current = '';
       startingRef.current = false;
+      recognitionRef.current = null;
     };
     recognition.onerror = (event) => {
       setError(event?.error || 'unknown');
       setListening(false);
       startingRef.current = false;
+      recognitionRef.current = null;
     };
     recognition.onresult = (event) => {
       let interim = '';
@@ -181,33 +179,52 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
         const result = event.results[i];
         const text = (result?.[0]?.transcript ?? '').trim();
         if (!text) continue;
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug('[speech] chunk', { index: i, isFinal: Boolean(result?.isFinal), text });
+        }
         if (result?.isFinal) {
-          if (i >= lastFinalIndexRef.current) {
-            finalTranscriptRef.current = `${finalTranscriptRef.current} ${text}`.trim();
-            lastFinalIndexRef.current = i + 1;
-          }
+          finalByIndexRef.current.set(i, text);
         } else {
           interim = text;
         }
       }
       interimTranscriptRef.current = interim;
+      const finalText = Array.from(finalByIndexRef.current.entries())
+        .sort(([a], [b]) => a - b)
+        .map(([, text]) => text)
+        .join(' ');
+      const combined = `${finalText} ${interim}`.replace(/\s+/g, ' ').trim();
+      setTranscript(combined);
       if (process.env.NODE_ENV !== 'production') {
-        // Debugging duplication: inspect resultIndex and transcripts.
         console.debug('[speech] result', {
           resultIndex: event.resultIndex,
           results: event.results.length,
-          finalText: finalTranscriptRef.current,
+          finalText,
           interim
         });
       }
-      const combined = `${finalTranscriptRef.current} ${interim}`.replace(/\s+/g, ' ').trim();
-      setTranscript(combined);
       if (noSpeechTimerRef.current) {
         window.clearTimeout(noSpeechTimerRef.current);
         noSpeechTimerRef.current = null;
       }
       resetSilenceTimer();
     };
+  }, [lang, noSpeechMs, playReadyTone, playStopTone, resetSilenceTimer]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognitionCtor = (window as unknown as { SpeechRecognition?: SpeechRecognitionConstructor }).SpeechRecognition
+      || (window as unknown as { webkitSpeechRecognition?: SpeechRecognitionConstructor }).webkitSpeechRecognition;
+
+    if (!SpeechRecognitionCtor) {
+      setSupported(false);
+      return;
+    }
+
+    setSupported(true);
+    recognitionCtorRef.current = SpeechRecognitionCtor;
+    const recognition = new SpeechRecognitionCtor();
+    attachRecognitionHandlers(recognition);
 
     recognitionRef.current = recognition;
 
@@ -227,7 +244,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
       recognition.stop();
       recognitionRef.current = null;
     };
-  }, [lang, playReadyTone, playStopTone, resetSilenceTimer]);
+  }, [attachRecognitionHandlers]);
 
   const warmUpMicrophone = useCallback(async () => {
     if (warmupRef.current) return;
@@ -259,7 +276,17 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
       }
       return;
     }
-    const recognition = recognitionRef.current;
+    let recognition = recognitionRef.current;
+    if (!recognition) {
+      const ctor = recognitionCtorRef.current;
+      if (!ctor) {
+        setError('not-supported');
+        return;
+      }
+      recognition = new ctor();
+      attachRecognitionHandlers(recognition);
+      recognitionRef.current = recognition;
+    }
     if (!recognition) {
       setError('not-supported');
       return;
@@ -269,6 +296,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
     finalTranscriptRef.current = '';
     interimTranscriptRef.current = '';
     lastFinalIndexRef.current = 0;
+    finalByIndexRef.current = new Map();
     manualStopRef.current = false;
     startingRef.current = true;
     try {
@@ -302,6 +330,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
     finalTranscriptRef.current = '';
     interimTranscriptRef.current = '';
     lastFinalIndexRef.current = 0;
+    finalByIndexRef.current = new Map();
   }, []);
 
   return { supported, listening, transcript, error, start, stop, reset };
