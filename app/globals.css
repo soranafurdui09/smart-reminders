@@ -10,15 +10,15 @@
   --fab-clearance: 72px;
   --keyboard-offset: 0px;
   color-scheme: dark;
-  --bg-0: 6 14 20;
-  --bg-1: 14 26 36;
-  --surface-1: rgba(255, 255, 255, 0.08);
-  --surface-2: rgba(255, 255, 255, 0.14);
-  --surface-3: rgba(255, 255, 255, 0.2);
-  --border-1: rgba(255, 255, 255, 0.12);
-  --text-1: rgba(255, 255, 255, 0.92);
-  --text-2: rgba(255, 255, 255, 0.72);
-  --text-3: rgba(255, 255, 255, 0.55);
+  --bg-0: 9 22 32;
+  --bg-1: 20 38 52;
+  --surface-1: rgba(255, 255, 255, 0.1);
+  --surface-2: rgba(255, 255, 255, 0.2);
+  --surface-3: rgba(255, 255, 255, 0.26);
+  --border-1: rgba(255, 255, 255, 0.14);
+  --text-1: rgba(255, 255, 255, 0.94);
+  --text-2: rgba(255, 255, 255, 0.76);
+  --text-3: rgba(255, 255, 255, 0.58);
   --danger: 248 113 113;
   --success: 52 211 153;
   --warning: 245 158 11;
@@ -26,7 +26,7 @@
 
   --bg0: var(--bg-0);
   --bg1: var(--bg-1);
-  --bg2: 10 22 32;
+  --bg2: 12 26 38;
   --surface: var(--surface-1);
   --surface-2: var(--surface-2);
   --surface-3: var(--surface-3);
@@ -93,8 +93,8 @@ body {
   @apply text-text antialiased;
   background-color: var(--bg-base);
   background-image:
-    radial-gradient(820px circle at 50% -30%, rgba(59, 130, 246, 0.16), transparent 60%),
-    linear-gradient(180deg, rgba(14, 26, 36, 0.98) 0%, rgba(6, 14, 20, 1) 52%, rgba(10, 22, 32, 1) 100%);
+    radial-gradient(860px circle at 50% -30%, rgba(59, 130, 246, 0.2), transparent 60%),
+    linear-gradient(180deg, rgba(20, 38, 52, 0.98) 0%, rgba(9, 22, 32, 1) 55%, rgba(12, 26, 38, 1) 100%);
   background-attachment: fixed;
   color: var(--text-1);
 }
@@ -104,8 +104,8 @@ body {
     background-attachment: scroll;
     background-color: var(--bg-base);
     background-image:
-      radial-gradient(640px circle at 50% -30%, rgba(59, 130, 246, 0.16), transparent 60%),
-      linear-gradient(180deg, rgba(14, 26, 36, 0.98) 0%, rgba(6, 14, 20, 1) 52%, rgba(10, 22, 32, 1) 100%);
+      radial-gradient(680px circle at 50% -30%, rgba(59, 130, 246, 0.2), transparent 60%),
+      linear-gradient(180deg, rgba(20, 38, 52, 0.98) 0%, rgba(9, 22, 32, 1) 55%, rgba(12, 26, 38, 1) 100%);
     color: var(--text-1);
   }
 }
@@ -318,7 +318,10 @@ h3 {
   }
 
   .page-wrap {
+    max-width: 100%;
     padding-top: 8px;
+    padding-left: 12px;
+    padding-right: 12px;
   }
 }
 
