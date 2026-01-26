@@ -119,7 +119,7 @@ export default async function HistoryPage({
 
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
           <div className="w-full overflow-x-auto">
-            <div className="inline-flex min-w-max flex-nowrap gap-1 rounded-full border border-borderSubtle bg-surfaceMuted/70 p-1">
+            <div className="inline-flex min-w-max flex-nowrap gap-1 rounded-full border border-borderSubtle bg-surfaceMuted p-1">
             {(['7', '30', 'all'] as const).map((key) => (
               <Link
                 key={key}

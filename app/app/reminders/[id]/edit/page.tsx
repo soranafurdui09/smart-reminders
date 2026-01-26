@@ -284,7 +284,7 @@ export default async function EditReminderPage({ params }: { params: { id: strin
                 placeholder={copy.remindersNew.recurrenceRulePlaceholder}
               />
             </div>
-            <div className="rounded-2xl border border-borderSubtle bg-surfaceMuted/60 p-4 space-y-4">
+            <div className="rounded-2xl border border-borderSubtle bg-surfaceMuted p-4 space-y-4">
               <div>
                 <div className="text-sm font-semibold text-ink">{copy.remindersNew.contextTitle}</div>
                 <p className="text-xs text-muted">{copy.remindersNew.contextSubtitle}</p>

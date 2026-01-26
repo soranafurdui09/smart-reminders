@@ -85,7 +85,7 @@ export default function AppNavigation({
   const headerPadding = isCollapsed ? 'py-2' : 'py-3';
   return (
     <>
-      <header className={`sticky top-0 z-30 border-b border-border/70 ${headerClass} safe-top`}>
+      <header className={`sticky top-0 z-30 border-b border-border ${headerClass} safe-top`}>
         <div className={`page-wrap flex flex-wrap items-center justify-between gap-4 ${headerPadding}`}>
           <Link href="/app" className="flex items-center gap-3 text-lg font-semibold tracking-tight text-ink">
             <span className={`flex ${isCollapsed ? 'h-9 w-9' : 'h-10 w-10'} items-center justify-center rounded-full bg-gradient-to-br from-primaryStrong via-primary to-accent text-sm font-bold text-white shadow-md shadow-sky-500/30`}>
@@ -95,7 +95,7 @@ export default function AppNavigation({
           </Link>
           <div className="flex flex-1 items-center justify-end gap-3 md:justify-between">
             {showTopNav ? (
-              <nav className="hidden flex-wrap items-center gap-1 rounded-full border border-borderSubtle bg-surfaceMuted/70 p-1 text-sm md:flex">
+              <nav className="hidden flex-wrap items-center gap-1 rounded-full border border-borderSubtle bg-surfaceMuted p-1 text-sm md:flex">
                 {navLinks.map((link) => {
                   const active = isActive(link.href);
                   if (link.href === '/app/reminders/new') {

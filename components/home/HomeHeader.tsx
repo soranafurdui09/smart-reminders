@@ -12,8 +12,8 @@ export default function HomeHeader({ title, subtitle, onSearchClick }: Props) {
   return (
     <div className="flex items-center justify-between gap-3">
       <div>
-        <div className="text-base font-semibold text-textInv">{title}</div>
-        {subtitle ? <div className="text-[11px] text-textInv/70">{subtitle}</div> : null}
+        <div className="text-base font-semibold text-text">{title}</div>
+        {subtitle ? <div className="text-[11px] text-muted">{subtitle}</div> : null}
       </div>
       <button
         type="button"
