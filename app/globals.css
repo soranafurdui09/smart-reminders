@@ -400,7 +400,7 @@ h3 {
   }
 
   .icon-btn {
-    @apply inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface3 text-text/90 transition active:scale-95;
+    @apply inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface3 text-text transition active:scale-95;
   }
 
   .page-title {
