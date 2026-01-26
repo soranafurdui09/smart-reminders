@@ -472,26 +472,6 @@ export default function ReminderDashboardSection({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const subtitle =
-      activeTab === 'inbox'
-        ? `${inboxOccurrences.length} ${copy.dashboard.reminderCountLabel}`
-        : `${todayOpenItems.length} ${copy.dashboard.todayTitle} • ${overdueItems.length} ${copy.dashboard.todayOverdue}`;
-    window.dispatchEvent(new CustomEvent('topbar:subtitle', { detail: { subtitle } }));
-    return () => {
-      window.dispatchEvent(new CustomEvent('topbar:clear'));
-    };
-  }, [
-    activeTab,
-    inboxOccurrences.length,
-    todayOpenItems.length,
-    overdueItems.length,
-    copy.dashboard.reminderCountLabel,
-    copy.dashboard.todayTitle,
-    copy.dashboard.todayOverdue
-  ]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
     if (householdId) {
       window.localStorage.setItem('smart-reminder-household', householdId);
     }
@@ -576,6 +556,26 @@ export default function ReminderDashboardSection({
         : todayOpenItems;
 
   const nextIsOverdue = Boolean(nextOccurrence && overdueItems.some((item) => item.id === nextOccurrence.id));
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const subtitle =
+      activeTab === 'inbox'
+        ? `${inboxOccurrences.length} ${copy.dashboard.reminderCountLabel}`
+        : `${todayOpenItems.length} ${copy.dashboard.todayTitle} • ${overdueItems.length} ${copy.dashboard.todayOverdue}`;
+    window.dispatchEvent(new CustomEvent('topbar:subtitle', { detail: { subtitle } }));
+    return () => {
+      window.dispatchEvent(new CustomEvent('topbar:clear'));
+    };
+  }, [
+    activeTab,
+    inboxOccurrences.length,
+    todayOpenItems.length,
+    overdueItems.length,
+    copy.dashboard.reminderCountLabel,
+    copy.dashboard.todayTitle,
+    copy.dashboard.todayOverdue
+  ]);
 
   if (isMobile) {
     return (
