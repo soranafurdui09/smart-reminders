@@ -636,7 +636,9 @@ export default function ReminderDashboardSection({
           </div>
         ) : (
           <div className="space-y-4 today-shell">
-            <HomeHeader title={copy.dashboard.todayTitle} />
+            <div className="hidden md:block">
+              <HomeHeader title={copy.dashboard.todayTitle} />
+            </div>
 
             {nextOccurrence && nextOccurrenceLabel ? (
               <NextUpCard

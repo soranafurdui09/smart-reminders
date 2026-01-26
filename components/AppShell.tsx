@@ -8,7 +8,7 @@ import NativeNotificationSync from '@/components/NativeNotificationSync';
 import AppNavigation from '@/components/AppNavigation';
 import NativeAppChrome from '@/components/NativeAppChrome';
 import WebViewNotice from '@/components/WebViewNotice';
-import MobileShell from '@/components/mobile/MobileShell';
+import MobileShell from '@/components/shell/MobileShell';
 
 export default function AppShell({
   children,
@@ -36,25 +36,6 @@ export default function AppShell({
     <div className="min-h-screen bg-app text-ink">
       <NativeAppChrome />
       <MobileShell
-        header={
-        <AppNavigation
-          navLinks={navLinks}
-          activePath={activePath}
-          appName={copy.appName}
-          userInitial={userInitial}
-          userEmail={safeEmail}
-          voiceLabel={copy.remindersNew.voiceNavLabel}
-          profileLabel={copy.common.profile}
-          logoutLabel={copy.nav.logout}
-          comingSoonLabel={copy.common.comingSoon}
-          mobileLabels={{
-            today: copy.nav.today,
-            inbox: copy.nav.inbox,
-            calendar: copy.nav.calendar,
-            you: copy.nav.you
-          }}
-        />
-        }
         labels={{
           today: copy.nav.today,
           inbox: copy.nav.inbox,
@@ -62,6 +43,19 @@ export default function AppShell({
           you: copy.nav.you
         }}
       >
+        <div className="hidden md:block">
+          <AppNavigation
+            navLinks={navLinks}
+            activePath={activePath}
+            appName={copy.appName}
+            userInitial={userInitial}
+            userEmail={safeEmail}
+            voiceLabel={copy.remindersNew.voiceNavLabel}
+            profileLabel={copy.common.profile}
+            logoutLabel={copy.nav.logout}
+            comingSoonLabel={copy.common.comingSoon}
+          />
+        </div>
         <WebViewNotice />
         {children}
       </MobileShell>

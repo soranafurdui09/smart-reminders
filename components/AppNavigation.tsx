@@ -2,10 +2,9 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Capacitor } from '@capacitor/core';
 import VoiceNavButton from '@/components/VoiceNavButton';
-import MobileTopBar from '@/components/mobile/MobileTopBar';
 
 type NavLink = {
   href: string;
@@ -22,12 +21,6 @@ type Props = {
   profileLabel: string;
   logoutLabel: string;
   comingSoonLabel: string;
-  mobileLabels?: {
-    today: string;
-    inbox: string;
-    calendar: string;
-    you: string;
-  };
 };
 
 export default function AppNavigation({
@@ -39,11 +32,9 @@ export default function AppNavigation({
   voiceLabel,
   profileLabel,
   logoutLabel,
-  comingSoonLabel,
-  mobileLabels
+  comingSoonLabel
 }: Props) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [isNativeAndroid, setIsNativeAndroid] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -92,17 +83,6 @@ export default function AppNavigation({
   const showTopNav = !showBottomNav;
   const headerClass = 'bg-surface/90 shadow-sm backdrop-blur';
   const headerPadding = isCollapsed ? 'py-2' : 'py-3';
-  const fallbackMobileLabels = mobileLabels ?? {
-    today: 'Azi',
-    inbox: 'Inbox',
-    calendar: 'Calendar',
-    you: 'Eu'
-  };
-
-  if (showBottomNav) {
-    return <MobileTopBar labels={fallbackMobileLabels} />;
-  }
-
   return (
     <>
       <header className={`sticky top-0 z-30 border-b border-border/70 ${headerClass} safe-top`}>

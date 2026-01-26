@@ -18,7 +18,7 @@ export default async function YouPage() {
         <SectionHeader title={copy.you.title} description={copy.you.subtitle} />
 
         <Card className="space-y-3">
-          <div className="text-lg font-semibold text-ink">{email || copy.common.profile}</div>
+          <div className="break-words text-lg font-semibold text-ink [overflow-wrap:anywhere]">{email || copy.common.profile}</div>
           <div className="text-sm text-muted">{copy.common.profile}</div>
         </Card>
 
