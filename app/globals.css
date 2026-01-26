@@ -10,14 +10,14 @@
   --fab-clearance: 80px;
   --keyboard-offset: 0px;
   color-scheme: dark;
-  --bg-0: 10 32 36;
-  --bg-1: 16 44 50;
-  --surface-1: rgba(255, 255, 255, 0.08);
-  --surface-2: rgba(255, 255, 255, 0.16);
-  --surface-3: rgba(255, 255, 255, 0.22);
-  --border-1: rgba(255, 255, 255, 0.12);
-  --text-1: rgba(255, 255, 255, 0.92);
-  --text-2: rgba(255, 255, 255, 0.72);
+  --bg-0: 12 34 40;
+  --bg-1: 24 58 66;
+  --surface-1: rgba(255, 255, 255, 0.1);
+  --surface-2: rgba(255, 255, 255, 0.18);
+  --surface-3: rgba(255, 255, 255, 0.26);
+  --border-1: rgba(255, 255, 255, 0.14);
+  --text-1: rgba(255, 255, 255, 0.95);
+  --text-2: rgba(255, 255, 255, 0.78);
   --text-3: rgba(255, 255, 255, 0.6);
   --danger: 248 113 113;
   --success: 52 211 153;
@@ -26,7 +26,7 @@
 
   --bg0: var(--bg-0);
   --bg1: var(--bg-1);
-  --bg2: 8 28 32;
+  --bg2: 10 30 34;
   --surface: var(--surface-1);
   --surface-2: var(--surface-2);
   --surface-3: var(--surface-3);
@@ -93,8 +93,8 @@ body {
   @apply text-text antialiased;
   background-color: var(--bg-base);
   background-image:
-    radial-gradient(800px circle at 50% -20%, rgba(59, 130, 246, 0.12), transparent 60%),
-    linear-gradient(180deg, rgba(16, 44, 50, 0.95) 0%, rgba(10, 32, 36, 1) 45%, rgba(10, 28, 32, 1) 100%);
+    radial-gradient(760px circle at 50% -20%, rgba(59, 130, 246, 0.1), transparent 60%),
+    linear-gradient(180deg, rgba(24, 58, 66, 0.95) 0%, rgba(12, 34, 40, 1) 48%, rgba(10, 30, 34, 1) 100%);
   background-attachment: fixed;
   color: var(--text-1);
 }
@@ -104,8 +104,8 @@ body {
     background-attachment: scroll;
     background-color: var(--bg-base);
     background-image:
-      radial-gradient(600px circle at 50% -20%, rgba(59, 130, 246, 0.12), transparent 60%),
-      linear-gradient(180deg, rgba(16, 44, 50, 0.95) 0%, rgba(10, 32, 36, 1) 45%, rgba(10, 28, 32, 1) 100%);
+      radial-gradient(600px circle at 50% -20%, rgba(59, 130, 246, 0.1), transparent 60%),
+      linear-gradient(180deg, rgba(24, 58, 66, 0.95) 0%, rgba(12, 34, 40, 1) 48%, rgba(10, 30, 34, 1) 100%);
     color: var(--text-1);
   }
 }
@@ -276,8 +276,8 @@ h3 {
 }
 
 .today-shell {
-  padding-top: calc(var(--safe-top) + 4px);
-  padding-bottom: calc(var(--bottom-nav-h, 72px) + var(--safe-bottom) + var(--fab-clearance, 72px));
+  padding-top: 0;
+  padding-bottom: calc(var(--bottom-nav-h, 68px) + var(--safe-bottom) + var(--fab-clearance, 80px));
 }
 
 .native-android .app-content {
@@ -396,6 +396,29 @@ h3 {
     @apply rounded-2xl bg-surface;
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+
+  .surface-a1 {
+    background: var(--surface-1);
+    border: 1px solid var(--border-1);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+  }
+
+  .surface-a2 {
+    background: var(--surface-2);
+    border: 1px solid var(--border-1);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+  }
+
+  .stat-tile {
+    @apply rounded-2xl px-3 py-2 text-left;
+    background: var(--surface-1);
+    border: 1px solid var(--border-1);
+    min-height: 68px;
+  }
+
+  .stat-tile-strong {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 12px 26px rgba(0, 0, 0, 0.35);
   }
 
   .input-surface {

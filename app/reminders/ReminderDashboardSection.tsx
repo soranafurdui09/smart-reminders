@@ -355,6 +355,10 @@ export default function ReminderDashboardSection({
     return { overdue, today, soon, todayAll, doneCount, totalCount: todayAll.length };
   }, [effectiveTimeZone, datedOccurrences]);
 
+  const overdueItems = mobileBuckets.overdue;
+  const todayOpenItems = mobileBuckets.today;
+  const soonItems = mobileBuckets.soon;
+
   const householdItems = useMemo(
     () =>
       datedOccurrences.filter((occurrence) => {
@@ -544,10 +548,6 @@ export default function ReminderDashboardSection({
     });
     return getReminderCategory(categoryId);
   }, [nextOccurrence]);
-
-  const overdueItems = mobileBuckets.overdue;
-  const todayOpenItems = mobileBuckets.today;
-  const soonItems = mobileBuckets.soon;
   const segmentItems =
     homeSegment === 'overdue'
       ? overdueItems
@@ -721,10 +721,10 @@ export default function ReminderDashboardSection({
 
             <AtAGlanceRow
               metrics={[
-                { id: 'overdue', label: copy.dashboard.todayOverdue, count: overdueItems.length, accentClass: 'text-red-400' },
-                { id: 'today', label: copy.dashboard.todayTitle, count: todayOpenItems.length, accentClass: 'text-blue-300' },
-                { id: 'soon', label: copy.dashboard.todaySoon, count: soonItems.length, accentClass: 'text-emerald-300' },
-                { id: 'meds', label: copy.dashboard.medicationsTitle, count: visibleDoses.length, accentClass: 'text-teal-300' }
+                { id: 'overdue', label: copy.dashboard.todayOverdue, count: overdueItems.length, accentClass: 'text-red-400', tone: 'danger', icon: AlertTriangle },
+                { id: 'today', label: copy.dashboard.todayTitle, count: todayOpenItems.length, accentClass: 'text-blue-300', tone: 'info', icon: SunMedium },
+                { id: 'soon', label: copy.dashboard.todaySoon, count: soonItems.length, accentClass: 'text-emerald-300', tone: 'success', icon: Calendar },
+                { id: 'meds', label: copy.dashboard.medicationsTitle, count: visibleDoses.length, accentClass: 'text-teal-300', tone: 'success', icon: Pill }
               ]}
               onSelect={(id) => {
                 if (id === 'overdue') setHomeSegment('overdue');

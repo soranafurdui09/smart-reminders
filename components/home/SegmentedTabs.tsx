@@ -10,14 +10,14 @@ type Props = {
 
 export default function SegmentedTabs({ tabs, value, onChange }: Props) {
   return (
-    <div className="inline-flex w-full rounded-full border border-white/10 bg-white/5 p-1 shadow-sm">
+    <div className="inline-flex w-full rounded-full border border-border bg-surface px-1 py-1 shadow-sm">
       {tabs.map((tab) => {
         const active = tab.id === value;
         const activeClass = tab.id === 'overdue'
-          ? 'bg-red-500/15 text-red-200'
+          ? 'bg-red-500/20 text-red-100'
           : tab.id === 'upcoming'
-            ? 'bg-amber-500/12 text-amber-200'
-            : 'bg-blue-500/12 text-blue-200';
+            ? 'bg-amber-500/16 text-amber-100'
+            : 'bg-blue-500/16 text-blue-100';
         return (
           <button
             key={tab.id}
