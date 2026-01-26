@@ -349,39 +349,41 @@ export default function QuickAddSheet({
 
   return (
     <BottomSheet open={open} onClose={onClose} className="pb-[calc(env(safe-area-inset-bottom)_+_6px)]" ariaLabel="Adaugă reminder">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className={`text-sm font-semibold ${classTextPrimary}`}>{sheetTitle}</div>
-            <p className={`mt-1 text-xs ${classTextSecondary}`}>
-              {activeMode === 'ai'
-                ? 'Scrie sau dictează un reminder scurt.'
-                : activeMode === 'task'
-                  ? 'Adaugă un task rapid și opțional o dată.'
-                  : 'Adaugă un element într-o listă simplă.'}
-            </p>
-          </div>
-          <IconButton aria-label="Închide" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </IconButton>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className={`text-sm font-semibold ${classTextPrimary}`}>{sheetTitle}</div>
+          <p className={`mt-1 text-xs ${classTextSecondary}`}>
+            {activeMode === 'ai'
+              ? 'Scrie sau dictează un reminder scurt.'
+              : activeMode === 'task'
+                ? 'Adaugă un task rapid și opțional o dată.'
+                : 'Adaugă un element într-o listă simplă.'}
+          </p>
         </div>
+        <IconButton aria-label="Închide" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </IconButton>
+      </div>
 
-        <div className="mt-4 space-y-3">
-          <Card className="p-3 text-xs text-muted">
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
-              <Sparkles className="h-3.5 w-3.5 text-[color:rgb(var(--accent-2))]" />
-              Preview
-              {parsedResult ? (
-                <Pill className="ml-auto bg-[color:rgba(14,165,233,0.12]) text-[color:rgb(var(--accent-2))]">AI completat</Pill>
-              ) : null}
-            </div>
-            <div className="mt-2 text-sm font-semibold text-ink">{previewTitle}</div>
-            <div className="mt-1 text-xs text-muted">{previewDate}</div>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Pill className="border border-border bg-surfaceMuted text-muted">Activ · Reminder nou</Pill>
-              <Pill className="bg-[color:rgba(14,165,233,0.14)] text-[color:rgb(var(--accent-2))]">{previewCategory}</Pill>
-            </div>
-            <div className="mt-2">{previewText}</div>
-          </Card>
+      <div className="mt-4 space-y-4">
+        <Card className="p-3 text-xs text-muted">
+          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
+            <Sparkles className="h-3.5 w-3.5 text-[color:rgb(var(--accent-2))]" />
+            Preview
+            {parsedResult ? (
+              <Pill className="ml-auto bg-[color:rgba(14,165,233,0.12)] text-[color:rgb(var(--accent-2))]">AI completat</Pill>
+            ) : null}
+          </div>
+          <div className="mt-2 text-sm font-semibold text-ink">{previewTitle}</div>
+          <div className="mt-1 text-xs text-muted">{previewDate}</div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Pill className="border border-border bg-surfaceMuted text-muted">Activ · Reminder nou</Pill>
+            <Pill className="bg-[color:rgba(14,165,233,0.14)] text-[color:rgb(var(--accent-2))]">{previewCategory}</Pill>
+          </div>
+          <div className="mt-2">{previewText}</div>
+        </Card>
+
+        <div className="space-y-2">
           {voiceActive ? (
             <div className="flex items-center justify-between text-xs text-[color:rgb(var(--accent-2))]">
               <div className="flex items-center gap-2">
@@ -435,62 +437,64 @@ export default function QuickAddSheet({
               />
             </div>
           ) : null}
-          {isAiMode ? (
-            <>
-              <div className="flex flex-wrap gap-2">
-                {suggestions.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className="premium-chip"
-                    onClick={() => {
-                      if (item.mode === 'medication') {
-                        handleNavigate('medication');
-                        return;
-                      }
-                      setParsedResult(null);
-                      setText(item.text ?? '');
-                    }}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {templates.map((template) => (
-                  <button
-                    key={template.id}
-                    type="button"
-                    className="rounded-2xl border border-border bg-surfaceMuted px-3 py-2 text-left text-xs font-semibold text-ink transition hover:bg-surface"
-                    onClick={() => {
-                      if (template.mode === 'medication') {
-                        handleNavigate('medication');
-                        return;
-                      }
-                      setParsedResult(null);
-                      setText(template.text ?? '');
-                    }}
-                  >
-                    {template.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : null}
         </div>
 
-        <div className="mt-4">
-          <button
-            type="button"
-            className="text-xs font-semibold text-muted"
-            onClick={() => setDetailsOpen((prev) => !prev)}
-          >
-            {detailsOpen ? 'Ascunde detalii avansate' : 'Detalii avansate'}
-          </button>
-            {detailsOpen ? (
-            <div className="mt-3 space-y-3">
-              {activeMode === 'list' ? (
-                <div className="space-y-1">
+        {isAiMode ? (
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="premium-chip"
+                  onClick={() => {
+                    if (item.mode === 'medication') {
+                      handleNavigate('medication');
+                      return;
+                    }
+                    setParsedResult(null);
+                    setText(item.text ?? '');
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {templates.map((template) => (
+                <button
+                  key={template.id}
+                  type="button"
+                  className="rounded-2xl border border-border bg-surfaceMuted px-3 py-2 text-left text-xs font-semibold text-ink transition hover:bg-surface"
+                  onClick={() => {
+                    if (template.mode === 'medication') {
+                      handleNavigate('medication');
+                      return;
+                    }
+                    setParsedResult(null);
+                    setText(template.text ?? '');
+                  }}
+                >
+                  {template.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-4">
+        <button
+          type="button"
+          className="text-xs font-semibold text-muted"
+          onClick={() => setDetailsOpen((prev) => !prev)}
+        >
+          {detailsOpen ? 'Ascunde detalii avansate' : 'Detalii avansate'}
+        </button>
+        {detailsOpen ? (
+          <div className="mt-3 space-y-3">
+            {activeMode === 'list' ? (
+              <div className="space-y-1">
                   <label className="text-xs font-semibold text-muted">Listă</label>
                   <input
                     className="premium-input w-full px-3 text-sm"
@@ -581,7 +585,7 @@ export default function QuickAddSheet({
               </div>
             </div>
           ) : null}
-        </div>
+      </div>
 
       <div className="mt-4 grid gap-2 sticky bottom-0 bg-sheet pt-2 pb-[calc(env(safe-area-inset-bottom)_+_12px)]">
           <button
@@ -605,7 +609,7 @@ export default function QuickAddSheet({
           </button>
         </div>
 
-        {error ? <p className="mt-3 text-xs text-rose-600">{error}</p> : null}
+      {error ? <p className="mt-3 text-xs text-rose-600">{error}</p> : null}
     </BottomSheet>
   );
 }

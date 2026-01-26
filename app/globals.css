@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 :root {
+  /* Theme layers: background (bg0/bg1/bg2), surfaces (surface-1/2/3), text + accents. */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --bottom-nav-h: 68px;
