@@ -131,7 +131,7 @@ export default function OccurrenceCard({
 
   return (
     <OccurrenceHighlightCard
-      className="rounded-2xl border border-borderSubtle bg-white/90 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md border-l-4 touch-pan-y"
+      className="rounded-2xl border border-borderSubtle bg-surface2 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md border-l-4 touch-pan-y md:bg-white/90"
       occurrenceId={occurrence.id}
       highlightKey={displayAt}
       style={{ borderLeftColor: category.color }}

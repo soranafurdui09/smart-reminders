@@ -36,12 +36,12 @@ export default function BottomSheet({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 backdrop-blur-sm"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className={`premium-sheet w-full max-w-none max-h-[75vh] overflow-y-auto overscroll-contain px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)_+_16px)] ${className}`}
+        className={`premium-sheet w-full max-w-none max-h-[75vh] overflow-y-auto overscroll-contain px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)_+_16px)] bg-bg border-t border-border ${className}`}
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"

@@ -23,9 +23,9 @@ export default function TopBar({
         : labels.today;
 
   return (
-    <div className="safe-top sticky top-0 z-40 bg-[color:var(--bg-base)]/95 backdrop-blur">
+    <div className="safe-top sticky top-0 z-40 bg-bg backdrop-blur-xl border-b border-border">
       <div className="page-wrap flex items-center justify-between gap-3 py-3">
-        <div className="text-base font-semibold text-textInv">{title}</div>
+        <div className="text-base font-semibold text-text">{title}</div>
         <div className="flex items-center gap-2">
           <Link href="/app?tab=inbox" className="icon-btn" aria-label="Căutare">
             <Search className="h-4 w-4" />

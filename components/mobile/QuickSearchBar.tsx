@@ -104,7 +104,7 @@ export default function QuickSearchBar({
   }, [router, trimmed]);
 
   return (
-    <div className="sticky top-[72px] z-20 space-y-3 rounded-[var(--radius-card)] border border-white/10 bg-surface/85 p-3 shadow-sm md:static md:border-0 md:bg-transparent md:p-0 md:shadow-none">
+    <div className="sticky top-[72px] z-20 space-y-3 rounded-[var(--radius-card)] border border-border bg-surface2 p-3 shadow-soft md:static md:border-0 md:bg-transparent md:p-0 md:shadow-none">
       <form onSubmit={handleSearch} className="flex items-center gap-2">
         <div className="relative flex-1">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">

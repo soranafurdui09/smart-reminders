@@ -81,7 +81,7 @@ export default function AppNavigation({
   const navLabelByHref = useMemo(() => new Map(navLinks.map((link) => [link.href, link.label])), [navLinks]);
   const showBottomNav = isNativeAndroid || isMobile;
   const showTopNav = !showBottomNav;
-  const headerClass = 'bg-surface/90 shadow-sm backdrop-blur';
+  const headerClass = 'bg-surface2 shadow-sm backdrop-blur';
   const headerPadding = isCollapsed ? 'py-2' : 'py-3';
   return (
     <>
