@@ -15,7 +15,7 @@ type Props = {
 export default function AtAGlanceRow({ metrics, onSelect }: Props) {
   return (
     <div className="premium-card">
-      <div className="grid grid-cols-4 divide-x divide-border">
+      <div className="grid grid-cols-2 divide-x divide-y divide-border sm:grid-cols-4 sm:divide-y-0">
         {metrics.map((metric) => (
           <button
             key={metric.id}

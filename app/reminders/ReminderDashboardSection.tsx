@@ -653,7 +653,7 @@ export default function ReminderDashboardSection({
                       <input type="hidden" name="occurAt" value={nextOccurrence.occur_at ?? ''} />
                       <input type="hidden" name="done_comment" value="" />
                       <ActionSubmitButton
-                        className="btn btn-secondary h-9 rounded-full px-3 text-xs"
+                        className="btn btn-primary h-9 rounded-full px-3 text-xs"
                         type="submit"
                         data-action-feedback={copy.common.actionDone}
                       >
@@ -668,7 +668,7 @@ export default function ReminderDashboardSection({
                         type="submit"
                         data-action-feedback={copy.common.snooze}
                       >
-                        {copy.common.snooze}
+                        ⋯
                       </ActionSubmitButton>
                     </form>
                   </div>

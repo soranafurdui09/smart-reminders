@@ -37,17 +37,23 @@ export default function AppShell({
       <NativeAppChrome />
       <MobileShell
         header={
-          <AppNavigation
-            navLinks={navLinks}
-            activePath={activePath}
-            appName={copy.appName}
-            userInitial={userInitial}
-            userEmail={safeEmail}
-            voiceLabel={copy.remindersNew.voiceNavLabel}
-            profileLabel={copy.common.profile}
-            logoutLabel={copy.nav.logout}
-            comingSoonLabel={copy.common.comingSoon}
-          />
+        <AppNavigation
+          navLinks={navLinks}
+          activePath={activePath}
+          appName={copy.appName}
+          userInitial={userInitial}
+          userEmail={safeEmail}
+          voiceLabel={copy.remindersNew.voiceNavLabel}
+          profileLabel={copy.common.profile}
+          logoutLabel={copy.nav.logout}
+          comingSoonLabel={copy.common.comingSoon}
+          mobileLabels={{
+            today: copy.nav.today,
+            inbox: copy.nav.inbox,
+            calendar: copy.nav.calendar,
+            you: copy.nav.you
+          }}
+        />
         }
         labels={{
           today: copy.nav.today,

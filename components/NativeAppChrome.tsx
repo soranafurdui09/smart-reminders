@@ -9,7 +9,7 @@ import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { useRouter } from 'next/navigation';
 
-const STATUS_BAR_COLOR = '#f8fafc';
+const STATUS_BAR_COLOR = '#0b2a2e';
 
 export default function NativeAppChrome() {
   const router = useRouter();
