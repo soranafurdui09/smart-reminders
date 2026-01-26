@@ -50,7 +50,7 @@ export default function TopBar({
 
   return (
     <div className="safe-top sticky top-0 z-40 border-b border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(7,26,28,0.55)] backdrop-blur-xl">
-      <div className={`page-wrap flex min-h-[56px] items-center justify-between gap-3 ${compact ? 'py-2' : 'py-3'}`}>
+      <div className={`mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 ${compact ? 'py-2' : 'py-3'}`}>
         <div className="min-w-0">
           <div className="page-title">{title}</div>
           {subtitle ? <div className="text-[11px] text-muted">{subtitle}</div> : null}
