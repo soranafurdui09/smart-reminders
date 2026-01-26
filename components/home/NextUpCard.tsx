@@ -9,6 +9,8 @@ type Props = {
   badge?: string;
   subtext?: string;
   actions?: ReactNode;
+  tone?: 'overdue' | 'normal';
+  statusLabel?: string;
 };
 
 export default function NextUpCard({
@@ -17,25 +19,35 @@ export default function NextUpCard({
   timeLabel,
   badge,
   subtext,
-  actions
+  actions,
+  tone = 'normal',
+  statusLabel
 }: Props) {
   return (
-    <div className="card p-4">
+    <div className="card relative overflow-hidden p-4">
+      {tone === 'overdue' ? (
+        <span className="absolute left-0 top-0 h-full w-1 bg-red-500/80" aria-hidden="true" />
+      ) : null}
       <div className="text-[11px] font-semibold uppercase tracking-wide text-accent">{title}</div>
       <div className="mt-2 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="truncate text-sm font-semibold text-text">{taskTitle}</div>
+          <div className="truncate text-base font-semibold text-text">{taskTitle}</div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
-            <span>{timeLabel}</span>
+            <span className={tone === 'overdue' ? 'text-red-300' : ''}>{timeLabel}</span>
             {badge ? (
               <span className="badge badge-blue">
                 {badge}
               </span>
             ) : null}
+            {tone === 'overdue' ? (
+              <span className="badge badge-amber">
+                {statusLabel ?? 'ÎNTÂRZIAT'}
+              </span>
+            ) : null}
           </div>
           {subtext ? <div className="mt-2 text-[11px] text-muted">{subtext}</div> : null}
         </div>
-        {actions ? <div className="flex flex-col gap-2">{actions}</div> : null}
+        {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
       </div>
     </div>
   );

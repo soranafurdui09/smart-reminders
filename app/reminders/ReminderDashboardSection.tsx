@@ -549,20 +549,45 @@ export default function ReminderDashboardSection({
     const overdueItems = mobileBuckets.overdue;
     const todayOpenItems = mobileBuckets.today;
     const soonItems = mobileBuckets.soon;
-    const segmentItems =
-      homeSegment === 'overdue'
-        ? overdueItems
-        : homeSegment === 'soon'
-          ? soonItems
-          : todayOpenItems;
+  const segmentItems =
+    homeSegment === 'overdue'
+      ? overdueItems
+      : homeSegment === 'soon'
+        ? soonItems
+        : todayOpenItems;
+
+  const nextIsOverdue = useMemo(() => {
+    if (!nextOccurrence) return false;
+    return overdueItems.some((item) => item.id === nextOccurrence.id);
+  }, [nextOccurrence, overdueItems]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const subtitle =
+      activeTab === 'inbox'
+        ? `${inboxOccurrences.length} ${copy.dashboard.reminderCountLabel}`
+        : `${todayOpenItems.length} ${copy.dashboard.todayTitle} • ${overdueItems.length} ${copy.dashboard.todayOverdue}`;
+    window.dispatchEvent(new CustomEvent('topbar:subtitle', { detail: { subtitle } }));
+    return () => {
+      window.dispatchEvent(new CustomEvent('topbar:clear'));
+    };
+  }, [
+    activeTab,
+    inboxOccurrences.length,
+    todayOpenItems.length,
+    overdueItems.length,
+    copy.dashboard.reminderCountLabel,
+    copy.dashboard.todayTitle,
+    copy.dashboard.todayOverdue
+  ]);
 
     return (
       <section className="space-y-4">
         {activeTab === 'inbox' ? (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold text-primary">Inbox</div>
-              <div className="text-xs text-tertiary">
+            <div className="card-soft flex items-center justify-between px-4 py-3">
+              <div className="text-sm font-semibold text-text">Inbox</div>
+              <div className="text-xs text-muted2">
                 {inboxOccurrences.length} {copy.dashboard.reminderCountLabel}
               </div>
             </div>
@@ -593,14 +618,14 @@ export default function ReminderDashboardSection({
                 { id: 'appointment', label: 'Programare', text: 'Programare la dentist mâine la 12:00' }
               ].map((chip) =>
                 chip.href ? (
-                  <Link key={chip.id} href={chip.href} className="premium-chip">
+                  <Link key={chip.id} href={chip.href} className="chip chip-selected">
                     {chip.label}
                   </Link>
                 ) : (
                   <Link
                     key={chip.id}
                     href={`/app/reminders/new?quick=${encodeURIComponent(chip.text ?? '')}`}
-                    className="premium-chip"
+                    className="chip"
                   >
                     {chip.label}
                   </Link>
@@ -646,9 +671,11 @@ export default function ReminderDashboardSection({
                 taskTitle={nextOccurrence.reminder?.title ?? copy.dashboard.nextTitle}
                 timeLabel={nextOccurrenceLabel}
                 badge={nextCategory?.label}
+                tone={nextIsOverdue ? 'overdue' : 'normal'}
+                statusLabel={copy.dashboard.todayOverdue}
                 subtext={`+${todayOpenItems.length} ${copy.dashboard.reminderCountLabel}`}
                 actions={
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col items-end gap-2">
                     <form action={markDone}>
                       <input type="hidden" name="occurrenceId" value={nextOccurrence.id} />
                       <input type="hidden" name="reminderId" value={nextOccurrence.reminder?.id ?? ''} />
@@ -662,17 +689,27 @@ export default function ReminderDashboardSection({
                         {copy.common.doneAction}
                       </ActionSubmitButton>
                     </form>
-                    <form action={snoozeOccurrence}>
-                      <input type="hidden" name="occurrenceId" value={nextOccurrence.id} />
-                      <input type="hidden" name="mode" value="30" />
-                      <ActionSubmitButton
-                        className="btn btn-secondary h-9 rounded-full px-3 text-xs"
-                        type="submit"
-                        data-action-feedback={copy.common.snooze}
-                      >
-                        ⋯
-                      </ActionSubmitButton>
-                    </form>
+                    <div className="flex items-center gap-2">
+                      <form action={snoozeOccurrence}>
+                        <input type="hidden" name="occurrenceId" value={nextOccurrence.id} />
+                        <input type="hidden" name="mode" value="30" />
+                        <ActionSubmitButton
+                          className="btn btn-secondary h-9 rounded-full px-3 text-xs"
+                          type="submit"
+                          data-action-feedback={copy.common.snooze}
+                        >
+                          {copy.common.snooze}
+                        </ActionSubmitButton>
+                      </form>
+                      {nextOccurrence.reminder?.id ? (
+                        <Link
+                          href={`/app/reminders/${nextOccurrence.reminder.id}/edit`}
+                          className="btn btn-secondary h-9 rounded-full px-3 text-xs"
+                        >
+                          {copy.common.edit}
+                        </Link>
+                      ) : null}
+                    </div>
                   </div>
                 }
               />
@@ -714,9 +751,9 @@ export default function ReminderDashboardSection({
 
             <SegmentedTabs
               tabs={[
-                { id: 'today', label: copy.dashboard.todayTitle },
-                { id: 'overdue', label: copy.dashboard.todayOverdue },
-                { id: 'soon', label: copy.dashboard.todaySoon }
+                { id: 'today', label: copy.dashboard.todayTitle, count: todayOpenItems.length },
+                { id: 'overdue', label: copy.dashboard.todayOverdue, count: overdueItems.length },
+                { id: 'soon', label: copy.dashboard.todaySoon, count: soonItems.length }
               ]}
               value={homeSegment}
               onChange={(value) => setHomeSegment(value as 'today' | 'overdue' | 'soon')}

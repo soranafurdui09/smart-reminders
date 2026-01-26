@@ -49,15 +49,15 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
   const category = getReminderCategory(categoryId);
   const categoryChipStyle = getCategoryChipStyle(category.color, true);
 
-  const statusColor = useMemo(() => {
+  const statusTone = useMemo(() => {
     const now = new Date();
     const compareDate = new Date(displayAt);
-    if (Number.isNaN(compareDate.getTime())) return 'border-sky-400';
+    if (Number.isNaN(compareDate.getTime())) return { bar: 'bg-sky-400/70', text: 'text-sky-200' };
     const dayDiff = diffDaysInTimeZone(compareDate, now, resolvedTimeZone || userTimeZone || 'UTC');
-    if (occurrence.status === 'done') return 'border-slate-300';
-    if (dayDiff < 0 || (dayDiff === 0 && compareDate.getTime() < now.getTime())) return 'border-red-500';
-    if (dayDiff === 0) return 'border-amber-400';
-    return 'border-blue-400';
+    if (occurrence.status === 'done') return { bar: 'bg-slate-300/60', text: 'text-muted' };
+    if (dayDiff < 0 || (dayDiff === 0 && compareDate.getTime() < now.getTime())) return { bar: 'bg-red-500/80', text: 'text-red-300' };
+    if (dayDiff === 0) return { bar: 'bg-amber-400/80', text: 'text-amber-200' };
+    return { bar: 'bg-blue-400/80', text: 'text-blue-200' };
   }, [displayAt, occurrence.status, resolvedTimeZone, userTimeZone]);
 
   const relativeLabel = useMemo(() => {
@@ -123,11 +123,12 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
   return (
     <>
       <div
-        className={`premium-card flex items-center gap-3 px-4 py-4 touch-pan-y border-l-4 ${statusColor}`}
+        className="premium-card relative flex items-center gap-3 px-4 py-4 touch-pan-y"
         onTouchStart={swipeHandlers.onTouchStart}
         onTouchMove={swipeHandlers.onTouchMove}
         onTouchEnd={swipeHandlers.onTouchEnd}
       >
+        <span className={`absolute left-0 top-3 bottom-3 w-1 rounded-full ${statusTone.bar}`} aria-hidden="true" />
         <form action={markDone}>
           <input type="hidden" name="occurrenceId" value={occurrence.id} />
           <input type="hidden" name="reminderId" value={reminderId ?? ''} />
@@ -143,11 +144,11 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
           </ActionSubmitButton>
         </form>
 
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="text-sm font-semibold text-primary line-clamp-2">{reminder?.title}</div>
-          <div className="text-xs text-secondary">
+        <div className="min-w-0 flex-1 space-y-1 pl-1">
+          <div className="text-sm font-semibold text-text line-clamp-2">{reminder?.title}</div>
+          <div className={`text-xs ${statusTone.text}`}>
             {displayLabel}
-            {relativeLabel ? <span className="text-tertiary"> · {relativeLabel}</span> : null}
+            {relativeLabel ? <span className="text-muted2"> · {relativeLabel}</span> : null}
           </div>
           <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase text-secondary">
             <span className="badge badge-blue px-2 py-0.5" style={categoryChipStyle}>

@@ -1,6 +1,6 @@
 "use client";
 
-type Tab = { id: string; label: string };
+type Tab = { id: string; label: string; count?: number };
 
 type Props = {
   tabs: Tab[];
@@ -29,7 +29,14 @@ export default function SegmentedTabs({ tabs, value, onChange }: Props) {
             }`}
             onClick={() => onChange(tab.id)}
           >
-            {tab.label}
+            <span className="inline-flex items-center justify-center gap-1">
+              {tab.label}
+              {typeof tab.count === 'number' ? (
+                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-text">
+                  {tab.count}
+                </span>
+              ) : null}
+            </span>
           </button>
         );
       })}

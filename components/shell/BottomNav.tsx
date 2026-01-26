@@ -27,7 +27,7 @@ export default function BottomNav({
 
   return (
     <nav className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 navbar safe-bottom">
-      <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between px-3 pb-[calc(env(safe-area-inset-bottom)_+_8px)] pt-2">
+      <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between px-3 pb-[calc(env(safe-area-inset-bottom)_+_10px)] pt-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           return (
@@ -47,7 +47,7 @@ export default function BottomNav({
                 router.push(tab.href);
               }}
             >
-              <span className={`flex h-9 w-9 items-center justify-center rounded-2xl ${tab.active ? 'bg-accent/20 text-text' : 'bg-surface3 text-muted'}`}>
+              <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${tab.active ? 'bg-accent/20 text-text' : 'bg-surface3 text-muted'}`}>
                 <Icon className="h-5 w-5" aria-hidden="true" />
               </span>
               <span className="whitespace-nowrap">{tab.label}</span>

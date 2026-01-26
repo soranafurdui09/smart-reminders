@@ -58,7 +58,7 @@ export default function QuickAddBar() {
           <button
             key={chip.id}
             type="button"
-            className="chip whitespace-nowrap"
+            className="chip whitespace-nowrap text-[12px] px-2.5 py-1.5"
             onClick={() => setValue((current) => (current ? `${current} ${chip.text}` : chip.text))}
           >
             {chip.label}
