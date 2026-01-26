@@ -10,17 +10,22 @@ type Props = {
 
 export default function SegmentedTabs({ tabs, value, onChange }: Props) {
   return (
-    <div className="inline-flex w-full rounded-full border border-border bg-surface p-1 shadow-sm">
+    <div className="inline-flex w-full rounded-full border border-white/10 bg-white/5 p-1 shadow-sm">
       {tabs.map((tab) => {
         const active = tab.id === value;
+        const activeClass = tab.id === 'overdue'
+          ? 'bg-red-500/15 text-red-200'
+          : tab.id === 'upcoming'
+            ? 'bg-amber-500/12 text-amber-200'
+            : 'bg-blue-500/12 text-blue-200';
         return (
           <button
             key={tab.id}
             type="button"
             className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold transition ${
               active
-                ? 'bg-[color:rgba(245,158,11,0.18)] text-ink'
-                : 'text-muted hover:bg-surfaceMuted'
+                ? activeClass
+                : 'text-muted hover:bg-white/5'
             }`}
             onClick={() => onChange(tab.id)}
           >

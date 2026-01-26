@@ -49,7 +49,7 @@ export default function ReminderActionsSheet({
       role="presentation"
     >
       <div
-        className="premium-sheet w-full max-w-lg p-4 shadow-[0_18px_40px_rgba(6,12,24,0.45)]"
+        className="sheet w-full max-w-lg p-4 shadow-[0_18px_40px_rgba(6,12,24,0.45)]"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -57,12 +57,12 @@ export default function ReminderActionsSheet({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div id={titleId} className="text-sm font-semibold text-slate-100 line-clamp-2">
+            <div id={titleId} className="text-sm font-semibold text-text line-clamp-2">
               {title}
             </div>
             {categoryLabel ? (
               <span
-                className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${categoryClassName ?? 'bg-white/10 text-slate-200'}`}
+                className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${categoryClassName ?? 'badge badge-blue'}`}
                 style={badgeStyle}
               >
                 {categoryLabel}
@@ -71,14 +71,14 @@ export default function ReminderActionsSheet({
           </div>
           <button
             type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300"
+            className="icon-btn inline-flex h-9 w-9 items-center justify-center"
             onClick={onClose}
             aria-label="Închide"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="mt-4 max-h-[70vh] overflow-y-auto pr-1 text-slate-200">
+        <div className="mt-4 max-h-[70vh] overflow-y-auto pr-1 text-text">
           {children}
         </div>
       </div>

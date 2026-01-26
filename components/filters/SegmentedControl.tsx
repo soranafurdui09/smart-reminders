@@ -21,10 +21,8 @@ export default function SegmentedControl({ options, value, onChange, className }
           <button
             key={option.value}
             type="button"
-            className={`rounded-full border px-3 py-1 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400 ${
-              selected
-                ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft-bg)] text-ink shadow-sm'
-                : 'border-white/10 bg-surfaceMuted text-secondary hover:bg-surface'
+            className={`text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400 ${
+              selected ? 'chip-selected' : 'chip'
             }`}
             aria-pressed={selected}
             onClick={() => onChange(option.value)}

@@ -12,16 +12,14 @@ type Props = {
 
 export default function FilterChip({ label, selected, onToggle, color, className }: Props) {
   const baseClasses =
-    'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400';
+    'inline-flex items-center gap-1.5 px-3 py-1 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400';
   const style = color ? getCategoryChipStyle(color, selected) : undefined;
-  const fallbackClasses = selected
-    ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft-bg)] text-ink shadow-sm'
-    : 'border-white/10 bg-surfaceMuted text-secondary hover:bg-surface';
+  const fallbackClasses = selected ? 'chip-selected' : 'chip';
 
   return (
     <button
       type="button"
-      className={`${baseClasses} ${color ? (selected ? 'shadow-sm' : 'border-white/10 bg-surfaceMuted text-secondary hover:bg-surface') : fallbackClasses} ${className ?? ''}`}
+      className={`${baseClasses} ${color ? (selected ? 'chip-selected shadow-sm' : 'chip') : fallbackClasses} ${className ?? ''}`}
       style={style}
       aria-pressed={selected}
       onClick={onToggle}

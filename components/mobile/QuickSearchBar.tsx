@@ -168,7 +168,7 @@ export default function QuickSearchBar({
               <Link
                 key={item.id}
                 href={`/app/reminders/${item.id}`}
-                className="rounded-2xl border border-white/10 bg-surface px-3 py-2 text-xs text-secondary shadow-sm"
+                className="card-soft px-3 py-2 text-xs text-secondary"
               >
                 <div className="text-[11px] text-tertiary">
                   {item.dueAt ? new Date(item.dueAt).toLocaleString(localeTag) : null}

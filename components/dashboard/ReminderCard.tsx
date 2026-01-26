@@ -236,7 +236,7 @@ function ReminderCard({
       <div className={`flex-1 ${isPrimary ? 'space-y-2' : 'space-y-1.5'}`}>
         <div className="flex items-center justify-between gap-2">
           <span
-            className={`inline-flex max-w-[65%] items-center rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${categoryStyles.pillBg} ${categoryStyles.pillText} truncate whitespace-nowrap`}
+            className={`badge inline-flex max-w-[65%] items-center px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${categoryStyles.pillBg} ${categoryStyles.pillText} truncate whitespace-nowrap`}
             title={categoryStyles.label}
           >
             {categoryStyles.label}
