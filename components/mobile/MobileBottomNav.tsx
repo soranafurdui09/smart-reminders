@@ -56,7 +56,7 @@ export default function MobileBottomNav({
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 navbar safe-bottom">
-      <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between px-3 pb-[calc(env(safe-area-inset-bottom)_+_8px)] pt-2">
+      <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between px-3 pb-[calc(env(safe-area-inset-bottom)_+_10px)] pt-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           return (

@@ -682,10 +682,10 @@ export default function ReminderDashboardSection({
 
             <AtAGlanceRow
               metrics={[
-                { id: 'overdue', label: copy.dashboard.todayOverdue, count: overdueItems.length, accentClass: 'text-rose-600' },
-                { id: 'today', label: copy.dashboard.todayTitle, count: todayOpenItems.length, accentClass: 'text-amber-600' },
-                { id: 'soon', label: copy.dashboard.todaySoon, count: soonItems.length, accentClass: 'text-sky-600' },
-                { id: 'meds', label: copy.dashboard.medicationsTitle, count: visibleDoses.length, accentClass: 'text-emerald-600' }
+                { id: 'overdue', label: copy.dashboard.todayOverdue, count: overdueItems.length, accentClass: 'text-red-400' },
+                { id: 'today', label: copy.dashboard.todayTitle, count: todayOpenItems.length, accentClass: 'text-blue-300' },
+                { id: 'soon', label: copy.dashboard.todaySoon, count: soonItems.length, accentClass: 'text-emerald-300' },
+                { id: 'meds', label: copy.dashboard.medicationsTitle, count: visibleDoses.length, accentClass: 'text-teal-300' }
               ]}
               onSelect={(id) => {
                 if (id === 'overdue') setHomeSegment('overdue');

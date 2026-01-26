@@ -28,8 +28,8 @@ export default function MobileShell({
     if (typeof document === 'undefined') return;
     document.documentElement.classList.toggle('has-bottom-nav', showMobile);
     if (showMobile) {
-      document.documentElement.style.setProperty('--bottom-nav-h', '72px');
-      document.documentElement.style.setProperty('--fab-clearance', '88px');
+      document.documentElement.style.setProperty('--bottom-nav-h', '68px');
+      document.documentElement.style.setProperty('--fab-clearance', '80px');
     } else {
       document.documentElement.style.removeProperty('--bottom-nav-h');
       document.documentElement.style.removeProperty('--fab-clearance');

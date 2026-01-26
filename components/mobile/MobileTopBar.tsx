@@ -29,7 +29,7 @@ export default function MobileTopBar({
 
   return (
     <div className="safe-top sticky top-0 z-40 border-b border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(7,26,28,0.55)] backdrop-blur-xl">
-      <div className="page-wrap flex items-center justify-between gap-3 py-3">
+      <div className="page-wrap flex min-h-[52px] items-center justify-between gap-3 py-2">
         <div className="page-title">{title}</div>
         <div className="flex items-center gap-2">
           <Link
