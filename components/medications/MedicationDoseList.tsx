@@ -93,7 +93,7 @@ export default function MedicationDoseList({
                   : labels.pending ?? labels.snooze;
         return { ...dose, timeLabel, statusLabel };
       }),
-    [items, timeZone, locale, labels.taken, labels.skipped, labels.snooze, labels.pending, labels.missed]
+    [items, timeZone, labels.taken, labels.skipped, labels.snooze, labels.pending, labels.missed]
   );
 
   return (

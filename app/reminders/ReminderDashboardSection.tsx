@@ -545,10 +545,9 @@ export default function ReminderDashboardSection({
     return getReminderCategory(categoryId);
   }, [nextOccurrence]);
 
-  if (isMobile) {
-    const overdueItems = mobileBuckets.overdue;
-    const todayOpenItems = mobileBuckets.today;
-    const soonItems = mobileBuckets.soon;
+  const overdueItems = mobileBuckets.overdue;
+  const todayOpenItems = mobileBuckets.today;
+  const soonItems = mobileBuckets.soon;
   const segmentItems =
     homeSegment === 'overdue'
       ? overdueItems
@@ -581,6 +580,7 @@ export default function ReminderDashboardSection({
     copy.dashboard.todayOverdue
   ]);
 
+  if (isMobile) {
     return (
       <section className="space-y-4">
         {activeTab === 'inbox' ? (
