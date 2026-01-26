@@ -50,7 +50,7 @@ export default function CalendarView({ days, weekdays, emptyLabel }: Props) {
                 day.isCurrentMonth
                   ? 'border-white/10 bg-white/5 text-slate-200 hover:border-cyan-400/40 hover:bg-cyan-500/10'
                   : 'border-white/5 bg-white/3 text-slate-500'
-              } ${day.isToday ? 'ring-1 ring-cyan-300/50' : ''} ${isActive ? 'bg-cyan-500/15' : ''}`}
+              } ${day.isToday ? 'ring-1 ring-cyan-300/50' : ''} ${isActive ? 'bg-cyan-500/20' : ''}`}
             >
               <span className={`text-xs ${isActive ? 'text-cyan-200' : ''}`}>{day.dayNumber}</span>
               <div className="flex items-center gap-1">

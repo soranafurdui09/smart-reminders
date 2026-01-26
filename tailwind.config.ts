@@ -10,10 +10,11 @@ const config: Config = {
     extend: {
       colors: {
         bg: 'var(--bg-base)',
+        bg2: 'var(--bg-accent)',
         surface: 'var(--surface)',
         surfaceMuted: 'var(--surface-2)',
         surface2: 'var(--surface-2)',
-        surface3: 'var(--surface-2)',
+        surface3: 'var(--surface-3)',
         appBg: 'var(--bg-base)',
         surfaceUi: 'var(--surface-2)',
         sheet: 'var(--sheet)',

@@ -958,9 +958,9 @@ export default function ReminderDashboardSection({
                         ? copy.dashboard.medicationsSkipped
                         : copy.common.statusOpen;
                     const statusClass = dose.status === 'taken'
-                      ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200'
+                      ? 'border-emerald-400/40 bg-emerald-500/20 text-emerald-200'
                       : dose.status === 'skipped'
-                        ? 'border-amber-400/40 bg-amber-500/15 text-amber-200'
+                        ? 'border-amber-400/40 bg-amber-500/20 text-amber-200'
                         : 'border-white/10 bg-white/5 text-tertiary';
                     return (
                       <div key={dose.id} className="premium-card p-4">
