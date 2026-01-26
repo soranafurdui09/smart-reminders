@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Mic, Sparkles } from 'lucide-react';
+import { Mic, Sparkles, Plus } from 'lucide-react';
 
 const chips = [
   { id: 'today', label: 'Azi', text: 'azi la 18:00' },
@@ -20,7 +20,7 @@ export default function QuickAddBar() {
   };
 
   return (
-    <div className="card-soft p-3">
+    <div className="surface-a1 rounded-2xl p-4">
       <div className="flex items-center gap-2">
         <div className="flex h-11 flex-1 items-center rounded-[14px] input-surface px-3">
           <input
@@ -51,6 +51,13 @@ export default function QuickAddBar() {
           onClick={() => openQuickAdd({ text: trimmed || undefined })}
         >
           <Sparkles className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          className="primary-btn h-11 px-3 text-xs"
+          onClick={() => openQuickAdd({ text: trimmed || undefined })}
+        >
+          <Plus className="h-4 w-4" />
         </button>
       </div>
       <div className="mt-2 flex gap-2 overflow-x-auto pb-1">

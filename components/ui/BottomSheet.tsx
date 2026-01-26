@@ -36,7 +36,7 @@ export default function BottomSheet({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/75 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/80 backdrop-blur-md"
       onClick={onClose}
       role="presentation"
     >

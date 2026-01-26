@@ -24,14 +24,14 @@ export default function NextUpCard({
   statusLabel
 }: Props) {
   return (
-    <div className="surface-a2 relative overflow-hidden rounded-2xl p-4">
+    <div className={`surface-a2 relative overflow-hidden rounded-2xl p-4 ${tone === 'overdue' ? 'segment-overdue' : ''}`}>
       {tone === 'overdue' ? (
         <span className="absolute left-0 top-0 h-full w-1 bg-red-500/80" aria-hidden="true" />
       ) : null}
       <div className="text-[11px] font-semibold uppercase tracking-wide text-[color:rgb(var(--info))]">{title}</div>
       <div className="mt-2 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="truncate text-[15px] font-semibold text-text">{taskTitle}</div>
+          <div className="truncate text-base font-semibold text-text">{taskTitle}</div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
             <span className={tone === 'overdue' ? 'text-red-300' : 'text-text'}>{timeLabel}</span>
             {badge ? (

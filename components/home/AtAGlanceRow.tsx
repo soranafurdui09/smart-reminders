@@ -24,7 +24,7 @@ export default function AtAGlanceRow({ metrics, onSelect }: Props) {
           <button
             key={metric.id}
             type="button"
-            className={`stat-tile ${metric.tone === 'danger' ? 'stat-tile-strong' : ''}`}
+            className={`stat-tile ${metric.tone === 'danger' ? 'stat-tile-strong stat-tile-danger' : metric.tone === 'success' ? 'stat-tile-success' : metric.tone === 'warning' ? 'stat-tile-warning' : 'stat-tile-info'}`}
             onClick={() => onSelect?.(metric.id)}
           >
             <div className="flex items-center justify-between">

@@ -27,14 +27,15 @@ export default function BottomNav({
 
   return (
     <nav className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 navbar safe-bottom">
-      <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between px-3 pb-[calc(env(safe-area-inset-bottom)_+_10px)] pt-2">
+      <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between px-3 pb-[calc(env(safe-area-inset-bottom)_+_12px)] pt-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.key}
               type="button"
-              className={`flex min-h-[44px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-1 text-[11px] font-semibold transition ${
+              aria-label={tab.label}
+              className={`flex min-h-[44px] flex-1 items-center justify-center rounded-2xl px-2 py-1 transition ${
                 tab.active ? 'text-text' : 'text-muted2'
               }`}
               aria-current={tab.active ? 'page' : undefined}
@@ -47,10 +48,12 @@ export default function BottomNav({
                 router.push(tab.href);
               }}
             >
-              <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${tab.active ? 'bg-accent/20 text-text' : 'bg-surface3 text-muted'}`}>
+              <span className={`relative flex h-11 w-11 items-center justify-center rounded-2xl ${tab.active ? 'bg-accent/20 text-text' : 'bg-surface3 text-muted'}`}>
                 <Icon className="h-5 w-5" aria-hidden="true" />
+                {tab.active ? (
+                  <span className="absolute -bottom-1 h-1 w-6 rounded-full bg-accent" />
+                ) : null}
               </span>
-              <span className="whitespace-nowrap">{tab.label}</span>
             </button>
           );
         })}

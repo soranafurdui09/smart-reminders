@@ -61,6 +61,8 @@ export default function QuickAddSheet({
   const [endDateValue, setEndDateValue] = useState('');
   const [categoryValue, setCategoryValue] = useState('');
   const [parsedResult, setParsedResult] = useState<AiResult | null>(null);
+  const [aiStatus, setAiStatus] = useState<'idle' | 'parsing' | 'ready'>('idle');
+  const [highlightPreview, setHighlightPreview] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listName, setListName] = useState('');
@@ -176,22 +178,36 @@ export default function QuickAddSheet({
   };
 
   const parseReminderText = useCallback(
-    async (inputText: string) => {
+    async (inputText: string, options?: { silent?: boolean }) => {
       const trimmedText = inputText.trim();
       if (!trimmedText) return null;
       const householdId = typeof window !== 'undefined'
         ? window.localStorage.getItem('smart-reminder-household')
         : null;
       if (!householdId) return null;
+      if (!options?.silent) {
+        setAiStatus('parsing');
+      }
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
       const clientNow = new Date().toISOString();
-      const response = await fetch('/api/ai/parse-reminder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: trimmedText, timezone, householdId, clientNow })
-      });
-      if (!response.ok) return null;
-      return (await response.json()) as AiResult;
+      let parsed: AiResult | null = null;
+      try {
+        const response = await fetch('/api/ai/parse-reminder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: trimmedText, timezone, householdId, clientNow })
+        });
+        if (!response.ok) {
+          parsed = null;
+          return null;
+        }
+        parsed = (await response.json()) as AiResult;
+        return parsed;
+      } finally {
+        if (!options?.silent) {
+          setAiStatus(parsed ? 'ready' : 'idle');
+        }
+      }
     },
     []
   );
@@ -244,6 +260,7 @@ export default function QuickAddSheet({
     if (initialText) {
       setText(initialText);
     }
+    setAiStatus('idle');
     if (autoVoice && voiceStatus === 'idle') {
       startVoice();
     }
@@ -252,7 +269,15 @@ export default function QuickAddSheet({
   useEffect(() => {
     if (open) return;
     resetVoice();
+    setAiStatus('idle');
   }, [open, resetVoice]);
+
+  useEffect(() => {
+    if (!parsedResult) return;
+    setHighlightPreview(true);
+    const timer = window.setTimeout(() => setHighlightPreview(false), 1100);
+    return () => window.clearTimeout(timer);
+  }, [parsedResult]);
 
   const parsePreReminder = () => {
     if (!remindBeforeValue) return '';
@@ -295,7 +320,7 @@ export default function QuickAddSheet({
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
       let parsed: AiResult | null = null;
       if (activeMode === 'ai') {
-        parsed = await parseReminderText(buildFullText());
+        parsed = await parseReminderText(buildFullText(), { silent: true });
       }
 
       const formData = new FormData();
@@ -346,6 +371,7 @@ export default function QuickAddSheet({
     : activeMode === 'list'
       ? 'Adaugă în listă'
       : 'Adaugă rapid';
+  const showParsing = aiStatus === 'parsing' || voice.status === 'processing' || voice.status === 'parsing';
 
   return (
     <BottomSheet open={open} onClose={onClose} className="pb-[calc(env(safe-area-inset-bottom)_+_6px)]" ariaLabel="Adaugă reminder">
@@ -366,21 +392,39 @@ export default function QuickAddSheet({
       </div>
 
       <div className="mt-4 space-y-4">
-        <Card className="p-3 text-xs text-muted">
+        <Card className={`surface-a2 p-4 text-xs text-muted ${highlightPreview ? 'ai-highlight' : ''}`}>
           <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
             <Sparkles className="h-3.5 w-3.5 text-[color:rgb(var(--accent-2))]" />
             Preview
-            {parsedResult ? (
-              <Pill className="ml-auto bg-[color:rgba(14,165,233,0.12)] text-[color:rgb(var(--accent-2))]">AI completat</Pill>
+            {showParsing ? (
+              <Pill className="ml-auto bg-[color:rgba(59,130,246,0.15)] text-[color:rgb(var(--accent))]">
+                AI generează…
+              </Pill>
+            ) : parsedResult ? (
+              <Pill className="ml-auto bg-[color:rgba(59,130,246,0.18)] text-[color:rgb(var(--accent))]">
+                AI completat
+              </Pill>
             ) : null}
           </div>
-          <div className="mt-2 text-sm font-semibold text-ink">{previewTitle}</div>
-          <div className="mt-1 text-xs text-muted">{previewDate}</div>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Pill className="border border-border bg-surfaceMuted text-muted">Activ · Reminder nou</Pill>
-            <Pill className="bg-[color:rgba(14,165,233,0.14)] text-[color:rgb(var(--accent-2))]">{previewCategory}</Pill>
-          </div>
-          <div className="mt-2">{previewText}</div>
+          {showParsing ? (
+            <div className="mt-3 space-y-2">
+              <div className="h-4 w-2/3 animate-pulse rounded-full bg-white/10" />
+              <div className="h-3 w-1/2 animate-pulse rounded-full bg-white/10" />
+              <div className="h-8 w-full animate-pulse rounded-xl bg-white/10" />
+            </div>
+          ) : (
+            <>
+              <div className="mt-2 text-sm font-semibold text-text">{previewTitle}</div>
+              <div className="mt-1 text-xs text-muted">{previewDate}</div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Pill className="border border-border bg-surfaceMuted text-muted">Activ · Reminder nou</Pill>
+                <Pill className="bg-[color:rgba(59,130,246,0.16)] text-[color:rgb(var(--accent))]">
+                  {previewCategory}
+                </Pill>
+              </div>
+              <div className="mt-2">{previewText}</div>
+            </>
+          )}
         </Card>
 
         <div className="space-y-2">
@@ -404,7 +448,7 @@ export default function QuickAddSheet({
           ) : null}
           <div className="relative">
             <textarea
-              className="premium-input min-h-[84px] w-full px-3 py-3 pr-12 text-sm placeholder:text-muted"
+              className="premium-input min-h-[88px] w-full px-3 py-3 pr-12 text-sm placeholder:text-muted"
               placeholder={
                 activeMode === 'task'
                   ? 'ex: trimite email către bancă'
@@ -415,6 +459,7 @@ export default function QuickAddSheet({
               value={text}
               onChange={(event) => {
                 setParsedResult(null);
+                setAiStatus('idle');
                 setText(event.target.value);
               }}
             />
@@ -465,7 +510,7 @@ export default function QuickAddSheet({
                 <button
                   key={template.id}
                   type="button"
-                  className="rounded-2xl border border-border bg-surfaceMuted px-3 py-2 text-left text-xs font-semibold text-ink transition hover:bg-surface"
+                  className="surface-a1 rounded-2xl px-3 py-2 text-left text-xs font-semibold text-text transition"
                   onClick={() => {
                     if (template.mode === 'medication') {
                       handleNavigate('medication');
@@ -587,7 +632,7 @@ export default function QuickAddSheet({
           ) : null}
       </div>
 
-      <div className="mt-4 grid gap-2 sticky bottom-0 bg-sheet pt-2 pb-[calc(env(safe-area-inset-bottom)_+_12px)]">
+      <div className="mt-4 grid gap-2 sticky bottom-0 bg-[color:var(--surface-2)] pt-3 pb-[calc(env(safe-area-inset-bottom)_+_14px)]">
           <button
             type="button"
             className="premium-btn-primary inline-flex items-center justify-center px-4 text-sm"

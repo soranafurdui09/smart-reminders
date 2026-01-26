@@ -35,7 +35,7 @@ export default function MobileFab() {
     <>
       <button
         type="button"
-        className="mobile-fab fixed bottom-[calc(var(--bottom-nav-h)_+_env(safe-area-inset-bottom)_+_12px)] left-1/2 z-50 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-accent text-ink shadow-float transition active:scale-95"
+        className="mobile-fab fixed bottom-[calc(var(--bottom-nav-h)_+_env(safe-area-inset-bottom)_+_12px)] right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-float transition active:scale-95"
         aria-label="Adaugă reminder"
         onClick={(event) => {
           event.preventDefault();

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Calendar, Pill, SunMedium, Users } from 'lucide-react';
+import { AlertTriangle, Calendar, Clock, PencilLine, Pill, SunMedium, Users } from 'lucide-react';
 import SemanticSearch from '@/components/SemanticSearch';
 import HomeHeader from '@/components/home/HomeHeader';
 import NextUpCard from '@/components/home/NextUpCard';
@@ -554,6 +554,8 @@ export default function ReminderDashboardSection({
       : homeSegment === 'soon'
         ? soonItems
         : todayOpenItems;
+  const segmentTone =
+    homeSegment === 'overdue' ? 'segment-overdue' : homeSegment === 'soon' ? 'segment-soon' : 'segment-today';
 
   const nextIsOverdue = Boolean(nextOccurrence && overdueItems.some((item) => item.id === nextOccurrence.id));
 
@@ -684,7 +686,7 @@ export default function ReminderDashboardSection({
                       <input type="hidden" name="occurAt" value={nextOccurrence.occur_at ?? ''} />
                       <input type="hidden" name="done_comment" value="" />
                       <ActionSubmitButton
-                        className="btn btn-primary h-9 rounded-full px-3 text-xs"
+                        className="primary-btn h-9 rounded-full px-4 text-xs"
                         type="submit"
                         data-action-feedback={copy.common.actionDone}
                       >
@@ -696,19 +698,19 @@ export default function ReminderDashboardSection({
                         <input type="hidden" name="occurrenceId" value={nextOccurrence.id} />
                         <input type="hidden" name="mode" value="30" />
                         <ActionSubmitButton
-                          className="btn btn-secondary h-9 rounded-full px-3 text-xs"
+                          className="icon-btn h-9 w-9"
                           type="submit"
                           data-action-feedback={copy.common.snooze}
                         >
-                          {copy.common.snooze}
+                          <Clock className="h-4 w-4" />
                         </ActionSubmitButton>
                       </form>
                       {nextOccurrence.reminder?.id ? (
                         <Link
                           href={`/app/reminders/${nextOccurrence.reminder.id}/edit`}
-                          className="btn btn-secondary h-9 rounded-full px-3 text-xs"
+                          className="icon-btn h-9 w-9"
                         >
-                          {copy.common.edit}
+                          <PencilLine className="h-4 w-4" />
                         </Link>
                       ) : null}
                     </div>
@@ -761,13 +763,25 @@ export default function ReminderDashboardSection({
               onChange={(value) => setHomeSegment(value as 'today' | 'overdue' | 'soon')}
             />
 
-            <FilteredTaskList
-              items={segmentItems}
-              locale={locale}
-              googleConnected={googleConnected}
-              userTimeZone={effectiveTimeZone}
-              emptyLabel={copy.dashboard.todayEmpty}
-            />
+            <div className={`rounded-2xl p-3 ${segmentTone}`}>
+              <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-text">
+                {homeSegment === 'overdue'
+                  ? copy.dashboard.todayOverdue
+                  : homeSegment === 'soon'
+                    ? copy.dashboard.todaySoon
+                    : copy.dashboard.todayTitle}
+                <span className="text-[10px] text-muted2">
+                  {segmentItems.length} {copy.dashboard.reminderCountLabel}
+                </span>
+              </div>
+              <FilteredTaskList
+                items={segmentItems}
+                locale={locale}
+                googleConnected={googleConnected}
+                userTimeZone={effectiveTimeZone}
+                emptyLabel={copy.dashboard.todayEmpty}
+              />
+            </div>
           </div>
         )}
       </section>

@@ -28,9 +28,9 @@ export default function MobileTopBar({
         : labels.today;
 
   return (
-    <div className="safe-top sticky top-0 z-40 border-b border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(7,26,28,0.55)] backdrop-blur-xl">
+    <div className="safe-top sticky top-0 z-40 border-b border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(6,12,18,0.72)] backdrop-blur-xl">
       <div className="mx-auto flex min-h-[56px] w-full max-w-6xl items-center justify-between gap-3 px-4 py-2">
-        <div className="page-title">{title}</div>
+        <div className="text-base font-semibold text-text">{title}</div>
         <div className="flex items-center gap-2">
           <Link
             href="/app?tab=inbox"

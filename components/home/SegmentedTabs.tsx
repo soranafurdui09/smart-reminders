@@ -14,10 +14,10 @@ export default function SegmentedTabs({ tabs, value, onChange }: Props) {
       {tabs.map((tab) => {
         const active = tab.id === value;
         const activeClass = tab.id === 'overdue'
-          ? 'bg-red-500/20 text-red-100'
-          : tab.id === 'upcoming'
-            ? 'bg-amber-500/16 text-amber-100'
-            : 'bg-blue-500/16 text-blue-100';
+          ? 'bg-red-500/25 text-red-100'
+          : tab.id === 'soon'
+            ? 'bg-emerald-500/20 text-emerald-100'
+            : 'bg-blue-500/20 text-blue-100';
         return (
           <button
             key={tab.id}

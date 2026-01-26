@@ -49,17 +49,17 @@ export default function TopBar({
   }, []);
 
   return (
-    <div className="safe-top sticky top-0 z-40 border-b border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(7,26,28,0.55)] backdrop-blur-xl">
-      <div className={`mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 ${compact ? 'py-2' : 'py-3'}`}>
+    <div className="safe-top sticky top-0 z-40 border-b border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(6,12,18,0.72)] backdrop-blur-xl">
+      <div className={`mx-auto flex min-h-[56px] w-full max-w-6xl items-center justify-between gap-3 px-4 ${compact ? 'py-1.5' : 'py-2'}`}>
         <div className="min-w-0">
-          <div className="page-title">{title}</div>
+          <div className="text-base font-semibold text-text">{title}</div>
           {subtitle ? <div className="text-[11px] text-muted">{subtitle}</div> : null}
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/app?tab=inbox" className="icon-btn" aria-label="Căutare">
+          <Link href="/app?tab=inbox" className="icon-btn h-9 w-9" aria-label="Căutare">
             <Search className="h-4 w-4" />
           </Link>
-          <Link href="/app/settings" className="icon-btn" aria-label="Setări">
+          <Link href="/app/settings" className="icon-btn h-9 w-9" aria-label="Setări">
             <UserRound className="h-4 w-4" />
           </Link>
         </div>
