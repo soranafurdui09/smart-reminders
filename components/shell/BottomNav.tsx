@@ -26,7 +26,7 @@ export default function BottomNav({
   ];
 
   return (
-    <nav className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-bg backdrop-blur-xl shadow-[0_-10px_30px_rgba(0,0,0,0.35)] safe-bottom">
+    <nav className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 navbar safe-bottom">
       <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between px-3 pb-[calc(env(safe-area-inset-bottom)_+_8px)] pt-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -35,7 +35,7 @@ export default function BottomNav({
               key={tab.key}
               type="button"
               className={`flex min-h-[44px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-1 text-[11px] font-semibold transition ${
-                tab.active ? 'text-text' : 'text-muted'
+                tab.active ? 'text-text' : 'text-muted2'
               }`}
               aria-current={tab.active ? 'page' : undefined}
               onClick={() => {
@@ -47,7 +47,7 @@ export default function BottomNav({
                 router.push(tab.href);
               }}
             >
-              <span className={`flex h-9 w-9 items-center justify-center rounded-2xl ${tab.active ? 'bg-accent/20 text-text' : 'bg-white/10 text-muted'}`}>
+              <span className={`flex h-9 w-9 items-center justify-center rounded-2xl ${tab.active ? 'bg-accent/20 text-text' : 'bg-surface3 text-muted'}`}>
                 <Icon className="h-5 w-5" aria-hidden="true" />
               </span>
               <span className="whitespace-nowrap">{tab.label}</span>

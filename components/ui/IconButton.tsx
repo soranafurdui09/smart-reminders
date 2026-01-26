@@ -10,7 +10,7 @@ export default function IconButton({
   return (
     <button
       type="button"
-      className={`premium-icon-btn inline-flex items-center justify-center ${className}`}
+      className={`icon-btn inline-flex items-center justify-center ${className}`}
       {...props}
     >
       {children}

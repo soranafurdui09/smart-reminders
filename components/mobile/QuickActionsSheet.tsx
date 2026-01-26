@@ -25,7 +25,7 @@ export default function QuickActionsSheet({
   return (
     <BottomSheet open={open} onClose={onClose} ariaLabel="Quick Actions">
       <div className="flex items-center justify-between">
-        <div className="text-sm font-semibold text-ink">Quick Actions</div>
+        <div className="text-sm font-semibold text-text">Quick Actions</div>
         <IconButton aria-label="Închide" onClick={onClose}>
           <X className="h-4 w-4" />
         </IconButton>
@@ -37,13 +37,13 @@ export default function QuickActionsSheet({
             <button
               key={action.key}
               type="button"
-              className="flex w-full items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3 text-left text-sm font-semibold text-ink transition hover:bg-surfaceMuted"
+              className="card-soft flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-text transition"
               onClick={() => {
                 onSelect(action.key);
                 onClose();
               }}
             >
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-surfaceMuted text-[color:rgb(var(--accent-2))]">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-border bg-surface3 text-[color:rgb(var(--accent))]">
                 <Icon className="h-5 w-5" />
               </span>
               <span className="flex flex-col">

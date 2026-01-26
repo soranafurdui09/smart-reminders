@@ -12,9 +12,9 @@
   --bg0: 7 26 28;
   --bg1: 5 42 47;
   --bg2: 4 24 28;
-  --surface: rgba(255, 255, 255, 0.06);
-  --surface-2: rgba(255, 255, 255, 0.1);
-  --surface-3: rgba(255, 255, 255, 0.14);
+  --surface: rgba(255, 255, 255, 0.07);
+  --surface-2: rgba(255, 255, 255, 0.12);
+  --surface-3: rgba(255, 255, 255, 0.16);
   --text: 255 255 255;
   --text-inv: 255 255 255;
   --muted: 255 255 255;
@@ -24,7 +24,7 @@
   --danger: 248 113 113;
   --success: 52 211 153;
   --ring: 59 130 246;
-  --border: rgba(255, 255, 255, 0.1);
+  --border: rgba(255, 255, 255, 0.08);
   --radius-lg: 16px;
   --radius-xl: 20px;
   --shadow-card: 0 12px 30px rgba(0, 0, 0, 0.18);
@@ -44,8 +44,8 @@
   --sheet: var(--surface-2);
   --shadow: var(--shadow-card);
   --text-1: rgba(255, 255, 255, 0.92);
-  --text-2: rgba(255, 255, 255, 0.68);
-  --text-3: rgba(255, 255, 255, 0.5);
+  --text-2: rgba(255, 255, 255, 0.74);
+  --text-3: rgba(255, 255, 255, 0.58);
   --accent-muted: rgba(59, 130, 246, 0.15);
   --accent-glow: rgba(59, 130, 246, 0.25);
   --radius-card: 20px;
@@ -309,7 +309,7 @@ h3 {
 }
 
 .card {
-  @apply rounded-2xl border border-borderSubtle bg-surface p-5 text-ink shadow-sm transition-all md:shadow-soft;
+  @apply rounded-2xl border border-border bg-surface2 p-5 text-text shadow-[0_14px_35px_rgba(0,0,0,0.45)] transition-all;
 }
 
 .btn {
@@ -317,15 +317,15 @@ h3 {
 }
 
 .btn-primary {
-  @apply bg-accent text-ink shadow-md hover:brightness-105;
+  @apply bg-accent text-white shadow-md hover:brightness-105;
 }
 
 .btn-secondary {
-  @apply border border-border text-ink hover:border-primary/30 hover:bg-surfaceMuted;
+  @apply border border-border text-text hover:bg-surfaceMuted;
 }
 
 .input {
-  @apply w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-ink shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary/30;
+  @apply w-full rounded-xl border border-border bg-surface3 px-3 py-2 text-sm text-text shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary/30;
 }
 
 .pill {
@@ -333,7 +333,7 @@ h3 {
 }
 
 .chip {
-  @apply inline-flex items-center rounded-full border border-borderSubtle bg-surfaceMuted px-2.5 py-1 text-xs font-semibold text-muted;
+  @apply inline-flex items-center rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-semibold text-muted;
 }
 
 :where(a, button, input, textarea, select, summary):focus-visible {
@@ -368,19 +368,25 @@ h3 {
 
 @layer components {
   .surface-card {
-    @apply rounded-2xl border border-border bg-surface2 shadow-soft;
+    @apply rounded-2xl bg-surface2 shadow-soft;
+    border: 1px solid var(--border);
   }
 
   .card {
-    @apply rounded-2xl border border-border bg-surface2 shadow-[0_12px_30px_rgba(0,0,0,0.35)];
+    @apply rounded-2xl bg-surface2;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05);
   }
 
   .card-soft {
-    @apply rounded-2xl border border-border bg-surface;
+    @apply rounded-2xl bg-surface;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
   }
 
   .input-surface {
-    @apply rounded-xl border border-border bg-surface3 text-text;
+    @apply rounded-xl bg-surface3 text-text;
+    border: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .text-muted {
@@ -392,15 +398,63 @@ h3 {
   }
 
   .chip {
-    @apply rounded-full border border-border bg-surface px-3 py-2 text-sm font-semibold text-muted;
+    @apply rounded-full bg-surface px-3 py-2 text-sm font-semibold text-muted;
+    border: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .chip-selected {
-    @apply rounded-full border border-accent/40 bg-accent/20 px-3 py-2 text-sm font-semibold text-text;
+    @apply rounded-full bg-accent/20 px-3 py-2 text-sm font-semibold text-text;
+    border: 1px solid rgba(59, 130, 246, 0.35);
   }
 
   .icon-btn {
-    @apply inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface3 text-text transition active:scale-95;
+    @apply inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface2 transition active:scale-95;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(6px);
+  }
+
+  .primary-btn {
+    @apply rounded-xl bg-accent px-4 py-2 font-semibold text-white transition active:scale-[0.99];
+    box-shadow: 0 14px 30px rgba(59, 130, 246, 0.25);
+  }
+
+  .sheet {
+    @apply rounded-t-3xl bg-bg;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 -20px 50px rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(18px);
+  }
+
+  .navbar {
+    @apply bg-bg;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 -12px 35px rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(18px);
+  }
+
+  .badge {
+    @apply rounded-full px-3 py-1 text-xs font-medium text-muted;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--surface-3);
+  }
+
+  .badge-blue {
+    @apply text-text;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    background: rgba(59, 130, 246, 0.15);
+  }
+
+  .badge-amber {
+    @apply text-amber-100;
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    background: rgba(251, 191, 36, 0.1);
+  }
+
+  .badge-emerald {
+    @apply text-emerald-100;
+    border: 1px solid rgba(52, 211, 153, 0.25);
+    background: rgba(52, 211, 153, 0.1);
   }
 
   .page-title {
@@ -412,7 +466,8 @@ h3 {
   }
 
   .input {
-    @apply rounded-xl border border-border bg-surface3 px-4 py-3 text-sm text-text placeholder:text-muted2 focus:outline-none focus:ring-2 focus:ring-accent/40;
+    @apply rounded-xl bg-surface3 px-4 py-3 text-sm text-text placeholder:text-muted2 focus:outline-none focus:ring-2 focus:ring-accent/40;
+    border: 1px solid rgba(255, 255, 255, 0.06);
   }
 }
 

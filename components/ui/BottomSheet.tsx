@@ -41,7 +41,7 @@ export default function BottomSheet({
       role="presentation"
     >
       <div
-        className={`premium-sheet w-full max-w-none max-h-[75vh] overflow-y-auto overscroll-contain px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)_+_16px)] bg-bg border-t border-border ${className}`}
+        className={`sheet w-full max-w-none max-h-[75vh] overflow-y-auto overscroll-contain px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)_+_16px)] ${className}`}
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"

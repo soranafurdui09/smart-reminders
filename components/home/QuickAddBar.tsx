@@ -20,11 +20,11 @@ export default function QuickAddBar() {
   };
 
   return (
-    <div className="premium-card p-3">
+    <div className="card-soft p-3">
       <div className="flex items-center gap-2">
-        <div className="flex h-11 flex-1 items-center rounded-[14px] border border-border bg-surface px-3">
+        <div className="flex h-11 flex-1 items-center rounded-[14px] input-surface px-3">
           <input
-            className="h-full w-full bg-transparent text-sm text-ink placeholder:text-muted focus:outline-none"
+            className="h-full w-full bg-transparent text-sm text-text placeholder:text-muted focus:outline-none"
             placeholder="Adaugă sau caută… (ex: chirie pe 1 la 9)"
             value={value}
             onChange={(event) => setValue(event.target.value)}
@@ -38,7 +38,7 @@ export default function QuickAddBar() {
         </div>
         <button
           type="button"
-          className="premium-icon-btn h-11 w-11 text-[color:rgb(var(--accent-2))]"
+          className="icon-btn h-11 w-11 text-[color:rgb(var(--accent))]"
           aria-label="Dictează"
           onClick={() => openQuickAdd({ voice: true })}
         >
@@ -46,7 +46,7 @@ export default function QuickAddBar() {
         </button>
         <button
           type="button"
-          className="premium-icon-btn h-11 w-11 text-[color:rgb(var(--accent-2))]"
+          className="icon-btn h-11 w-11 text-[color:rgb(var(--accent))]"
           aria-label="AI"
           onClick={() => openQuickAdd({ text: trimmed || undefined })}
         >
@@ -58,7 +58,7 @@ export default function QuickAddBar() {
           <button
             key={chip.id}
             type="button"
-            className="premium-chip whitespace-nowrap"
+            className="chip whitespace-nowrap"
             onClick={() => setValue((current) => (current ? `${current} ${chip.text}` : chip.text))}
           >
             {chip.label}

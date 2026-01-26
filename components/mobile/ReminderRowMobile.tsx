@@ -150,7 +150,7 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
             {relativeLabel ? <span className="text-tertiary"> · {relativeLabel}</span> : null}
           </div>
           <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase text-secondary">
-            <span className="chip px-2 py-0.5" style={categoryChipStyle}>
+            <span className="badge badge-blue px-2 py-0.5" style={categoryChipStyle}>
               {category.label}
             </span>
             {assigneeLabel ? (
@@ -164,7 +164,7 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
 
         <button
           type="button"
-          className="premium-icon-btn flex h-10 w-10 items-center justify-center text-secondary"
+          className="icon-btn flex h-10 w-10 items-center justify-center text-secondary"
           aria-label={copy.common.moreActions}
           onClick={() => setActionsOpen(true)}
         >
@@ -177,7 +177,7 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
         onClose={() => setActionsOpen(false)}
         title={reminder?.title ?? copy.reminderDetail.title}
         categoryLabel={category.label}
-        categoryClassName="bg-white/10 text-slate-200"
+        categoryClassName="badge badge-blue"
         categoryStyle={categoryChipStyle}
       >
         <div className="space-y-2">

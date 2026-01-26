@@ -17,7 +17,7 @@ export default function HomeHeader({ title, subtitle, onSearchClick }: Props) {
       </div>
       <button
         type="button"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-ink shadow-sm transition hover:bg-surfaceMuted"
+        className="icon-btn"
         aria-label="Căutare"
         onClick={onSearchClick}
       >
