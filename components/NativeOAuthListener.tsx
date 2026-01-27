@@ -74,6 +74,7 @@ export default function NativeOAuthListener() {
           return;
         }
         handlingRef.current = true;
+        handledDeepLinkUrls.add(url);
         const incoming = new URL(url);
         const code = incoming.searchParams.get('code');
         const state = incoming.searchParams.get('state');
@@ -96,7 +97,9 @@ export default function NativeOAuthListener() {
             return;
           }
           if (!code) {
-            console.warn('[oauth] missing code in callback, skipping exchange');
+            console.warn('[oauth] missing code in callback, skipping exchange', JSON.stringify({
+              queryKeys: Array.from(incoming.searchParams.keys())
+            }));
             return;
           }
           const { error } = await supabase.auth.exchangeCodeForSession(url);
@@ -105,7 +108,8 @@ export default function NativeOAuthListener() {
           } else {
             logStorageState('[oauth][storage] after exchange');
           }
-          handledDeepLinkUrls.add(url);
+          const { data } = await supabase.auth.getSession();
+          console.log('[oauth] getSession', JSON.stringify({ hasSession: Boolean(data?.session) }));
         } finally {
           console.log('[oauth] Browser.close');
           await Browser.close().catch(() => undefined);
@@ -146,26 +150,12 @@ export default function NativeOAuthListener() {
       });
     }
 
-    if (!appStateListenerRef.current) {
-      appStateListenerRef.current = App.addListener('appStateChange', ({ isActive }) => {
-        if (isActive) {
-          Browser.close().catch(() => undefined);
-          window.setTimeout(() => {
-            Browser.close().catch(() => undefined);
-          }, 300);
-          window.setTimeout(() => {
-            Browser.close().catch(() => undefined);
-          }, 900);
-        }
-      });
-    }
+    // appStateChange Browser.close disabled to avoid racing OAuth exchange.
 
     return () => {
       removeListenerRef.current?.then((handler) => handler.remove());
       removeListenerRef.current = null;
       listenerAttached.current = false;
-      appStateListenerRef.current?.then((handler) => handler.remove());
-      appStateListenerRef.current = null;
     };
   }, [router]);
 

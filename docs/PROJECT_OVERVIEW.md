@@ -108,6 +108,7 @@ Helper: `lib/reminderAssignments.ts`
   - `com.smartreminder.app://auth/callback`
   - handled via `App.addListener('appUrlOpen')` in `components/NativeAppChrome.tsx`
   - browser closed via `Browser.close()` after code exchange
+  - IMPORTANT: add `com.smartreminder.app://auth/callback` to Supabase Auth → Redirect URLs allowlist
 
 Android intent filter in:
 `android/app/src/main/AndroidManifest.xml`
