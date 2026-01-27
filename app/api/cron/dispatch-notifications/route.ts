@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAppUrl, sendEmail } from '@/lib/notifications';
 import { sendPushNotification } from '@/lib/push';
+import { sendFcmToTokens } from '@/lib/push/fcm';
 import { reminderEmailTemplate } from '@/lib/templates';
 import { evaluateReminderContext, parseContextSettings } from '@/lib/reminders/context';
 import { getFreeBusyIntervalsForUser } from '@/lib/google/calendar';
@@ -185,6 +186,29 @@ export async function GET() {
 
   const seedChannels: Array<'email' | 'push'> = ['email', 'push'];
 
+  const occurrenceReminderIds = Array.from(
+    new Set(
+      (occurrenceSeeds ?? [])
+        .map((occurrence: any) => {
+          const reminder = Array.isArray(occurrence.reminder) ? occurrence.reminder[0] : occurrence.reminder;
+          return reminder?.id ?? null;
+        })
+        .filter(Boolean)
+    )
+  );
+  const assignmentMap = new Map<string, string[]>();
+  if (occurrenceReminderIds.length) {
+    const { data: assignments } = await admin
+      .from('reminder_assignments')
+      .select('reminder_id, user_id')
+      .in('reminder_id', occurrenceReminderIds);
+    (assignments ?? []).forEach((row: any) => {
+      const list = assignmentMap.get(row.reminder_id) ?? [];
+      list.push(row.user_id);
+      assignmentMap.set(row.reminder_id, list);
+    });
+  }
+
   const occurrenceInserts = (occurrenceSeeds ?? [])
     .flatMap((occurrence: any) => {
       const reminder = Array.isArray(occurrence.reminder) ? occurrence.reminder[0] : occurrence.reminder;
@@ -192,17 +216,21 @@ export async function GET() {
         return [];
       }
       const effectiveAt = occurrence.snoozed_until ?? occurrence.occur_at;
-      return seedChannels
-        .map((channel) => ({
-          reminder_id: reminder.id,
-          user_id: reminder.created_by,
-          notify_at: effectiveAt,
-          channel,
-          status: 'pending' as const,
-          entity_type: 'reminder' as const,
-          entity_id: reminder.id,
-          occurrence_at_utc: effectiveAt
-        }))
+      const assignedUsers = assignmentMap.get(reminder.id) ?? [];
+      const recipients = assignedUsers.length ? assignedUsers : [reminder.created_by];
+      return recipients
+        .flatMap((userId) =>
+          seedChannels.map((channel) => ({
+            reminder_id: reminder.id,
+            user_id: userId,
+            notify_at: effectiveAt,
+            channel,
+            status: 'pending' as const,
+            entity_type: 'reminder' as const,
+            entity_id: reminder.id,
+            occurrence_at_utc: effectiveAt
+          }))
+        )
         .filter((job) =>
           addSeedKey(
             buildNotificationJobKey({
@@ -507,6 +535,21 @@ export async function GET() {
     pushMap.set(sub.user_id, existing);
   });
 
+  const { data: fcmTokens, error: fcmTokensError } = await admin
+    .from('fcm_tokens')
+    .select('user_id, token')
+    .in('user_id', userIds)
+    .eq('is_disabled', false);
+  if (fcmTokensError) {
+    console.warn('[cron] failed to load fcm tokens', fcmTokensError);
+  }
+  const fcmMap = new Map<string, string[]>();
+  (fcmTokens ?? []).forEach((row: any) => {
+    const list = fcmMap.get(row.user_id) ?? [];
+    list.push(row.token);
+    fcmMap.set(row.user_id, list);
+  });
+
   const { data: occurrences } = await admin
     .from('reminder_occurrences')
     .select('id, reminder_id, occur_at, snoozed_until, status')
@@ -797,6 +840,13 @@ export async function GET() {
       }
     }
 
+    const occurrenceId = !isMedication ? occurrenceMap.get(`${reminder.id}:${job.notify_at}`)?.id ?? null : null;
+    if (!isMedication && !occurrenceId) {
+      await markJobSkipped(job.id, 'stale_occurrence');
+      skippedCount += 1;
+      continue;
+    }
+
     const profile = profileMap.get(job.user_id);
     const userTimeZone = profile?.timeZone || 'UTC';
     const displayTimeZone = resolveReminderTimeZone(reminder.tz ?? null, userTimeZone);
@@ -903,7 +953,6 @@ export async function GET() {
           continue;
         }
       } else {
-        const occurrenceId = occurrenceMap.get(`${reminder.id}:${job.notify_at}`)?.id;
         if (occurrenceId) {
           const logResult = await insertReminderLog({
             occurrenceId,
@@ -919,8 +968,8 @@ export async function GET() {
             continue;
           }
         } else {
-          await markJobFailed(job, 'occurrence_missing');
-          failedCount += 1;
+          await markJobSkipped(job.id, 'stale_occurrence');
+          skippedCount += 1;
           continue;
         }
       }
@@ -962,9 +1011,15 @@ export async function GET() {
         failedCount += 1;
         continue;
       }
+      if (fcmTokensError) {
+        await markJobFailed(job, 'fcm_tokens_query_failed');
+        failedCount += 1;
+        continue;
+      }
       const subs = pushMap.get(job.user_id) ?? [];
-      if (!subs.length) {
-        await markJobSkipped(job.id, 'missing_push');
+      const fcmUserTokens = fcmMap.get(job.user_id) ?? [];
+      if (!subs.length && !fcmUserTokens.length) {
+        await markJobSkipped(job.id, 'missing_push_targets');
         skippedCount += 1;
         continue;
       }
@@ -988,7 +1043,6 @@ export async function GET() {
           continue;
         }
       } else {
-        const occurrenceId = occurrenceMap.get(`${reminder.id}:${job.notify_at}`)?.id;
         if (occurrenceId) {
           const logResult = await insertReminderLog({
             occurrenceId,
@@ -1004,8 +1058,8 @@ export async function GET() {
             continue;
           }
         } else {
-          await markJobFailed(job, 'occurrence_missing');
-          failedCount += 1;
+          await markJobSkipped(job.id, 'stale_occurrence');
+          skippedCount += 1;
           continue;
         }
       }
@@ -1017,25 +1071,55 @@ export async function GET() {
       }
 
       if (logId) {
-        const pushResult = await sendPushNotification(subs, { title, body, url, jobId: job.id, token });
-        console.log('[cron] push result', { jobId: job.id, status: pushResult.status });
-        if (pushResult.staleEndpoints.length) {
-          await admin
-            .from('push_subscriptions')
-            .delete()
-            .in('endpoint', pushResult.staleEndpoints);
+        let anySent = false;
+        let anyFailed = false;
+
+        if (subs.length) {
+          const pushResult = await sendPushNotification(subs, { title, body, url, jobId: job.id, token });
+          console.log('[cron] push result', { jobId: job.id, status: pushResult.status });
+          if (pushResult.staleEndpoints.length) {
+            await admin.from('push_subscriptions').delete().in('endpoint', pushResult.staleEndpoints);
+          }
+          if (pushResult.status === 'sent') {
+            anySent = true;
+          } else if (pushResult.status === 'failed') {
+            anyFailed = true;
+          }
         }
+
+        if (fcmUserTokens.length) {
+          try {
+            const fcmResult = await sendFcmToTokens(fcmUserTokens, { title, body, url });
+            if (fcmResult.invalidTokens.length) {
+              await admin
+                .from('fcm_tokens')
+                .update({ is_disabled: true, updated_at: nowIso })
+                .in('token', fcmResult.invalidTokens);
+            }
+            if (fcmResult.sent > 0) {
+              anySent = true;
+            }
+            if (fcmResult.failed > 0 && fcmResult.sent === 0) {
+              anyFailed = true;
+            }
+          } catch (error) {
+            console.error('[cron] fcm send failed', error);
+            anyFailed = true;
+          }
+        }
+
+        const finalStatus: NotificationStatus = anySent ? 'sent' : anyFailed ? 'failed' : 'skipped';
         if (isMedication) {
-          await updateMedicationLogStatus(logId, pushResult.status);
+          await updateMedicationLogStatus(logId, finalStatus);
         } else {
-          await updateLogStatus(logId, pushResult.status, pushResult.status === 'failed' ? 'push_failed' : null);
+          await updateLogStatus(logId, finalStatus, finalStatus === 'failed' ? 'push_failed' : null);
         }
-        if (pushResult.status === 'failed') {
+        if (finalStatus === 'failed') {
           await markJobFailed(job, 'push_failed');
           failedCount += 1;
           continue;
         }
-        if (pushResult.status === 'skipped') {
+        if (finalStatus === 'skipped') {
           await markJobSkipped(job.id, 'push_skipped');
           skippedCount += 1;
           continue;

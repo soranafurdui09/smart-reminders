@@ -3,6 +3,7 @@ import http from 'http';
 import { setTimeout as sleep } from 'timers/promises';
 import { createClient } from '@supabase/supabase-js';
 import webpush from 'web-push';
+import admin from 'firebase-admin';
 
 const REQUIRED_ENV = ['SUPABASE_SERVICE_ROLE_KEY'];
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -23,6 +24,30 @@ const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || '';
+const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || '';
+const FIREBASE_CLIENT_EMAIL = process.env.FIREBASE_CLIENT_EMAIL || '';
+const FIREBASE_PRIVATE_KEY = process.env.FIREBASE_PRIVATE_KEY || '';
+
+let firebaseApp = null;
+
+function initFirebaseAdmin() {
+  if (firebaseApp) return firebaseApp;
+  if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
+    throw new Error('missing_firebase_env');
+  }
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: FIREBASE_PROJECT_ID,
+        clientEmail: FIREBASE_CLIENT_EMAIL,
+        privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+      }),
+      projectId: FIREBASE_PROJECT_ID
+    });
+  }
+  firebaseApp = admin.app();
+  return firebaseApp;
+}
 
 const FREEBUSY_CACHE_TTL_MS = 10 * 60 * 1000;
 const FREEBUSY_CACHE_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -603,6 +628,35 @@ async function sendPushToSubscriptions(subs, payload) {
   return { status: failed ? 'failed' : 'sent', staleEndpoints };
 }
 
+async function sendFcmToTokens(tokens, payload) {
+  if (!tokens.length) {
+    return { sent: 0, failed: 0, invalidTokens: [] };
+  }
+  initFirebaseAdmin();
+  const message = {
+    tokens,
+    notification: {
+      title: payload.title,
+      body: payload.body
+    },
+    data: payload.url ? { url: payload.url } : undefined,
+    android: {
+      priority: 'high',
+      ttl: 60 * 60 * 1000
+    }
+  };
+  const response = await admin.messaging().sendEachForMulticast(message);
+  const invalidTokens = [];
+  response.responses.forEach((res, index) => {
+    if (res.success) return;
+    const code = res.error?.code;
+    if (code === 'messaging/invalid-registration-token' || code === 'messaging/registration-token-not-registered') {
+      invalidTokens.push(tokens[index]);
+    }
+  });
+  return { sent: response.successCount, failed: response.failureCount, invalidTokens };
+}
+
 async function processBatch(now) {
   const nowIso = now.toISOString();
   const windowStart = new Date(now.getTime() - GRACE_MINUTES * 60 * 1000);
@@ -648,6 +702,21 @@ async function processBatch(now) {
     const list = pushMap.get(sub.user_id) ?? [];
     list.push({ endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth });
     pushMap.set(sub.user_id, list);
+  });
+
+  const { data: fcmTokens, error: fcmTokensError } = await supabase
+    .from('fcm_tokens')
+    .select('user_id, token')
+    .in('user_id', userIds)
+    .eq('is_disabled', false);
+  if (fcmTokensError) {
+    console.warn('[worker] failed to load fcm tokens', fcmTokensError);
+  }
+  const fcmMap = new Map();
+  (fcmTokens ?? []).forEach((row) => {
+    const list = fcmMap.get(row.user_id) ?? [];
+    list.push(row.token);
+    fcmMap.set(row.user_id, list);
   });
 
   const occurrenceMap = new Map();
@@ -734,6 +803,13 @@ async function processBatch(now) {
       }
     }
 
+    const occurrenceId = !isMedication ? occurrenceMap.get(`${reminder.id}:${job.notify_at}`)?.id ?? null : null;
+    if (!isMedication && !occurrenceId) {
+      await markJobSkipped(job.id, nowIso, 'stale_occurrence');
+      skipped += 1;
+      return;
+    }
+
     const profile = profileMap.get(job.user_id);
     if (!profile?.notifyByPush) {
       await markJobSkipped(job.id, nowIso, 'pref_push_off');
@@ -781,10 +857,16 @@ async function processBatch(now) {
       failed += 1;
       return;
     }
+    if (fcmTokensError) {
+      await markJobFailed(job, now, nowIso, 'fcm_tokens_query_failed');
+      failed += 1;
+      return;
+    }
 
     const subs = pushMap.get(job.user_id) ?? [];
-    if (!subs.length) {
-      await markJobSkipped(job.id, nowIso, 'missing_push');
+    const fcmUserTokens = fcmMap.get(job.user_id) ?? [];
+    if (!subs.length && !fcmUserTokens.length) {
+      await markJobSkipped(job.id, nowIso, 'missing_push_targets');
       skipped += 1;
       return;
     }
@@ -820,14 +902,13 @@ async function processBatch(now) {
         return;
       }
     } else {
-      const occurrence = occurrenceMap.get(`${reminder.id}:${job.notify_at}`);
-      if (!occurrence?.id) {
-        await markJobFailed(job, now, nowIso, 'occurrence_missing');
-        failed += 1;
+      if (!occurrenceId) {
+        await markJobSkipped(job.id, nowIso, 'stale_occurrence');
+        skipped += 1;
         return;
       }
       const logResult = await insertReminderLog({
-        occurrenceId: occurrence.id,
+        occurrenceId,
         reminderId: reminder.id,
         occurrenceAtUtc,
         channel: 'push',
@@ -848,29 +929,56 @@ async function processBatch(now) {
       return;
     }
 
-    const pushResult = await sendPushToSubscriptions(subs, {
-      title,
-      body,
-      url,
-      jobId: job.id,
-      token: actionToken.token
-    });
+    let anySent = false;
+    let anyFailed = false;
 
-    if (pushResult.staleEndpoints.length) {
-      await supabase
-        .from('push_subscriptions')
-        .delete()
-        .in('endpoint', pushResult.staleEndpoints);
+    if (subs.length) {
+      const pushResult = await sendPushToSubscriptions(subs, {
+        title,
+        body,
+        url,
+        jobId: job.id,
+        token: actionToken.token
+      });
+      if (pushResult.staleEndpoints.length) {
+        await supabase.from('push_subscriptions').delete().in('endpoint', pushResult.staleEndpoints);
+      }
+      if (pushResult.status === 'sent') {
+        anySent = true;
+      } else if (pushResult.status === 'failed') {
+        anyFailed = true;
+      }
     }
 
-    if (pushResult.status === 'failed') {
-      await markJobFailed(job, now, nowIso, pushResult.error ?? 'push_failed');
+    if (fcmUserTokens.length) {
+      try {
+        const fcmResult = await sendFcmToTokens(fcmUserTokens, { title, body, url });
+        if (fcmResult.invalidTokens.length) {
+          await supabase
+            .from('fcm_tokens')
+            .update({ is_disabled: true, updated_at: nowIso })
+            .in('token', fcmResult.invalidTokens);
+        }
+        if (fcmResult.sent > 0) {
+          anySent = true;
+        }
+        if (fcmResult.failed > 0 && fcmResult.sent === 0) {
+          anyFailed = true;
+        }
+      } catch (error) {
+        console.error('[worker] fcm send failed', error);
+        anyFailed = true;
+      }
+    }
+
+    if (!anySent && anyFailed) {
+      await markJobFailed(job, now, nowIso, 'push_failed');
       failed += 1;
       return;
     }
 
-    if (pushResult.status === 'skipped') {
-      await markJobSkipped(job.id, nowIso, pushResult.error ?? 'push_skipped');
+    if (!anySent && !anyFailed) {
+      await markJobSkipped(job.id, nowIso, 'push_skipped');
       skipped += 1;
       return;
     }
