@@ -25,10 +25,43 @@ export default function BottomNav({
     { key: 'you', href: '/app/you', icon: User, label: labels.you, active: pathname?.startsWith('/app/you') ?? false }
   ];
 
+  const leftTabs = tabs.slice(0, 2);
+  const rightTabs = tabs.slice(2);
+
   return (
     <nav className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 navbar safe-bottom">
-      <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between px-3 pb-[calc(env(safe-area-inset-bottom)_+_12px)] pt-2">
-        {tabs.map((tab) => {
+      <div className="relative mx-auto flex w-full max-w-none items-center justify-between px-3 pb-[calc(env(safe-area-inset-bottom)_+_12px)] pt-2 md:max-w-6xl">
+        {leftTabs.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              aria-label={tab.label}
+              className={`flex min-h-[44px] flex-1 items-center justify-center rounded-2xl px-2 py-1 transition ${
+                tab.active ? 'text-text' : 'text-muted2'
+              }`}
+              aria-current={tab.active ? 'page' : undefined}
+              onClick={() => {
+                if (typeof window !== 'undefined' && pathname === '/app' && (tab.key === 'today' || tab.key === 'inbox')) {
+                  window.history.replaceState(null, '', tab.href);
+                  window.dispatchEvent(new CustomEvent('dashboard:tab', { detail: { tab: tab.key } }));
+                  return;
+                }
+                router.push(tab.href);
+              }}
+            >
+              <span className={`relative flex h-11 w-11 items-center justify-center rounded-2xl ${tab.active ? 'bg-accent/20 text-text' : 'bg-surface3 text-muted'}`}>
+                <Icon className="h-5 w-5" aria-hidden="true" />
+                {tab.active ? (
+                  <span className="absolute -bottom-1 h-1 w-6 rounded-full bg-accent" />
+                ) : null}
+              </span>
+            </button>
+          );
+        })}
+        <span className="pointer-events-none flex h-11 w-11 items-center justify-center" aria-hidden="true" />
+        {rightTabs.map((tab) => {
           const Icon = tab.icon;
           return (
             <button
