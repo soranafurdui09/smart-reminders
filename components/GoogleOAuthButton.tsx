@@ -59,10 +59,31 @@ export default function GoogleOAuthButton({
       const useNativeFlow = isNative && platform === 'android';
       console.log('[oauth] native=', isNative, 'platform=', platform, 'webviewHint=', webViewHint);
       if (useNativeFlow) {
-        const nativeStart = `${origin}/auth/native-start?next=${encodeURIComponent(next)}`;
-        console.log('[oauth] native-start=', nativeStart);
-        console.log('[oauth] Browser.open');
-        await Browser.open({ url: nativeStart });
+        const redirectTo = `com.smartreminder.app://auth/callback${next ? `?next=${encodeURIComponent(next)}` : ''}`;
+        console.log('[oauth] redirectTo=', redirectTo, 'skipBrowserRedirect=', true);
+        logStorageState('[oauth][storage] before signIn');
+        const supabase = getBrowserClient();
+        const { data, error: signInError } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo,
+            skipBrowserRedirect: true
+          }
+        });
+        logStorageState('[oauth][storage] after signIn');
+        if (signInError) {
+          const message = signInError.message?.toLowerCase() ?? '';
+          setError(message.includes('provider') || message.includes('oauth') ? errorNotConfigured : errorGeneric);
+          setPending(false);
+          return;
+        }
+        if (data?.url) {
+          console.log('[oauth] auth url=', data.url);
+          console.log('[oauth] Browser.open');
+          await Browser.open({ url: data.url });
+        } else {
+          setError(errorGeneric);
+        }
         setPending(false);
         return;
       }
@@ -87,7 +108,6 @@ export default function GoogleOAuthButton({
       }
       if (data?.url) {
         console.log('[oauth] auth url=', data.url);
-        console.log('[oauth] window.location.assign');
         window.location.assign(data.url);
       } else {
         setError(errorGeneric);

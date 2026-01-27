@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { getBrowserClient } from '@/lib/supabase/client';
 
 const CALLBACK_PREFIX = 'com.smartreminder.app://auth/callback';
+const handledDeepLinkUrls = new Set<string>();
 
 const maskUrlForLog = (url: string) => {
   try {
@@ -60,71 +61,54 @@ export default function NativeOAuthListener() {
 
     if (!isNative) return;
 
-    const closeBrowserSafely = async () => {
-      try {
-        await Browser.close();
-      } catch {
-        // ignore
-      }
-      window.setTimeout(() => {
-        Browser.close().catch(() => undefined);
-      }, 300);
-      window.setTimeout(() => {
-        Browser.close().catch(() => undefined);
-      }, 900);
-    };
-
     const handleUrl = async (url: string, source: 'appUrlOpen' | 'getLaunchUrl') => {
       try {
         console.log(`[oauth] ${source} url=`, maskUrlForLog(url));
         if (!url || !url.startsWith(CALLBACK_PREFIX)) return;
+        if (handledDeepLinkUrls.has(url)) {
+          console.log('[oauth] deep link already handled, skip');
+          return;
+        }
         if (handlingRef.current) {
           console.log('[oauth] already handling, skip');
           return;
         }
         handlingRef.current = true;
-        await closeBrowserSafely();
         const incoming = new URL(url);
         const code = incoming.searchParams.get('code');
         const state = incoming.searchParams.get('state');
-        const accessToken = incoming.searchParams.get('access_token');
-        const refreshToken = incoming.searchParams.get('refresh_token');
         const errorParam = incoming.searchParams.get('error');
+        const errorDescription = incoming.searchParams.get('error_description');
         console.log('[oauth] callback params', JSON.stringify({
           hasCode: Boolean(code),
           codeLen: code?.length ?? 0,
           hasState: Boolean(state),
           stateLen: state?.length ?? 0,
-          hasAccessToken: Boolean(accessToken),
-          accessLen: accessToken?.length ?? 0,
-          hasRefreshToken: Boolean(refreshToken),
-          refreshLen: refreshToken?.length ?? 0,
           error: errorParam
         }));
-        const next = incoming.searchParams.get('next') ?? '/app';
+        const rawNext = incoming.searchParams.get('next') ?? '/app';
+        const next = rawNext.startsWith('/') ? rawNext : '/app';
         logStorageState('[oauth][storage] before exchange');
         const supabase = getBrowserClient();
         try {
-          if (accessToken && refreshToken) {
-            const { error } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken
-            });
-            if (error) {
-              console.warn('[oauth] setSession failed', error);
-            } else {
-              logStorageState('[oauth][storage] after setSession');
-            }
-          } else if (code) {
-            console.warn('[oauth] code-only callback in native listener (legacy), skipping');
-            return;
-          } else {
-            console.warn('[oauth] missing code and tokens in callback, skipping exchange');
+          if (errorParam) {
+            console.warn('[oauth] callback error', JSON.stringify({ error: errorParam, errorDescription }));
             return;
           }
+          if (!code) {
+            console.warn('[oauth] missing code in callback, skipping exchange');
+            return;
+          }
+          const { error } = await supabase.auth.exchangeCodeForSession(url);
+          if (error) {
+            console.warn('[oauth] exchangeCodeForSession failed', error);
+          } else {
+            logStorageState('[oauth][storage] after exchange');
+          }
+          handledDeepLinkUrls.add(url);
         } finally {
           console.log('[oauth] Browser.close');
-          await closeBrowserSafely();
+          await Browser.close().catch(() => undefined);
         }
         router.replace(next || '/app');
       } catch (error) {
@@ -166,6 +150,12 @@ export default function NativeOAuthListener() {
       appStateListenerRef.current = App.addListener('appStateChange', ({ isActive }) => {
         if (isActive) {
           Browser.close().catch(() => undefined);
+          window.setTimeout(() => {
+            Browser.close().catch(() => undefined);
+          }, 300);
+          window.setTimeout(() => {
+            Browser.close().catch(() => undefined);
+          }, 900);
         }
       });
     }
