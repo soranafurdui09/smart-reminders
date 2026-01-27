@@ -8,6 +8,7 @@ import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
 import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { useRouter } from 'next/navigation';
+import { createBrowserClient } from '@/lib/supabase/client';
 
 const STATUS_BAR_COLOR = '#0b2a2e';
 
@@ -48,21 +49,22 @@ export default function NativeAppChrome() {
       void applyChrome();
     }, 150);
 
-    const handleAppUrlOpen = (event: { url: string }) => {
+    const handleAppUrlOpen = async (event: { url: string }) => {
       try {
+        console.log('[appUrlOpen]', event.url);
         const incoming = new URL(event.url);
         const isCallbackPath =
           incoming.pathname === '/auth/callback' ||
           (incoming.host === 'auth' && incoming.pathname === '/callback');
         if (!isCallbackPath) return;
-        const code = incoming.searchParams.get('code');
         const next = incoming.searchParams.get('next') ?? '/app';
-        if (code) {
-          router.push(`/auth/callback?code=${encodeURIComponent(code)}&next=${encodeURIComponent(next)}`);
-        } else {
-          router.push(next);
+        const supabase = createBrowserClient();
+        const { error } = await supabase.auth.exchangeCodeForSession(event.url);
+        if (error) {
+          console.warn('[native] exchangeCodeForSession failed', error);
         }
-        Browser.close().catch(() => undefined);
+        await Browser.close().catch(() => undefined);
+        router.replace(next);
       } catch (error) {
         console.warn('[native] failed to handle app url', error);
       }
