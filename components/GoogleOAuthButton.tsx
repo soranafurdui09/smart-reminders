@@ -3,7 +3,22 @@
 import { useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
-import { createBrowserClient } from '@/lib/supabase/client';
+import { getBrowserClient } from '@/lib/supabase/browserClient';
+
+const logStorageState = (label: string) => {
+  if (typeof window === 'undefined') return;
+  try {
+    const lsKeys = Object.keys(localStorage).filter((k) => /sb-|supabase|pkce|oauth/i.test(k));
+    const lsInfo = lsKeys.map((k) => ({ k, len: (localStorage.getItem(k) || '').length }));
+    const cookieNames = document.cookie
+      .split(';')
+      .map((c) => c.trim().split('=')[0])
+      .filter((n) => /sb-|supabase/i.test(n));
+    console.log(label, { lsInfo, cookieNames });
+  } catch (error) {
+    console.warn(label, 'storage dump failed', error);
+  }
+};
 
 export default function GoogleOAuthButton({
   next,
@@ -22,6 +37,10 @@ export default function GoogleOAuthButton({
   const [error, setError] = useState<string | null>(null);
 
   const handleClick = async () => {
+    if (pending) {
+      console.log('[oauth] click ignored, pending');
+      return;
+    }
     setPending(true);
     setError(null);
     try {
@@ -40,7 +59,8 @@ export default function GoogleOAuthButton({
         : `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
       console.log('[oauth] native=', isNative, 'platform=', platform, 'webviewHint=', webViewHint);
       console.log('[oauth] redirectTo=', redirectTo, 'skipBrowserRedirect=', useNativeFlow);
-      const supabase = createBrowserClient();
+      logStorageState('[oauth][storage] before signIn');
+      const supabase = getBrowserClient();
       const { data, error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -48,6 +68,7 @@ export default function GoogleOAuthButton({
           skipBrowserRedirect: useNativeFlow
         }
       });
+      logStorageState('[oauth][storage] after signIn');
       if (signInError) {
         const message = signInError.message?.toLowerCase() ?? '';
         setError(message.includes('provider') || message.includes('oauth') ? errorNotConfigured : errorGeneric);
