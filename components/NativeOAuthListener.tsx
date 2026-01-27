@@ -14,11 +14,13 @@ const logStorageState = (label: string) => {
   try {
     const lsKeys = Object.keys(localStorage).filter((k) => /sb-|supabase|pkce|oauth/i.test(k));
     const lsInfo = lsKeys.map((k) => ({ k, len: (localStorage.getItem(k) || '').length }));
+    const codeVerifierKeys = Object.keys(localStorage).filter((k) => /code-verifier/i.test(k));
+    const codeVerifierInfo = codeVerifierKeys.map((k) => ({ k, len: (localStorage.getItem(k) || '').length }));
     const cookieNames = document.cookie
       .split(';')
       .map((c) => c.trim().split('=')[0])
       .filter((n) => /sb-|supabase/i.test(n));
-    console.log(label, { lsInfo, cookieNames });
+    console.log(label, { lsInfo, codeVerifierInfo, cookieNames });
   } catch (error) {
     console.warn(label, 'storage dump failed', error);
   }
@@ -59,6 +61,10 @@ export default function NativeOAuthListener() {
           stateLen: state?.length ?? 0,
           error: errorParam
         });
+        if (!code) {
+          console.warn('[oauth] missing code in callback, skipping exchange');
+          return;
+        }
         const next = incoming.searchParams.get('next') ?? '/app';
         logStorageState('[oauth][storage] before exchange');
         const supabase = getBrowserClient();
