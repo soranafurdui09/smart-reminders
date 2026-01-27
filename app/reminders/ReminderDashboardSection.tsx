@@ -8,7 +8,6 @@ import HomeHeader from '@/components/home/HomeHeader';
 import NextUpCard from '@/components/home/NextUpCard';
 import QuickAddBar from '@/components/home/QuickAddBar';
 import AtAGlanceRow from '@/components/home/AtAGlanceRow';
-import SegmentedTabs from '@/components/home/SegmentedTabs';
 import FilteredTaskList from '@/components/home/FilteredTaskList';
 import MedsTeaserCard from '@/components/home/MedsTeaserCard';
 import ReminderRowMobile from '@/components/mobile/ReminderRowMobile';
@@ -728,6 +727,7 @@ export default function ReminderDashboardSection({
                 { id: 'soon', label: copy.dashboard.todaySoon, count: soonItems.length, accentClass: 'text-emerald-300', tone: 'success', icon: Calendar },
                 { id: 'meds', label: copy.dashboard.medicationsTitle, count: visibleDoses.length, accentClass: 'text-teal-300', tone: 'success', icon: Pill }
               ]}
+              activeId={homeSegment}
               onSelect={(id) => {
                 if (id === 'overdue') setHomeSegment('overdue');
                 if (id === 'today') setHomeSegment('today');
@@ -752,16 +752,6 @@ export default function ReminderDashboardSection({
             ) : (
               <MedsTeaserCard title={copy.dashboard.medicationsTitle} subtitle={copy.dashboard.medicationsEmpty} />
             )}
-
-            <SegmentedTabs
-              tabs={[
-                { id: 'today', label: copy.dashboard.todayTitle, count: todayOpenItems.length },
-                { id: 'overdue', label: copy.dashboard.todayOverdue, count: overdueItems.length },
-                { id: 'soon', label: copy.dashboard.todaySoon, count: soonItems.length }
-              ]}
-              value={homeSegment}
-              onChange={(value) => setHomeSegment(value as 'today' | 'overdue' | 'soon')}
-            />
 
             <div className={`rounded-2xl p-3 ${segmentTone}`}>
               <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-text">

@@ -24,6 +24,7 @@ export default function TopBar({
       : pathname?.startsWith('/app/you')
         ? labels.you
         : labels.today;
+  const showTitle = pathname !== '/app';
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -52,7 +53,7 @@ export default function TopBar({
     <div className="safe-top sticky top-0 z-40 border-b border-[color:rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(59,130,246,0.12),rgba(6,12,18,0.76))] backdrop-blur-xl">
       <div className={`mx-auto flex min-h-[56px] w-full max-w-none md:max-w-6xl items-center justify-between gap-3 px-4 ${compact ? 'py-1.5' : 'py-2'}`}>
         <div className="min-w-0">
-          <div className="text-base font-semibold text-text">{title}</div>
+          {showTitle ? <div className="text-base font-semibold text-text">{title}</div> : null}
           {subtitle ? <div className="text-[11px] text-muted">{subtitle}</div> : null}
         </div>
         <div className="flex items-center gap-2">

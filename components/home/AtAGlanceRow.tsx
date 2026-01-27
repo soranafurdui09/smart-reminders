@@ -13,18 +13,27 @@ type Metric = {
 
 type Props = {
   metrics: Metric[];
+  activeId?: string | null;
   onSelect?: (id: string) => void;
 };
 
-export default function AtAGlanceRow({ metrics, onSelect }: Props) {
+export default function AtAGlanceRow({ metrics, activeId, onSelect }: Props) {
   return (
     <div className="surface-a1 rounded-2xl px-2 py-2">
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         {metrics.map((metric) => (
           <button
             key={metric.id}
             type="button"
-            className={`stat-tile ${metric.tone === 'danger' ? 'stat-tile-strong stat-tile-danger' : metric.tone === 'success' ? 'stat-tile-success' : metric.tone === 'warning' ? 'stat-tile-warning' : 'stat-tile-info'}`}
+            className={`stat-tile ${
+              metric.tone === 'danger'
+                ? 'stat-tile-strong stat-tile-danger'
+                : metric.tone === 'success'
+                  ? 'stat-tile-success'
+                  : metric.tone === 'warning'
+                    ? 'stat-tile-warning'
+                    : 'stat-tile-info'
+            } ${activeId === metric.id ? 'stat-tile-active' : ''}`}
             onClick={() => onSelect?.(metric.id)}
           >
             <div className="flex items-center justify-between">

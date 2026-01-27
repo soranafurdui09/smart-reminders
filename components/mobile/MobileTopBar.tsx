@@ -26,11 +26,12 @@ export default function MobileTopBar({
       : pathname?.startsWith('/app/you')
         ? labels.you
         : labels.today;
+  const showTitle = pathname !== '/app';
 
   return (
     <div className="safe-top sticky top-0 z-40 border-b border-[color:rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(59,130,246,0.12),rgba(6,12,18,0.76))] backdrop-blur-xl">
       <div className="mx-auto flex min-h-[56px] w-full max-w-none items-center justify-between gap-3 px-4 py-2">
-        <div className="text-base font-semibold text-text">{title}</div>
+        {showTitle ? <div className="text-base font-semibold text-text">{title}</div> : <div />}
         <div className="flex items-center gap-2">
           <Link
             href="/app?tab=inbox"

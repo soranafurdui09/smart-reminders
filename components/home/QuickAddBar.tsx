@@ -3,13 +3,6 @@
 import { useState } from 'react';
 import { Mic, Sparkles, Plus } from 'lucide-react';
 
-const chips = [
-  { id: 'today', label: 'Azi', text: 'azi la 18:00' },
-  { id: 'tomorrow', label: 'Mâine', text: 'mâine la 09:00' },
-  { id: 'in1h', label: '1h', text: 'peste o oră' },
-  { id: 'recurring', label: 'Recurent', text: 'în fiecare săptămână' }
-];
-
 export default function QuickAddBar() {
   const [value, setValue] = useState('');
   const trimmed = value.trim();
@@ -59,18 +52,6 @@ export default function QuickAddBar() {
         >
           <Plus className="h-4 w-4" />
         </button>
-      </div>
-      <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-        {chips.map((chip) => (
-          <button
-            key={chip.id}
-            type="button"
-            className="chip whitespace-nowrap text-[12px] px-2.5 py-1.5"
-            onClick={() => setValue((current) => (current ? `${current} ${chip.text}` : chip.text))}
-          >
-            {chip.label}
-          </button>
-        ))}
       </div>
     </div>
   );

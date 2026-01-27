@@ -22,15 +22,6 @@ type AiResult = {
   categoryId: string | null;
 };
 
-const suggestions = [
-  { id: 'today', label: 'Azi', text: 'Azi la 18:00' },
-  { id: 'tomorrow', label: 'Mâine', text: 'Mâine la 09:00' },
-  { id: 'in1h', label: 'În 1h', text: 'Peste o oră' },
-  { id: 'weekly', label: 'Săptămânal', text: 'În fiecare săptămână' },
-  { id: 'monthly', label: 'Lunar', text: 'Pe 1 ale lunii la 09:00' },
-  { id: 'medication', label: 'Medicație', mode: 'medication' as const }
-];
-
 const templates = [
   { id: 'rent', label: 'Plată chirie', text: 'Plata chiriei pe 1 ale lunii la 9:00, cu 2 zile înainte' },
   { id: 'bills', label: 'Factură utilități', text: 'Factura utilități pe 15 la 10:00' },
@@ -486,25 +477,6 @@ export default function QuickAddSheet({
 
         {isAiMode ? (
           <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              {suggestions.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className="premium-chip"
-                  onClick={() => {
-                    if (item.mode === 'medication') {
-                      handleNavigate('medication');
-                      return;
-                    }
-                    setParsedResult(null);
-                    setText(item.text ?? '');
-                  }}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
             <div className="grid gap-2 sm:grid-cols-2">
               {templates.map((template) => (
                 <button
