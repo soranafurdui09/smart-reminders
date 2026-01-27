@@ -1,22 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
-import { App } from '@capacitor/app';
-import { Browser } from '@capacitor/browser';
-import { useRouter } from 'next/navigation';
-import { createBrowserClient } from '@/lib/supabase/client';
 
 const STATUS_BAR_COLOR = '#0b2a2e';
 
 export default function NativeAppChrome() {
-  const router = useRouter();
-  const listenerAttached = useRef(false);
-  const removeListenerRef = useRef<Promise<{ remove: () => void }> | null>(null);
-
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const isAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
@@ -52,47 +44,6 @@ export default function NativeAppChrome() {
       void applyChrome();
     }, 150);
 
-    const handleAppUrlOpen = async (event: { url: string }) => {
-      try {
-        console.log('[oauth] appUrlOpen url=', event.url);
-        const incoming = new URL(event.url);
-        const isCallbackPath =
-          incoming.pathname === '/auth/callback' ||
-          (incoming.host === 'auth' && incoming.pathname === '/callback');
-        if (!isCallbackPath) return;
-        const next = incoming.searchParams.get('next') ?? '/app';
-        const supabase = createBrowserClient();
-        try {
-          const { error } = await supabase.auth.exchangeCodeForSession(event.url);
-          if (error) {
-            console.warn('[oauth] exchangeCodeForSession failed', error);
-          }
-        } finally {
-          console.log('[oauth] Browser.close');
-          await Browser.close().catch(() => undefined);
-        }
-        router.replace(next || '/app');
-      } catch (error) {
-        console.warn('[native] failed to handle app url', error);
-      }
-    };
-
-    if (!listenerAttached.current) {
-      listenerAttached.current = true;
-      const removeListener = App.addListener('appUrlOpen', handleAppUrlOpen);
-      removeListenerRef.current = removeListener;
-      App.getLaunchUrl()
-        .then((result) => {
-          if (result?.url) {
-            console.log('[oauth] getLaunchUrl url=', result.url);
-            return handleAppUrlOpen({ url: result.url });
-          }
-          return undefined;
-        })
-        .catch((error) => {
-          console.warn('[oauth] getLaunchUrl failed', error);
-        });
-    }
     const focusHandler = (event: FocusEvent) => {
       const target = event.target as HTMLElement | null;
       if (!target) return;
@@ -116,12 +67,11 @@ export default function NativeAppChrome() {
 
     return () => {
       window.clearTimeout(timer);
-      removeListenerRef.current?.then((handler) => handler.remove());
       keyboardShow.then((handler) => handler.remove());
       keyboardHide.then((handler) => handler.remove());
       document.removeEventListener('focusin', focusHandler);
     };
-  }, [router]);
+  }, []);
 
   return null;
 }

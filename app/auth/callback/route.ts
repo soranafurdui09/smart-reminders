@@ -8,6 +8,17 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const next = url.searchParams.get('next') ?? '/app';
+  const native = url.searchParams.get('native');
+  const userAgent = request.headers.get('user-agent') || '';
+
+  if (native === '1' && /Android/i.test(userAgent)) {
+    const deepLink = new URL('com.smartreminder.app://auth/callback');
+    url.searchParams.forEach((value, key) => {
+      deepLink.searchParams.set(key, value);
+    });
+    console.log('[auth/callback] native=1 bounce to deep link', deepLink.toString());
+    return NextResponse.redirect(deepLink);
+  }
 
   if (!code) {
     url.pathname = '/auth';

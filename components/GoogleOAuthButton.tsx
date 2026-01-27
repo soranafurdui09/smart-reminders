@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { createBrowserClient } from '@/lib/supabase/client';
@@ -20,17 +20,6 @@ export default function GoogleOAuthButton({
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isNativeAndroid, setIsNativeAndroid] = useState(false);
-  const [isAndroidWebView, setIsAndroidWebView] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    setIsNativeAndroid(Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android');
-    const userAgent = navigator.userAgent || '';
-    const webViewHint = userAgent.includes('SmartReminderWebView') || (userAgent.includes('Android') && userAgent.includes('wv'));
-    setIsAndroidWebView(webViewHint);
-    console.log('[oauth] native=', Capacitor.isNativePlatform(), 'platform=', Capacitor.getPlatform(), 'webviewHint=', webViewHint);
-  }, []);
 
   const handleClick = async () => {
     setPending(true);
@@ -41,10 +30,15 @@ export default function GoogleOAuthButton({
         ? 'localhost'
         : hostname;
       const origin = `${protocol}//${safeHost}${port ? `:${port}` : ''}`;
-      const useNativeFlow = isNativeAndroid;
+      const isNative = Capacitor.isNativePlatform();
+      const platform = Capacitor.getPlatform();
+      const userAgent = navigator.userAgent || '';
+      const webViewHint = userAgent.includes('SmartReminderWebView') || (userAgent.includes('Android') && userAgent.includes('wv'));
+      const useNativeFlow = isNative && platform === 'android';
       const redirectTo = useNativeFlow
-        ? `com.smartreminder.app://auth/callback?next=${encodeURIComponent(next)}`
+        ? `com.smartreminder.app://auth/callback?next=${encodeURIComponent(next)}&native=1`
         : `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
+      console.log('[oauth] native=', isNative, 'platform=', platform, 'webviewHint=', webViewHint);
       console.log('[oauth] redirectTo=', redirectTo, 'skipBrowserRedirect=', useNativeFlow);
       const supabase = createBrowserClient();
       const { data, error: signInError } = await supabase.auth.signInWithOAuth({
