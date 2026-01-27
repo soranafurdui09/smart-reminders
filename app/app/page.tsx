@@ -161,7 +161,7 @@ export default async function DashboardPage({
 
   return (
     <AppShell locale={locale} activePath="/app" userEmail={user.email}>
-      <div className="mx-auto max-w-6xl space-y-6 px-4 pb-10 md:space-y-8">
+      <div className="w-full space-y-[var(--section-gap)] pb-10 md:mx-auto md:max-w-6xl md:px-4 md:space-y-8">
         <div className="hidden md:block">
           <DashboardHero
             title={copy.dashboard.heroTitle}

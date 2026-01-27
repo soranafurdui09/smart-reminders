@@ -382,7 +382,7 @@ export default function QuickAddSheet({
         </IconButton>
       </div>
 
-      <div className="mt-4 space-y-4">
+      <div className="mt-[var(--space-4)] space-y-[var(--space-3)]">
         <Card className={`surface-a2 px-[var(--space-3)] py-[var(--space-3)] text-xs text-muted ${highlightPreview ? 'ai-highlight' : ''}`}>
           <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
             <Sparkles className="h-3.5 w-3.5 text-[color:rgb(var(--accent-2))]" />
@@ -418,7 +418,7 @@ export default function QuickAddSheet({
           )}
         </Card>
 
-        <div className="space-y-2">
+        <div className="space-y-[var(--space-2)]">
           {voiceActive ? (
             <div className="flex items-center justify-between text-xs text-[color:rgb(var(--accent-2))]">
               <div className="flex items-center gap-2">
@@ -476,7 +476,7 @@ export default function QuickAddSheet({
         </div>
 
         {isAiMode ? (
-          <div className="space-y-3">
+          <div className="space-y-[var(--space-2)]">
             <div className="grid gap-2 sm:grid-cols-2">
               {templates.map((template) => (
                 <button
@@ -500,7 +500,7 @@ export default function QuickAddSheet({
         ) : null}
       </div>
 
-      <div className="mt-4">
+      <div className="mt-[var(--space-4)]">
         <button
           type="button"
           className="text-xs font-semibold text-muted"
@@ -509,7 +509,7 @@ export default function QuickAddSheet({
           {detailsOpen ? 'Ascunde detalii avansate' : 'Detalii avansate'}
         </button>
         {detailsOpen ? (
-          <div className="mt-3 space-y-3">
+          <div className="mt-[var(--space-2)] space-y-[var(--space-2)]">
             {activeMode === 'list' ? (
               <div className="space-y-1">
                   <label className="text-xs font-semibold text-muted">Listă</label>
@@ -521,7 +521,7 @@ export default function QuickAddSheet({
                   />
                 </div>
               ) : null}
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-[var(--space-2)] sm:grid-cols-2">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-muted">Data</label>
                   <input
@@ -541,7 +541,7 @@ export default function QuickAddSheet({
                   />
                 </div>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-[var(--space-2)] sm:grid-cols-2">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-muted">Recurență</label>
                   <select
@@ -604,7 +604,7 @@ export default function QuickAddSheet({
           ) : null}
       </div>
 
-      <div className="mt-4 grid gap-2 sticky bottom-0 bg-[color:var(--surface-2)] pt-3 pb-[calc(env(safe-area-inset-bottom)_+_14px)]">
+      <div className="mt-[var(--space-3)] grid gap-[var(--space-2)] sticky bottom-0 bg-[color:var(--surface-2)] pt-[var(--space-2)] pb-[calc(env(safe-area-inset-bottom)_+_14px)]">
           <button
             type="button"
             className="premium-btn-primary inline-flex items-center justify-center px-4 text-sm"

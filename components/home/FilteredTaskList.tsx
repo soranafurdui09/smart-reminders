@@ -19,13 +19,13 @@ export default function FilteredTaskList({
 }: Props) {
   if (!items.length) {
     return (
-      <div className="premium-card p-4 text-sm text-muted">
+      <div className="premium-card p-[var(--space-3)] text-sm text-muted">
         {emptyLabel}
       </div>
     );
   }
   return (
-    <div className="space-y-2">
+    <div className="space-y-[var(--space-2)]">
       {items.map((occurrence) => (
         <ReminderRowMobile
           key={occurrence.id}

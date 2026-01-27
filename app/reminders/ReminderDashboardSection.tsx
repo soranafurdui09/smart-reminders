@@ -580,16 +580,16 @@ export default function ReminderDashboardSection({
 
   if (isMobile) {
     return (
-      <section className="space-y-4">
+      <section className="space-y-[var(--space-3)]">
         {activeTab === 'inbox' ? (
-          <div className="space-y-3">
-            <div className="card-soft flex items-center justify-between px-4 py-3">
+          <div className="space-y-[var(--space-3)]">
+            <div className="card-soft flex items-center justify-between px-[var(--space-3)] py-[var(--space-2)]">
               <div className="text-sm font-semibold text-text">Inbox</div>
               <div className="text-xs text-muted2">
                 {inboxOccurrences.length} {copy.dashboard.reminderCountLabel}
               </div>
             </div>
-            <div className="card-soft space-y-3 p-3">
+            <div className="card-soft space-y-[var(--space-2)] p-[var(--space-3)]">
               <div className="text-[11px] font-semibold uppercase tracking-wide text-muted2">
                 Filtre rapide
               </div>
@@ -636,7 +636,7 @@ export default function ReminderDashboardSection({
               )}
             </div>
             {mobileInboxItems.length ? (
-              <div className="space-y-2">
+              <div className="space-y-[var(--space-2)]">
                 {mobileInboxItems.map((occurrence) => (
                   <ReminderRowMobile
                     key={occurrence.id}
@@ -648,7 +648,7 @@ export default function ReminderDashboardSection({
                 ))}
               </div>
             ) : (
-              <div className="premium-card p-4 text-sm text-tertiary">
+              <div className="premium-card p-[var(--space-3)] text-sm text-tertiary">
                 {copy.dashboard.empty}
               </div>
             )}
@@ -663,7 +663,7 @@ export default function ReminderDashboardSection({
             ) : null}
           </div>
         ) : (
-          <div className="space-y-4 today-shell">
+          <div className="space-y-[var(--space-3)] today-shell">
             <div className="hidden md:block">
               <HomeHeader title={copy.dashboard.todayTitle} />
             </div>

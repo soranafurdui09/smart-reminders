@@ -52,10 +52,11 @@
   --radius-1: 0.75rem;
   --radius-2: 1.125rem;
   --radius-3: 1.5rem;
-  --container-pad: clamp(0.75rem, 4vw, 1.25rem);
-  --container-pad-y: clamp(0.75rem, 3.5vw, 1.5rem);
+  --container-pad: clamp(0.75rem, 3.5vw, 1.5rem);
+  --container-pad-y: clamp(0.75rem, 3vw, 1.5rem);
   --container-max-sm: 45rem;
   --container-max-md: 60rem;
+  --section-gap: clamp(0.75rem, 2.8vw, 1.25rem);
 
   --bg-base: rgb(var(--bg0));
   --bg-top: rgb(var(--bg1));
