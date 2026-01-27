@@ -5,9 +5,25 @@ import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import { useRouter } from 'next/navigation';
-import { getBrowserClient } from '@/lib/supabase/browserClient';
+import { getBrowserClient } from '@/lib/supabase/client';
 
 const CALLBACK_PREFIX = 'com.smartreminder.app://auth/callback';
+
+const maskUrlForLog = (url: string) => {
+  try {
+    const u = new URL(url);
+    const params = new URLSearchParams(u.search);
+    ['access_token', 'refresh_token', 'code'].forEach((key) => {
+      const value = params.get(key);
+      if (value) {
+        params.set(key, `<redacted:${value.length}>`);
+      }
+    });
+    return `${u.protocol}//${u.host}${u.pathname}?${params.toString()}`;
+  } catch {
+    return '<invalid-url>';
+  }
+};
 
 const logStorageState = (label: string) => {
   if (typeof window === 'undefined') return;
@@ -45,7 +61,7 @@ export default function NativeOAuthListener() {
 
     const handleUrl = async (url: string, source: 'appUrlOpen' | 'getLaunchUrl') => {
       try {
-        console.log(`[oauth] ${source} url=`, url);
+        console.log(`[oauth] ${source} url=`, maskUrlForLog(url));
         if (!url || !url.startsWith(CALLBACK_PREFIX)) return;
         if (handlingRef.current) {
           console.log('[oauth] already handling, skip');
@@ -80,6 +96,8 @@ export default function NativeOAuthListener() {
             });
             if (error) {
               console.warn('[oauth] setSession failed', error);
+            } else {
+              logStorageState('[oauth][storage] after setSession');
             }
           } else if (code) {
             console.warn('[oauth] code-only callback in native listener (legacy), skipping');

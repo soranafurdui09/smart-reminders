@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
-import { getBrowserClient } from '@/lib/supabase/browserClient';
+import { getBrowserClient } from '@/lib/supabase/client';
 
 const logStorageState = (label: string) => {
   if (typeof window === 'undefined') return;

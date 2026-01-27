@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from 'react';
-import { getBrowserClient } from '@/lib/supabase/browserClient';
+import { getBrowserClient } from '@/lib/supabase/client';
 
 export default function AuthNativeStartPage({
   searchParams

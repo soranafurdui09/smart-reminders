@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { getBrowserClient } from '@/lib/supabase/browserClient';
+import { getBrowserClient } from '@/lib/supabase/client';
 
 const logStorageState = (label: string) => {
   if (typeof window === 'undefined') return;
@@ -50,6 +50,7 @@ export default function AuthCallbackPage() {
         window.location.replace('/auth?error=callback-failed');
         return;
       }
+      logStorageState('[auth/callback][storage] after exchange');
 
       const { data } = await supabase.auth.getSession();
       const session = data?.session ?? null;
