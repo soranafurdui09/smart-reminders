@@ -82,10 +82,8 @@ export default function NativeOAuthListener() {
               console.warn('[oauth] setSession failed', error);
             }
           } else if (code) {
-            const { error } = await supabase.auth.exchangeCodeForSession(code);
-            if (error) {
-              console.warn('[oauth] exchangeCodeForSession failed', error);
-            }
+            console.warn('[oauth] code-only callback in native listener (legacy), skipping');
+            return;
           } else {
             console.warn('[oauth] missing code and tokens in callback, skipping exchange');
             return;

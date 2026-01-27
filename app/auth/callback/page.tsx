@@ -16,6 +16,8 @@ const logStorageState = (label: string) => {
 
 export default function AuthCallbackPage() {
   const [status, setStatus] = useState('Procesăm autentificarea...');
+  const [showOpenApp, setShowOpenApp] = useState(false);
+  const [openAppUrl, setOpenAppUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const run = async () => {
@@ -60,7 +62,13 @@ export default function AuthCallbackPage() {
         deepLink.searchParams.set('refresh_token', session!.refresh_token);
         deepLink.searchParams.set('next', next);
         deepLink.searchParams.set('native', '1');
-        window.location.replace(deepLink.toString());
+        const deepLinkUrl = deepLink.toString();
+        console.log('[auth/callback] deep link redirect', JSON.stringify({ hasSession, next }));
+        setOpenAppUrl(deepLinkUrl);
+        window.location.replace(deepLinkUrl);
+        window.setTimeout(() => {
+          setShowOpenApp(true);
+        }, 600);
         return;
       }
 
@@ -72,8 +80,17 @@ export default function AuthCallbackPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
-      <div className="max-w-sm rounded-xl border border-white/10 bg-white/5 p-6 text-center text-sm">
-        {status}
+      <div className="max-w-sm space-y-4 rounded-xl border border-white/10 bg-white/5 p-6 text-center text-sm">
+        <div>{status}</div>
+        {showOpenApp && openAppUrl ? (
+          <button
+            type="button"
+            className="w-full rounded-lg bg-white/10 px-4 py-2 text-sm text-white"
+            onClick={() => window.location.assign(openAppUrl)}
+          >
+            Deschide aplicația
+          </button>
+        ) : null}
       </div>
     </div>
   );

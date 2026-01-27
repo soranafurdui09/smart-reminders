@@ -57,18 +57,25 @@ export default function GoogleOAuthButton({
       const userAgent = navigator.userAgent || '';
       const webViewHint = userAgent.includes('SmartReminderWebView') || (userAgent.includes('Android') && userAgent.includes('wv'));
       const useNativeFlow = isNative && platform === 'android';
-      const redirectTo = useNativeFlow
-        ? `${origin}/auth/callback?native=1&next=${encodeURIComponent(next)}`
-        : `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
       console.log('[oauth] native=', isNative, 'platform=', platform, 'webviewHint=', webViewHint);
-      console.log('[oauth] redirectTo=', redirectTo, 'skipBrowserRedirect=', useNativeFlow);
+      if (useNativeFlow) {
+        const nativeStart = `${origin}/auth/native-start?next=${encodeURIComponent(next)}`;
+        console.log('[oauth] native-start=', nativeStart);
+        console.log('[oauth] Browser.open');
+        await Browser.open({ url: nativeStart });
+        setPending(false);
+        return;
+      }
+
+      const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
+      console.log('[oauth] redirectTo=', redirectTo, 'skipBrowserRedirect=', false);
       logStorageState('[oauth][storage] before signIn');
       const supabase = getBrowserClient();
       const { data, error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo,
-          skipBrowserRedirect: useNativeFlow
+          skipBrowserRedirect: false
         }
       });
       logStorageState('[oauth][storage] after signIn');
@@ -80,13 +87,8 @@ export default function GoogleOAuthButton({
       }
       if (data?.url) {
         console.log('[oauth] auth url=', data.url);
-        if (useNativeFlow) {
-          console.log('[oauth] Browser.open');
-          await Browser.open({ url: data.url });
-        } else {
-          console.log('[oauth] window.location.assign');
-          window.location.assign(data.url);
-        }
+        console.log('[oauth] window.location.assign');
+        window.location.assign(data.url);
       } else {
         setError(errorGeneric);
         setPending(false);
