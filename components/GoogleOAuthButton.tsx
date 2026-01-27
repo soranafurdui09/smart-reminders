@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { Browser } from '@capacitor/browser';
 import { createBrowserClient } from '@/lib/supabase/client';
 
 export default function GoogleOAuthButton({
@@ -40,16 +39,16 @@ export default function GoogleOAuthButton({
         ? 'localhost'
         : hostname;
       const origin = `${protocol}//${safeHost}${port ? `:${port}` : ''}`;
-      const useCustomScheme = isNativeAndroid || isAndroidWebView;
-      const redirectTo = useCustomScheme
-        ? `com.smartreminder.app://auth/callback?next=${encodeURIComponent(next)}`
+      const useInAppFlow = isNativeAndroid || isAndroidWebView;
+      const redirectTo = useInAppFlow
+        ? `${origin}/auth/callback?next=${encodeURIComponent(next)}`
         : `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
       const supabase = createBrowserClient();
       const { data, error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo,
-          skipBrowserRedirect: useCustomScheme
+          skipBrowserRedirect: useInAppFlow
         }
       });
       if (signInError) {
@@ -59,13 +58,7 @@ export default function GoogleOAuthButton({
         return;
       }
       if (data?.url) {
-        if (isNativeAndroid) {
-          await Browser.open({ url: data.url });
-        } else if (isAndroidWebView) {
-          window.location.assign(data.url);
-        } else {
-          window.location.assign(data.url);
-        }
+        window.location.assign(data.url);
       } else {
         setError(errorGeneric);
         setPending(false);

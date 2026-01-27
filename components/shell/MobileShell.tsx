@@ -37,6 +37,11 @@ export default function MobileShell({
       <main className="page-wrap app-content relative z-0">{children}</main>
       {showMobile ? <BottomNav labels={labels} /> : null}
       {showMobile ? <Fab /> : null}
+      {isNativeAndroid ? (
+        <div className="pointer-events-none fixed bottom-[calc(var(--bottom-nav-h)_+_env(safe-area-inset-bottom)_+_8px)] right-3 z-[55] rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white/80">
+          NATIVE SHELL
+        </div>
+      ) : null}
     </div>
   );
 }
