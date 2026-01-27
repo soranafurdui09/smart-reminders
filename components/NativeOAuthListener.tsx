@@ -49,6 +49,7 @@ export default function NativeOAuthListener() {
   const removeListenerRef = useRef<Promise<{ remove: () => void }> | null>(null);
   const handlingRef = useRef(false);
   const authListenerAttached = useRef(false);
+  const appStateListenerRef = useRef<Promise<{ remove: () => void }> | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -59,6 +60,20 @@ export default function NativeOAuthListener() {
 
     if (!isNative) return;
 
+    const closeBrowserSafely = async () => {
+      try {
+        await Browser.close();
+      } catch {
+        // ignore
+      }
+      window.setTimeout(() => {
+        Browser.close().catch(() => undefined);
+      }, 300);
+      window.setTimeout(() => {
+        Browser.close().catch(() => undefined);
+      }, 900);
+    };
+
     const handleUrl = async (url: string, source: 'appUrlOpen' | 'getLaunchUrl') => {
       try {
         console.log(`[oauth] ${source} url=`, maskUrlForLog(url));
@@ -68,6 +83,7 @@ export default function NativeOAuthListener() {
           return;
         }
         handlingRef.current = true;
+        await closeBrowserSafely();
         const incoming = new URL(url);
         const code = incoming.searchParams.get('code');
         const state = incoming.searchParams.get('state');
@@ -108,7 +124,7 @@ export default function NativeOAuthListener() {
           }
         } finally {
           console.log('[oauth] Browser.close');
-          await Browser.close().catch(() => undefined);
+          await closeBrowserSafely();
         }
         router.replace(next || '/app');
       } catch (error) {
@@ -146,10 +162,20 @@ export default function NativeOAuthListener() {
       });
     }
 
+    if (!appStateListenerRef.current) {
+      appStateListenerRef.current = App.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) {
+          Browser.close().catch(() => undefined);
+        }
+      });
+    }
+
     return () => {
       removeListenerRef.current?.then((handler) => handler.remove());
       removeListenerRef.current = null;
       listenerAttached.current = false;
+      appStateListenerRef.current?.then((handler) => handler.remove());
+      appStateListenerRef.current = null;
     };
   }, [router]);
 

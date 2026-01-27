@@ -14,6 +14,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  const userAgent = request.headers.get('user-agent') || '';
+  const isWebView = /wv|SmartReminderWebView/i.test(userAgent);
+  if (isWebView) {
+    console.log('[middleware] skip auth redirect for WebView', JSON.stringify({ path: pathname }));
+    return NextResponse.next();
+  }
+
   // Verificăm doar dacă există un cookie Supabase de tip auth.
   // Acceptă atât cookie chunked (auth-token.0) cât și nechunked (auth-token).
   const hasSupabaseAuthCookie = request.cookies
@@ -32,6 +39,7 @@ export function middleware(request: NextRequest) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/auth';
     redirectUrl.searchParams.set('next', pathname + search);
+    console.log('[middleware] redirect /auth', JSON.stringify({ path: pathname, hasSupabaseAuthCookie }));
     return NextResponse.redirect(redirectUrl);
   }
 
