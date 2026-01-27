@@ -13,7 +13,7 @@ export default function QuickAddBar() {
   };
 
   return (
-    <div className="surface-a1 rounded-2xl p-4">
+    <div className="surface-a1 rounded-2xl px-[var(--space-3)] py-[var(--space-3)]">
       <div className="flex items-center gap-2">
         <div className="flex h-11 flex-1 items-center rounded-[14px] input-surface px-3">
           <input

@@ -19,8 +19,8 @@ type Props = {
 
 export default function AtAGlanceRow({ metrics, activeId, onSelect }: Props) {
   return (
-    <div className="surface-a1 rounded-2xl px-2 py-2">
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+    <div className="surface-a1 rounded-2xl px-[var(--space-2)] py-[var(--space-2)]">
+      <div className="grid grid-cols-2 gap-[var(--space-2)] md:grid-cols-4">
         {metrics.map((metric) => (
           <button
             key={metric.id}

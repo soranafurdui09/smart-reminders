@@ -24,7 +24,7 @@ export default function NextUpCard({
   statusLabel
 }: Props) {
   return (
-    <div className={`surface-a2 relative overflow-hidden rounded-2xl p-4 ${tone === 'overdue' ? 'segment-overdue' : ''}`}>
+    <div className={`surface-a2 relative overflow-hidden rounded-2xl px-[var(--space-3)] py-[var(--space-3)] ${tone === 'overdue' ? 'segment-overdue' : ''}`}>
       {tone === 'overdue' ? (
         <span className="absolute left-0 top-0 h-full w-1 bg-red-500/80" aria-hidden="true" />
       ) : null}

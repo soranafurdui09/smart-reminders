@@ -383,7 +383,7 @@ export default function QuickAddSheet({
       </div>
 
       <div className="mt-4 space-y-4">
-        <Card className={`surface-a2 p-4 text-xs text-muted ${highlightPreview ? 'ai-highlight' : ''}`}>
+        <Card className={`surface-a2 px-[var(--space-3)] py-[var(--space-3)] text-xs text-muted ${highlightPreview ? 'ai-highlight' : ''}`}>
           <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
             <Sparkles className="h-3.5 w-3.5 text-[color:rgb(var(--accent-2))]" />
             Preview
@@ -439,7 +439,7 @@ export default function QuickAddSheet({
           ) : null}
           <div className="relative">
             <textarea
-              className="premium-input min-h-[88px] w-full px-3 py-3 pr-12 text-sm placeholder:text-muted"
+              className="premium-input min-h-[88px] w-full px-[var(--space-2)] py-[var(--space-2)] pr-12 text-sm placeholder:text-muted"
               placeholder={
                 activeMode === 'task'
                   ? 'ex: trimite email către bancă'

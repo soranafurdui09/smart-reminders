@@ -42,12 +42,20 @@
   --radius-xl: 20px;
   --shadow-card: 0 12px 30px rgba(0, 0, 0, 0.18);
   --shadow-float: 0 8px 18px rgba(0, 0, 0, 0.12);
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-6: 24px;
-  --page-pad: clamp(0.75rem, 4vw, 1.25rem);
-  --page-pad-y: clamp(0.75rem, 3.5vw, 1.5rem);
+  /* Spacing + sizing tokens (fluid, rem + clamp). */
+  --space-1: clamp(0.35rem, 1.2vw, 0.55rem);
+  --space-2: clamp(0.55rem, 1.8vw, 0.85rem);
+  --space-3: clamp(0.8rem, 2.4vw, 1.1rem);
+  --space-4: clamp(1rem, 3vw, 1.35rem);
+  --space-5: clamp(1.25rem, 3.6vw, 1.6rem);
+  --space-6: clamp(1.6rem, 4.4vw, 2rem);
+  --radius-1: 0.75rem;
+  --radius-2: 1.125rem;
+  --radius-3: 1.5rem;
+  --container-pad: clamp(0.75rem, 4vw, 1.25rem);
+  --container-pad-y: clamp(0.75rem, 3.5vw, 1.5rem);
+  --container-max-sm: 45rem;
+  --container-max-md: 60rem;
 
   --bg-base: rgb(var(--bg0));
   --bg-top: rgb(var(--bg1));
@@ -274,14 +282,20 @@ h3 {
 
 .page-wrap {
   width: 100%;
-  max-width: 1100px;
+  max-width: var(--container-max-sm);
   margin-left: auto;
   margin-right: auto;
-  padding-left: var(--page-pad);
-  padding-right: var(--page-pad);
-  padding-top: var(--page-pad-y);
+  padding-left: var(--container-pad);
+  padding-right: var(--container-pad);
+  padding-top: var(--container-pad-y);
   padding-bottom: clamp(1.5rem, 4vw, 2.5rem);
   min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .page-wrap {
+    max-width: var(--container-max-md);
+  }
 }
 
 .today-shell {
@@ -329,8 +343,8 @@ h3 {
   .page-wrap {
     max-width: 100%;
     padding-top: clamp(0.5rem, 2.5vw, 0.75rem);
-    padding-left: var(--page-pad);
-    padding-right: var(--page-pad);
+    padding-left: var(--container-pad);
+    padding-right: var(--container-pad);
   }
 }
 
@@ -394,19 +408,22 @@ h3 {
 
 @layer components {
   .surface-card {
-    @apply rounded-2xl bg-surface2;
+    border-radius: var(--radius-3);
+    @apply bg-surface2;
     border: 1px solid var(--border-1);
     box-shadow: 0 14px 35px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05);
   }
 
   .card {
-    @apply rounded-2xl bg-surface;
+    border-radius: var(--radius-3);
+    @apply bg-surface;
     border: 1px solid var(--border-1);
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04);
   }
 
   .card-soft {
-    @apply rounded-2xl bg-surface;
+    border-radius: var(--radius-3);
+    @apply bg-surface;
     border: 1px solid rgba(255, 255, 255, 0.07);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
   }
@@ -424,7 +441,9 @@ h3 {
   }
 
   .stat-tile {
-    @apply rounded-2xl px-3 py-2 text-left;
+    border-radius: var(--radius-2);
+    padding: var(--space-2) var(--space-3);
+    @apply text-left;
     background: var(--surface-1);
     border: 1px solid var(--border-1);
     min-height: 68px;
@@ -460,7 +479,8 @@ h3 {
   }
 
   .input-surface {
-    @apply rounded-xl bg-surface3 text-text;
+    border-radius: var(--radius-2);
+    @apply bg-surface3 text-text;
     border: 1px solid rgba(255, 255, 255, 0.14);
   }
 
@@ -473,17 +493,21 @@ h3 {
   }
 
   .chip {
-    @apply rounded-full bg-surface px-3 py-2 text-sm font-semibold text-muted;
+    border-radius: 999px;
+    padding: var(--space-1) var(--space-3);
+    @apply bg-surface text-sm font-semibold text-muted;
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .chip-selected {
-    @apply rounded-full bg-accent/20 px-3 py-2 text-sm font-semibold text-text;
+    border-radius: 999px;
+    padding: var(--space-1) var(--space-3);
+    @apply bg-accent/20 text-sm font-semibold text-text;
     border: 1px solid rgba(59, 130, 246, 0.35);
   }
 
   .icon-btn {
-    @apply inline-flex h-10 w-10 items-center justify-center rounded-full transition active:scale-[0.98];
+    @apply inline-flex h-11 w-11 items-center justify-center rounded-full transition active:scale-[0.98];
     background: var(--surface-2);
     border: 1px solid rgba(255, 255, 255, 0.08);
     color: var(--text-1);
