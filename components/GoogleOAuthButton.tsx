@@ -12,11 +12,12 @@ const logStorageState = (label: string) => {
     const lsInfo = lsKeys.map((k) => ({ k, len: (localStorage.getItem(k) || '').length }));
     const codeVerifierKeys = Object.keys(localStorage).filter((k) => /code-verifier/i.test(k));
     const codeVerifierInfo = codeVerifierKeys.map((k) => ({ k, len: (localStorage.getItem(k) || '').length }));
+    const codeVerifierPresent = codeVerifierKeys.length > 0;
     const cookieNames = document.cookie
       .split(';')
       .map((c) => c.trim().split('=')[0])
       .filter((n) => /sb-|supabase/i.test(n));
-    console.log(label, { lsInfo, codeVerifierInfo, cookieNames });
+    console.log(label, JSON.stringify({ lsInfo, codeVerifierInfo, codeVerifierPresent, cookieNames }));
   } catch (error) {
     console.warn(label, 'storage dump failed', error);
   }
@@ -57,7 +58,7 @@ export default function GoogleOAuthButton({
       const webViewHint = userAgent.includes('SmartReminderWebView') || (userAgent.includes('Android') && userAgent.includes('wv'));
       const useNativeFlow = isNative && platform === 'android';
       const redirectTo = useNativeFlow
-        ? `com.smartreminder.app://auth/callback?next=${encodeURIComponent(next)}&native=1`
+        ? `${origin}/auth/callback?native=1&next=${encodeURIComponent(next)}`
         : `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
       console.log('[oauth] native=', isNative, 'platform=', platform, 'webviewHint=', webViewHint);
       console.log('[oauth] redirectTo=', redirectTo, 'skipBrowserRedirect=', useNativeFlow);
@@ -83,6 +84,7 @@ export default function GoogleOAuthButton({
           console.log('[oauth] Browser.open');
           await Browser.open({ url: data.url });
         } else {
+          console.log('[oauth] window.location.assign');
           window.location.assign(data.url);
         }
       } else {

@@ -16,11 +16,12 @@ const logStorageState = (label: string) => {
     const lsInfo = lsKeys.map((k) => ({ k, len: (localStorage.getItem(k) || '').length }));
     const codeVerifierKeys = Object.keys(localStorage).filter((k) => /code-verifier/i.test(k));
     const codeVerifierInfo = codeVerifierKeys.map((k) => ({ k, len: (localStorage.getItem(k) || '').length }));
+    const codeVerifierPresent = codeVerifierKeys.length > 0;
     const cookieNames = document.cookie
       .split(';')
       .map((c) => c.trim().split('=')[0])
       .filter((n) => /sb-|supabase/i.test(n));
-    console.log(label, { lsInfo, codeVerifierInfo, cookieNames });
+    console.log(label, JSON.stringify({ lsInfo, codeVerifierInfo, codeVerifierPresent, cookieNames }));
   } catch (error) {
     console.warn(label, 'storage dump failed', error);
   }
@@ -31,13 +32,14 @@ export default function NativeOAuthListener() {
   const listenerAttached = useRef(false);
   const removeListenerRef = useRef<Promise<{ remove: () => void }> | null>(null);
   const handlingRef = useRef(false);
+  const authListenerAttached = useRef(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const isNative = Capacitor.isNativePlatform();
     const platform = Capacitor.getPlatform();
     const ua = navigator.userAgent || '';
-    console.log('[oauth] listener mount', { isNative, platform, href: window.location.href, ua });
+    console.log('[oauth] listener mount', JSON.stringify({ isNative, platform, href: window.location.href, ua }));
 
     if (!isNative) return;
 
@@ -53,25 +55,40 @@ export default function NativeOAuthListener() {
         const incoming = new URL(url);
         const code = incoming.searchParams.get('code');
         const state = incoming.searchParams.get('state');
+        const accessToken = incoming.searchParams.get('access_token');
+        const refreshToken = incoming.searchParams.get('refresh_token');
         const errorParam = incoming.searchParams.get('error');
-        console.log('[oauth] callback params', {
+        console.log('[oauth] callback params', JSON.stringify({
           hasCode: Boolean(code),
           codeLen: code?.length ?? 0,
           hasState: Boolean(state),
           stateLen: state?.length ?? 0,
+          hasAccessToken: Boolean(accessToken),
+          accessLen: accessToken?.length ?? 0,
+          hasRefreshToken: Boolean(refreshToken),
+          refreshLen: refreshToken?.length ?? 0,
           error: errorParam
-        });
-        if (!code) {
-          console.warn('[oauth] missing code in callback, skipping exchange');
-          return;
-        }
+        }));
         const next = incoming.searchParams.get('next') ?? '/app';
         logStorageState('[oauth][storage] before exchange');
         const supabase = getBrowserClient();
         try {
-          const { error } = await supabase.auth.exchangeCodeForSession(url);
-          if (error) {
-            console.warn('[oauth] exchangeCodeForSession failed', error);
+          if (accessToken && refreshToken) {
+            const { error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            });
+            if (error) {
+              console.warn('[oauth] setSession failed', error);
+            }
+          } else if (code) {
+            const { error } = await supabase.auth.exchangeCodeForSession(code);
+            if (error) {
+              console.warn('[oauth] exchangeCodeForSession failed', error);
+            }
+          } else {
+            console.warn('[oauth] missing code and tokens in callback, skipping exchange');
+            return;
           }
         } finally {
           console.log('[oauth] Browser.close');
@@ -104,6 +121,14 @@ export default function NativeOAuthListener() {
       .catch((error) => {
         console.warn('[oauth] getLaunchUrl failed', error);
       });
+
+    if (!authListenerAttached.current) {
+      authListenerAttached.current = true;
+      const supabase = getBrowserClient();
+      supabase.auth.onAuthStateChange((event, session) => {
+        console.log('[oauth] auth state', JSON.stringify({ event, hasSession: Boolean(session) }));
+      });
+    }
 
     return () => {
       removeListenerRef.current?.then((handler) => handler.remove());
