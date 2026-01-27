@@ -29,6 +29,7 @@ export default function GoogleOAuthButton({
     const userAgent = navigator.userAgent || '';
     const webViewHint = userAgent.includes('SmartReminderWebView') || (userAgent.includes('Android') && userAgent.includes('wv'));
     setIsAndroidWebView(webViewHint);
+    console.log('[oauth] native=', Capacitor.isNativePlatform(), 'platform=', Capacitor.getPlatform(), 'webviewHint=', webViewHint);
   }, []);
 
   const handleClick = async () => {
@@ -44,6 +45,7 @@ export default function GoogleOAuthButton({
       const redirectTo = useNativeFlow
         ? `com.smartreminder.app://auth/callback?next=${encodeURIComponent(next)}`
         : `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
+      console.log('[oauth] redirectTo=', redirectTo, 'skipBrowserRedirect=', useNativeFlow);
       const supabase = createBrowserClient();
       const { data, error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -59,7 +61,9 @@ export default function GoogleOAuthButton({
         return;
       }
       if (data?.url) {
+        console.log('[oauth] auth url=', data.url);
         if (useNativeFlow) {
+          console.log('[oauth] Browser.open');
           await Browser.open({ url: data.url });
         } else {
           window.location.assign(data.url);
