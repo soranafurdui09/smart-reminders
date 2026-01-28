@@ -70,9 +70,28 @@ export default function GoogleOAuthButton({
       console.log('[oauth] native=', isNative, 'platform=', platform, 'webviewHint=', webViewHint);
       if (useNativeFlow) {
         const normalizedNext = normalizeNext(next);
-        const nativeStartUrl = `${origin}/auth/native-start?next=${encodeURIComponent(normalizedNext)}`;
-        console.log('[oauth][native] open', JSON.stringify({ nativeStartUrl }));
-        await Browser.open({ url: nativeStartUrl });
+        const redirectTo = `${origin}/auth/native-callback?next=${encodeURIComponent(normalizedNext)}`;
+        console.log('[oauth][native] redirectTo=', redirectTo, 'skipBrowserRedirect=', true);
+        const supabase = getBrowserClient();
+        const { data, error: signInError } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo,
+            skipBrowserRedirect: true
+          }
+        });
+        if (signInError) {
+          const message = signInError.message?.toLowerCase() ?? '';
+          setError(message.includes('provider') || message.includes('oauth') ? errorNotConfigured : errorGeneric);
+          setPending(false);
+          return;
+        }
+        if (data?.url) {
+          console.log('[oauth][native] Browser.open');
+          await Browser.open({ url: data.url });
+        } else {
+          setError(errorGeneric);
+        }
         setPending(false);
         return;
       }

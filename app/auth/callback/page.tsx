@@ -21,8 +21,6 @@ const logStorageState = (label: string) => {
 
 export default function AuthCallbackPage() {
   const [status, setStatus] = useState('Procesăm autentificarea...');
-  const [showOpenApp, setShowOpenApp] = useState(false);
-  const [openAppUrl, setOpenAppUrl] = useState<string | null>(null);
   const [debugEnabled, setDebugEnabled] = useState(false);
   const [cookieDump, setCookieDump] = useState<unknown | null>(null);
 
@@ -32,7 +30,6 @@ export default function AuthCallbackPage() {
       const url = new URL(window.location.href);
       const code = url.searchParams.get('code');
       const next = url.searchParams.get('next') ?? '/app';
-      const native = url.searchParams.get('native');
       const debug = url.searchParams.get('debug') === '1';
       const summary = summarizeUrl(window.location.href);
       const hasCode = Boolean(code);
@@ -41,7 +38,6 @@ export default function AuthCallbackPage() {
       console.log('[callback]', JSON.stringify({
         hasCode,
         codeLen: code?.length ?? 0,
-        native,
         next
       }));
       console.log('[callback][summary]', JSON.stringify(summary));
@@ -91,16 +87,6 @@ export default function AuthCallbackPage() {
       const hasSession = Boolean(session?.access_token && session?.refresh_token);
       console.log('[auth/callback] session', JSON.stringify({ hasSession }));
 
-      if (native === '1') {
-        const deepLink = `com.smartreminder.app://auth/complete?next=${encodeURIComponent(next)}`;
-        setOpenAppUrl(deepLink);
-        window.location.replace(deepLink);
-        window.setTimeout(() => {
-          setShowOpenApp(true);
-        }, 600);
-        return;
-      }
-
       window.location.replace(next);
     };
 
@@ -128,15 +114,6 @@ export default function AuthCallbackPage() {
               Copy
             </button>
           </div>
-        ) : null}
-        {showOpenApp && openAppUrl ? (
-          <button
-            type="button"
-            className="w-full rounded-lg bg-white/10 px-4 py-2 text-sm text-white"
-            onClick={() => window.location.assign(openAppUrl)}
-          >
-            Deschide aplicația
-          </button>
         ) : null}
       </div>
     </div>
