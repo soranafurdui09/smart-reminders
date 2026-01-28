@@ -1,15 +1,14 @@
 "use client";
 
-// OAuth invariant: native Android must use the Preferences-backed client for both PKCE start/exchange.
-// Mixing web/native clients breaks PKCE state and causes "invalid flow state" errors.
+// OAuth invariant: native Android must use the browser client in the WebView for PKCE start/exchange.
+// Mixing storage contexts breaks PKCE state and causes "invalid flow state" errors.
 
 import { useEffect, useRef } from 'react';
 import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
-import { Preferences } from '@capacitor/preferences';
 import { useRouter } from 'next/navigation';
-import { dumpPrefs, getNativeSupabase } from '@/lib/supabase/nativeClient';
+import { getBrowserClient } from '@/lib/supabase/client';
 
 const CALLBACK_PREFIX = 'com.smartreminder.app://auth/callback';
 const OAUTH_NEXT_KEY = 'oauth_next';
@@ -36,10 +35,7 @@ const normalizeNext = (value?: string | null) => {
   return value.startsWith('/') ? value : DEFAULT_NEXT;
 };
 
-const readNextFromPreferences = async () => {
-  const { value } = await Preferences.get({ key: OAUTH_NEXT_KEY });
-  return normalizeNext(value);
-};
+const handledDeepLinkUrls = new Set<string>();
 
 const closeBrowserSafely = async () => {
   try {
@@ -61,7 +57,6 @@ export default function NativeOAuthListener() {
   const removeListenerRef = useRef<Promise<{ remove: () => void }> | null>(null);
   const handlingRef = useRef(false);
   const authListenerAttached = useRef(false);
-  const lastHandledCodeRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -75,6 +70,10 @@ export default function NativeOAuthListener() {
     const handleUrl = async (url: string, source: 'appUrlOpen' | 'getLaunchUrl') => {
       console.log(`[oauth] ${source} url=`, maskUrlForLog(url));
       if (!url || !url.startsWith(CALLBACK_PREFIX)) return;
+      if (handledDeepLinkUrls.has(url)) {
+        console.log('[oauth] deep link already handled, skip');
+        return;
+      }
       if (handlingRef.current) {
         console.log('[oauth] already handling, skip');
         return;
@@ -94,53 +93,43 @@ export default function NativeOAuthListener() {
           stateLen: state?.length ?? 0,
           error: errorParam
         }));
-        await dumpPrefs('[oauth][native][prefs] before exchange');
 
         if (errorParam) {
           console.warn('[oauth] callback error', JSON.stringify({ error: errorParam, errorDescription }));
           return;
         }
-        if (!code) {
-          console.warn('[oauth] missing code in callback, skipping exchange', JSON.stringify({
+        if (!code || !state) {
+          console.warn('[oauth] missing code/state in callback, skipping exchange', JSON.stringify({
             hasCode: Boolean(code),
-            queryKeys: Array.from(incoming.searchParams.keys())
+            hasState: Boolean(state),
+            queryKeys: Array.from(incoming.searchParams.keys()),
+            maskedUrl: maskUrlForLog(url)
           }));
           return;
         }
-        if (lastHandledCodeRef.current === code) {
-          console.log('[oauth] code already handled, skip');
-          return;
-        }
-        lastHandledCodeRef.current = code;
 
-        console.log('[oauth] client=native');
-        const supabase = getNativeSupabase();
-        // exchangeCodeForSession is called with CODE ONLY; state is not required for callback handling.
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        console.log('[oauth] client=web');
+        console.log('[oauth] exchange start');
+        const supabase = getBrowserClient();
+        const { error } = await supabase.auth.exchangeCodeForSession(url);
         if (error) {
           console.warn('[oauth] exchangeCodeForSession failed', error);
           return;
         }
-        await dumpPrefs('[oauth][native][prefs] after exchange');
         const { data } = await supabase.auth.getSession();
         const session = data?.session ?? null;
         console.log('[oauth] getSession', JSON.stringify({
-          hasSession: Boolean(session),
-          accessLen: session?.access_token?.length ?? 0,
-          refreshLen: session?.refresh_token?.length ?? 0
+          hasSession: Boolean(session)
         }));
-        if (session?.access_token && session?.refresh_token) {
-          await supabase.auth.setSession({
-            access_token: session.access_token,
-            refresh_token: session.refresh_token
-          });
-        }
-        const next = await readNextFromPreferences();
-        await Preferences.remove({ key: OAUTH_NEXT_KEY });
+        console.log('[oauth] exchange done');
+        const rawNext = localStorage.getItem(OAUTH_NEXT_KEY) ?? DEFAULT_NEXT;
+        const next = normalizeNext(rawNext);
+        localStorage.removeItem(OAUTH_NEXT_KEY);
         router.replace(next);
       } catch (error) {
         console.warn('[oauth] handleUrl failed', error);
       } finally {
+        handledDeepLinkUrls.add(url);
         console.log('[oauth] Browser.close');
         await closeBrowserSafely();
         handlingRef.current = false;
@@ -169,7 +158,7 @@ export default function NativeOAuthListener() {
 
     if (!authListenerAttached.current) {
       authListenerAttached.current = true;
-      const supabase = getNativeSupabase();
+      const supabase = getBrowserClient();
       supabase.auth.onAuthStateChange((event, session) => {
         console.log('[oauth] auth state', JSON.stringify({ event, hasSession: Boolean(session) }));
       });

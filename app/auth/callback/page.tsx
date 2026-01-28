@@ -1,10 +1,10 @@
 "use client";
 
-// OAuth invariant: native Android must use the Preferences-backed client for PKCE.
+// OAuth invariant: native Android must use the browser client in the WebView for PKCE.
 // This web callback only handles browser redirects and must not deep-link tokens.
 
 import { useEffect, useState } from 'react';
-import { getWebSupabase } from '@/lib/supabase/web';
+import { getBrowserClient } from '@/lib/supabase/client';
 
 const logStorageState = (label: string) => {
   if (typeof window === 'undefined') return;
@@ -42,8 +42,8 @@ export default function AuthCallbackPage() {
       }
 
       console.log('[auth/callback] client=web');
-      const supabase = getWebSupabase();
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      const supabase = getBrowserClient();
+      const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
       if (error) {
         console.warn('[auth/callback] exchangeCodeForSession failed', error);
         setStatus('Autentificarea a eșuat.');

@@ -1,14 +1,12 @@
 'use client';
 
-// OAuth invariant: native Android must use the Preferences-backed client for both PKCE start/exchange.
-// Mixing web/native clients breaks PKCE state and causes "invalid flow state" errors.
+// OAuth invariant: native Android must use the browser client in the WebView for PKCE start/exchange.
+// Mixing storage contexts breaks PKCE state and causes "invalid flow state" errors.
 
 import { useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
-import { Preferences } from '@capacitor/preferences';
-import { dumpPrefs, getNativeSupabase } from '@/lib/supabase/nativeClient';
-import { getWebSupabase } from '@/lib/supabase/web';
+import { getBrowserClient } from '@/lib/supabase/client';
 
 const OAUTH_NEXT_KEY = 'oauth_next';
 const DEFAULT_NEXT = '/app';
@@ -74,11 +72,11 @@ export default function GoogleOAuthButton({
       if (useNativeFlow) {
         const redirectTo = 'com.smartreminder.app://auth/callback';
         console.log('[oauth] redirectTo=', redirectTo, 'skipBrowserRedirect=', true);
-        console.log('[oauth] client=native');
+        console.log('[oauth] client=web');
         const normalizedNext = normalizeNext(next);
-        await Preferences.set({ key: OAUTH_NEXT_KEY, value: normalizedNext });
-        await dumpPrefs('[oauth][native][prefs] before signIn');
-        const supabase = getNativeSupabase();
+        localStorage.setItem(OAUTH_NEXT_KEY, normalizedNext);
+        console.log('[oauth] oauth_next stored', normalizedNext);
+        const supabase = getBrowserClient();
         const { data, error: signInError } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
@@ -86,7 +84,6 @@ export default function GoogleOAuthButton({
             skipBrowserRedirect: true
           }
         });
-        await dumpPrefs('[oauth][native][prefs] after signIn');
         if (signInError) {
           const message = signInError.message?.toLowerCase() ?? '';
           setError(message.includes('provider') || message.includes('oauth') ? errorNotConfigured : errorGeneric);
@@ -113,9 +110,8 @@ export default function GoogleOAuthButton({
 
       const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
       console.log('[oauth] redirectTo=', redirectTo, 'skipBrowserRedirect=', false);
-      console.log('[oauth] client=web');
       logWebStorageState('[oauth][storage] before signIn');
-      const supabase = getWebSupabase();
+      const supabase = getBrowserClient();
       const { data, error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
