@@ -8,7 +8,6 @@ import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { getBrowserClient } from '@/lib/supabase/client';
 
-const OAUTH_NEXT_KEY = 'oauth_next';
 const DEFAULT_NEXT = '/app';
 
 const normalizeNext = (value?: string) => {
@@ -70,40 +69,10 @@ export default function GoogleOAuthButton({
       const useNativeFlow = isNative && platform === 'android';
       console.log('[oauth] native=', isNative, 'platform=', platform, 'webviewHint=', webViewHint);
       if (useNativeFlow) {
-        const redirectTo = 'com.smartreminder.app://auth/callback';
-        console.log('[oauth] redirectTo=', redirectTo, 'skipBrowserRedirect=', true);
-        console.log('[oauth] client=web');
         const normalizedNext = normalizeNext(next);
-        localStorage.setItem(OAUTH_NEXT_KEY, normalizedNext);
-        console.log('[oauth] oauth_next stored', normalizedNext);
-        const supabase = getBrowserClient();
-        const { data, error: signInError } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo,
-            skipBrowserRedirect: true
-          }
-        });
-        if (signInError) {
-          const message = signInError.message?.toLowerCase() ?? '';
-          setError(message.includes('provider') || message.includes('oauth') ? errorNotConfigured : errorGeneric);
-          setPending(false);
-          return;
-        }
-        if (data?.url) {
-          let hasRedirectParam = false;
-          try {
-            const oauthUrl = new URL(data.url);
-            hasRedirectParam = oauthUrl.searchParams.has('redirect_to');
-          } catch {
-            hasRedirectParam = false;
-          }
-          console.log('[oauth] auth url len=', data.url.length, 'has_redirect_to=', hasRedirectParam);
-          console.log('[oauth] Browser.open');
-          await Browser.open({ url: data.url });
-        } else {
-          setError(errorGeneric);
-        }
+        const nativeStartUrl = `${origin}/auth/native-start?next=${encodeURIComponent(normalizedNext)}`;
+        console.log('[oauth][native] open', JSON.stringify({ nativeStartUrl }));
+        await Browser.open({ url: nativeStartUrl });
         setPending(false);
         return;
       }
