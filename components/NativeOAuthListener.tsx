@@ -9,10 +9,9 @@ import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { useRouter } from 'next/navigation';
-import { getNativeSupabase, NATIVE_AUTH_STORAGE_KEY } from '@/lib/supabase/native';
+import { dumpPrefs, getNativeSupabase } from '@/lib/supabase/nativeClient';
 
 const CALLBACK_PREFIX = 'com.smartreminder.app://auth/callback';
-const handledDeepLinkUrls = new Set<string>();
 const OAUTH_NEXT_KEY = 'oauth_next';
 const DEFAULT_NEXT = '/app';
 
@@ -37,29 +36,23 @@ const normalizeNext = (value?: string | null) => {
   return value.startsWith('/') ? value : DEFAULT_NEXT;
 };
 
-const logNativeAuthStorageState = async (label: string) => {
-  try {
-    const keys = [
-      NATIVE_AUTH_STORAGE_KEY,
-      `${NATIVE_AUTH_STORAGE_KEY}-code-verifier`,
-      `${NATIVE_AUTH_STORAGE_KEY}-oauth-state`,
-      OAUTH_NEXT_KEY
-    ];
-    const results = await Promise.all(
-      keys.map(async (key) => {
-        const { value } = await Preferences.get({ key });
-        return { key, present: value !== null, len: value?.length ?? 0 };
-      })
-    );
-    console.log(label, JSON.stringify({ keys: results }));
-  } catch (error) {
-    console.warn(label, 'native storage dump failed', error);
-  }
-};
-
 const readNextFromPreferences = async () => {
   const { value } = await Preferences.get({ key: OAUTH_NEXT_KEY });
   return normalizeNext(value);
+};
+
+const closeBrowserSafely = async () => {
+  try {
+    await Browser.close();
+  } catch {
+    // swallow
+  }
+  setTimeout(() => {
+    void Browser.close().catch(() => undefined);
+  }, 300);
+  setTimeout(() => {
+    void Browser.close().catch(() => undefined);
+  }, 900);
 };
 
 export default function NativeOAuthListener() {
@@ -68,6 +61,7 @@ export default function NativeOAuthListener() {
   const removeListenerRef = useRef<Promise<{ remove: () => void }> | null>(null);
   const handlingRef = useRef(false);
   const authListenerAttached = useRef(false);
+  const lastHandledCodeRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -81,10 +75,6 @@ export default function NativeOAuthListener() {
     const handleUrl = async (url: string, source: 'appUrlOpen' | 'getLaunchUrl') => {
       console.log(`[oauth] ${source} url=`, maskUrlForLog(url));
       if (!url || !url.startsWith(CALLBACK_PREFIX)) return;
-      if (handledDeepLinkUrls.has(url)) {
-        console.log('[oauth] deep link already handled, skip');
-        return;
-      }
       if (handlingRef.current) {
         console.log('[oauth] already handling, skip');
         return;
@@ -93,7 +83,7 @@ export default function NativeOAuthListener() {
       handlingRef.current = true;
       try {
         const incoming = new URL(url);
-        const code = incoming.searchParams.get('code');
+        const code = incoming.searchParams.get('code')?.replace(/#$/, '');
         const state = incoming.searchParams.get('state');
         const errorParam = incoming.searchParams.get('error');
         const errorDescription = incoming.searchParams.get('error_description');
@@ -104,43 +94,55 @@ export default function NativeOAuthListener() {
           stateLen: state?.length ?? 0,
           error: errorParam
         }));
-        await logNativeAuthStorageState('[oauth][native][storage] before exchange');
+        await dumpPrefs('[oauth][native][prefs] before exchange');
 
         if (errorParam) {
           console.warn('[oauth] callback error', JSON.stringify({ error: errorParam, errorDescription }));
           return;
         }
-        if (!code || !state) {
-          console.warn('[oauth] missing code/state in callback, skipping exchange', JSON.stringify({
+        if (!code) {
+          console.warn('[oauth] missing code in callback, skipping exchange', JSON.stringify({
             hasCode: Boolean(code),
-            hasState: Boolean(state),
             queryKeys: Array.from(incoming.searchParams.keys())
           }));
           return;
         }
+        if (lastHandledCodeRef.current === code) {
+          console.log('[oauth] code already handled, skip');
+          return;
+        }
+        lastHandledCodeRef.current = code;
 
         console.log('[oauth] client=native');
         const supabase = getNativeSupabase();
-        const { error } = await supabase.auth.exchangeCodeForSession(url);
+        // exchangeCodeForSession is called with CODE ONLY; state is not required for callback handling.
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
           console.warn('[oauth] exchangeCodeForSession failed', error);
-          const reason = encodeURIComponent((error.message || 'unknown').slice(0, 120));
-          router.replace(`/auth?error=oauth_exchange_failed&reason=${reason}`);
           return;
-        } else {
-          await logNativeAuthStorageState('[oauth][native][storage] after exchange');
         }
+        await dumpPrefs('[oauth][native][prefs] after exchange');
         const { data } = await supabase.auth.getSession();
-        console.log('[oauth] getSession', JSON.stringify({ hasSession: Boolean(data?.session) }));
+        const session = data?.session ?? null;
+        console.log('[oauth] getSession', JSON.stringify({
+          hasSession: Boolean(session),
+          accessLen: session?.access_token?.length ?? 0,
+          refreshLen: session?.refresh_token?.length ?? 0
+        }));
+        if (session?.access_token && session?.refresh_token) {
+          await supabase.auth.setSession({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token
+          });
+        }
         const next = await readNextFromPreferences();
         await Preferences.remove({ key: OAUTH_NEXT_KEY });
         router.replace(next);
       } catch (error) {
         console.warn('[oauth] handleUrl failed', error);
       } finally {
-        handledDeepLinkUrls.add(url);
         console.log('[oauth] Browser.close');
-        await Browser.close().catch(() => undefined);
+        await closeBrowserSafely();
         handlingRef.current = false;
       }
     };

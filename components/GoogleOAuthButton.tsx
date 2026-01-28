@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { Preferences } from '@capacitor/preferences';
-import { getNativeSupabase, NATIVE_AUTH_STORAGE_KEY } from '@/lib/supabase/native';
+import { dumpPrefs, getNativeSupabase } from '@/lib/supabase/nativeClient';
 import { getWebSupabase } from '@/lib/supabase/web';
 
 const OAUTH_NEXT_KEY = 'oauth_next';
@@ -33,26 +33,6 @@ const logWebStorageState = (label: string) => {
     console.log(label, JSON.stringify({ lsInfo, codeVerifierInfo, codeVerifierPresent, cookieNames }));
   } catch (error) {
     console.warn(label, 'storage dump failed', error);
-  }
-};
-
-const logNativeAuthStorageState = async (label: string) => {
-  try {
-    const keys = [
-      NATIVE_AUTH_STORAGE_KEY,
-      `${NATIVE_AUTH_STORAGE_KEY}-code-verifier`,
-      `${NATIVE_AUTH_STORAGE_KEY}-oauth-state`,
-      OAUTH_NEXT_KEY
-    ];
-    const results = await Promise.all(
-      keys.map(async (key) => {
-        const { value } = await Preferences.get({ key });
-        return { key, present: value !== null, len: value?.length ?? 0 };
-      })
-    );
-    console.log(label, JSON.stringify({ keys: results }));
-  } catch (error) {
-    console.warn(label, 'native storage dump failed', error);
   }
 };
 
@@ -97,7 +77,7 @@ export default function GoogleOAuthButton({
         console.log('[oauth] client=native');
         const normalizedNext = normalizeNext(next);
         await Preferences.set({ key: OAUTH_NEXT_KEY, value: normalizedNext });
-        await logNativeAuthStorageState('[oauth][native][storage] before signIn');
+        await dumpPrefs('[oauth][native][prefs] before signIn');
         const supabase = getNativeSupabase();
         const { data, error: signInError } = await supabase.auth.signInWithOAuth({
           provider: 'google',
@@ -106,7 +86,7 @@ export default function GoogleOAuthButton({
             skipBrowserRedirect: true
           }
         });
-        await logNativeAuthStorageState('[oauth][native][storage] after signIn');
+        await dumpPrefs('[oauth][native][prefs] after signIn');
         if (signInError) {
           const message = signInError.message?.toLowerCase() ?? '';
           setError(message.includes('provider') || message.includes('oauth') ? errorNotConfigured : errorGeneric);
@@ -114,7 +94,14 @@ export default function GoogleOAuthButton({
           return;
         }
         if (data?.url) {
-          console.log('[oauth] auth url=', data.url);
+          let hasRedirectParam = false;
+          try {
+            const oauthUrl = new URL(data.url);
+            hasRedirectParam = oauthUrl.searchParams.has('redirect_to');
+          } catch {
+            hasRedirectParam = false;
+          }
+          console.log('[oauth] auth url len=', data.url.length, 'has_redirect_to=', hasRedirectParam);
           console.log('[oauth] Browser.open');
           await Browser.open({ url: data.url });
         } else {
