@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { createBrowserClient } from '@/lib/supabase/client';
+import { getSupabaseClient } from '@/lib/supabase';
 
 export default function MagicLinkForm({
   next,
@@ -58,7 +58,7 @@ export default function MagicLinkForm({
       const emailRedirectTo = useCustomScheme
         ? `com.smartreminder.app://auth/callback?next=${encodeURIComponent(next)}`
         : `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
-      const supabase = createBrowserClient();
+      const supabase = getSupabaseClient();
       const { error: signInError } = await supabase.auth.signInWithOtp({
         email,
         options: {

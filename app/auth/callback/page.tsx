@@ -1,7 +1,10 @@
 "use client";
 
+// OAuth invariant: native Android must use the Preferences-backed client for PKCE.
+// This web callback only handles browser redirects and must not deep-link tokens.
+
 import { useEffect, useState } from 'react';
-import { getBrowserClient } from '@/lib/supabase/client';
+import { getWebSupabase } from '@/lib/supabase/web';
 
 const logStorageState = (label: string) => {
   if (typeof window === 'undefined') return;
@@ -16,8 +19,6 @@ const logStorageState = (label: string) => {
 
 export default function AuthCallbackPage() {
   const [status, setStatus] = useState('Procesăm autentificarea...');
-  const [showOpenApp, setShowOpenApp] = useState(false);
-  const [openAppUrl, setOpenAppUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const run = async () => {
@@ -25,13 +26,11 @@ export default function AuthCallbackPage() {
       const url = new URL(window.location.href);
       const code = url.searchParams.get('code');
       const next = url.searchParams.get('next') ?? '/app';
-      const native = url.searchParams.get('native');
       const hasCode = Boolean(code);
 
       console.log('[auth/callback] page', JSON.stringify({
         hasCode,
         codeLen: code?.length ?? 0,
-        native,
         next
       }));
       logStorageState('[auth/callback][storage] before exchange');
@@ -42,7 +41,8 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      const supabase = getBrowserClient();
+      console.log('[auth/callback] client=web');
+      const supabase = getWebSupabase();
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) {
         console.warn('[auth/callback] exchangeCodeForSession failed', error);
@@ -57,22 +57,6 @@ export default function AuthCallbackPage() {
       const hasSession = Boolean(session?.access_token && session?.refresh_token);
       console.log('[auth/callback] session', JSON.stringify({ hasSession }));
 
-      if (native === '1' && hasSession) {
-        const deepLink = new URL('com.smartreminder.app://auth/callback');
-        deepLink.searchParams.set('access_token', session!.access_token);
-        deepLink.searchParams.set('refresh_token', session!.refresh_token);
-        deepLink.searchParams.set('next', next);
-        deepLink.searchParams.set('native', '1');
-        const deepLinkUrl = deepLink.toString();
-        console.log('[auth/callback] deep link redirect', JSON.stringify({ hasSession, next }));
-        setOpenAppUrl(deepLinkUrl);
-        window.location.replace(deepLinkUrl);
-        window.setTimeout(() => {
-          setShowOpenApp(true);
-        }, 600);
-        return;
-      }
-
       window.location.replace(next);
     };
 
@@ -83,15 +67,6 @@ export default function AuthCallbackPage() {
     <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
       <div className="max-w-sm space-y-4 rounded-xl border border-white/10 bg-white/5 p-6 text-center text-sm">
         <div>{status}</div>
-        {showOpenApp && openAppUrl ? (
-          <button
-            type="button"
-            className="w-full rounded-lg bg-white/10 px-4 py-2 text-sm text-white"
-            onClick={() => window.location.assign(openAppUrl)}
-          >
-            Deschide aplicația
-          </button>
-        ) : null}
       </div>
     </div>
   );

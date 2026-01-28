@@ -1,12 +1,24 @@
 'use client';
 
+// OAuth invariant: native Android must use the Preferences-backed client for both PKCE start/exchange.
+// Mixing web/native clients breaks PKCE state and causes "invalid flow state" errors.
+
 import { useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
-import { getBrowserClient } from '@/lib/supabase/client';
-import { getNativeSupabase } from '@/lib/supabase/nativeClient';
+import { Preferences } from '@capacitor/preferences';
+import { getNativeSupabase, NATIVE_AUTH_STORAGE_KEY } from '@/lib/supabase/native';
+import { getWebSupabase } from '@/lib/supabase/web';
 
-const logStorageState = (label: string) => {
+const OAUTH_NEXT_KEY = 'oauth_next';
+const DEFAULT_NEXT = '/app';
+
+const normalizeNext = (value?: string) => {
+  if (!value) return DEFAULT_NEXT;
+  return value.startsWith('/') ? value : DEFAULT_NEXT;
+};
+
+const logWebStorageState = (label: string) => {
   if (typeof window === 'undefined') return;
   try {
     const lsKeys = Object.keys(localStorage).filter((k) => /sb-|supabase|pkce|oauth/i.test(k));
@@ -21,6 +33,26 @@ const logStorageState = (label: string) => {
     console.log(label, JSON.stringify({ lsInfo, codeVerifierInfo, codeVerifierPresent, cookieNames }));
   } catch (error) {
     console.warn(label, 'storage dump failed', error);
+  }
+};
+
+const logNativeAuthStorageState = async (label: string) => {
+  try {
+    const keys = [
+      NATIVE_AUTH_STORAGE_KEY,
+      `${NATIVE_AUTH_STORAGE_KEY}-code-verifier`,
+      `${NATIVE_AUTH_STORAGE_KEY}-oauth-state`,
+      OAUTH_NEXT_KEY
+    ];
+    const results = await Promise.all(
+      keys.map(async (key) => {
+        const { value } = await Preferences.get({ key });
+        return { key, present: value !== null, len: value?.length ?? 0 };
+      })
+    );
+    console.log(label, JSON.stringify({ keys: results }));
+  } catch (error) {
+    console.warn(label, 'native storage dump failed', error);
   }
 };
 
@@ -60,9 +92,12 @@ export default function GoogleOAuthButton({
       const useNativeFlow = isNative && platform === 'android';
       console.log('[oauth] native=', isNative, 'platform=', platform, 'webviewHint=', webViewHint);
       if (useNativeFlow) {
-        const redirectTo = `com.smartreminder.app://auth/callback${next ? `?next=${encodeURIComponent(next)}` : ''}`;
+        const redirectTo = 'com.smartreminder.app://auth/callback';
         console.log('[oauth] redirectTo=', redirectTo, 'skipBrowserRedirect=', true);
-        logStorageState('[oauth][storage] before signIn');
+        console.log('[oauth] client=native');
+        const normalizedNext = normalizeNext(next);
+        await Preferences.set({ key: OAUTH_NEXT_KEY, value: normalizedNext });
+        await logNativeAuthStorageState('[oauth][native][storage] before signIn');
         const supabase = getNativeSupabase();
         const { data, error: signInError } = await supabase.auth.signInWithOAuth({
           provider: 'google',
@@ -71,7 +106,7 @@ export default function GoogleOAuthButton({
             skipBrowserRedirect: true
           }
         });
-        logStorageState('[oauth][storage] after signIn');
+        await logNativeAuthStorageState('[oauth][native][storage] after signIn');
         if (signInError) {
           const message = signInError.message?.toLowerCase() ?? '';
           setError(message.includes('provider') || message.includes('oauth') ? errorNotConfigured : errorGeneric);
@@ -91,8 +126,9 @@ export default function GoogleOAuthButton({
 
       const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
       console.log('[oauth] redirectTo=', redirectTo, 'skipBrowserRedirect=', false);
-      logStorageState('[oauth][storage] before signIn');
-      const supabase = getBrowserClient();
+      console.log('[oauth] client=web');
+      logWebStorageState('[oauth][storage] before signIn');
+      const supabase = getWebSupabase();
       const { data, error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -100,7 +136,7 @@ export default function GoogleOAuthButton({
           skipBrowserRedirect: false
         }
       });
-      logStorageState('[oauth][storage] after signIn');
+      logWebStorageState('[oauth][storage] after signIn');
       if (signInError) {
         const message = signInError.message?.toLowerCase() ?? '';
         setError(message.includes('provider') || message.includes('oauth') ? errorNotConfigured : errorGeneric);

@@ -1,14 +1,20 @@
 "use client";
 
+// OAuth invariant: native Android must use the Preferences-backed client for both PKCE start/exchange.
+// Mixing web/native clients breaks PKCE state and causes "invalid flow state" errors.
+
 import { useEffect, useRef } from 'react';
 import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 import { useRouter } from 'next/navigation';
-import { getNativeSupabase } from '@/lib/supabase/nativeClient';
+import { getNativeSupabase, NATIVE_AUTH_STORAGE_KEY } from '@/lib/supabase/native';
 
 const CALLBACK_PREFIX = 'com.smartreminder.app://auth/callback';
 const handledDeepLinkUrls = new Set<string>();
+const OAUTH_NEXT_KEY = 'oauth_next';
+const DEFAULT_NEXT = '/app';
 
 const maskUrlForLog = (url: string) => {
   try {
@@ -26,22 +32,34 @@ const maskUrlForLog = (url: string) => {
   }
 };
 
-const logStorageState = (label: string) => {
-  if (typeof window === 'undefined') return;
+const normalizeNext = (value?: string | null) => {
+  if (!value) return DEFAULT_NEXT;
+  return value.startsWith('/') ? value : DEFAULT_NEXT;
+};
+
+const logNativeAuthStorageState = async (label: string) => {
   try {
-    const lsKeys = Object.keys(localStorage).filter((k) => /sb-|supabase|pkce|oauth/i.test(k));
-    const lsInfo = lsKeys.map((k) => ({ k, len: (localStorage.getItem(k) || '').length }));
-    const codeVerifierKeys = Object.keys(localStorage).filter((k) => /code-verifier/i.test(k));
-    const codeVerifierInfo = codeVerifierKeys.map((k) => ({ k, len: (localStorage.getItem(k) || '').length }));
-    const codeVerifierPresent = codeVerifierKeys.length > 0;
-    const cookieNames = document.cookie
-      .split(';')
-      .map((c) => c.trim().split('=')[0])
-      .filter((n) => /sb-|supabase/i.test(n));
-    console.log(label, JSON.stringify({ lsInfo, codeVerifierInfo, codeVerifierPresent, cookieNames }));
+    const keys = [
+      NATIVE_AUTH_STORAGE_KEY,
+      `${NATIVE_AUTH_STORAGE_KEY}-code-verifier`,
+      `${NATIVE_AUTH_STORAGE_KEY}-oauth-state`,
+      OAUTH_NEXT_KEY
+    ];
+    const results = await Promise.all(
+      keys.map(async (key) => {
+        const { value } = await Preferences.get({ key });
+        return { key, present: value !== null, len: value?.length ?? 0 };
+      })
+    );
+    console.log(label, JSON.stringify({ keys: results }));
   } catch (error) {
-    console.warn(label, 'storage dump failed', error);
+    console.warn(label, 'native storage dump failed', error);
   }
+};
+
+const readNextFromPreferences = async () => {
+  const { value } = await Preferences.get({ key: OAUTH_NEXT_KEY });
+  return normalizeNext(value);
 };
 
 export default function NativeOAuthListener() {
@@ -50,7 +68,6 @@ export default function NativeOAuthListener() {
   const removeListenerRef = useRef<Promise<{ remove: () => void }> | null>(null);
   const handlingRef = useRef(false);
   const authListenerAttached = useRef(false);
-  const appStateListenerRef = useRef<Promise<{ remove: () => void }> | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -87,30 +104,36 @@ export default function NativeOAuthListener() {
           stateLen: state?.length ?? 0,
           error: errorParam
         }));
-        const rawNext = incoming.searchParams.get('next') ?? '/app';
-        const next = rawNext.startsWith('/') ? rawNext : '/app';
-        logStorageState('[oauth][storage] before exchange');
-        const supabase = getNativeSupabase();
+        await logNativeAuthStorageState('[oauth][native][storage] before exchange');
 
         if (errorParam) {
           console.warn('[oauth] callback error', JSON.stringify({ error: errorParam, errorDescription }));
           return;
         }
-        if (!code) {
-          console.warn('[oauth] missing code in callback, skipping exchange', JSON.stringify({
+        if (!code || !state) {
+          console.warn('[oauth] missing code/state in callback, skipping exchange', JSON.stringify({
+            hasCode: Boolean(code),
+            hasState: Boolean(state),
             queryKeys: Array.from(incoming.searchParams.keys())
           }));
           return;
         }
 
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        console.log('[oauth] client=native');
+        const supabase = getNativeSupabase();
+        const { error } = await supabase.auth.exchangeCodeForSession(url);
         if (error) {
           console.warn('[oauth] exchangeCodeForSession failed', error);
+          const reason = encodeURIComponent((error.message || 'unknown').slice(0, 120));
+          router.replace(`/auth?error=oauth_exchange_failed&reason=${reason}`);
+          return;
         } else {
-          logStorageState('[oauth][storage] after exchange');
+          await logNativeAuthStorageState('[oauth][native][storage] after exchange');
         }
         const { data } = await supabase.auth.getSession();
         console.log('[oauth] getSession', JSON.stringify({ hasSession: Boolean(data?.session) }));
+        const next = await readNextFromPreferences();
+        await Preferences.remove({ key: OAUTH_NEXT_KEY });
         router.replace(next);
       } catch (error) {
         console.warn('[oauth] handleUrl failed', error);

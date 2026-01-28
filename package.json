@@ -10,6 +10,7 @@
     "test": "node --test --loader ts-node/esm \"tests/**/*.test.ts\"",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "deps:check:supabase": "npm ls @supabase/supabase-js",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",
     "docker:reset": "docker compose exec supabase supabase db reset",
@@ -30,7 +31,7 @@
     "@capacitor/splash-screen": "^6.0.0",
     "@capacitor/status-bar": "^6.0.0",
     "@supabase/ssr": "^0.5.2",
-    "@supabase/supabase-js": "^2.90.1",
+    "@supabase/supabase-js": "2.90.1",
     "date-fns": "^3.6.0",
     "date-fns-tz": "^3.2.0",
     "firebase-admin": "^12.5.0",
@@ -57,5 +58,13 @@
     "tailwindcss": "^3.4.7",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4"
+  },
+  "overrides": {
+    "@supabase/supabase-js": "2.90.1",
+    "@supabase/auth-js": "2.90.1",
+    "@supabase/functions-js": "2.90.1",
+    "@supabase/postgrest-js": "2.90.1",
+    "@supabase/realtime-js": "2.90.1",
+    "@supabase/storage-js": "2.90.1"
   }
 }

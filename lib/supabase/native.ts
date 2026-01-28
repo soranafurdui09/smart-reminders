@@ -9,6 +9,8 @@ type StorageAdapter = {
   removeItem: (key: string) => Promise<void>;
 };
 
+export const NATIVE_AUTH_STORAGE_KEY = 'sb-auth-token';
+
 const PreferencesStorageAdapter: StorageAdapter = {
   async getItem(key) {
     const { value } = await Preferences.get({ key });
@@ -42,7 +44,7 @@ export function getNativeSupabase() {
         autoRefreshToken: true,
         detectSessionInUrl: false,
         storage: PreferencesStorageAdapter,
-        storageKey: 'sb-auth-token'
+        storageKey: NATIVE_AUTH_STORAGE_KEY
       }
     }
   );

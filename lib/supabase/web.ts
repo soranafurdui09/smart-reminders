@@ -1,0 +1,31 @@
+import { createBrowserClient as createSupabaseBrowserClient } from '@supabase/ssr';
+import type { Database } from './types';
+import { getPublicEnvStatus, getRequiredPublicEnv } from '@/lib/env';
+
+let webClient: ReturnType<typeof createSupabaseBrowserClient<Database>> | null = null;
+
+export function createWebSupabase() {
+  const envStatus = getPublicEnvStatus();
+  if (!envStatus.ok) {
+    throw new Error(`Missing env vars: ${envStatus.missing.join(', ')}`);
+  }
+
+  return createSupabaseBrowserClient<Database>(
+    getRequiredPublicEnv('NEXT_PUBLIC_SUPABASE_URL'),
+    getRequiredPublicEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+    {
+      auth: {
+        flowType: 'pkce',
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false
+      }
+    }
+  );
+}
+
+export function getWebSupabase() {
+  if (webClient) return webClient;
+  webClient = createWebSupabase();
+  return webClient;
+}
