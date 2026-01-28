@@ -5,7 +5,7 @@ import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import { useRouter } from 'next/navigation';
-import { getBrowserClient } from '@/lib/supabase/client';
+import { getNativeSupabase } from '@/lib/supabase/nativeClient';
 
 const CALLBACK_PREFIX = 'com.smartreminder.app://auth/callback';
 const handledDeepLinkUrls = new Set<string>();
@@ -62,19 +62,19 @@ export default function NativeOAuthListener() {
     if (!isNative) return;
 
     const handleUrl = async (url: string, source: 'appUrlOpen' | 'getLaunchUrl') => {
+      console.log(`[oauth] ${source} url=`, maskUrlForLog(url));
+      if (!url || !url.startsWith(CALLBACK_PREFIX)) return;
+      if (handledDeepLinkUrls.has(url)) {
+        console.log('[oauth] deep link already handled, skip');
+        return;
+      }
+      if (handlingRef.current) {
+        console.log('[oauth] already handling, skip');
+        return;
+      }
+
+      handlingRef.current = true;
       try {
-        console.log(`[oauth] ${source} url=`, maskUrlForLog(url));
-        if (!url || !url.startsWith(CALLBACK_PREFIX)) return;
-        if (handledDeepLinkUrls.has(url)) {
-          console.log('[oauth] deep link already handled, skip');
-          return;
-        }
-        if (handlingRef.current) {
-          console.log('[oauth] already handling, skip');
-          return;
-        }
-        handlingRef.current = true;
-        handledDeepLinkUrls.add(url);
         const incoming = new URL(url);
         const code = incoming.searchParams.get('code');
         const state = incoming.searchParams.get('state');
@@ -90,34 +90,34 @@ export default function NativeOAuthListener() {
         const rawNext = incoming.searchParams.get('next') ?? '/app';
         const next = rawNext.startsWith('/') ? rawNext : '/app';
         logStorageState('[oauth][storage] before exchange');
-        const supabase = getBrowserClient();
-        try {
-          if (errorParam) {
-            console.warn('[oauth] callback error', JSON.stringify({ error: errorParam, errorDescription }));
-            return;
-          }
-          if (!code) {
-            console.warn('[oauth] missing code in callback, skipping exchange', JSON.stringify({
-              queryKeys: Array.from(incoming.searchParams.keys())
-            }));
-            return;
-          }
-          const { error } = await supabase.auth.exchangeCodeForSession(url);
-          if (error) {
-            console.warn('[oauth] exchangeCodeForSession failed', error);
-          } else {
-            logStorageState('[oauth][storage] after exchange');
-          }
-          const { data } = await supabase.auth.getSession();
-          console.log('[oauth] getSession', JSON.stringify({ hasSession: Boolean(data?.session) }));
-        } finally {
-          console.log('[oauth] Browser.close');
-          await Browser.close().catch(() => undefined);
+        const supabase = getNativeSupabase();
+
+        if (errorParam) {
+          console.warn('[oauth] callback error', JSON.stringify({ error: errorParam, errorDescription }));
+          return;
         }
-        router.replace(next || '/app');
+        if (!code) {
+          console.warn('[oauth] missing code in callback, skipping exchange', JSON.stringify({
+            queryKeys: Array.from(incoming.searchParams.keys())
+          }));
+          return;
+        }
+
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          console.warn('[oauth] exchangeCodeForSession failed', error);
+        } else {
+          logStorageState('[oauth][storage] after exchange');
+        }
+        const { data } = await supabase.auth.getSession();
+        console.log('[oauth] getSession', JSON.stringify({ hasSession: Boolean(data?.session) }));
+        router.replace(next);
       } catch (error) {
         console.warn('[oauth] handleUrl failed', error);
       } finally {
+        handledDeepLinkUrls.add(url);
+        console.log('[oauth] Browser.close');
+        await Browser.close().catch(() => undefined);
         handlingRef.current = false;
       }
     };
@@ -144,7 +144,7 @@ export default function NativeOAuthListener() {
 
     if (!authListenerAttached.current) {
       authListenerAttached.current = true;
-      const supabase = getBrowserClient();
+      const supabase = getNativeSupabase();
       supabase.auth.onAuthStateChange((event, session) => {
         console.log('[oauth] auth state', JSON.stringify({ event, hasSession: Boolean(session) }));
       });

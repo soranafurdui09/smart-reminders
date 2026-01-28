@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { getBrowserClient } from '@/lib/supabase/client';
+import { getNativeSupabase } from '@/lib/supabase/nativeClient';
 
 const logStorageState = (label: string) => {
   if (typeof window === 'undefined') return;
@@ -62,7 +63,7 @@ export default function GoogleOAuthButton({
         const redirectTo = `com.smartreminder.app://auth/callback${next ? `?next=${encodeURIComponent(next)}` : ''}`;
         console.log('[oauth] redirectTo=', redirectTo, 'skipBrowserRedirect=', true);
         logStorageState('[oauth][storage] before signIn');
-        const supabase = getBrowserClient();
+        const supabase = getNativeSupabase();
         const { data, error: signInError } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
