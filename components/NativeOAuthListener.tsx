@@ -14,6 +14,64 @@ const CALLBACK_PREFIX = 'com.smartreminder.app://auth/callback';
 const OAUTH_NEXT_KEY = 'oauth_next';
 const DEFAULT_NEXT = '/app';
 
+const maskDeepLinkForShare = (rawUrl: string) => {
+  const fallback = () => {
+    const masked = rawUrl
+      .replace(/([?&]code=)[^&]*/i, (_match, prefix) => `${prefix}<redacted>`)
+      .replace(/([?&]state=)[^&]*/i, (_match, prefix) => `${prefix}<redacted>`);
+    return {
+      maskedUrl: masked,
+      summary: {
+        hasCode: /[?&]code=/i.test(rawUrl),
+        codeLen: 0,
+        hasState: /[?&]state=/i.test(rawUrl),
+        stateLen: 0,
+        error: null as string | null,
+        errorDesc: null as string | null,
+        next: null as string | null,
+        paramKeys: [] as string[]
+      }
+    };
+  };
+
+  try {
+    const url = new URL(rawUrl);
+    const params = new URLSearchParams(url.search);
+    const code = params.get('code');
+    const state = params.get('state');
+    const error = params.get('error');
+    const errorDesc = params.get('error_description');
+    const next = params.get('next');
+    const paramKeys = Array.from(params.keys());
+
+    const maskedParams = new URLSearchParams(params);
+    if (code) maskedParams.set('code', `<redacted:${code.length}>`);
+    if (state) maskedParams.set('state', `<redacted:${state.length}>`);
+
+    for (const [key, value] of maskedParams.entries()) {
+      if (value.length > 200) {
+        maskedParams.set(key, `<len:${value.length}>`);
+      }
+    }
+
+    return {
+      maskedUrl: `${url.protocol}//${url.host}${url.pathname}?${maskedParams.toString()}`,
+      summary: {
+        hasCode: Boolean(code),
+        codeLen: code?.length ?? 0,
+        hasState: Boolean(state),
+        stateLen: state?.length ?? 0,
+        error,
+        errorDesc,
+        next,
+        paramKeys
+      }
+    };
+  } catch {
+    return fallback();
+  }
+};
+
 const maskUrlForLog = (url: string) => {
   try {
     const u = new URL(url);
@@ -68,6 +126,9 @@ export default function NativeOAuthListener() {
     if (!isNative) return;
 
     const handleUrl = async (url: string, source: 'appUrlOpen' | 'getLaunchUrl') => {
+      const dumped = maskDeepLinkForShare(url);
+      console.log('[deeplink][RAW]', dumped.maskedUrl);
+      console.log('[deeplink][SUMMARY]', JSON.stringify(dumped.summary));
       console.log(`[oauth] ${source} url=`, maskUrlForLog(url));
       if (!url || !url.startsWith(CALLBACK_PREFIX)) return;
       if (handledDeepLinkUrls.has(url)) {
