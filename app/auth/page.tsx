@@ -5,6 +5,7 @@ import { messages } from '@/lib/i18n';
 import { getLocaleFromCookie } from '@/lib/i18n/server';
 import GoogleOAuthButton from '@/components/GoogleOAuthButton';
 import NativeNotificationDebug from '@/components/NativeNotificationDebug';
+import NativeSpeechDebug from '@/components/NativeSpeechDebug';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,6 +81,7 @@ export default async function AuthPage({ searchParams }: { searchParams: { [key:
               errorGeneric={copy.auth.errorGeneric}
             />
             <NativeNotificationDebug />
+            <NativeSpeechDebug />
           </div>
         </div>
       </div>

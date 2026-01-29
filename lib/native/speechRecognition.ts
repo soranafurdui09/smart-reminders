@@ -29,16 +29,24 @@ export async function requestSpeechPermission() {
   const api = SpeechRecognition as unknown as {
     requestPermission?: () => Promise<unknown>;
     requestPermissions?: () => Promise<unknown>;
+    checkPermissions?: () => Promise<unknown>;
     hasPermission?: () => Promise<unknown>;
   };
-  if (api.requestPermission) {
-    const result = await api.requestPermission();
-    console.log('[native][speech] permission result', result);
-    return getPermissionGranted(result);
+  if (api.checkPermissions) {
+    const current = await api.checkPermissions();
+    console.log('[native][speech] checkPermissions', current);
+    if (getPermissionGranted(current)) {
+      return true;
+    }
   }
   if (api.requestPermissions) {
     const result = await api.requestPermissions();
     console.log('[native][speech] permissions result', result);
+    return getPermissionGranted(result);
+  }
+  if (api.requestPermission) {
+    const result = await api.requestPermission();
+    console.log('[native][speech] permission result', result);
     return getPermissionGranted(result);
   }
   if (api.hasPermission) {
@@ -49,6 +57,26 @@ export async function requestSpeechPermission() {
   return false;
 }
 
+export async function getSpeechPermissionStatus() {
+  if (!isNativeAndroid()) return 'unavailable';
+  if (!isSpeechPluginAvailable()) return 'missing';
+  const api = SpeechRecognition as unknown as {
+    hasPermission?: () => Promise<unknown>;
+    checkPermissions?: () => Promise<unknown>;
+  };
+  if (api.hasPermission) {
+    const result = await api.hasPermission();
+    console.log('[native][speech] hasPermission', result);
+    return getPermissionGranted(result) ? 'granted' : 'denied';
+  }
+  if (api.checkPermissions) {
+    const result = await api.checkPermissions();
+    console.log('[native][speech] checkPermissions', result);
+    return getPermissionGranted(result) ? 'granted' : 'denied';
+  }
+  return 'unknown';
+}
+
 export async function startDictation(lang: string): Promise<string> {
   if (!isNativeAndroid()) {
     throw new Error('not-supported');
@@ -57,6 +85,7 @@ export async function startDictation(lang: string): Promise<string> {
     console.warn('[native][speech] plugin missing');
     throw new Error('plugin-missing');
   }
+  console.log('[native][speech] start requested', { lang });
   const granted = await requestSpeechPermission();
   if (!granted) {
     throw new Error('not-allowed');
@@ -69,7 +98,7 @@ export async function startDictation(lang: string): Promise<string> {
   const result = await SpeechRecognition.start({
     language: lang,
     partialResults: false,
-    popup: false,
+    popup: true,
     maxResults: 1
   });
   const transcript = Array.isArray(result?.matches) ? result.matches[0] ?? '' : '';

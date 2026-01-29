@@ -298,6 +298,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
       if (listening || startingRef.current) {
         return;
       }
+      console.log('[native][speech] start tapped', { lang });
       setError(null);
       setTranscript('');
       setListening(true);
