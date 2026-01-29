@@ -11,14 +11,17 @@ import {
 export default function NativeNotificationDebug() {
   const [status, setStatus] = useState<string | null>(null);
   const [permission, setPermission] = useState<string>('unknown');
-  if (process.env.NODE_ENV === 'production') return null;
-  if (!isNativeAndroidApp()) return null;
 
   useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    if (!isNativeAndroidApp()) return;
     getNotificationPermissionStatus()
       .then((next) => setPermission(next))
       .catch(() => setPermission('unknown'));
   }, []);
+
+  if (process.env.NODE_ENV === 'production') return null;
+  if (!isNativeAndroidApp()) return null;
 
   const handleTest = async () => {
     setStatus(null);
