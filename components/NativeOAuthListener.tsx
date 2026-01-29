@@ -1,6 +1,6 @@
 "use client";
 
-// OAuth invariant: native Android Google sign-in uses a server-side session flow.
+// OAuth invariant: native Android Google sign-in uses native ID token + Supabase signInWithIdToken.
 // Deep link PKCE callbacks are logged but not exchanged here.
 
 import { useEffect, useRef } from 'react';
@@ -95,35 +95,7 @@ export default function NativeOAuthListener() {
 
       handlingRef.current = true;
       try {
-        const incoming = new URL(url);
-        const code = incoming.searchParams.get('code')?.replace(/#$/, '');
-        const state = incoming.searchParams.get('state');
-        const errorParam = incoming.searchParams.get('error');
-        const errorDescription = incoming.searchParams.get('error_description');
-        console.log('[oauth] callback params', JSON.stringify({
-          hasCode: Boolean(code),
-          codeLen: code?.length ?? 0,
-          hasState: Boolean(state),
-          stateLen: state?.length ?? 0,
-          error: errorParam,
-          errorDesc: errorDescription,
-          next: incoming.searchParams.get('next') ?? null,
-          paramKeys: Array.from(incoming.searchParams.keys())
-        }));
-
-        if (errorParam) {
-          console.warn('[oauth] callback error', JSON.stringify({ error: errorParam, errorDescription }));
-          return;
-        }
-        if (!code) {
-          console.warn('[oauth] missing code in callback, ignoring');
-          return;
-        }
-        if (!state) {
-          console.warn('[oauth] missing state in callback, ignoring');
-          return;
-        }
-        console.warn('[oauth] native Google sign-in uses server session; ignoring PKCE exchange');
+        console.warn('[oauth] deep link callback ignored; native Google sign-in uses ID token flow');
       } catch (error) {
         console.warn('[oauth] handleUrl failed', error);
       } finally {

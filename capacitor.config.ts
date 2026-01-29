@@ -26,10 +26,10 @@ const config: CapacitorConfig = {
       backgroundColor: '#f8fafc',
       showSpinner: false
     },
-    GoogleAuth: {
-      scopes: ['profile', 'email'],
-      clientId: process.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '',
-      serverClientId: process.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? ''
+    SocialLogin: {
+      providers: {
+        google: true
+      }
     }
   }
 };

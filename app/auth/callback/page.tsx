@@ -1,6 +1,6 @@
 "use client";
 
-// OAuth invariant: native Android uses native Google sign-in + server session cookies.
+// OAuth invariant: native Android uses native Google sign-in + signInWithIdToken.
 // This web callback only handles browser redirects and must not deep-link tokens.
 // Debug cookies on localhost: add &debug=1 to the callback URL.
 
