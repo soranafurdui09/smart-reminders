@@ -1,17 +1,13 @@
 "use client";
 
-// OAuth invariant: native Android must use the browser client in the WebView for PKCE start/exchange.
-// Mixing storage contexts breaks PKCE state and causes "invalid flow state" errors.
+// OAuth invariant: native Android Google sign-in uses a server-side session flow.
+// Deep link PKCE callbacks are logged but not exchanged here.
 
 import { useEffect, useRef } from 'react';
 import { App } from '@capacitor/app';
-import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
-import { useRouter } from 'next/navigation';
-import { getBrowserClient } from '@/lib/supabase/client';
 
 const CALLBACK_PREFIX = 'com.smartreminder.app://auth/callback';
-const DEFAULT_NEXT = '/app';
 
 const maskDeepLinkForLog = (rawUrl: string) => {
   const fallback = () => {
@@ -66,33 +62,12 @@ const maskDeepLinkForLog = (rawUrl: string) => {
   }
 };
 
-const normalizeNext = (value?: string | null) => {
-  if (!value) return DEFAULT_NEXT;
-  return value.startsWith('/') ? value : DEFAULT_NEXT;
-};
-
 const handledDeepLinkUrls = new Set<string>();
 
-const closeBrowserSafely = async () => {
-  try {
-    await Browser.close();
-  } catch {
-    // swallow
-  }
-  setTimeout(() => {
-    void Browser.close().catch(() => undefined);
-  }, 300);
-  setTimeout(() => {
-    void Browser.close().catch(() => undefined);
-  }, 900);
-};
-
 export default function NativeOAuthListener() {
-  const router = useRouter();
   const listenerAttached = useRef(false);
   const removeListenerRef = useRef<Promise<{ remove: () => void }> | null>(null);
   const handlingRef = useRef(false);
-  const authListenerAttached = useRef(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -119,8 +94,6 @@ export default function NativeOAuthListener() {
       }
 
       handlingRef.current = true;
-      let next = DEFAULT_NEXT;
-      let shouldNavigate = false;
       try {
         const incoming = new URL(url);
         const code = incoming.searchParams.get('code')?.replace(/#$/, '');
@@ -142,32 +115,19 @@ export default function NativeOAuthListener() {
           console.warn('[oauth] callback error', JSON.stringify({ error: errorParam, errorDescription }));
           return;
         }
-        if (!code || !state) {
-          console.warn('[oauth] missing code/state in callback, skipping exchange');
+        if (!code) {
+          console.warn('[oauth] missing code in callback, ignoring');
           return;
         }
-
-        const supabase = getBrowserClient();
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (error) {
-          console.warn('[oauth] exchangeCodeForSession failed', error);
+        if (!state) {
+          console.warn('[oauth] missing state in callback, ignoring');
           return;
         }
-        const { data } = await supabase.auth.getSession();
-        console.log('[oauth] getSession', JSON.stringify({ hasSession: Boolean(data?.session) }));
-
-        const rawNext = incoming.searchParams.get('next');
-        next = normalizeNext(rawNext);
-        shouldNavigate = true;
+        console.warn('[oauth] native Google sign-in uses server session; ignoring PKCE exchange');
       } catch (error) {
         console.warn('[oauth] handleUrl failed', error);
       } finally {
         handledDeepLinkUrls.add(url);
-        console.log('[oauth] Browser.close');
-        await closeBrowserSafely();
-        if (shouldNavigate) {
-          router.replace(next);
-        }
         handlingRef.current = false;
       }
     };
@@ -192,14 +152,6 @@ export default function NativeOAuthListener() {
         console.warn('[oauth] getLaunchUrl failed', error);
       });
 
-    if (!authListenerAttached.current) {
-      authListenerAttached.current = true;
-      const supabase = getBrowserClient();
-      supabase.auth.onAuthStateChange((event, session) => {
-        console.log('[oauth] auth state', JSON.stringify({ event, hasSession: Boolean(session) }));
-      });
-    }
-
     // appStateChange Browser.close disabled to avoid racing OAuth exchange.
 
     return () => {
@@ -207,7 +159,7 @@ export default function NativeOAuthListener() {
       removeListenerRef.current = null;
       listenerAttached.current = false;
     };
-  }, [router]);
+  }, []);
 
   return null;
 }
