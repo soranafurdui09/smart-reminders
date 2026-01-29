@@ -219,6 +219,27 @@ export default function QuickAddSheet({
     return normalized.join(' ');
   };
 
+  const resolveVoiceError = (code: string) => {
+    switch (code) {
+      case 'not-allowed':
+      case 'service-not-allowed':
+        return 'Permite accesul la microfon pentru dictare vocală.';
+      case 'plugin-missing':
+        return 'Plugin-ul de dictare lipsește. Rulează: npx cap sync android.';
+      case 'not-supported':
+        return 'Dictarea vocală nu este disponibilă pe acest dispozitiv.';
+      case 'no-speech':
+        return 'Nu s-a detectat niciun sunet. Încearcă din nou.';
+      case 'too-short':
+        return 'Dictarea este prea scurtă. Încearcă din nou.';
+      case 'parse-failed':
+        return 'Nu am putut interpreta dictarea. Încearcă din nou.';
+      case 'start-failed':
+      default:
+        return 'Nu am putut porni dictarea.';
+    }
+  };
+
   const voice = useSpeechToReminder<AiResult>({
     useAi: activeMode === 'ai',
     parseText: activeMode === 'ai'
@@ -237,8 +258,8 @@ export default function QuickAddSheet({
     onFallback: (inputText) => {
       setText(normalizeTranscript(inputText));
     },
-    onError: () => {
-      setError('Nu am putut porni dictarea.');
+    onError: (code) => {
+      setError(resolveVoiceError(code));
     }
   });
 

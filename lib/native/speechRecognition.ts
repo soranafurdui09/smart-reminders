@@ -32,13 +32,19 @@ export async function requestSpeechPermission() {
     hasPermission?: () => Promise<unknown>;
   };
   if (api.requestPermission) {
-    return getPermissionGranted(await api.requestPermission());
+    const result = await api.requestPermission();
+    console.log('[native][speech] permission result', result);
+    return getPermissionGranted(result);
   }
   if (api.requestPermissions) {
-    return getPermissionGranted(await api.requestPermissions());
+    const result = await api.requestPermissions();
+    console.log('[native][speech] permissions result', result);
+    return getPermissionGranted(result);
   }
   if (api.hasPermission) {
-    return getPermissionGranted(await api.hasPermission());
+    const result = await api.hasPermission();
+    console.log('[native][speech] permission status', result);
+    return getPermissionGranted(result);
   }
   return false;
 }
@@ -48,6 +54,7 @@ export async function startDictation(lang: string): Promise<string> {
     throw new Error('not-supported');
   }
   if (!isSpeechPluginAvailable()) {
+    console.warn('[native][speech] plugin missing');
     throw new Error('plugin-missing');
   }
   const granted = await requestSpeechPermission();
@@ -55,6 +62,7 @@ export async function startDictation(lang: string): Promise<string> {
     throw new Error('not-allowed');
   }
   const available = await SpeechRecognition.available();
+  console.log('[native][speech] available', available);
   if (!available?.available) {
     throw new Error('not-supported');
   }

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
+import { isSpeechPluginAvailable } from '@/lib/native/speechRecognition';
 
 export type SpeechStatus =
   | 'idle'
@@ -39,6 +41,8 @@ export function useSpeechToReminder<TParsed>({
   onFallback,
   onError
 }: UseSpeechToReminderOptions<TParsed>) {
+  const isNativeAndroid =
+    typeof window !== 'undefined' && Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
   const {
     supported,
     listening,
@@ -164,8 +168,13 @@ export function useSpeechToReminder<TParsed>({
 
   const start = useCallback(() => {
     if (!supported) {
-      setError('not-supported');
-      onError?.('not-supported');
+      if (isNativeAndroid && !isSpeechPluginAvailable()) {
+        setError('plugin-missing');
+        onError?.('plugin-missing');
+      } else {
+        setError('not-supported');
+        onError?.('not-supported');
+      }
       return;
     }
     if (listening) return;
@@ -174,7 +183,7 @@ export function useSpeechToReminder<TParsed>({
     setStatus('starting');
     committedTranscriptRef.current = '';
     startSpeech();
-  }, [listening, onError, resetSpeech, startSpeech, supported]);
+  }, [isNativeAndroid, listening, onError, resetSpeech, startSpeech, supported]);
 
   const stop = useCallback(() => {
     if (!listening) return;

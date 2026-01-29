@@ -1021,7 +1021,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     if (voiceErrorCode === 'too-short') {
       return copy.remindersNew.voiceTooShort;
     }
-    if (voiceErrorCode === 'not-supported') {
+    if (voiceErrorCode === 'not-supported' || voiceErrorCode === 'plugin-missing') {
       return copy.remindersNew.voiceNotSupported;
     }
     return copy.remindersNew.voiceError;
