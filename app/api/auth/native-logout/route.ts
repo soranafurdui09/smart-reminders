@@ -29,7 +29,8 @@ const createRouteSupabase = () => {
           cookiesToSet: Array<{ name: string; value: string; options?: Parameters<typeof cookieStore.set>[0] }>
         ) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set({ name, value, ...options });
+            const cookieOptions = options && typeof options === 'object' ? options : {};
+            cookieStore.set({ name, value, ...cookieOptions });
           });
         }
       }
