@@ -56,9 +56,19 @@ export async function requestPermissionsIfNeeded() {
   await ensureNotificationChannel();
   const status = await LocalNotifications.checkPermissions();
   console.log('[native] notification permissions', status);
+  try {
+    await Preferences.set({ key: 'local-notifications:status', value: status.display });
+  } catch {
+    // ignore preferences failures
+  }
   if (status.display === 'granted') return true;
   const next = await LocalNotifications.requestPermissions();
   console.log('[native] notification permissions result', next);
+  try {
+    await Preferences.set({ key: 'local-notifications:status', value: next.display });
+  } catch {
+    // ignore preferences failures
+  }
   return next.display === 'granted';
 }
 
@@ -157,6 +167,16 @@ export async function scheduleTestNotification() {
   } catch (error) {
     console.error('[native] test notification failed', error);
     throw error;
+  }
+}
+
+export async function getNotificationPermissionStatus() {
+  if (!isNativeAndroidApp()) return 'unavailable';
+  try {
+    const status = await LocalNotifications.checkPermissions();
+    return status.display;
+  } catch {
+    return 'unknown';
   }
 }
 

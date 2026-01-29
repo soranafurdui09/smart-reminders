@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { isSpeechAvailable, startDictation, stopDictation } from '@/lib/native/speechRecognition';
+import { isSpeechAvailable, isSpeechPluginAvailable, startDictation, stopDictation } from '@/lib/native/speechRecognition';
 
 type SpeechRecognitionResult = {
   isFinal?: boolean;
@@ -57,6 +57,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const errorNotifiedRef = useRef<string | null>(null);
   const silenceMs = 3000;
   const noSpeechMs = 8000;
   const minWords = 4;
@@ -161,9 +162,15 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
       const wordCount = finalText.split(/\s+/).filter(Boolean).length;
       if (!manualStopRef.current && wordCount > 0 && wordCount < minWords) {
         setError('too-short');
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('native-speech-error', { detail: { code: 'too-short' } }));
+        }
       }
       if (!finalText && !manualStopRef.current) {
         setError('no-speech');
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('native-speech-error', { detail: { code: 'no-speech' } }));
+        }
       }
       setTranscript(finalText);
       manualStopRef.current = false;
@@ -172,7 +179,11 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
       recognitionRef.current = null;
     };
     recognition.onerror = (event) => {
-      setError(event?.error || 'unknown');
+      const code = event?.error || 'unknown';
+      setError(code);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('native-speech-error', { detail: { code } }));
+      }
       setListening(false);
       startingRef.current = false;
       recognitionRef.current = null;
@@ -219,9 +230,11 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (isNativeAndroid) {
-      isSpeechAvailable()
-        .then((available) => setSupported(available))
-        .catch(() => setSupported(false));
+      const pluginAvailable = isSpeechPluginAvailable();
+      setSupported(pluginAvailable);
+      if (pluginAvailable) {
+        isSpeechAvailable().catch(() => undefined);
+      }
       return;
     }
     const SpeechRecognitionCtor = (window as unknown as { SpeechRecognition?: SpeechRecognitionConstructor }).SpeechRecognition
@@ -285,6 +298,9 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
       if (!supported || listening || startingRef.current) {
         if (!supported) {
           setError('not-supported');
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('native-speech-error', { detail: { code: 'not-supported' } }));
+          }
         }
         return;
       }
@@ -297,16 +313,33 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
           const transcript = await startDictation(lang);
           if (!transcript) {
             setError('no-speech');
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('native-speech-error', { detail: { code: 'no-speech' } }));
+            }
           }
           setTranscript(transcript);
         } catch (err) {
           const message = err instanceof Error ? err.message : 'unknown';
           if (message === 'not-allowed') {
             setError('not-allowed');
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('native-speech-error', { detail: { code: 'not-allowed' } }));
+            }
+          } else if (message === 'plugin-missing') {
+            setError('not-supported');
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('native-speech-error', { detail: { code: 'plugin-missing' } }));
+            }
           } else if (message === 'not-supported') {
             setError('not-supported');
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('native-speech-error', { detail: { code: 'not-supported' } }));
+            }
           } else {
             setError('start-failed');
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('native-speech-error', { detail: { code: 'start-failed' } }));
+            }
           }
         } finally {
           setListening(false);

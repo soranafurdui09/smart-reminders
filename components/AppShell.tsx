@@ -9,6 +9,7 @@ import AppNavigation from '@/components/AppNavigation';
 import NativeAppChrome from '@/components/NativeAppChrome';
 import WebViewNotice from '@/components/WebViewNotice';
 import MobileShell from '@/components/shell/MobileShell';
+import NativeSpeechErrorToast from '@/components/NativeSpeechErrorToast';
 
 export default function AppShell({
   children,
@@ -61,6 +62,7 @@ export default function AppShell({
       </MobileShell>
       <TimeZoneSync />
       <NativeNotificationSync />
+      <NativeSpeechErrorToast />
       <VoiceCreateToast copy={copy} locale={locale} undoAction={deleteReminder} />
       <ActionFeedback />
     </div>

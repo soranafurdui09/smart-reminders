@@ -5,6 +5,8 @@ import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 
 const isNativeAndroid = () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
+export const isSpeechPluginAvailable = () => isNativeAndroid() && Capacitor.isPluginAvailable('SpeechRecognition');
+
 const getPermissionGranted = (value: unknown) => {
   if (typeof value === 'boolean') return value;
   if (!value || typeof value !== 'object') return false;
@@ -17,8 +19,7 @@ const getPermissionGranted = (value: unknown) => {
 };
 
 export async function isSpeechAvailable() {
-  if (!isNativeAndroid()) return false;
-  if (!Capacitor.isPluginAvailable('SpeechRecognition')) return false;
+  if (!isSpeechPluginAvailable()) return false;
   const result = await SpeechRecognition.available();
   return Boolean(result?.available);
 }
@@ -46,16 +47,16 @@ export async function startDictation(lang: string): Promise<string> {
   if (!isNativeAndroid()) {
     throw new Error('not-supported');
   }
-  if (!Capacitor.isPluginAvailable('SpeechRecognition')) {
-    throw new Error('not-supported');
-  }
-  const available = await SpeechRecognition.available();
-  if (!available?.available) {
-    throw new Error('not-supported');
+  if (!isSpeechPluginAvailable()) {
+    throw new Error('plugin-missing');
   }
   const granted = await requestSpeechPermission();
   if (!granted) {
     throw new Error('not-allowed');
+  }
+  const available = await SpeechRecognition.available();
+  if (!available?.available) {
+    throw new Error('not-supported');
   }
   const result = await SpeechRecognition.start({
     language: lang,
