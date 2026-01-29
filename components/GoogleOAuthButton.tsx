@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { useRouter } from 'next/navigation';
 import { getBrowserClient } from '@/lib/supabase/client';
 import { nativeGoogleSupabaseSignIn, nativeGoogleSupabaseSignOut } from '@/lib/auth/nativeGoogleSupabase';
 
@@ -51,6 +52,7 @@ export default function GoogleOAuthButton({
   const [nativeError, setNativeError] = useState<string | null>(null);
   const [lastSuccessAt, setLastSuccessAt] = useState<string | null>(null);
   const [nativeMeta, setNativeMeta] = useState<{ isNative: boolean; platform: string; hasPlugin: boolean } | null>(null);
+  const router = useRouter();
   const [isNativeAndroid, setIsNativeAndroid] = useState(false);
 
   useEffect(() => {
@@ -76,9 +78,12 @@ export default function GoogleOAuthButton({
     try {
       if (isNativeAndroid) {
         const normalizedNext = normalizeNext(next);
-        await nativeGoogleSupabaseSignIn(normalizedNext);
+        const result = await nativeGoogleSupabaseSignIn(normalizedNext);
         setLastSuccessAt(new Date().toISOString());
         setPending(false);
+        if (result.ok) {
+          router.replace(result.next);
+        }
         return;
       }
 

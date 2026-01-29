@@ -6,15 +6,9 @@
 // - Supabase Google provider: include BOTH client IDs (comma-separated).
 
 import { Capacitor } from '@capacitor/core';
-import { Preferences } from '@capacitor/preferences';
 import { SocialLogin } from '@capgo/capacitor-social-login';
-import type { Session } from '@supabase/supabase-js';
-import { getNativeSupabase } from '@/lib/supabase';
 
 const DEFAULT_NEXT = '/app';
-const OAUTH_NEXT_KEY = 'oauth_next';
-const NATIVE_NONCE_KEY = 'native_google_nonce';
-const NATIVE_BRIDGE_ATTEMPT_KEY = 'native_bridge_attempted';
 
 const normalizeNext = (value: string) => (value.startsWith('/') ? value : DEFAULT_NEXT);
 
@@ -91,85 +85,7 @@ const extractGoogleTokens = (response: any) => {
   return { idToken, accessToken };
 };
 
-const clearTransientKeys = async () => {
-  try {
-    localStorage.removeItem(OAUTH_NEXT_KEY);
-    localStorage.removeItem(NATIVE_NONCE_KEY);
-    localStorage.removeItem(NATIVE_BRIDGE_ATTEMPT_KEY);
-  } catch {
-    // ignore storage errors
-  }
-  try {
-    sessionStorage.removeItem(OAUTH_NEXT_KEY);
-    sessionStorage.removeItem(NATIVE_NONCE_KEY);
-    sessionStorage.removeItem(NATIVE_BRIDGE_ATTEMPT_KEY);
-  } catch {
-    // ignore storage errors
-  }
-  try {
-    await Preferences.remove({ key: OAUTH_NEXT_KEY });
-    await Preferences.remove({ key: NATIVE_NONCE_KEY });
-    await Preferences.remove({ key: NATIVE_BRIDGE_ATTEMPT_KEY });
-  } catch {
-    // ignore storage errors
-  }
-};
-
-const logCookieNames = (label: string) => {
-  if (process.env.NODE_ENV !== 'development' || typeof document === 'undefined') return;
-  const names = document.cookie
-    .split(';')
-    .map((cookie) => cookie.trim().split('=')[0])
-    .filter((name) => name.startsWith('sb-'));
-  console.log(label, JSON.stringify({ cookieNames: names }));
-};
-
-export async function bridgeSessionToCookies(session: Session) {
-  safeLogSummary('[native-google] bridge-start', {
-    hasAccessToken: Boolean(session?.access_token),
-    accessTokenLen: session?.access_token?.length ?? 0,
-    hasRefreshToken: Boolean(session?.refresh_token),
-    refreshTokenLen: session?.refresh_token?.length ?? 0
-  });
-
-  const response = await fetch('/api/auth/native-session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    cache: 'no-store',
-    body: JSON.stringify({
-      access_token: session.access_token,
-      refresh_token: session.refresh_token
-    })
-  });
-
-  const payload = await response.json().catch(() => null);
-  safeLogSummary('[native-google] bridge-result', {
-    ok: Boolean(payload?.ok),
-    hasUser: Boolean(payload?.hasUser)
-  });
-
-  if (!response.ok || !payload?.ok) {
-    throw new Error('Failed to bridge native session to cookies.');
-  }
-
-  logCookieNames('[native-google] cookie-names');
-}
-
-export async function getNativeBridgeAttempted() {
-  const { value } = await Preferences.get({ key: NATIVE_BRIDGE_ATTEMPT_KEY });
-  return value;
-}
-
-export async function setNativeBridgeAttempted() {
-  await Preferences.set({ key: NATIVE_BRIDGE_ATTEMPT_KEY, value: String(Date.now()) });
-}
-
-export async function clearNativeBridgeAttempted() {
-  await Preferences.remove({ key: NATIVE_BRIDGE_ATTEMPT_KEY });
-}
-
-export async function nativeGoogleSupabaseSignIn(nextPath: string): Promise<void> {
+export async function nativeGoogleSupabaseSignIn(nextPath: string): Promise<{ ok: true; next: string }> {
   const isNative = Capacitor.isNativePlatform();
   const platform = Capacitor.getPlatform();
   const hasPlugin = hasPluginAvailable();
@@ -189,7 +105,6 @@ export async function nativeGoogleSupabaseSignIn(nextPath: string): Promise<void
 
     const rawNonce = generateNonce();
     const nonceDigest = await sha256Hex(rawNonce);
-    await Preferences.set({ key: NATIVE_NONCE_KEY, value: rawNonce });
 
     const response = await SocialLogin.login({
       provider: 'google',
@@ -198,31 +113,39 @@ export async function nativeGoogleSupabaseSignIn(nextPath: string): Promise<void
       }
     });
 
-    const { idToken, accessToken } = extractGoogleTokens(response);
-    safeLogSummary('[native-google] login-result', { hasIdToken: Boolean(idToken), idTokenLen: idToken?.length ?? 0 });
+    const { idToken } = extractGoogleTokens(response);
+    safeLogSummary('[native-google] login-result', {
+      hasIdToken: Boolean(idToken),
+      idTokenLen: idToken?.length ?? 0,
+      hasNonce: Boolean(rawNonce),
+      nonceLen: rawNonce.length
+    });
 
     if (!idToken) {
       throw new Error('Missing Google idToken.');
     }
 
-    const supabase = getNativeSupabase();
-    const { data, error } = await supabase.auth.signInWithIdToken({
-      provider: 'google',
-      token: idToken,
-      nonce: rawNonce,
-      access_token: accessToken || undefined
+    const responseSession = await fetch('/api/auth/native-idtoken', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      cache: 'no-store',
+      body: JSON.stringify({
+        idToken,
+        nonce: rawNonce,
+        next
+      })
     });
-    const hasSession = Boolean(data?.session);
-    const hasUser = Boolean(data?.user);
-    safeLogSummary('[native-google] supabase-result', { hasSession, hasUser });
 
-    if (error || !hasSession || !data?.session) {
-      throw error ?? new Error('Supabase session missing after native sign-in.');
+    safeLogSummary('[native-google] native-idtoken', {
+      status: responseSession.status
+    });
+
+    if (!responseSession.ok) {
+      throw new Error('Native idToken sign-in failed.');
     }
 
-    await bridgeSessionToCookies(data.session);
-    await clearTransientKeys();
-    window.location.replace(next);
+    return { ok: true, next };
   } catch (error) {
     safeLogError(error);
     throw error;
@@ -244,20 +167,12 @@ export async function nativeGoogleSupabaseSignOut(): Promise<void> {
   }
 
   try {
-    const supabase = getNativeSupabase();
-    await supabase.auth.signOut();
+    await fetch('/logout', {
+      method: 'POST',
+      credentials: 'include',
+      cache: 'no-store'
+    });
   } catch (error) {
     safeLogError(error);
-  } finally {
-    try {
-      await fetch('/api/auth/native-logout', {
-        method: 'POST',
-        credentials: 'include',
-        cache: 'no-store'
-      });
-    } catch {
-      // ignore logout bridge errors
-    }
-    await clearTransientKeys();
   }
 }
