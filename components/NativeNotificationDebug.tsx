@@ -1,0 +1,44 @@
+"use client";
+
+import { useState } from 'react';
+import {
+  isNativeAndroidApp,
+  requestPermissionsIfNeeded,
+  scheduleTestNotification
+} from '@/lib/native/localNotifications';
+
+export default function NativeNotificationDebug() {
+  const [status, setStatus] = useState<string | null>(null);
+  if (process.env.NODE_ENV === 'production') return null;
+  if (!isNativeAndroidApp()) return null;
+
+  const handleTest = async () => {
+    setStatus(null);
+    try {
+      const granted = await requestPermissionsIfNeeded();
+      if (!granted) {
+        setStatus('Permisiunea pentru notificări este dezactivată.');
+        return;
+      }
+      await scheduleTestNotification();
+      setStatus('Notificare programată pentru 5s.');
+    } catch (error) {
+      console.error('[native] test notification failed', error);
+      setStatus('Testul de notificare a eșuat.');
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+      <div className="font-semibold">Debug (native)</div>
+      <button
+        type="button"
+        className="mt-2 inline-flex w-full items-center justify-center rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700"
+        onClick={handleTest}
+      >
+        Test notification (5s)
+      </button>
+      {status ? <div className="mt-2 text-xs text-slate-600">{status}</div> : null}
+    </div>
+  );
+}

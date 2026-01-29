@@ -37,9 +37,9 @@ export default function MobileShell({
   }, [showMobile]);
 
   return (
-    <div className="relative min-h-dvh">
+    <div className="relative flex min-h-dvh flex-col">
       <div className="sticky top-0 z-40">{header}</div>
-      <main className="page-wrap app-content relative z-0">{children}</main>
+      <main className="page-wrap app-content relative z-0 flex-1 overflow-y-auto">{children}</main>
       {showMobile ? <MobileBottomNav labels={labels} /> : null}
       {showMobile ? <MobileFab /> : null}
     </div>

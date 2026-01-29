@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 
 const STORAGE_KEY = 'smart-reminder:webview-notice-dismissed';
 
@@ -10,9 +11,8 @@ export default function WebViewNotice() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const dismissed = window.localStorage.getItem(STORAGE_KEY) === '1';
-    const userAgent = navigator.userAgent || '';
-    const isWebView = userAgent.includes('SmartReminderWebView') || (userAgent.includes('Android') && userAgent.includes('wv'));
-    if (!dismissed && isWebView) {
+    const isNative = Capacitor.isNativePlatform();
+    if (!dismissed && !isNative) {
       setVisible(true);
     }
   }, []);

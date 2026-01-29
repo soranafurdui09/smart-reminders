@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { isSpeechAvailable, startDictation, stopDictation } from '@/lib/native/speechRecognition';
 
 type SpeechRecognitionResult = {
   isFinal?: boolean;
@@ -36,6 +38,9 @@ export interface UseSpeechToTextResult {
 }
 
 export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
+  const isNativeAndroid = typeof window !== 'undefined'
+    && Capacitor.isNativePlatform()
+    && Capacitor.getPlatform() === 'android';
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const recognitionCtorRef = useRef<SpeechRecognitionConstructor | null>(null);
   const silenceTimerRef = useRef<number | null>(null);
@@ -213,6 +218,12 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (isNativeAndroid) {
+      isSpeechAvailable()
+        .then((available) => setSupported(available))
+        .catch(() => setSupported(false));
+      return;
+    }
     const SpeechRecognitionCtor = (window as unknown as { SpeechRecognition?: SpeechRecognitionConstructor }).SpeechRecognition
       || (window as unknown as { webkitSpeechRecognition?: SpeechRecognitionConstructor }).webkitSpeechRecognition;
 
@@ -244,7 +255,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
       recognition.stop();
       recognitionRef.current = null;
     };
-  }, [attachRecognitionHandlers]);
+  }, [attachRecognitionHandlers, isNativeAndroid]);
 
   const warmUpMicrophone = useCallback(async () => {
     if (warmupRef.current) return;
@@ -270,6 +281,40 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
   }, []);
 
   const start = useCallback(() => {
+    if (isNativeAndroid) {
+      if (!supported || listening || startingRef.current) {
+        if (!supported) {
+          setError('not-supported');
+        }
+        return;
+      }
+      setError(null);
+      setTranscript('');
+      setListening(true);
+      startingRef.current = true;
+      void (async () => {
+        try {
+          const transcript = await startDictation(lang);
+          if (!transcript) {
+            setError('no-speech');
+          }
+          setTranscript(transcript);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'unknown';
+          if (message === 'not-allowed') {
+            setError('not-allowed');
+          } else if (message === 'not-supported') {
+            setError('not-supported');
+          } else {
+            setError('start-failed');
+          }
+        } finally {
+          setListening(false);
+          startingRef.current = false;
+        }
+      })();
+      return;
+    }
     if (!supported || listening || startingRef.current) {
       if (!supported) {
         setError('not-supported');
@@ -319,10 +364,15 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
   }, [listening, supported, warmUpMicrophone]);
 
   const stop = useCallback(() => {
+    if (isNativeAndroid) {
+      void stopDictation();
+      setListening(false);
+      return;
+    }
     manualStopRef.current = true;
     interimTranscriptRef.current = '';
     recognitionRef.current?.stop();
-  }, []);
+  }, [isNativeAndroid]);
 
   const reset = useCallback(() => {
     setTranscript('');

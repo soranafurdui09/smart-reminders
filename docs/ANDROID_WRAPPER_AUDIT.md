@@ -27,3 +27,12 @@
 - Push vs local: local notifications must only run in Capacitor Android environment.
 - Service worker remains for web; do NOT register SW in Android WebView/Capacitor.
 
+## Capacitor plugin setup checklist (native build)
+- After `npm install`, run `npx cap sync android` to register native plugins.
+- Android permissions (already in `android/app/src/main/AndroidManifest.xml`):
+  - `android.permission.POST_NOTIFICATIONS` (Android 13+ local notifications)
+  - `android.permission.RECORD_AUDIO` (speech dictation)
+- Plugins used by the native shell:
+  - `@capacitor/local-notifications`
+  - `@capacitor-community/speech-recognition`
+  - `@capgo/capacitor-social-login`

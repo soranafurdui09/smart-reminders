@@ -4,6 +4,7 @@ import MagicLinkForm from '@/components/MagicLinkForm';
 import { messages } from '@/lib/i18n';
 import { getLocaleFromCookie } from '@/lib/i18n/server';
 import GoogleOAuthButton from '@/components/GoogleOAuthButton';
+import NativeNotificationDebug from '@/components/NativeNotificationDebug';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,6 +79,7 @@ export default async function AuthPage({ searchParams }: { searchParams: { [key:
               errorNotConfigured={copy.auth.errorOauthNotConfigured}
               errorGeneric={copy.auth.errorGeneric}
             />
+            <NativeNotificationDebug />
           </div>
         </div>
       </div>

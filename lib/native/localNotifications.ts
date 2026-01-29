@@ -11,6 +11,7 @@ const DEVICE_ID_KEY = 'native-device-id';
 const RESYNC_MIN_INTERVAL_MS = 20 * 1000;
 const RESYNC_ON_RESUME_MS = 12 * 60 * 60 * 1000;
 const HEARTBEAT_MIN_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const REMINDER_CHANNEL_ID = 'reminders';
 
 type UpcomingNotificationItem = {
   job_key: string;
@@ -25,6 +26,21 @@ export function isNativeAndroidApp() {
   return typeof window !== 'undefined' && Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 }
 
+export async function ensureNotificationChannel() {
+  if (!isNativeAndroidApp()) return;
+  try {
+    await LocalNotifications.createChannel({
+      id: REMINDER_CHANNEL_ID,
+      name: 'Reminders',
+      description: 'Smart Reminder alerts',
+      importance: 5
+    });
+    console.log('[native] notification channel ready', REMINDER_CHANNEL_ID);
+  } catch (error) {
+    console.warn('[native] notification channel create failed', error);
+  }
+}
+
 export async function getOrCreateDeviceId() {
   const existing = await Preferences.get({ key: DEVICE_ID_KEY });
   if (existing.value) return existing.value;
@@ -37,9 +53,12 @@ export async function getOrCreateDeviceId() {
 
 export async function requestPermissionsIfNeeded() {
   if (!isNativeAndroidApp()) return false;
+  await ensureNotificationChannel();
   const status = await LocalNotifications.checkPermissions();
+  console.log('[native] notification permissions', status);
   if (status.display === 'granted') return true;
   const next = await LocalNotifications.requestPermissions();
+  console.log('[native] notification permissions result', next);
   return next.display === 'granted';
 }
 
@@ -98,15 +117,47 @@ export async function scheduleUpcoming(days = 7) {
         id: notificationIdFromKey(item.job_key),
         title: item.title,
         body: item.body,
+        channelId: REMINDER_CHANNEL_ID,
         schedule: { at },
         extra: { reminder_id: item.reminder_id, job_key: item.job_key }
       };
     })
-    .filter(Boolean) as Array<{ id: number; title: string; body: string; schedule: { at: Date }; extra: Record<string, string> }>;
+    .filter(Boolean) as Array<{
+      id: number;
+      title: string;
+      body: string;
+      channelId: string;
+      schedule: { at: Date };
+      extra: Record<string, string>;
+    }>;
   if (!notifications.length) {
     return;
   }
   await LocalNotifications.schedule({ notifications });
+}
+
+export async function scheduleTestNotification() {
+  if (!isNativeAndroidApp()) return;
+  await ensureNotificationChannel();
+  const at = new Date(Date.now() + 5000);
+  const id = Math.floor(Date.now() % 2147483647);
+  try {
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id,
+          title: 'Test notification',
+          body: 'If you can read this, local notifications work.',
+          channelId: REMINDER_CHANNEL_ID,
+          schedule: { at }
+        }
+      ]
+    });
+    console.log('[native] test notification scheduled', { id, at: at.toISOString() });
+  } catch (error) {
+    console.error('[native] test notification failed', error);
+    throw error;
+  }
 }
 
 export async function resync(days = 7, force = false) {

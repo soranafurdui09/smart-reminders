@@ -32,9 +32,9 @@ export default function MobileShell({
   }, [showMobile]);
 
   return (
-    <div className="relative min-h-dvh">
+    <div className="relative flex min-h-dvh flex-col">
       {showMobile ? <TopBar labels={labels} /> : null}
-      <main className="page-wrap app-content relative z-0">{children}</main>
+      <main className="page-wrap app-content relative z-0 flex-1 overflow-y-auto">{children}</main>
       {showMobile ? <BottomNav labels={labels} /> : null}
       {showMobile ? <Fab /> : null}
       {isNativeAndroid ? (
