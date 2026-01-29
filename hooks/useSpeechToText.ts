@@ -295,13 +295,7 @@ export function useSpeechToText(lang = 'ro-RO'): UseSpeechToTextResult {
 
   const start = useCallback(() => {
     if (isNativeAndroid) {
-      if (!supported || listening || startingRef.current) {
-        if (!supported) {
-          setError('not-supported');
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('native-speech-error', { detail: { code: 'not-supported' } }));
-          }
-        }
+      if (listening || startingRef.current) {
         return;
       }
       setError(null);
