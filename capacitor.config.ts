@@ -1,6 +1,17 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-const serverUrl = 'https://www.smart-reminder-app.com';
+const baseServerUrl =
+  process.env.CAPACITOR_SERVER_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  'https://www.smart-reminder-app.com';
+const isAndroidBuild =
+  process.env.CAPACITOR_PLATFORM === 'android' ||
+  process.env.CAPACITOR_ANDROID === 'true' ||
+  process.env.CAPACITOR_ANDROID === '1';
+// NOTE: set CAPACITOR_PLATFORM=android (or CAPACITOR_ANDROID=1) for Android builds to load /native.
+const serverUrl = isAndroidBuild
+  ? `${baseServerUrl.replace(/\/$/, '')}/native`
+  : baseServerUrl;
 
 const config: CapacitorConfig = {
   appId: 'com.smartreminder.app',
