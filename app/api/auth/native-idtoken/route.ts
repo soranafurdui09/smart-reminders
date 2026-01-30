@@ -14,6 +14,8 @@ const json = (body: unknown, status = 200) =>
     }
   });
 
+const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
+
 const createRouteSupabase = (onSetAll?: (count: number) => void) => {
   const cookieStore = cookies();
   return createServerClient<Database>(
@@ -31,9 +33,22 @@ const createRouteSupabase = (onSetAll?: (count: number) => void) => {
           cookiesToSet: Array<{ name: string; value: string; options?: Parameters<typeof cookieStore.set>[0] }>
         ) {
           onSetAll?.(cookiesToSet.length);
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('[native-idtoken] set cookies', cookiesToSet.map((cookie) => cookie.name));
+          }
           cookiesToSet.forEach(({ name, value, options }) => {
             const cookieOptions = options && typeof options === 'object' ? options : {};
-            cookieStore.set({ name, value, ...cookieOptions });
+            const needsMaxAge = typeof cookieOptions.maxAge !== 'number';
+            const needsExpires = !cookieOptions.expires;
+            const persistentOptions = {
+              httpOnly: cookieOptions.httpOnly ?? true,
+              secure: cookieOptions.secure ?? process.env.NODE_ENV === 'production',
+              sameSite: cookieOptions.sameSite ?? 'lax',
+              path: cookieOptions.path ?? '/',
+              ...(needsMaxAge ? { maxAge: ONE_YEAR_SECONDS } : {}),
+              ...(needsExpires ? { expires: new Date(Date.now() + ONE_YEAR_SECONDS * 1000) } : {})
+            };
+            cookieStore.set({ name, value, ...persistentOptions, ...cookieOptions });
           });
         }
       }
