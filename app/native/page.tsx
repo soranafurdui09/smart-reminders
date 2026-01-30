@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Capacitor } from '@capacitor/core';
-import { Clock, Home, PlusCircle } from 'lucide-react';
+import { Calendar, Clock, Home, PlusCircle } from 'lucide-react';
 import { messages, defaultLocale, getLocaleTag, type Locale } from '@/lib/i18n';
 import ReminderDashboardSection from '@/app/reminders/ReminderDashboardSection';
 import NativeAppChrome from '@/components/NativeAppChrome';
@@ -65,6 +66,7 @@ type HistoryErrorPayload = {
 type TabKey = 'dashboard' | 'history' | 'new';
 
 const DEV = process.env.NODE_ENV !== 'production';
+const NativeFab = dynamic(() => import('@/components/mobile/MobileFab'), { ssr: false });
 
 const getNativeAllowed = () => {
   if (typeof window === 'undefined') {
@@ -192,10 +194,11 @@ export default function NativePage() {
   const tabs = useMemo(
     () => ([
       { key: 'dashboard' as const, label: copy.nav.dashboard, icon: Home },
+      { key: 'calendar' as const, label: copy.nav.calendar, icon: Calendar },
       { key: 'history' as const, label: copy.nav.history, icon: Clock },
       { key: 'new' as const, label: copy.nav.newReminder, icon: PlusCircle }
     ]),
-    [copy.nav.dashboard, copy.nav.history, copy.nav.newReminder]
+    [copy.nav.calendar, copy.nav.dashboard, copy.nav.history, copy.nav.newReminder]
   );
 
   if (!isNativeAllowed) {
@@ -401,7 +404,13 @@ export default function NativePage() {
                   className={`flex min-h-[44px] flex-1 items-center justify-center rounded-2xl px-2 py-1 transition ${
                     active ? 'text-text' : 'text-muted2'
                   }`}
-                  onClick={() => setTab(item.key)}
+                  onClick={() => {
+                    if (item.key === 'calendar') {
+                      router.push('/app/calendar');
+                      return;
+                    }
+                    setTab(item.key);
+                  }}
                 >
                   <span className={`relative flex h-11 w-11 items-center justify-center rounded-2xl ${active ? 'bg-accent/20 text-text' : 'bg-surface3 text-muted'}`}>
                     <Icon className="h-5 w-5" aria-hidden="true" />
@@ -414,6 +423,7 @@ export default function NativePage() {
         </nav>
       </div>
 
+      <NativeFab />
       <TimeZoneSync />
       <NativeNotificationSync />
       <NativeSpeechErrorToast />
