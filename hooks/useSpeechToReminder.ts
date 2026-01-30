@@ -56,10 +56,28 @@ export function useSpeechToReminder<TParsed>({
   const [error, setError] = useState<string | null>(null);
   const committedTranscriptRef = useRef('');
   const autoStartedRef = useRef(false);
+  const userStoppedRef = useRef(false);
 
   useEffect(() => {
-    if (!autoStart || autoStartedRef.current || !supported) return;
+    if (!autoStart || autoStartedRef.current || !supported || userStoppedRef.current) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug('[voice] autoStart skipped', {
+          autoStart,
+          autoStarted: autoStartedRef.current,
+          supported,
+          userStopped: userStoppedRef.current
+        });
+      }
+      return;
+    }
     autoStartedRef.current = true;
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('[voice] autoStart run', {
+        autoStart,
+        supported,
+        userStopped: userStoppedRef.current
+      });
+    }
     const startNow = () => {
       resetSpeech();
       setError(null);
@@ -111,6 +129,16 @@ export function useSpeechToReminder<TParsed>({
     setStatus('error');
     onError?.(speechError);
   }, [onError, speechError]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    console.debug('[voice] status', {
+      status,
+      autoStart,
+      autoStarted: autoStartedRef.current,
+      userStopped: userStoppedRef.current
+    });
+  }, [autoStart, status]);
 
   useEffect(() => {
     if (listening) return;
@@ -178,6 +206,8 @@ export function useSpeechToReminder<TParsed>({
       return;
     }
     if (listening) return;
+    userStoppedRef.current = false;
+    autoStartedRef.current = true;
     resetSpeech();
     setError(null);
     setStatus('starting');
@@ -187,6 +217,8 @@ export function useSpeechToReminder<TParsed>({
 
   const stop = useCallback(() => {
     if (!listening) return;
+    userStoppedRef.current = true;
+    autoStartedRef.current = true;
     stopSpeech();
   }, [listening, stopSpeech]);
 

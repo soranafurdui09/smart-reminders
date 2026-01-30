@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mic, Sparkles, X } from 'lucide-react';
 import { reminderCategories } from '@/lib/categories';
@@ -58,6 +58,9 @@ export default function QuickAddSheet({
   const [error, setError] = useState<string | null>(null);
   const [listName, setListName] = useState('');
   const [activeMode, setActiveMode] = useState<'ai' | 'task' | 'list'>(mode);
+  const autoStartOnceRef = useRef(false);
+  const autoStartDisabledRef = useRef(false);
+  const userStoppedRef = useRef(false);
 
   const trimmed = text.trim();
   const canContinue = trimmed.length > 0;
@@ -264,6 +267,8 @@ export default function QuickAddSheet({
   });
 
   const { start: startVoice, reset: resetVoice, status: voiceStatus } = voice;
+  const voiceTranscript = voice.transcript;
+  const voiceTranscriptClean = voiceTranscript.trim();
   const voiceActive = ['starting', 'listening', 'transcribing', 'processing', 'parsing'].includes(voiceStatus);
 
   useEffect(() => {
@@ -273,13 +278,32 @@ export default function QuickAddSheet({
       setText(initialText);
     }
     setAiStatus('idle');
-    if (autoVoice && voiceStatus === 'idle') {
+    if (
+      autoVoice
+      && voiceStatus === 'idle'
+      && !autoStartOnceRef.current
+      && !autoStartDisabledRef.current
+      && !userStoppedRef.current
+    ) {
+      autoStartOnceRef.current = true;
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug('[voice][quickadd] autoStart', {
+          autoVoice,
+          autoStarted: autoStartOnceRef.current,
+          userStopped: userStoppedRef.current
+        });
+      }
       startVoice();
     }
   }, [autoVoice, initialText, mode, open, startVoice, voiceStatus]);
 
   useEffect(() => {
-    if (open) return;
+    if (open) {
+      autoStartOnceRef.current = false;
+      autoStartDisabledRef.current = false;
+      userStoppedRef.current = false;
+      return;
+    }
     resetVoice();
     setAiStatus('idle');
   }, [open, resetVoice]);
@@ -362,6 +386,10 @@ export default function QuickAddSheet({
       formData.set('tz', timezone);
 
       await createReminder(formData);
+      autoStartDisabledRef.current = true;
+      autoStartOnceRef.current = true;
+      userStoppedRef.current = true;
+      resetVoice();
       onClose();
     } catch (err) {
       const digest = (err as { digest?: string } | null)?.digest;
@@ -449,7 +477,11 @@ export default function QuickAddSheet({
               <button
                 type="button"
                 className="premium-chip border-[color:rgba(14,165,233,0.3)] text-[color:rgb(var(--accent-2))]"
-                onClick={voice.stop}
+                onClick={() => {
+                  userStoppedRef.current = true;
+                  autoStartDisabledRef.current = true;
+                  voice.stop();
+                }}
               >
                 Oprește
               </button>
@@ -457,6 +489,33 @@ export default function QuickAddSheet({
           ) : null}
           {voice.status === 'processing' || voice.status === 'parsing' ? (
             <div className="text-xs text-muted">Procesez dictarea…</div>
+          ) : null}
+          {!voiceActive && voiceTranscriptClean ? (
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <button
+                type="button"
+                className="premium-chip border-[color:rgba(14,165,233,0.3)] text-[color:rgb(var(--accent-2))]"
+                onClick={() => {
+                  setText(normalizeTranscript(voiceTranscriptClean));
+                  autoStartDisabledRef.current = true;
+                  resetVoice();
+                }}
+              >
+                Folosește dictarea
+              </button>
+              <button
+                type="button"
+                className="premium-chip"
+                onClick={() => {
+                  autoStartDisabledRef.current = true;
+                  resetVoice();
+                  setParsedResult(null);
+                  setText('');
+                }}
+              >
+                Renunță
+              </button>
+            </div>
           ) : null}
           <div className="relative">
             <textarea
@@ -478,7 +537,16 @@ export default function QuickAddSheet({
             <IconButton
               className="absolute right-2 top-2"
               aria-label={voiceActive ? 'Oprește dictarea' : 'Dictează'}
-              onClick={voice.toggle}
+              onClick={() => {
+                if (!voiceActive) {
+                  userStoppedRef.current = false;
+                  autoStartDisabledRef.current = true;
+                } else {
+                  userStoppedRef.current = true;
+                  autoStartDisabledRef.current = true;
+                }
+                voice.toggle();
+              }}
             >
               <Mic className="h-4 w-4" />
             </IconButton>

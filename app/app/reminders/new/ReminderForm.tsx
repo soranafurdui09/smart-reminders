@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { useSpeechToReminder, type SpeechStatus } from '@/hooks/useSpeechToReminder';
 import { getDefaultContextSettings, isDefaultContextSettings, type ContextSettings, type DayOfWeek } from '@/lib/reminders/context';
@@ -385,6 +386,8 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   contextDefaults,
   onVoiceStateChange
 }, ref) {
+  const isNativeAndroid =
+    typeof window !== 'undefined' && Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
   const activeLocale: TemplateLocale = locale === 'en' ? 'en' : locale === 'de' ? 'de' : 'ro';
   const [aiText, setAiText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -421,6 +424,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [voiceMissingMessage, setVoiceMissingMessage] = useState<string | null>(null);
   const [voiceErrorCode, setVoiceErrorCode] = useState<string | null>(null);
+  const [autoStartDisabled, setAutoStartDisabled] = useState(false);
   const defaultContext = useMemo(
     () => (contextDefaults ? contextDefaults : getDefaultContextSettings()),
     [contextDefaults]
@@ -853,7 +857,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
 
   const voice = useSpeechToReminder<AiResult>({
     lang: activeLocale === 'en' ? 'en-US' : activeLocale === 'de' ? 'de-DE' : 'ro-RO',
-    autoStart: autoVoice,
+    autoStart: autoVoice && !autoStartDisabled,
     useAi: voiceUseAi,
     parseText: (text) => parseReminderText(text, false),
     isComplete: getCompleteness,
@@ -921,6 +925,17 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
       voiceReset();
     }
   }, [voiceReset, voiceStatus]);
+
+  const handleFormSubmit = useCallback(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('[voice] submit', { autoVoice, autoStartDisabled: true, status: voiceStatus });
+    }
+    setAutoStartDisabled(true);
+    setVoiceErrorCode(null);
+    setVoiceMissingMessage(null);
+    voiceStop();
+    voiceReset();
+  }, [autoVoice, voiceReset, voiceStatus, voiceStop]);
 
   useEffect(() => {
     return () => {
@@ -1128,7 +1143,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   ]);
 
   return (
-    <form ref={formRef} action={action} className="space-y-8">
+    <form ref={formRef} action={action} className="space-y-8" onSubmit={handleFormSubmit}>
       <input type="hidden" name="voice_auto" value={autoCreateSource === 'voice' ? '1' : ''} />
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="title" value={title} />
@@ -1337,6 +1352,31 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                   </div>
                 ) : autoVoice ? (
                   <div className="text-xs text-muted">{copy.remindersNew.voiceAutoActive}</div>
+                ) : null}
+                {isNativeAndroid && !voiceIsActive && !voiceIsProcessing && voiceTranscriptClean ? (
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <button
+                      type="button"
+                      className="btn btn-secondary h-7 px-3 text-xs"
+                      onClick={() => {
+                        handleVoiceFallback(voiceTranscriptClean);
+                        voiceReset();
+                      }}
+                    >
+                      {copy.remindersNew.voiceUseTranscript ?? 'Folosește dictarea'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary h-7 px-3 text-xs"
+                      onClick={() => {
+                        setVoiceErrorCode(null);
+                        setVoiceMissingMessage(null);
+                        voiceReset();
+                      }}
+                    >
+                      {copy.remindersNew.voiceCancel ?? 'Renunță'}
+                    </button>
+                  </div>
                 ) : null}
                 {!voiceSupported ? (
                   <div className="text-xs text-muted">{copy.remindersNew.voiceNotSupported}</div>
