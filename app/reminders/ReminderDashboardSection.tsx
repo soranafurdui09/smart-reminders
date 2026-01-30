@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Calendar, Clock, PencilLine, Pill, SunMedium, Users } from 'lucide-react';
 import SemanticSearch from '@/components/SemanticSearch';
@@ -172,6 +173,7 @@ export default function ReminderDashboardSection({
   localeTag,
   userTimeZone
 }: Props) {
+  const router = useRouter();
   const [createdBy, setCreatedBy] = useState<CreatedByOption>(initialCreatedBy);
   const [assignment, setAssignment] = useState<AssignmentOption>(initialAssignment);
   const [kindFilter, setKindFilter] = useState<'all' | 'tasks' | 'medications'>('all');
@@ -744,9 +746,7 @@ export default function ReminderDashboardSection({
                 })}`}
                 actionLabel={copy.medicationsHub.viewDetails}
                 onAction={() => {
-                  if (typeof window !== 'undefined') {
-                    window.location.href = '/app/medications';
-                  }
+                  router.push('/app/medications');
                 }}
               />
             ) : (

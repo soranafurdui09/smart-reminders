@@ -18,15 +18,20 @@ export default async function HistoryPage({
 }: {
   searchParams: { range?: string; performer?: string; page?: string };
 }) {
+  const DEV = process.env.NODE_ENV !== 'production';
+  if (DEV) console.time('[history] user+context');
   const user = await requireUser('/app/history');
-  const locale = await getUserLocale(user.id);
+  const [locale, membership] = await Promise.all([
+    getUserLocale(user.id),
+    getUserHousehold(user.id)
+  ]);
+  if (DEV) console.timeEnd('[history] user+context');
   const copy = messages[locale];
   const rangeLabels = {
     '7': copy.history.range7,
     '30': copy.history.range30,
     all: copy.history.rangeAll
   } as const;
-  const membership = await getUserHousehold(user.id);
 
   if (!membership?.households) {
     return (
@@ -42,9 +47,10 @@ export default async function HistoryPage({
   type RangeKey = keyof typeof rangeLabels;
   const rangeParam = searchParams.range;
   const range = (rangeParam && rangeParam in rangeLabels ? rangeParam : '7') as RangeKey;
-  const members = await getHouseholdMembers(membership.households.id);
+  if (DEV) console.time('[history] household data');
+  const membersPromise = getHouseholdMembers(membership.households.id);
   const memberLabelMap = new Map(
-    members.map((member: any) => [
+    (await membersPromise).map((member: any) => [
       member.user_id,
       member.profiles?.name || member.profiles?.email || member.user_id
     ])
@@ -57,18 +63,24 @@ export default async function HistoryPage({
   const offset = (page - 1) * pageSize;
   const cutoff = range === 'all' ? subMonths(new Date(), 6) : addDays(new Date(), -Number(range));
   const cutoffIso = cutoff.toISOString();
-  const { items: filtered, hasMore } = await getDoneOccurrencesForHouseholdPaged({
+  const donePromise = getDoneOccurrencesForHouseholdPaged({
     householdId: membership.households.id,
     limit: pageSize,
     offset,
     performedBy: performerFilter === 'all' ? undefined : performerFilter,
     startIso: cutoffIso
   });
-  const actionOccurrences = await getActionOccurrencesForHousehold(
+  const actionPromise = getActionOccurrencesForHousehold(
     membership.households.id,
     ['done', 'snoozed'],
     cutoffIso
   );
+  const [members, { items: filtered, hasMore }, actionOccurrences] = await Promise.all([
+    membersPromise,
+    donePromise,
+    actionPromise
+  ]);
+  if (DEV) console.timeEnd('[history] household data');
   const statsMap = new Map<string, { done: number; snoozed: number }>();
   actionOccurrences.forEach((occurrence) => {
     if (!occurrence.performed_by) {

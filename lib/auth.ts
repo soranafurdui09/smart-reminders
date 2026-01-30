@@ -1,7 +1,8 @@
+import { cache } from 'react';
 import { redirect } from 'next/navigation';
 import { createServerClient } from './supabase/server';
 
-export async function requireUser(nextPath?: string) {
+const requireUserCached = cache(async (nextPath?: string) => {
   const supabase = createServerClient();
   const { data } = await supabase.auth.getUser();
   if (!data.user) {
@@ -9,4 +10,6 @@ export async function requireUser(nextPath?: string) {
     redirect(redirectTo);
   }
   return data.user;
-}
+});
+
+export const requireUser = requireUserCached;

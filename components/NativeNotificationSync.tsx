@@ -1,15 +1,16 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import {
   cancelAllScheduled,
   isNativeAndroidApp,
   requestPermissionsIfNeeded,
   resync,
   sendHeartbeat,
-  setupNotificationTap,
-  setupResumeSync
+  setupNotificationTap
 } from '@/lib/native/localNotifications';
 
 export default function NativeNotificationSync() {
@@ -17,32 +18,62 @@ export default function NativeNotificationSync() {
   const router = useRouter();
   const initializedRef = useRef(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const lastResyncRef = useRef(0);
+  const DEV = process.env.NODE_ENV !== 'production';
+  const RESYNC_COOLDOWN_MS = 10 * 60 * 1000;
+
+  const runResync = useCallback(
+    async (reason: 'mount' | 'resume' | 'path') => {
+      if (!isNativeAndroidApp()) return;
+      const now = Date.now();
+      if (now - lastResyncRef.current < RESYNC_COOLDOWN_MS) {
+        return;
+      }
+      lastResyncRef.current = now;
+      if (DEV) console.time(`[native] resync:${reason}`);
+      try {
+        await resync(7, true);
+      } finally {
+        if (DEV) console.timeEnd(`[native] resync:${reason}`);
+      }
+    },
+    [DEV]
+  );
 
   useEffect(() => {
     if (!isNativeAndroidApp()) return;
     if (initializedRef.current) return;
     initializedRef.current = true;
     setupNotificationTap((url) => router.push(url));
-    setupResumeSync();
     requestPermissionsIfNeeded()
       .then(async (granted) => {
         setPermissionDenied(!granted);
         await sendHeartbeat(true);
         if (granted) {
-          await resync(7, true);
+          await runResync('mount');
         }
       })
       .catch((error) => {
         console.error('[native] notification init failed', error);
       });
-  }, [router]);
+  }, [router, runResync]);
 
   useEffect(() => {
-    if (!isNativeAndroidApp()) return;
+    if (isNativeAndroidApp()) {
+      const isNative = Capacitor.isNativePlatform();
+      if (!isNative) return;
+      const handler = App.addListener('appStateChange', ({ isActive }) => {
+        if (!isActive) return;
+        void runResync('resume');
+      });
+      return () => {
+        handler.then((sub) => sub.remove());
+      };
+    }
     resync(7).catch((error) => {
       console.error('[native] resync failed', error);
     });
-  }, [pathname]);
+  }, [pathname, runResync]);
 
   useEffect(() => {
     if (!isNativeAndroidApp()) return;

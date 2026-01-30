@@ -17,12 +17,17 @@ export default async function DashboardPage({
 }: {
   searchParams?: { created?: string; assigned?: string; tab?: string };
 }) {
+  const DEV = process.env.NODE_ENV !== 'production';
+  if (DEV) console.time('[dashboard] user+context');
   const user = await requireUser('/app');
-  const locale = await getUserLocale(user.id);
-  const userTimeZone = await getUserTimeZone(user.id);
+  const [locale, userTimeZone, membership, googleConnection] = await Promise.all([
+    getUserLocale(user.id),
+    getUserTimeZone(user.id),
+    getUserHousehold(user.id),
+    getUserGoogleConnection(user.id)
+  ]);
+  if (DEV) console.timeEnd('[dashboard] user+context');
   const copy = messages[locale];
-  const membership = await getUserHousehold(user.id);
-  const googleConnection = await getUserGoogleConnection(user.id);
 
   if (!membership?.households) {
     return (
@@ -47,9 +52,13 @@ export default async function DashboardPage({
     );
   }
 
-  const occurrencesAll = await getOpenOccurrencesForHousehold(membership.households.id);
-  const members = await getHouseholdMembers(membership.households.id);
-  const medicationDoses = await getTodayMedicationDoses(membership.households.id, new Date(), userTimeZone);
+  if (DEV) console.time('[dashboard] household data');
+  const [occurrencesAll, members, medicationDoses] = await Promise.all([
+    getOpenOccurrencesForHousehold(membership.households.id),
+    getHouseholdMembers(membership.households.id),
+    getTodayMedicationDoses(membership.households.id, new Date(), userTimeZone)
+  ]);
+  if (DEV) console.timeEnd('[dashboard] household data');
   const memberMap = new Map(
     members.map((member: any) => [
       member.id,
