@@ -37,7 +37,7 @@ export default function NativeNotificationSync() {
         if (DEV) console.timeEnd(`[native] resync:${reason}`);
       }
     },
-    [DEV]
+    [DEV, RESYNC_COOLDOWN_MS]
   );
 
   useEffect(() => {

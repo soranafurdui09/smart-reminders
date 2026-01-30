@@ -42,7 +42,7 @@ export default function TimeZoneSync() {
         console.error('[profile] time zone sync failed', error);
       }
     },
-    [isNativeAndroid]
+    [COOLDOWN_MS, isNativeAndroid]
   );
 
   useEffect(() => {
