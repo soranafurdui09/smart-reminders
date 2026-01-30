@@ -269,6 +269,21 @@ body.native-android {
   -webkit-tap-highlight-color: transparent;
 }
 
+html.native-shell,
+.native-shell body,
+.native-shell #__next {
+  height: 100%;
+  overflow: hidden;
+}
+
+.native-shell .app-content {
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
 h1 {
   @apply text-3xl font-semibold tracking-tight text-ink md:text-4xl;
 }

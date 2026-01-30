@@ -7,6 +7,7 @@ import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import BottomNav from '@/components/shell/BottomNav';
 import Fab from '@/components/shell/Fab';
 import TopBar from '@/components/shell/TopBar';
+import NativeShellGate from '@/components/NativeShellGate';
 
 export default function MobileShell({
   children,
@@ -33,6 +34,7 @@ export default function MobileShell({
 
   return (
     <div className="relative flex min-h-dvh flex-col">
+      {isNativeAndroid ? <NativeShellGate /> : null}
       {showMobile ? <TopBar labels={labels} /> : null}
       <main className="page-wrap app-content relative z-0 flex-1 overflow-y-auto">{children}</main>
       {showMobile ? <BottomNav labels={labels} /> : null}
