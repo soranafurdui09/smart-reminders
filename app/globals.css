@@ -270,15 +270,19 @@ body.native-android {
 }
 
 html.native-shell,
-.native-shell body,
-.native-shell #__next {
+.native-shell body {
   height: 100%;
   overflow: hidden;
 }
 
-.native-shell .app-content {
+.native-shell .native-shell-root {
   height: 100vh;
   height: 100dvh;
+}
+
+.native-shell .app-content {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
