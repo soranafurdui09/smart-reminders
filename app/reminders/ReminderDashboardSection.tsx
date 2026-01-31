@@ -182,7 +182,8 @@ export default function ReminderDashboardSection({
   const [assignment, setAssignment] = useState<AssignmentOption>(initialAssignment);
   const [kindFilter, setKindFilter] = useState<'all' | 'tasks' | 'medications'>('all');
   const [categoryFilter, setCategoryFilter] = useState<CategoryOption>('all');
-  const [doseState, setDoseState] = useState<MedicationDose[]>(medicationDoses);
+  const safeMedicationDoses = Array.isArray(medicationDoses) ? medicationDoses : [];
+  const [doseState, setDoseState] = useState<MedicationDose[]>(safeMedicationDoses);
   const [visibleMonthGroups, setVisibleMonthGroups] = useState(2);
   const [showOverdue, setShowOverdue] = useState(false);
   const [showToday, setShowToday] = useState(false);
