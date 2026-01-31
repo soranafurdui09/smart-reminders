@@ -55,6 +55,10 @@ export default function MobileFab() {
             router.push('/app/medications/new');
             return;
           }
+          if (key === 'tasks') {
+            router.push('/app/tasks');
+            return;
+          }
           setMode(key === 'task' ? 'task' : key === 'list' ? 'list' : 'ai');
           setInitialText(undefined);
           setAutoVoice(false);

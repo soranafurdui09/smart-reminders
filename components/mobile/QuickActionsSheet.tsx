@@ -1,17 +1,12 @@
 "use client";
 
+import { useEffect, useMemo, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { ClipboardList, ListChecks, Pill, Sparkles, X } from 'lucide-react';
 import BottomSheet from '@/components/ui/BottomSheet';
 import IconButton from '@/components/ui/IconButton';
 
-type ActionKey = 'ai' | 'task' | 'list' | 'medication';
-
-const actions: { key: ActionKey; label: string; description: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { key: 'ai', label: 'AI Reminder', description: 'Descrie rapid și generează cu AI.', icon: Sparkles },
-  { key: 'task', label: 'Quick Task', description: 'Un task simplu, fără pași complicați.', icon: ClipboardList },
-  { key: 'medication', label: 'Medication', description: 'Setează o schemă de medicație.', icon: Pill },
-  { key: 'list', label: 'List Item', description: 'Adaugă un element într-o listă.', icon: ListChecks }
-];
+type ActionKey = 'ai' | 'task' | 'list' | 'medication' | 'tasks';
 
 export default function QuickActionsSheet({
   open,
@@ -22,6 +17,36 @@ export default function QuickActionsSheet({
   onClose: () => void;
   onSelect: (key: ActionKey) => void;
 }) {
+  const [isNative, setIsNative] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setIsNative(Capacitor.isNativePlatform());
+  }, []);
+
+  const actions = useMemo(() => {
+    const base: {
+      key: ActionKey;
+      label: string;
+      description: string;
+      icon: React.ComponentType<{ className?: string }>;
+    }[] = [
+      { key: 'ai', label: 'AI Reminder', description: 'Descrie rapid și generează cu AI.', icon: Sparkles },
+      { key: 'task', label: 'Quick Task', description: 'Un task simplu, fără pași complicați.', icon: ClipboardList },
+      { key: 'medication', label: 'Medication', description: 'Setează o schemă de medicație.', icon: Pill },
+      { key: 'list', label: 'List Item', description: 'Adaugă un element într-o listă.', icon: ListChecks }
+    ];
+    if (isNative) {
+      base.splice(2, 0, {
+        key: 'tasks',
+        label: 'Tasks',
+        description: 'Vezi și gestionează taskurile tale.',
+        icon: ClipboardList
+      });
+    }
+    return base;
+  }, [isNative]);
+
   return (
     <BottomSheet open={open} onClose={onClose} ariaLabel="Quick Actions">
       <div className="flex items-center justify-between">
