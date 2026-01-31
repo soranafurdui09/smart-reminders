@@ -6,6 +6,7 @@ import { formatDateTimeWithTimeZone, resolveReminderTimeZone } from '@/lib/dates
 
 const DEFAULT_DAYS = 7;
 const MAX_DAYS = 30;
+const MAX_UPCOMING = 300;
 
 export async function GET(request: Request) {
   const supabase = createRouteClient();
@@ -136,5 +137,9 @@ export async function GET(request: Request) {
     ];
   });
 
-  return NextResponse.json([...reminderItems, ...doseItems]);
+  const combined = [...reminderItems, ...doseItems]
+    .sort((a, b) => new Date(a.occurrence_at_utc).getTime() - new Date(b.occurrence_at_utc).getTime())
+    .slice(0, MAX_UPCOMING);
+
+  return NextResponse.json(combined);
 }

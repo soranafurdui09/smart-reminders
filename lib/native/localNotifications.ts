@@ -12,6 +12,7 @@ const RESYNC_MIN_INTERVAL_MS = 20 * 1000;
 const RESYNC_ON_RESUME_MS = 12 * 60 * 60 * 1000;
 const HEARTBEAT_MIN_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const REMINDER_CHANNEL_ID = 'reminders';
+const MAX_LOCAL_NOTIFICATIONS = 300;
 
 type UpcomingNotificationItem = {
   job_key: string;
@@ -114,10 +115,17 @@ async function fetchUpcoming(days = 7): Promise<UpcomingNotificationItem[]> {
 export async function scheduleUpcoming(days = 7) {
   if (!isNativeAndroidApp()) return;
   const items = await fetchUpcoming(days);
-  if (!items.length) {
+  const limitedItems = items.slice(0, MAX_LOCAL_NOTIFICATIONS);
+  if (items.length > limitedItems.length) {
+    console.warn('[native] upcoming notifications capped', {
+      total: items.length,
+      scheduled: limitedItems.length
+    });
+  }
+  if (!limitedItems.length) {
     return;
   }
-  const notifications = items
+  const notifications = limitedItems
     .map((item) => {
       const at = new Date(item.occurrence_at_utc);
       if (Number.isNaN(at.getTime())) {
