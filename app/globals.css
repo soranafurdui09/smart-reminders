@@ -10,15 +10,15 @@
   --fab-clearance: 72px;
   --keyboard-offset: 0px;
   color-scheme: dark;
-  --bg-0: 9 22 32;
-  --bg-1: 20 38 52;
-  --surface-1: rgba(255, 255, 255, 0.1);
-  --surface-2: rgba(255, 255, 255, 0.2);
-  --surface-3: rgba(255, 255, 255, 0.26);
-  --border-1: rgba(255, 255, 255, 0.14);
-  --text-1: rgba(255, 255, 255, 0.94);
-  --text-2: rgba(255, 255, 255, 0.76);
-  --text-3: rgba(255, 255, 255, 0.58);
+  --bg-0: 7 10 18;
+  --bg-1: 10 16 32;
+  --surface-1: rgb(15 23 42);
+  --surface-2: rgb(19 30 52);
+  --surface-3: rgb(23 36 60);
+  --border-1: rgba(255, 255, 255, 0.08);
+  --text-1: rgba(255, 255, 255, 0.92);
+  --text-2: rgba(255, 255, 255, 0.68);
+  --text-3: rgba(255, 255, 255, 0.52);
   --danger: 248 113 113;
   --success: 52 211 153;
   --warning: 245 158 11;
@@ -26,17 +26,19 @@
 
   --bg0: var(--bg-0);
   --bg1: var(--bg-1);
-  --bg2: 12 26 38;
+  --bg2: 10 16 32;
   --surface: var(--surface-1);
   --surface-2: var(--surface-2);
   --surface-3: var(--surface-3);
-  --text: 255 255 255;
+  --text: 235 238 245;
   --text-inv: 255 255 255;
-  --muted: 255 255 255;
-  --muted-2: 255 255 255;
-  --accent: 59 130 246;
-  --accent-2: 59 130 246;
-  --ring: 59 130 246;
+  --muted: 202 210 224;
+  --muted-2: 180 190 206;
+  --accent: 79 141 255;
+  --accent-2: 79 141 255;
+  --accent-hover: 106 162 255;
+  --accent-ring: rgba(79, 141, 255, 0.35);
+  --ring: 79 141 255;
   --border: var(--border-1);
   --radius-lg: 16px;
   --radius-xl: 20px;
@@ -67,8 +69,8 @@
   --surface-3: var(--surface-3);
   --sheet: var(--surface-2);
   --shadow: var(--shadow-card);
-  --accent-muted: rgba(59, 130, 246, 0.14);
-  --accent-glow: rgba(59, 130, 246, 0.22);
+  --accent-muted: rgba(79, 141, 255, 0.14);
+  --accent-glow: rgba(79, 141, 255, 0.22);
   --radius-card: 20px;
   --radius-input: 16px;
   --radius-pill: 999px;
@@ -77,14 +79,14 @@
   --glass-blur: blur(6px);
 
   --color-bg: var(--bg0);
-  --color-surface: 255 255 255;
-  --color-surface-muted: 255 255 255;
-  --color-surface-2: 255 255 255;
-  --color-surface-3: 255 255 255;
+  --color-surface: 15 23 42;
+  --color-surface-muted: 19 30 52;
+  --color-surface-2: 19 30 52;
+  --color-surface-3: 23 36 60;
   --color-border: 255 255 255;
   --color-border-subtle: 255 255 255;
-  --color-text: 255 255 255;
-  --color-text-muted: 255 255 255;
+  --color-text: 235 238 245;
+  --color-text-muted: 202 210 224;
   --color-primary: var(--accent);
   --color-primary-strong: var(--accent);
   --color-primary-soft: var(--accent);
@@ -104,8 +106,8 @@ body {
   @apply text-text antialiased;
   background-color: var(--bg-base);
   background-image:
-    radial-gradient(860px circle at 50% -30%, rgba(59, 130, 246, 0.2), transparent 60%),
-    linear-gradient(180deg, rgba(20, 38, 52, 0.98) 0%, rgba(9, 22, 32, 1) 55%, rgba(12, 26, 38, 1) 100%);
+    radial-gradient(860px circle at 50% -30%, rgba(79, 141, 255, 0.18), transparent 60%),
+    linear-gradient(180deg, rgb(var(--bg1)) 0%, rgb(var(--bg0)) 60%, rgb(var(--bg2)) 100%);
   background-attachment: fixed;
   color: var(--text-1);
 }
@@ -115,8 +117,8 @@ body {
     background-attachment: scroll;
     background-color: var(--bg-base);
     background-image:
-      radial-gradient(680px circle at 50% -30%, rgba(59, 130, 246, 0.2), transparent 60%),
-      linear-gradient(180deg, rgba(20, 38, 52, 0.98) 0%, rgba(9, 22, 32, 1) 55%, rgba(12, 26, 38, 1) 100%);
+      radial-gradient(680px circle at 50% -30%, rgba(79, 141, 255, 0.18), transparent 60%),
+      linear-gradient(180deg, rgb(var(--bg1)) 0%, rgb(var(--bg0)) 60%, rgb(var(--bg2)) 100%);
     color: var(--text-1);
   }
 }
