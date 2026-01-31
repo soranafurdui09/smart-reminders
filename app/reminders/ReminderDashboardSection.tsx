@@ -27,7 +27,7 @@ import {
 import { getReminderCategory, inferReminderCategoryId, type ReminderCategoryId } from '@/lib/categories';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { toggleTaskDoneAction } from '@/app/app/tasks/actions';
-import type { TaskItem } from '@/lib/tasks';
+import type { TaskItem, TaskListPreview } from '@/lib/tasks';
 
 type CreatedByOption = 'all' | 'me' | 'others';
 type AssignmentOption = 'all' | 'assigned_to_me';
@@ -83,6 +83,7 @@ type Props = {
   googleConnected: boolean;
   medicationDoses: MedicationDose[];
   inboxTasks?: TaskItem[];
+  inboxLists?: TaskListPreview[];
   memberLabels: Record<string, string>;
   householdId: string;
   initialCreatedBy?: CreatedByOption;
@@ -195,8 +196,11 @@ export default function ReminderDashboardSection({
   const [activeTab, setActiveTab] = useState<TabOption>(initialTab);
   const [mobileInboxLimit, setMobileInboxLimit] = useState(30);
   const [homeSegment, setHomeSegment] = useState<'today' | 'overdue' | 'soon'>('today');
-  const [inboxView, setInboxView] = useState<'reminders' | 'tasks'>('reminders');
-  const [taskItems, setTaskItems] = useState<TaskItem[]>(inboxTasks);
+  const [inboxView, setInboxView] = useState<'reminders' | 'tasks' | 'lists'>('reminders');
+  const safeInboxTasks = Array.isArray(inboxTasks) ? inboxTasks : [];
+  const safeInboxLists = Array.isArray(inboxLists) ? inboxLists : [];
+  const [taskItems, setTaskItems] = useState<TaskItem[]>(safeInboxTasks);
+  const [listItems] = useState<TaskListPreview[]>(safeInboxLists);
   const [taskPending, startTaskTransition] = useTransition();
 
   const filteredOccurrences = useMemo(() => {
@@ -618,8 +622,10 @@ export default function ReminderDashboardSection({
             <div className="card-soft flex items-center justify-between px-[var(--space-3)] py-[var(--space-2)]">
               <div className="text-sm font-semibold text-text">Inbox</div>
               <div className="text-xs text-muted2">
-                {inboxView === 'tasks'
-                  ? `${taskItems.length} taskuri`
+              {inboxView === 'tasks'
+                ? `${taskItems.length} taskuri`
+                : inboxView === 'lists'
+                  ? `${listItems.length} liste`
                   : `${inboxReminderItems.length} ${copy.dashboard.reminderCountLabel}`}
               </div>
             </div>
@@ -637,6 +643,13 @@ export default function ReminderDashboardSection({
                 onClick={() => setInboxView('tasks')}
               >
                 Taskuri
+              </button>
+              <button
+                type="button"
+                className={`premium-chip ${inboxView === 'lists' ? 'border-[color:rgba(59,130,246,0.4)] text-[color:rgb(var(--accent-2))]' : ''}`}
+                onClick={() => setInboxView('lists')}
+              >
+                Liste
               </button>
             </div>
             {inboxView === 'reminders' ? (
@@ -716,6 +729,45 @@ export default function ReminderDashboardSection({
               ) : (
                 <div className="premium-card p-[var(--space-3)] text-sm text-tertiary">
                   Nu ai taskuri în Inbox.
+                </div>
+              )
+            ) : inboxView === 'lists' ? (
+              listItems.length ? (
+                <div className="space-y-[var(--space-2)]">
+                  {listItems.map((list) => (
+                    <Link
+                      key={list.id}
+                      href={`/app/lists/${list.id}`}
+                      className="premium-card block space-y-2 px-4 py-3 transition hover:bg-surfaceMuted"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-ink truncate">{list.name}</div>
+                          <div className="text-xs text-tertiary">
+                            {list.doneCount}/{list.totalCount} finalizate
+                          </div>
+                        </div>
+                        <span className="chip">
+                          {list.type === 'shopping' ? 'Shopping' : 'Listă'}
+                        </span>
+                      </div>
+                      {list.previewItems.length ? (
+                        <div className="space-y-1 text-xs text-muted">
+                          {list.previewItems.map((item) => (
+                            <div key={item.id} className={item.done ? 'line-through text-tertiary' : ''}>
+                              • {item.title}{item.qty ? ` · ${item.qty}` : ''}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-tertiary">Nicio intrare încă.</div>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="premium-card p-[var(--space-3)] text-sm text-tertiary">
+                  Nu ai liste create.
                 </div>
               )
             ) : mobileInboxItems.length ? (

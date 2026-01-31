@@ -27,6 +27,12 @@ export type TaskItem = {
   updated_at: string;
 };
 
+export type TaskListPreview = TaskList & {
+  totalCount: number;
+  doneCount: number;
+  previewItems: Array<{ id: string; title: string; done: boolean; qty: string | null }>;
+};
+
 export async function getOrCreateInboxList(userId: string) {
   const supabase = createServerClient();
   const { data: existing, error: existingError } = await supabase
@@ -95,6 +101,41 @@ export async function getTaskItemsForList(
     return [];
   }
   return (data ?? []) as TaskItem[];
+}
+
+export async function getTaskListsWithPreview(userId: string, previewLimit = 2) {
+  const lists = await getTaskLists(userId);
+  if (!lists.length) return [];
+  const listIds = lists.map((list) => list.id);
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from('task_items')
+    .select('id, list_id, title, done, qty, created_at')
+    .eq('owner_id', userId)
+    .in('list_id', listIds)
+    .order('created_at', { ascending: false });
+  if (error) {
+    logTaskError('getTaskListsWithPreview items', error);
+  }
+  const map = new Map<string, { total: number; done: number; preview: TaskListPreview['previewItems'] }>();
+  (data ?? []).forEach((item: any) => {
+    const entry = map.get(item.list_id) ?? { total: 0, done: 0, preview: [] };
+    entry.total += 1;
+    if (item.done) entry.done += 1;
+    if (entry.preview.length < previewLimit) {
+      entry.preview.push({ id: item.id, title: item.title, done: Boolean(item.done), qty: item.qty ?? null });
+    }
+    map.set(item.list_id, entry);
+  });
+  return lists.map((list) => {
+    const entry = map.get(list.id) ?? { total: 0, done: 0, preview: [] };
+    return {
+      ...list,
+      totalCount: entry.total,
+      doneCount: entry.done,
+      previewItems: entry.preview
+    } satisfies TaskListPreview;
+  });
 }
 
 export async function createTaskItem(

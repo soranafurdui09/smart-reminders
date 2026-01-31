@@ -10,7 +10,7 @@ import {
 import { getUserGoogleConnection } from '@/lib/google/calendar';
 import { getLocaleTag } from '@/lib/i18n';
 import { getTodayMedicationDoses } from '@/lib/reminders/medication';
-import { getOrCreateInboxList, getTaskItemsForList } from '@/lib/tasks';
+import { getOrCreateInboxList, getTaskItemsForList, getTaskListsWithPreview } from '@/lib/tasks';
 
 const jsonNoStore = (body: unknown, init?: ResponseInit) =>
   NextResponse.json(body, {
@@ -48,11 +48,12 @@ export async function GET() {
   const householdId = membership.households.id;
   if (DEV) console.time('[native-dashboard] household data');
   const inboxList = await getOrCreateInboxList(user.id);
-  const [occurrencesAll, members, medicationDoses, inboxTasks] = await Promise.all([
+  const [occurrencesAll, members, medicationDoses, inboxTasks, inboxLists] = await Promise.all([
     getOpenOccurrencesForHousehold(householdId),
     getHouseholdMembers(householdId),
     getTodayMedicationDoses(householdId, new Date(), userTimeZone),
-    getTaskItemsForList(user.id, inboxList.id, { status: 'all' })
+    getTaskItemsForList(user.id, inboxList.id, { status: 'all' }),
+    getTaskListsWithPreview(user.id)
   ]);
   if (DEV) console.timeEnd('[native-dashboard] household data');
 
@@ -108,6 +109,7 @@ export async function GET() {
     memberLabels,
     medicationDoses,
     inboxTasks,
+    inboxLists,
     occurrences
   });
 }

@@ -4,6 +4,29 @@ import { type ReactNode, useEffect, useId } from 'react';
 import type { CSSProperties } from 'react';
 import { X } from 'lucide-react';
 
+const updateOverlayCount = (delta: number) => {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  const body = document.body;
+  const current = Number(root.dataset.overlayCount ?? '0');
+  const next = Math.max(0, current + delta);
+  if (next > 0) {
+    if (!body.dataset.overlayOverflow) {
+      body.dataset.overlayOverflow = body.style.overflow || '';
+    }
+    body.style.overflow = 'hidden';
+    root.dataset.overlayCount = String(next);
+    root.classList.add('sheet-open');
+  } else {
+    const previousOverflow = body.dataset.overlayOverflow ?? '';
+    body.style.overflow = previousOverflow;
+    delete body.dataset.overlayOverflow;
+    delete root.dataset.overlayCount;
+    root.classList.remove('sheet-open');
+  }
+  window.dispatchEvent(new CustomEvent('overlay:change', { detail: { open: next > 0, count: next } }));
+};
+
 export default function ReminderActionsSheet({
   open,
   onClose,
@@ -25,8 +48,7 @@ export default function ReminderActionsSheet({
 
   useEffect(() => {
     if (!open) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    updateOverlayCount(1);
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose();
@@ -34,7 +56,7 @@ export default function ReminderActionsSheet({
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.body.style.overflow = previousOverflow;
+      updateOverlayCount(-1);
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [open, onClose]);

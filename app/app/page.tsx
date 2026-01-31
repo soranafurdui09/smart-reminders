@@ -11,7 +11,7 @@ import ReminderDashboardSection from '@/app/reminders/ReminderDashboardSection';
 import { getTodayMedicationDoses } from '@/lib/reminders/medication';
 import { coerceDateForTimeZone, diffDaysInTimeZone, formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
 import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
-import { getOrCreateInboxList, getTaskItemsForList } from '@/lib/tasks';
+import { getOrCreateInboxList, getTaskItemsForList, getTaskListsWithPreview } from '@/lib/tasks';
 
 export default async function DashboardPage({
   searchParams
@@ -55,11 +55,12 @@ export default async function DashboardPage({
 
   if (DEV) console.time('[dashboard] household data');
   const inboxList = await getOrCreateInboxList(user.id);
-  const [occurrencesAll, members, medicationDoses, inboxTasks] = await Promise.all([
+  const [occurrencesAll, members, medicationDoses, inboxTasks, inboxLists] = await Promise.all([
     getOpenOccurrencesForHousehold(membership.households.id),
     getHouseholdMembers(membership.households.id),
     getTodayMedicationDoses(membership.households.id, new Date(), userTimeZone),
-    getTaskItemsForList(user.id, inboxList.id, { status: 'all' })
+    getTaskItemsForList(user.id, inboxList.id, { status: 'all' }),
+    getTaskListsWithPreview(user.id)
   ]);
   if (DEV) console.timeEnd('[dashboard] household data');
   const memberMap = new Map(
@@ -213,6 +214,7 @@ export default async function DashboardPage({
           googleConnected={Boolean(googleConnection)}
           medicationDoses={medicationDoses}
           inboxTasks={inboxTasks}
+          inboxLists={inboxLists}
           memberLabels={memberLabels}
           initialCreatedBy={initialCreatedBy}
           initialAssignment={initialAssignment}

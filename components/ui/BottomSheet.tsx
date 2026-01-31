@@ -3,6 +3,29 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
+const updateOverlayCount = (delta: number) => {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  const body = document.body;
+  const current = Number(root.dataset.overlayCount ?? '0');
+  const next = Math.max(0, current + delta);
+  if (next > 0) {
+    if (!body.dataset.overlayOverflow) {
+      body.dataset.overlayOverflow = body.style.overflow || '';
+    }
+    body.style.overflow = 'hidden';
+    root.dataset.overlayCount = String(next);
+    root.classList.add('sheet-open');
+  } else {
+    const previousOverflow = body.dataset.overlayOverflow ?? '';
+    body.style.overflow = previousOverflow;
+    delete body.dataset.overlayOverflow;
+    delete root.dataset.overlayCount;
+    root.classList.remove('sheet-open');
+  }
+  window.dispatchEvent(new CustomEvent('overlay:change', { detail: { open: next > 0, count: next } }));
+};
+
 export default function BottomSheet({
   open,
   onClose,
@@ -18,16 +41,13 @@ export default function BottomSheet({
 }) {
   useEffect(() => {
     if (!open) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    document.documentElement.classList.add('sheet-open');
+    updateOverlayCount(1);
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
     };
     document.addEventListener('keydown', handleKey);
     return () => {
-      document.body.style.overflow = previousOverflow;
-      document.documentElement.classList.remove('sheet-open');
+      updateOverlayCount(-1);
       document.removeEventListener('keydown', handleKey);
     };
   }, [open, onClose]);

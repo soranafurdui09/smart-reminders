@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Mic, Sparkles, X } from 'lucide-react';
 import { reminderCategories } from '@/lib/categories';
 import { createReminder } from '@/app/app/reminders/new/actions';
+import { createTaskListAction } from '@/app/app/lists/actions';
 import { useSpeechToReminder } from '@/hooks/useSpeechToReminder';
 import Card from '@/components/ui/Card';
 import Pill from '@/components/ui/Pill';
@@ -66,7 +67,9 @@ export default function QuickAddSheet({
   const parsingTimerRef = useRef<number | null>(null);
 
   const trimmed = text.trim();
-  const canContinue = trimmed.length > 0;
+  const canContinue = activeMode === 'list'
+    ? listName.trim().length > 0 || trimmed.length > 0
+    : trimmed.length > 0;
   const categoryLabel = reminderCategories.find((category) => category.id === categoryValue)?.label ?? '';
   const parsedCategoryLabel = parsedResult?.categoryId
     ? reminderCategories.find((category) => category.id === parsedResult.categoryId)?.label ?? ''
@@ -370,7 +373,32 @@ export default function QuickAddSheet({
   };
 
   const handleSave = async () => {
-    if (!trimmed || saving) return;
+    if (saving) return;
+    if (activeMode === 'list') {
+      const name = (listName || trimmed).trim();
+      if (!name) {
+        setError('Introdu un nume pentru listă.');
+        return;
+      }
+      setSaving(true);
+      setError(null);
+      try {
+        await createTaskListAction({ name, type: 'generic' });
+        autoStartDisabledRef.current = true;
+        autoStartOnceRef.current = true;
+        userStoppedRef.current = true;
+        resetVoice();
+        onClose();
+        router.refresh();
+      } catch (err) {
+        console.error('[quick-add] list save failed', err);
+        setError('Nu am reușit să salvăm lista.');
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+    if (!trimmed) return;
     setSaving(true);
     setError(null);
     try {

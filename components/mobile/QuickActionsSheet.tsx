@@ -34,7 +34,7 @@ export default function QuickActionsSheet({
       { key: 'ai', label: 'AI Reminder', description: 'Descrie rapid și generează cu AI.', icon: Sparkles },
       { key: 'task', label: 'Quick Task', description: 'Un task simplu, fără pași complicați.', icon: ClipboardList },
       { key: 'medication', label: 'Medication', description: 'Setează o schemă de medicație.', icon: Pill },
-      { key: 'list', label: 'List Item', description: 'Adaugă un element într-o listă.', icon: ListChecks }
+      { key: 'list', label: 'Listă', description: 'Creează o listă (cumpărături, bagaj, pași).', icon: ListChecks }
     ];
     if (isNative) {
       base.splice(2, 0, {

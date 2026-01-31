@@ -39,7 +39,7 @@ export default function FabMenu({
     { label: 'AI Reminder', href: '/app/reminders/new?mode=ai', icon: Sparkles },
     { label: 'Quick Task', href: '/app/reminders/new?mode=quick', icon: ClipboardList },
     { label: 'Medication', href: '/app/medications/new', icon: Pill },
-    { label: 'List Item', href: '/app/reminders/new?mode=list', icon: ListChecks }
+    { label: 'Listă', href: '/app/reminders/new?mode=list', icon: ListChecks }
   ];
 
   return (
