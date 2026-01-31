@@ -6,14 +6,13 @@ alter table public.task_items
 
 update public.task_lists tl
 set household_id = hm.household_id
-from lateral (
-  select household_id
+from (
+  select distinct on (user_id) user_id, household_id
   from public.household_members
-  where user_id = tl.owner_id
-  order by created_at
-  limit 1
+  order by user_id, created_at
 ) hm
-where tl.household_id is null;
+where hm.user_id = tl.owner_id
+  and tl.household_id is null;
 
 update public.task_items ti
 set household_id = tl.household_id
@@ -184,7 +183,10 @@ create policy task_items_household_delete
 
 do $$
 begin
-  alter publication supabase_realtime add table public.task_items;
-exception when duplicate_object then
-  null;
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    alter publication supabase_realtime add table public.task_items;
+  end if;
+exception
+  when duplicate_object then null;
+  when undefined_object then null;
 end $$;
