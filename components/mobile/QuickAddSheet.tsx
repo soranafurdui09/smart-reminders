@@ -95,11 +95,6 @@ export default function QuickAddSheet({
     : remindBeforeValue
       ? `cu ${remindBeforeValue}`
       : '';
-  const previewStatus = voiceActive
-    ? 'Ascult…'
-    : showParsing
-      ? 'Procesez…'
-      : 'Previzualizare';
   const previewLine = [previewDate, previewBefore].filter(Boolean).join(' · ');
 
   const buildFullText = () => {
@@ -250,6 +245,11 @@ export default function QuickAddSheet({
   const voiceTranscriptClean = voiceTranscript.trim();
   const voiceActive = ['starting', 'listening', 'transcribing', 'processing', 'parsing'].includes(voiceStatus);
   const showParsing = aiStatus === 'parsing' || voice.status === 'processing' || voice.status === 'parsing';
+  const previewStatus = voiceActive
+    ? 'Ascult…'
+    : showParsing
+      ? 'Procesez…'
+      : 'Previzualizare';
   // Preview visibility: show only when user starts typing, voice is active/processing,
   // transcript has content, or a parsed result exists.
   const showPreview = useMemo(() => {
