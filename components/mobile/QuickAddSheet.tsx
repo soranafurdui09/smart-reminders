@@ -82,38 +82,6 @@ export default function QuickAddSheet({
     },
     [toLocalInputValue]
   );
-  const previewText = useMemo(() => {
-    if (parsedResult) {
-      const parts = [
-        parsedResult.title,
-        parsedResult.dueAt ? toLocalInputFromIso(parsedResult.dueAt).replace('T', ' ') : null,
-        parsedResult.recurrenceRule ? 'recurent' : null,
-        parsedResult.preReminderMinutes ? `cu ${parsedResult.preReminderMinutes} min înainte` : null,
-        parsedCategoryLabel ? `categorie ${parsedCategoryLabel}` : null
-      ].filter(Boolean);
-      return `Se va salva: ${parts.join(' · ')}`;
-    }
-    if (!trimmed) return 'Scrie ceva simplu, iar noi îl transformăm într-un reminder.';
-    const parts = [
-      trimmed,
-      dateValue ? `${dateValue}${timeValue ? ` ${timeValue}` : ''}` : null,
-      recurrenceValue ? recurrenceValue : null,
-      remindBeforeValue ? `cu ${remindBeforeValue}` : null,
-      categoryLabel ? `categorie ${categoryLabel}` : null
-    ].filter(Boolean);
-    return `Se va salva: ${parts.join(' · ')}`;
-  }, [
-    categoryLabel,
-    dateValue,
-    parsedCategoryLabel,
-    parsedResult,
-    recurrenceValue,
-    remindBeforeValue,
-    timeValue,
-    trimmed,
-    toLocalInputFromIso
-  ]);
-
   const previewTitle = parsedResult?.title || trimmed || 'Titlul reminderului';
   const parsedDate = parsedResult?.dueAt ? toLocalInputFromIso(parsedResult.dueAt) : '';
   const previewDate = parsedDate
@@ -122,6 +90,17 @@ export default function QuickAddSheet({
       ? `${dateValue}${timeValue ? ` · ${timeValue}` : ''}`
       : 'Data și ora';
   const previewCategory = parsedCategoryLabel || categoryLabel || 'Fără categorie';
+  const previewBefore = parsedResult?.preReminderMinutes
+    ? `cu ${parsedResult.preReminderMinutes} min înainte`
+    : remindBeforeValue
+      ? `cu ${remindBeforeValue}`
+      : '';
+  const previewStatus = voiceActive
+    ? 'Ascult…'
+    : showParsing
+      ? 'Procesez…'
+      : 'Previzualizare';
+  const previewLine = [previewDate, previewBefore].filter(Boolean).join(' · ');
 
   const buildFullText = () => {
     if (!trimmed) return '';
@@ -270,6 +249,15 @@ export default function QuickAddSheet({
   const voiceTranscript = voice.transcript;
   const voiceTranscriptClean = voiceTranscript.trim();
   const voiceActive = ['starting', 'listening', 'transcribing', 'processing', 'parsing'].includes(voiceStatus);
+  const showParsing = aiStatus === 'parsing' || voice.status === 'processing' || voice.status === 'parsing';
+  // Preview visibility: show only when user starts typing, voice is active/processing,
+  // transcript has content, or a parsed result exists.
+  const showPreview = useMemo(() => {
+    if (trimmed.length > 0) return true;
+    if (voiceActive) return true;
+    if (voiceTranscriptClean.length > 0) return true;
+    return Boolean(parsedResult);
+  }, [parsedResult, trimmed.length, voiceActive, voiceTranscriptClean.length]);
 
   useEffect(() => {
     if (!open) return;
@@ -411,7 +399,6 @@ export default function QuickAddSheet({
     : activeMode === 'list'
       ? 'Adaugă în listă'
       : 'Adaugă rapid';
-  const showParsing = aiStatus === 'parsing' || voice.status === 'processing' || voice.status === 'parsing';
 
   return (
     <BottomSheet open={open} onClose={onClose} className="pb-[calc(env(safe-area-inset-bottom)_+_6px)]" ariaLabel="Adaugă reminder">
@@ -432,41 +419,6 @@ export default function QuickAddSheet({
       </div>
 
       <div className="mt-[var(--space-4)] space-y-[var(--space-3)]">
-        <Card className={`surface-a2 px-[var(--space-3)] py-[var(--space-3)] text-xs text-muted ${highlightPreview ? 'ai-highlight' : ''}`}>
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
-            <Sparkles className="h-3.5 w-3.5 text-[color:rgb(var(--accent-2))]" />
-            Preview
-            {showParsing ? (
-              <Pill className="ml-auto bg-[color:rgba(59,130,246,0.15)] text-[color:rgb(var(--accent))]">
-                AI generează…
-              </Pill>
-            ) : parsedResult ? (
-              <Pill className="ml-auto bg-[color:rgba(59,130,246,0.18)] text-[color:rgb(var(--accent))]">
-                AI completat
-              </Pill>
-            ) : null}
-          </div>
-          {showParsing ? (
-            <div className="mt-3 space-y-2">
-              <div className="h-4 w-2/3 animate-pulse rounded-full bg-white/10" />
-              <div className="h-3 w-1/2 animate-pulse rounded-full bg-white/10" />
-              <div className="h-8 w-full animate-pulse rounded-xl bg-white/10" />
-            </div>
-          ) : (
-            <>
-              <div className="mt-2 text-sm font-semibold text-text">{previewTitle}</div>
-              <div className="mt-1 text-xs text-muted">{previewDate}</div>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <Pill className="border border-border bg-surfaceMuted text-muted">Activ · Reminder nou</Pill>
-                <Pill className="bg-[color:rgba(59,130,246,0.16)] text-[color:rgb(var(--accent))]">
-                  {previewCategory}
-                </Pill>
-              </div>
-              <div className="mt-2">{previewText}</div>
-            </>
-          )}
-        </Card>
-
         <div className="space-y-[var(--space-2)]">
           {voiceActive ? (
             <div className="flex items-center justify-between text-xs text-[color:rgb(var(--accent-2))]">
@@ -562,6 +514,41 @@ export default function QuickAddSheet({
               />
             </div>
           ) : null}
+        </div>
+
+        <div
+          className={`overflow-hidden transition-all duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none ${
+            showPreview
+              ? 'max-h-[320px] translate-y-0 opacity-100'
+              : 'max-h-0 -translate-y-1 opacity-0 pointer-events-none'
+          }`}
+          aria-hidden={!showPreview}
+        >
+          <Card
+            className={`relative overflow-hidden border border-[color:rgba(59,130,246,0.25)] bg-[linear-gradient(135deg,rgba(15,23,42,0.94),rgba(30,58,138,0.55))] px-[var(--space-3)] py-[var(--space-3)] text-xs text-white/80 shadow-[0_12px_30px_rgba(2,8,23,0.35)] ${highlightPreview ? 'ai-highlight' : ''}`}
+          >
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-white/70">
+              <Sparkles className="h-3.5 w-3.5 text-[color:rgb(var(--accent-2))]" />
+              <span>{previewStatus}</span>
+            </div>
+            {showParsing ? (
+              <div className="mt-3 space-y-2">
+                <div className="h-4 w-2/3 animate-pulse rounded-full bg-white/10" />
+                <div className="h-3 w-1/2 animate-pulse rounded-full bg-white/10" />
+              </div>
+            ) : (
+              <>
+                <div className="mt-2 text-sm font-semibold text-white/90 truncate">{previewTitle}</div>
+                <div className="mt-1 text-xs text-white/70">{previewLine}</div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Pill className="border border-white/10 bg-white/5 text-white/70">Activ · Reminder nou</Pill>
+                  <Pill className="bg-[color:rgba(59,130,246,0.2)] text-[color:rgb(var(--accent-2))]">
+                    {previewCategory}
+                  </Pill>
+                </div>
+              </>
+            )}
+          </Card>
         </div>
 
         {isAiMode ? (
