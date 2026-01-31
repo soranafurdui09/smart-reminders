@@ -6,13 +6,15 @@ import { Plus } from 'lucide-react';
 import BottomSheet from '@/components/ui/BottomSheet';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { createTaskListAction } from './actions';
+import ListShareSheet from '@/components/lists/ListShareSheet';
 import type { TaskList } from '@/lib/tasks';
 
 type Props = {
   lists: TaskList[];
+  members: Array<{ id: string; label: string }>;
 };
 
-export default function ListsClient({ lists }: Props) {
+export default function ListsClient({ lists, members }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [name, setName] = useState('');
   const [type, setType] = useState<'generic' | 'shopping'>('generic');
@@ -49,16 +51,24 @@ export default function ListsClient({ lists }: Props) {
       <div className="grid gap-3 sm:grid-cols-2">
         {lists.length ? (
           lists.map((list) => (
-            <Link
-              key={list.id}
-              href={`/app/lists/${list.id}`}
-              className="premium-card flex flex-col gap-2 px-4 py-4"
-            >
-              <div className="text-sm font-semibold text-ink">{list.name}</div>
-              <div className="text-xs text-muted">
-                {list.type === 'shopping' ? 'Shopping list' : 'Listă generică'}
+            <div key={list.id} className="premium-card flex flex-col gap-2 px-4 py-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <Link href={`/app/lists/${list.id}`} className="text-sm font-semibold text-ink">
+                    {list.name}
+                  </Link>
+                  <div className="text-xs text-muted">
+                    {list.type === 'shopping' ? 'Shopping list' : 'Listă generică'}
+                  </div>
+                </div>
+                <ListShareSheet listId={list.id} members={members} shared={Boolean(list.household_id)} />
               </div>
-            </Link>
+              {list.household_id ? (
+                <div className="text-[11px] font-semibold text-[color:rgb(var(--accent-2))]">
+                  Shared · {members.length}
+                </div>
+              ) : null}
+            </div>
           ))
         ) : (
           <div className="text-sm text-muted">Nu există liste încă.</div>

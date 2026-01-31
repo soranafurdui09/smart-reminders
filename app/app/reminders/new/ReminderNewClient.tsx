@@ -19,6 +19,7 @@ type Props = {
   autoVoice?: boolean;
   prefillAiText?: string;
   prefillMode?: 'ai' | 'manual' | 'medication';
+  listId?: string;
   contextDefaults?: ContextSettings;
 };
 
@@ -33,6 +34,7 @@ export default function ReminderNewClient({
   autoVoice = false,
   prefillAiText,
   prefillMode,
+  listId,
   contextDefaults
 }: Props) {
   return (
@@ -58,6 +60,7 @@ export default function ReminderNewClient({
         googleConnected={googleConnected}
         prefillAiText={prefillAiText}
         prefillMode={prefillMode}
+        listId={listId}
         contextDefaults={contextDefaults}
       />
     </div>

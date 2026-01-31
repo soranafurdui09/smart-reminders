@@ -1,15 +1,16 @@
 import AppShell from '@/components/AppShell';
 import { requireUser } from '@/lib/auth';
-import { getUserLocale } from '@/lib/data';
-import { getOrCreateInboxList, getTaskItemsForList, getTaskLists } from '@/lib/tasks';
+import { getUserHousehold, getUserLocale } from '@/lib/data';
+import { getOrCreateInboxList, getTaskItemsForList, getTaskListsForHousehold } from '@/lib/tasks';
 import TasksClient from './TasksClient';
 
 export default async function TasksPage() {
   const user = await requireUser('/app/tasks');
   const locale = await getUserLocale(user.id);
-  const inbox = await getOrCreateInboxList(user.id);
+  const membership = await getUserHousehold(user.id);
+  const inbox = await getOrCreateInboxList(user.id, membership?.households?.id ?? null);
   const [lists, items] = await Promise.all([
-    getTaskLists(user.id),
+    getTaskListsForHousehold(user.id, membership?.households?.id ?? null),
     getTaskItemsForList(user.id, inbox.id, { status: 'all' })
   ]);
 

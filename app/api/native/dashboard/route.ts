@@ -47,13 +47,13 @@ export async function GET() {
 
   const householdId = membership.households.id;
   if (DEV) console.time('[native-dashboard] household data');
-  const inboxList = await getOrCreateInboxList(user.id);
+  const inboxList = await getOrCreateInboxList(user.id, householdId);
   const [occurrencesAll, members, medicationDoses, inboxTasks, inboxLists] = await Promise.all([
     getOpenOccurrencesForHousehold(householdId),
     getHouseholdMembers(householdId),
     getTodayMedicationDoses(householdId, new Date(), userTimeZone),
     getTaskItemsForList(user.id, inboxList.id, { status: 'all' }),
-    getTaskListsWithPreview(user.id)
+    getTaskListsWithPreview(user.id, 2, householdId)
   ]);
   if (DEV) console.timeEnd('[native-dashboard] household data');
 

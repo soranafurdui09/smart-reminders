@@ -2,7 +2,13 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireUser } from '@/lib/auth';
+import { createServerClient } from '@/lib/supabase/server';
+import { getUserHousehold, getUserTimeZone } from '@/lib/data';
 import { createTaskList, deleteTaskList } from '@/lib/tasks';
+import { scheduleNotificationJobsForReminder } from '@/lib/notifications/jobs';
+import { localDateAndTimeToUtc, resolveTimeZone } from '@/lib/time/schedule';
+import { addDays } from 'date-fns';
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
 export async function createTaskListAction(input: { name: string; type?: 'generic' | 'shopping' }) {
   const user = await requireUser('/app/lists');
@@ -18,4 +24,96 @@ export async function deleteTaskListAction(listId: string) {
   const user = await requireUser('/app/lists');
   await deleteTaskList(user.id, listId);
   revalidatePath('/app/lists');
+}
+
+export async function shareTaskListAction(listId: string) {
+  const user = await requireUser('/app/lists');
+  const membership = await getUserHousehold(user.id);
+  if (!membership?.households) {
+    return { ok: false, error: 'no-household' as const };
+  }
+  const supabase = createServerClient();
+  const { error } = await supabase
+    .from('task_lists')
+    .update({ household_id: membership.households.id })
+    .eq('id', listId)
+    .eq('owner_id', user.id);
+  if (error) {
+    console.error('[lists] share failed', error);
+    return { ok: false, error: 'share-failed' as const };
+  }
+  revalidatePath('/app/lists');
+  revalidatePath('/app');
+  return { ok: true };
+}
+
+export async function createListReminderAction(input: {
+  listId: string;
+  preset: 'today_evening' | 'tomorrow_morning';
+}) {
+  const user = await requireUser('/app/lists');
+  const membership = await getUserHousehold(user.id);
+  if (!membership?.households) {
+    return { ok: false, error: 'no-household' as const };
+  }
+  const supabase = createServerClient();
+  const { data: list } = await supabase
+    .from('task_lists')
+    .select('id, name')
+    .eq('id', input.listId)
+    .eq('owner_id', user.id)
+    .maybeSingle();
+  if (!list) {
+    return { ok: false, error: 'list-not-found' as const };
+  }
+
+  const userTimeZone = await getUserTimeZone(user.id);
+  const tz = resolveTimeZone(userTimeZone || 'UTC');
+  const now = new Date();
+  const base = input.preset === 'tomorrow_morning' ? addDays(toZonedTime(now, tz), 1) : toZonedTime(now, tz);
+  const dateKey = formatInTimeZone(base, tz, 'yyyy-MM-dd');
+  const timeKey = input.preset === 'today_evening' ? '20:00' : '09:00';
+  const dueAt = localDateAndTimeToUtc(dateKey, timeKey, tz);
+
+  const { data: reminder, error } = await supabase
+    .from('reminders')
+    .insert({
+      household_id: membership.households.id,
+      created_by: user.id,
+      title: `Verifică lista: ${list.name}`,
+      notes: null,
+      schedule_type: 'once',
+      due_at: dueAt.toISOString(),
+      tz,
+      is_active: true,
+      recurrence_rule: null,
+      pre_reminder_minutes: null,
+      assigned_member_id: null,
+      kind: 'generic',
+      context_settings: { list_id: list.id }
+    })
+    .select('id')
+    .maybeSingle();
+  if (error || !reminder) {
+    console.error('[list-reminder] create reminder failed', error);
+    return { ok: false, error: 'create-reminder' as const };
+  }
+
+  const { error: occurrenceError } = await supabase.from('reminder_occurrences').insert({
+    reminder_id: reminder.id,
+    occur_at: dueAt.toISOString(),
+    status: 'open'
+  });
+  if (occurrenceError) {
+    console.error('[list-reminder] create occurrence failed', occurrenceError);
+  }
+  await scheduleNotificationJobsForReminder({
+    reminderId: reminder.id,
+    userId: user.id,
+    dueAt,
+    channel: 'both'
+  });
+  revalidatePath('/app');
+  revalidatePath('/app/lists');
+  return { ok: true, reminderId: reminder.id };
 }

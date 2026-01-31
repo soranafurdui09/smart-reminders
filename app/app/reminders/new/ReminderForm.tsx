@@ -369,6 +369,7 @@ type ReminderFormProps = {
   autoVoice?: boolean;
   prefillAiText?: string;
   prefillMode?: 'ai' | 'manual' | 'medication';
+  listId?: string;
   contextDefaults?: ContextSettings;
   onVoiceStateChange?: (payload: { status: SpeechStatus; supported: boolean }) => void;
 };
@@ -383,6 +384,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   autoVoice = false,
   prefillAiText,
   prefillMode,
+  listId,
   contextDefaults,
   onVoiceStateChange
 }, ref) {
@@ -1150,6 +1152,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
       <input type="hidden" name="due_at" value={dueAt} />
       <input type="hidden" name="medication_details" value={medicationDetailsJson} />
       <input type="hidden" name="medication_add_to_calendar" value={medAddToCalendar ? '1' : ''} />
+      {listId ? <input type="hidden" name="context_list_id" value={listId} /> : null}
       <input
         type="hidden"
         name="context_category"

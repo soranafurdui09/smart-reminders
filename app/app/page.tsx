@@ -54,13 +54,13 @@ export default async function DashboardPage({
   }
 
   if (DEV) console.time('[dashboard] household data');
-  const inboxList = await getOrCreateInboxList(user.id);
+  const inboxList = await getOrCreateInboxList(user.id, membership.households.id);
   const [occurrencesAll, members, medicationDoses, inboxTasks, inboxLists] = await Promise.all([
     getOpenOccurrencesForHousehold(membership.households.id),
     getHouseholdMembers(membership.households.id),
     getTodayMedicationDoses(membership.households.id, new Date(), userTimeZone),
     getTaskItemsForList(user.id, inboxList.id, { status: 'all' }),
-    getTaskListsWithPreview(user.id)
+    getTaskListsWithPreview(user.id, 2, membership.households.id)
   ]);
   if (DEV) console.timeEnd('[dashboard] household data');
   const memberMap = new Map(

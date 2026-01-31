@@ -1,23 +1,53 @@
 "use client";
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, Circle, Plus } from 'lucide-react';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
+import ListReminderButton from '@/components/lists/ListReminderButton';
+import ListShareSheet from '@/components/lists/ListShareSheet';
 import { createTaskItemAction, toggleTaskDoneAction } from '@/app/app/tasks/actions';
+import { getBrowserClient } from '@/lib/supabase/client';
 import type { TaskItem, TaskList } from '@/lib/tasks';
 
 type Props = {
   list: TaskList;
   items: TaskItem[];
+  members: Array<{ id: string; label: string }>;
 };
 
-export default function ListDetailClient({ list, items: initialItems }: Props) {
+export default function ListDetailClient({ list, items: initialItems, members }: Props) {
   const router = useRouter();
   const [items, setItems] = useState<TaskItem[]>(initialItems);
   const [title, setTitle] = useState('');
   const [qty, setQty] = useState('');
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    const supabase = getBrowserClient();
+    const channel = supabase
+      .channel(`list-items:${list.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'task_items', filter: `list_id=eq.${list.id}` },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const next = payload.new as TaskItem;
+            setItems((prev) => (prev.some((item) => item.id === next.id) ? prev : [next, ...prev]));
+          } else if (payload.eventType === 'UPDATE') {
+            const next = payload.new as TaskItem;
+            setItems((prev) => prev.map((item) => (item.id === next.id ? { ...item, ...next } : item)));
+          } else if (payload.eventType === 'DELETE') {
+            const next = payload.old as TaskItem;
+            setItems((prev) => prev.filter((item) => item.id !== next.id));
+          }
+        }
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [list.id]);
 
   const handleToggle = (item: TaskItem) => {
     startTransition(async () => {
@@ -48,6 +78,10 @@ export default function ListDetailClient({ list, items: initialItems }: Props) {
       <div>
         <h1 className="text-2xl font-semibold text-ink">{list.name}</h1>
         <p className="text-sm text-muted">{list.type === 'shopping' ? 'Shopping list' : 'Listă generică'}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <ListReminderButton listId={list.id} listTitle={list.name} />
+          <ListShareSheet listId={list.id} members={members} shared={Boolean(list.household_id)} />
+        </div>
       </div>
 
       <div className="premium-card space-y-3 px-4 py-4">

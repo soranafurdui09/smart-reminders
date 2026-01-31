@@ -7,6 +7,7 @@ function logTaskError(scope: string, error: unknown) {
 export type TaskList = {
   id: string;
   owner_id: string;
+  household_id: string | null;
   name: string;
   type: string;
   created_at: string;
@@ -16,6 +17,7 @@ export type TaskItem = {
   id: string;
   list_id: string;
   owner_id: string;
+  household_id: string | null;
   title: string;
   notes: string | null;
   qty: string | null;
@@ -33,11 +35,11 @@ export type TaskListPreview = TaskList & {
   previewItems: Array<{ id: string; title: string; done: boolean; qty: string | null }>;
 };
 
-export async function getOrCreateInboxList(userId: string) {
+export async function getOrCreateInboxList(userId: string, householdId?: string | null) {
   const supabase = createServerClient();
   const { data: existing, error: existingError } = await supabase
     .from('task_lists')
-    .select('id, owner_id, name, type, created_at')
+    .select('id, owner_id, household_id, name, type, created_at')
     .eq('owner_id', userId)
     .eq('name', 'Inbox')
     .order('created_at', { ascending: true })
@@ -51,8 +53,8 @@ export async function getOrCreateInboxList(userId: string) {
   }
   const { data: created, error: insertError } = await supabase
     .from('task_lists')
-    .insert({ owner_id: userId, name: 'Inbox', type: 'generic' })
-    .select('id, owner_id, name, type, created_at')
+    .insert({ owner_id: userId, household_id: householdId ?? null, name: 'Inbox', type: 'generic' })
+    .select('id, owner_id, household_id, name, type, created_at')
     .single();
   if (insertError) {
     logTaskError('getOrCreateInboxList insert', insertError);
@@ -65,11 +67,26 @@ export async function getTaskLists(userId: string) {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('task_lists')
-    .select('id, owner_id, name, type, created_at')
+    .select('id, owner_id, household_id, name, type, created_at')
     .eq('owner_id', userId)
     .order('created_at', { ascending: false });
   if (error) {
     logTaskError('getTaskLists', error);
+    return [];
+  }
+  return (data ?? []) as TaskList[];
+}
+
+export async function getTaskListsForHousehold(userId: string, householdId?: string | null) {
+  if (!householdId) return getTaskLists(userId);
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from('task_lists')
+    .select('id, owner_id, household_id, name, type, created_at')
+    .or(`owner_id.eq.${userId},household_id.eq.${householdId}`)
+    .order('created_at', { ascending: false });
+  if (error) {
+    logTaskError('getTaskListsForHousehold', error);
     return [];
   }
   return (data ?? []) as TaskList[];
@@ -83,8 +100,7 @@ export async function getTaskItemsForList(
   const supabase = createServerClient();
   let query = supabase
     .from('task_items')
-    .select('id, list_id, owner_id, title, notes, qty, due_date, priority, done, done_at, created_at, updated_at')
-    .eq('owner_id', userId)
+    .select('id, list_id, owner_id, household_id, title, notes, qty, due_date, priority, done, done_at, created_at, updated_at')
     .eq('list_id', listId);
   const status = opts?.status ?? 'all';
   if (status === 'open') {
@@ -103,15 +119,14 @@ export async function getTaskItemsForList(
   return (data ?? []) as TaskItem[];
 }
 
-export async function getTaskListsWithPreview(userId: string, previewLimit = 2) {
-  const lists = await getTaskLists(userId);
+export async function getTaskListsWithPreview(userId: string, previewLimit = 2, householdId?: string | null) {
+  const lists = await getTaskListsForHousehold(userId, householdId);
   if (!lists.length) return [];
   const listIds = lists.map((list) => list.id);
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('task_items')
     .select('id, list_id, title, done, qty, created_at')
-    .eq('owner_id', userId)
     .in('list_id', listIds)
     .order('created_at', { ascending: false });
   if (error) {
@@ -151,18 +166,27 @@ export async function createTaskItem(
 ) {
   const listId = input.listId ?? (await getOrCreateInboxList(userId)).id;
   const supabase = createServerClient();
+  const { data: listRow, error: listError } = await supabase
+    .from('task_lists')
+    .select('id, household_id')
+    .eq('id', listId)
+    .maybeSingle();
+  if (listError) {
+    logTaskError('createTaskItem list lookup', listError);
+  }
   const { data, error } = await supabase
     .from('task_items')
     .insert({
       list_id: listId,
       owner_id: userId,
+      household_id: listRow?.household_id ?? null,
       title: input.title,
       notes: input.notes ?? null,
       qty: input.qty ?? null,
       due_date: input.dueDate ?? null,
       priority: input.priority ?? null
     })
-    .select('id, list_id, owner_id, title, notes, qty, due_date, priority, done, done_at, created_at, updated_at')
+    .select('id, list_id, owner_id, household_id, title, notes, qty, due_date, priority, done, done_at, created_at, updated_at')
     .single();
   if (error) {
     logTaskError('createTaskItem', error);
@@ -179,9 +203,8 @@ export async function toggleTaskDone(userId: string, itemId: string, done: boole
       done,
       done_at: done ? new Date().toISOString() : null
     })
-    .eq('owner_id', userId)
     .eq('id', itemId)
-    .select('id, list_id, owner_id, title, notes, qty, due_date, priority, done, done_at, created_at, updated_at')
+    .select('id, list_id, owner_id, household_id, title, notes, qty, due_date, priority, done, done_at, created_at, updated_at')
     .single();
   if (error) {
     logTaskError('toggleTaskDone', error);
@@ -205,9 +228,8 @@ export async function updateTaskItem(
   const { data, error } = await supabase
     .from('task_items')
     .update(patch)
-    .eq('owner_id', userId)
     .eq('id', itemId)
-    .select('id, list_id, owner_id, title, notes, qty, due_date, priority, done, done_at, created_at, updated_at')
+    .select('id, list_id, owner_id, household_id, title, notes, qty, due_date, priority, done, done_at, created_at, updated_at')
     .single();
   if (error) {
     logTaskError('updateTaskItem', error);
@@ -221,7 +243,6 @@ export async function deleteTaskItem(userId: string, itemId: string) {
   const { error } = await supabase
     .from('task_items')
     .delete()
-    .eq('owner_id', userId)
     .eq('id', itemId);
   if (error) {
     logTaskError('deleteTaskItem', error);
@@ -231,17 +252,18 @@ export async function deleteTaskItem(userId: string, itemId: string) {
 
 export async function createTaskList(
   userId: string,
-  input: { name: string; type?: 'generic' | 'shopping' }
+  input: { name: string; type?: 'generic' | 'shopping'; householdId?: string | null }
 ) {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('task_lists')
     .insert({
       owner_id: userId,
+      household_id: input.householdId ?? null,
       name: input.name,
       type: input.type ?? 'generic'
     })
-    .select('id, owner_id, name, type, created_at')
+    .select('id, owner_id, household_id, name, type, created_at')
     .single();
   if (error) {
     logTaskError('createTaskList', error);
@@ -255,7 +277,6 @@ export async function deleteTaskList(userId: string, listId: string) {
   const { error } = await supabase
     .from('task_lists')
     .delete()
-    .eq('owner_id', userId)
     .eq('id', listId);
   if (error) {
     logTaskError('deleteTaskList', error);

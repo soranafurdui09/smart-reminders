@@ -116,6 +116,10 @@ export async function createReminder(formData: FormData) {
   const voiceAuto = String(formData.get('voice_auto') || '') === '1';
   const tz = String(formData.get('tz') || '').trim() || 'UTC';
   const contextSettings = buildContextSettings(formData, contextDefaults);
+  const listIdRaw = String(formData.get('context_list_id') || '').trim();
+  const contextSettingsWithList = listIdRaw
+    ? (contextSettings ? { ...contextSettings, list_id: listIdRaw } : { list_id: listIdRaw })
+    : contextSettings;
   const medicationDetailsRaw = String(formData.get('medication_details') || '').trim();
   const medicationAddCalendar = String(formData.get('medication_add_to_calendar') || '') === '1';
 
@@ -197,7 +201,7 @@ export async function createReminder(formData: FormData) {
       recurrence_rule: recurrenceRuleRaw || null,
       pre_reminder_minutes: preReminderValue,
       assigned_member_id: assignedMemberId,
-      context_settings: contextSettings,
+      context_settings: contextSettingsWithList,
       kind,
       medication_details: medicationDetails ? medicationDetails : null
     })

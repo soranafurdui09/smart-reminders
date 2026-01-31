@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react';
 import { AlertTriangle, Calendar, CheckCircle2, Circle, Clock, PencilLine, Pill, SunMedium, Users } from 'lucide-react';
 import SemanticSearch from '@/components/SemanticSearch';
 import HomeHeader from '@/components/home/HomeHeader';
@@ -15,6 +15,8 @@ import ReminderRowMobile from '@/components/mobile/ReminderRowMobile';
 import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
 import ReminderCard from '@/components/dashboard/ReminderCard';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
+import ListReminderButton from '@/components/lists/ListReminderButton';
+import ListShareSheet from '@/components/lists/ListShareSheet';
 import { messages, type Locale } from '@/lib/i18n';
 import {
   diffDaysInTimeZone,
@@ -145,7 +147,7 @@ const SectionHeading = ({
   countLabel
 }: {
   label: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   countLabel?: string;
 }) => (
   <div className="flex items-center gap-3">
@@ -169,6 +171,7 @@ export default function ReminderDashboardSection({
   googleConnected,
   medicationDoses,
   inboxTasks = [],
+  inboxLists = [],
   memberLabels,
   householdId,
   initialCreatedBy = 'all',
@@ -368,6 +371,11 @@ export default function ReminderDashboardSection({
     return { overdue, today, soon, todayAll, doneCount, totalCount: todayAll.length };
   }, [effectiveTimeZone, datedOccurrences]);
 
+  const householdMembers = useMemo(
+    () => Object.entries(memberLabels).map(([id, label]) => ({ id, label })),
+    [memberLabels]
+  );
+
   const overdueItems = mobileBuckets.overdue;
   const todayOpenItems = mobileBuckets.today;
   const soonItems = mobileBuckets.soon;
@@ -410,10 +418,87 @@ export default function ReminderDashboardSection({
     return { total: todayItems.length, taken: takenCount };
   }, [doseState, effectiveTimeZone]);
 
-  const mobileInboxItems = useMemo(
-    () => inboxReminderItems.slice(0, mobileInboxLimit),
-    [inboxReminderItems, mobileInboxLimit]
+  const inboxReminderBuckets = useMemo(() => {
+    const now = new Date();
+    const overdue: OccurrencePayload[] = [];
+    const today: OccurrencePayload[] = [];
+    const soon: OccurrencePayload[] = [];
+    const later: OccurrencePayload[] = [];
+    const undated: OccurrencePayload[] = [];
+
+    inboxReminderItems.forEach((occurrence) => {
+      if (!occurrence.reminder?.due_at) {
+        undated.push(occurrence);
+        return;
+      }
+      const rawDate = occurrence.effective_at ?? occurrence.occur_at;
+      const reminderTimeZone = resolveReminderTimeZone(occurrence.reminder?.tz ?? null, effectiveTimeZone);
+      const compareDate = occurrence.snoozed_until
+        ? new Date(rawDate)
+        : coerceDateForTimeZone(rawDate, reminderTimeZone);
+      if (Number.isNaN(compareDate.getTime())) {
+        undated.push(occurrence);
+        return;
+      }
+      const bucketTimeZone = reminderTimeZone || effectiveTimeZone;
+      const dayDiff = diffDaysInTimeZone(compareDate, now, bucketTimeZone);
+      if (dayDiff < 0) {
+        overdue.push(occurrence);
+      } else if (dayDiff === 0) {
+        today.push(occurrence);
+      } else if (dayDiff <= 7) {
+        soon.push(occurrence);
+      } else {
+        later.push(occurrence);
+      }
+    });
+
+    return { overdue, today, soon, later, undated };
+  }, [effectiveTimeZone, inboxReminderItems]);
+
+  const reminderUndated = useMemo(() => inboxReminderBuckets.undated, [inboxReminderBuckets]);
+  const reminderUndatedLimited = useMemo(
+    () => reminderUndated.slice(0, mobileInboxLimit),
+    [reminderUndated, mobileInboxLimit]
   );
+  const reminderLater = useMemo(() => inboxReminderBuckets.later, [inboxReminderBuckets]);
+  const taskBuckets = useMemo(() => {
+    const now = new Date();
+    const overdue: TaskItem[] = [];
+    const today: TaskItem[] = [];
+    const soon: TaskItem[] = [];
+    const later: TaskItem[] = [];
+    const undated: TaskItem[] = [];
+    taskItems.forEach((item) => {
+      if (!item.due_date) {
+        undated.push(item);
+        return;
+      }
+      const dueDate = new Date(`${item.due_date}T00:00:00`);
+      if (Number.isNaN(dueDate.getTime())) {
+        undated.push(item);
+        return;
+      }
+      const dayDiff = diffDaysInTimeZone(dueDate, now, effectiveTimeZone);
+      if (dayDiff < 0) {
+        overdue.push(item);
+      } else if (dayDiff === 0) {
+        today.push(item);
+      } else if (dayDiff <= 7) {
+        soon.push(item);
+      } else {
+        later.push(item);
+      }
+    });
+    return { overdue, today, soon, later, undated };
+  }, [taskItems, effectiveTimeZone]);
+  const inboxOverdue = inboxReminderBuckets.overdue;
+  const inboxToday = inboxReminderBuckets.today;
+  const inboxSoon = inboxReminderBuckets.soon;
+  const inboxLater = inboxReminderBuckets.later;
+  const inboxUndated = inboxReminderBuckets.undated;
+  const hasInboxReminders = inboxOverdue.length + inboxToday.length + inboxSoon.length + inboxLater.length + inboxUndated.length > 0;
+  const hasInboxTasks = taskBuckets.overdue.length + taskBuckets.today.length + taskBuckets.soon.length + taskBuckets.later.length + taskBuckets.undated.length > 0;
 
   useEffect(() => {
     if (autoExpanded) return;
@@ -578,7 +663,9 @@ export default function ReminderDashboardSection({
       activeTab === 'inbox'
         ? inboxView === 'tasks'
           ? `${taskItems.length} taskuri`
-          : `${inboxReminderItems.length} ${copy.dashboard.reminderCountLabel}`
+          : inboxView === 'lists'
+            ? `${listItems.length} liste`
+            : `${inboxReminderItems.length} ${copy.dashboard.reminderCountLabel}`
         : `${todayOpenItems.length} ${copy.dashboard.todayTitle} • ${overdueItems.length} ${copy.dashboard.todayOverdue}`;
     window.dispatchEvent(new CustomEvent('topbar:subtitle', { detail: { subtitle } }));
     return () => {
@@ -589,6 +676,7 @@ export default function ReminderDashboardSection({
     inboxReminderItems.length,
     inboxView,
     taskItems.length,
+    listItems.length,
     todayOpenItems.length,
     overdueItems.length,
     copy.dashboard.reminderCountLabel,
@@ -653,30 +741,33 @@ export default function ReminderDashboardSection({
               </button>
             </div>
             {inboxView === 'reminders' ? (
-              <div className="card-soft space-y-[var(--space-2)] p-[var(--space-3)]">
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-muted2">
-                  Filtre rapide
+              <details className="card-soft group p-[var(--space-3)]">
+                <summary className="flex cursor-pointer items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-muted2">
+                  Filtre
+                  <span className="text-[11px] font-semibold text-muted2 group-open:rotate-180 transition">▾</span>
+                </summary>
+                <div className="mt-[var(--space-2)]">
+                  <ReminderFiltersPanel
+                    locale={locale}
+                    kindFilter={kindFilter}
+                    createdBy={createdBy}
+                    assignment={assignment}
+                    category={categoryFilter}
+                    onChangeKind={(value) => setKindFilter(value)}
+                    onChangeCreatedBy={(value) => {
+                      if (CreatedOptions.includes(value)) {
+                        setCreatedBy(value);
+                      }
+                    }}
+                    onChangeAssignment={(value) => {
+                      if (AssignmentOptions.includes(value)) {
+                        setAssignment(value);
+                      }
+                    }}
+                    onChangeCategory={(value) => setCategoryFilter(value)}
+                  />
                 </div>
-                <ReminderFiltersPanel
-                  locale={locale}
-                  kindFilter={kindFilter}
-                  createdBy={createdBy}
-                  assignment={assignment}
-                  category={categoryFilter}
-                  onChangeKind={(value) => setKindFilter(value)}
-                  onChangeCreatedBy={(value) => {
-                    if (CreatedOptions.includes(value)) {
-                      setCreatedBy(value);
-                    }
-                  }}
-                  onChangeAssignment={(value) => {
-                    if (AssignmentOptions.includes(value)) {
-                      setAssignment(value);
-                    }
-                  }}
-                  onChangeCategory={(value) => setCategoryFilter(value)}
-                />
-              </div>
+              </details>
             ) : null}
             <div className="flex flex-wrap gap-2">
               {[
@@ -702,29 +793,139 @@ export default function ReminderDashboardSection({
             </div>
             {inboxView === 'tasks' ? (
               taskItems.length ? (
-                <div className="space-y-[var(--space-2)]">
-                  {taskItems.map((item) => (
-                    <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
-                      <button
-                        type="button"
-                        className="mt-0.5 text-[color:rgb(var(--accent))]"
-                        aria-pressed={item.done}
-                        aria-label={item.done ? 'Marchează ca nefinalizat' : 'Marchează ca finalizat'}
-                        onClick={() => handleToggleTask(item)}
-                        disabled={taskPending}
-                      >
-                        {item.done ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
-                      </button>
-                      <div className="min-w-0 flex-1">
-                        <div className={`text-sm font-semibold ${item.done ? 'text-muted line-through' : 'text-ink'}`}>
-                          {item.title}
+                <div className="space-y-[var(--space-3)]">
+                  {taskBuckets.overdue.length ? (
+                    <div className="space-y-2">
+                      <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Restante</div>
+                      {taskBuckets.overdue.map((item) => (
+                        <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
+                          <button
+                            type="button"
+                            className="mt-0.5 text-[color:rgb(var(--accent))]"
+                            aria-pressed={item.done}
+                            aria-label={item.done ? 'Marchează ca nefinalizat' : 'Marchează ca finalizat'}
+                            onClick={() => handleToggleTask(item)}
+                            disabled={taskPending}
+                          >
+                            {item.done ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <div className={`text-sm font-semibold ${item.done ? 'text-muted line-through' : 'text-ink'}`}>
+                              {item.title}
+                            </div>
+                            {item.due_date ? (
+                              <div className="mt-1 text-xs text-muted">Scadență: {item.due_date}</div>
+                            ) : null}
+                          </div>
                         </div>
-                        {item.due_date ? (
-                          <div className="mt-1 text-xs text-muted">Scadență: {item.due_date}</div>
-                        ) : null}
-                      </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : null}
+                  {taskBuckets.today.length ? (
+                    <div className="space-y-2">
+                      <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Azi</div>
+                      {taskBuckets.today.map((item) => (
+                        <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
+                          <button
+                            type="button"
+                            className="mt-0.5 text-[color:rgb(var(--accent))]"
+                            aria-pressed={item.done}
+                            aria-label={item.done ? 'Marchează ca nefinalizat' : 'Marchează ca finalizat'}
+                            onClick={() => handleToggleTask(item)}
+                            disabled={taskPending}
+                          >
+                            {item.done ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <div className={`text-sm font-semibold ${item.done ? 'text-muted line-through' : 'text-ink'}`}>
+                              {item.title}
+                            </div>
+                            {item.due_date ? (
+                              <div className="mt-1 text-xs text-muted">Scadență: {item.due_date}</div>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {taskBuckets.soon.length ? (
+                    <div className="space-y-2">
+                      <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Următoarele 7 zile</div>
+                      {taskBuckets.soon.map((item) => (
+                        <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
+                          <button
+                            type="button"
+                            className="mt-0.5 text-[color:rgb(var(--accent))]"
+                            aria-pressed={item.done}
+                            aria-label={item.done ? 'Marchează ca nefinalizat' : 'Marchează ca finalizat'}
+                            onClick={() => handleToggleTask(item)}
+                            disabled={taskPending}
+                          >
+                            {item.done ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <div className={`text-sm font-semibold ${item.done ? 'text-muted line-through' : 'text-ink'}`}>
+                              {item.title}
+                            </div>
+                            {item.due_date ? (
+                              <div className="mt-1 text-xs text-muted">Scadență: {item.due_date}</div>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {taskBuckets.later.length ? (
+                    <div className="space-y-2">
+                      <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Mai târziu</div>
+                      {taskBuckets.later.map((item) => (
+                        <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
+                          <button
+                            type="button"
+                            className="mt-0.5 text-[color:rgb(var(--accent))]"
+                            aria-pressed={item.done}
+                            aria-label={item.done ? 'Marchează ca nefinalizat' : 'Marchează ca finalizat'}
+                            onClick={() => handleToggleTask(item)}
+                            disabled={taskPending}
+                          >
+                            {item.done ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <div className={`text-sm font-semibold ${item.done ? 'text-muted line-through' : 'text-ink'}`}>
+                              {item.title}
+                            </div>
+                            {item.due_date ? (
+                              <div className="mt-1 text-xs text-muted">Scadență: {item.due_date}</div>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {taskBuckets.undated.length ? (
+                    <div className="space-y-2">
+                      <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Fără dată</div>
+                      {taskBuckets.undated.map((item) => (
+                        <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
+                          <button
+                            type="button"
+                            className="mt-0.5 text-[color:rgb(var(--accent))]"
+                            aria-pressed={item.done}
+                            aria-label={item.done ? 'Marchează ca nefinalizat' : 'Marchează ca finalizat'}
+                            onClick={() => handleToggleTask(item)}
+                            disabled={taskPending}
+                          >
+                            {item.done ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <div className={`text-sm font-semibold ${item.done ? 'text-muted line-through' : 'text-ink'}`}>
+                              {item.title}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               ) : (
                 <div className="premium-card p-[var(--space-3)] text-sm text-tertiary">
@@ -735,22 +936,31 @@ export default function ReminderDashboardSection({
               listItems.length ? (
                 <div className="space-y-[var(--space-2)]">
                   {listItems.map((list) => (
-                    <Link
-                      key={list.id}
-                      href={`/app/lists/${list.id}`}
-                      className="premium-card block space-y-2 px-4 py-3 transition hover:bg-surfaceMuted"
-                    >
+                    <div key={list.id} className="premium-card space-y-2 px-4 py-3 transition hover:bg-surfaceMuted">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <div className="text-sm font-semibold text-ink truncate">{list.name}</div>
+                          <Link href={`/app/lists/${list.id}`} className="text-sm font-semibold text-ink truncate">
+                            {list.name}
+                          </Link>
                           <div className="text-xs text-tertiary">
                             {list.doneCount}/{list.totalCount} finalizate
                           </div>
                         </div>
-                        <span className="chip">
-                          {list.type === 'shopping' ? 'Shopping' : 'Listă'}
-                        </span>
+                        <div className="flex flex-col items-end gap-2">
+                          <span className="chip">
+                            {list.type === 'shopping' ? 'Shopping' : 'Listă'}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <ListReminderButton listId={list.id} listTitle={list.name} />
+                            <ListShareSheet listId={list.id} members={householdMembers} shared={Boolean(list.household_id)} />
+                          </div>
+                        </div>
                       </div>
+                      {list.household_id ? (
+                        <div className="text-[11px] font-semibold text-[color:rgb(var(--accent-2))]">
+                          Shared · {householdMembers.length}
+                        </div>
+                      ) : null}
                       {list.previewItems.length ? (
                         <div className="space-y-1 text-xs text-muted">
                           {list.previewItems.map((item) => (
@@ -762,7 +972,7 @@ export default function ReminderDashboardSection({
                       ) : (
                         <div className="text-xs text-tertiary">Nicio intrare încă.</div>
                       )}
-                    </Link>
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -770,24 +980,86 @@ export default function ReminderDashboardSection({
                   Nu ai liste create.
                 </div>
               )
-            ) : mobileInboxItems.length ? (
-              <div className="space-y-[var(--space-2)]">
-                {mobileInboxItems.map((occurrence) => (
-                  <ReminderRowMobile
-                    key={occurrence.id}
-                    occurrence={occurrence}
-                    locale={locale}
-                    googleConnected={googleConnected}
-                    userTimeZone={effectiveTimeZone}
-                  />
-                ))}
-              </div>
             ) : (
-              <div className="premium-card p-[var(--space-3)] text-sm text-tertiary">
-                {copy.dashboard.empty}
-              </div>
+              <>
+                {inboxOverdue.length ? (
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Restante</div>
+                    {inboxOverdue.map((occurrence) => (
+                      <ReminderRowMobile
+                        key={occurrence.id}
+                        occurrence={occurrence}
+                        locale={locale}
+                        googleConnected={googleConnected}
+                        userTimeZone={effectiveTimeZone}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+                {inboxToday.length ? (
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Azi</div>
+                    {inboxToday.map((occurrence) => (
+                      <ReminderRowMobile
+                        key={occurrence.id}
+                        occurrence={occurrence}
+                        locale={locale}
+                        googleConnected={googleConnected}
+                        userTimeZone={effectiveTimeZone}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+                {inboxSoon.length ? (
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Următoarele 7 zile</div>
+                    {inboxSoon.map((occurrence) => (
+                      <ReminderRowMobile
+                        key={occurrence.id}
+                        occurrence={occurrence}
+                        locale={locale}
+                        googleConnected={googleConnected}
+                        userTimeZone={effectiveTimeZone}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+                {inboxLater.length ? (
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Mai târziu</div>
+                    {inboxLater.map((occurrence) => (
+                      <ReminderRowMobile
+                        key={occurrence.id}
+                        occurrence={occurrence}
+                        locale={locale}
+                        googleConnected={googleConnected}
+                        userTimeZone={effectiveTimeZone}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+                {reminderUndatedLimited.length ? (
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Fără dată</div>
+                    {reminderUndatedLimited.map((occurrence) => (
+                      <ReminderRowMobile
+                        key={occurrence.id}
+                        occurrence={occurrence}
+                        locale={locale}
+                        googleConnected={googleConnected}
+                        userTimeZone={effectiveTimeZone}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+                {!inboxOverdue.length && !inboxToday.length && !inboxSoon.length && !inboxLater.length && !reminderUndatedLimited.length ? (
+                  <div className="premium-card p-[var(--space-3)] text-sm text-tertiary">
+                    {copy.dashboard.empty}
+                  </div>
+                ) : null}
+              </>
             )}
-            {inboxView === 'reminders' && inboxReminderItems.length > mobileInboxLimit ? (
+            {inboxView === 'reminders' && reminderUndated.length > mobileInboxLimit ? (
               <button
                 type="button"
                 className="text-xs font-semibold text-secondary"
@@ -942,25 +1214,33 @@ export default function ReminderDashboardSection({
             <SemanticSearch householdId={householdId} localeTag={localeTag} copy={copy.search} />
             {activeTab === 'inbox' ? (
               <div className="mt-4">
-                <ReminderFiltersPanel
-                  locale={locale}
-                  kindFilter={kindFilter}
-                  createdBy={createdBy}
-                  assignment={assignment}
-                  category={categoryFilter}
-                  onChangeKind={(value) => setKindFilter(value)}
-                  onChangeCreatedBy={(value) => {
-                    if (CreatedOptions.includes(value)) {
-                      setCreatedBy(value);
-                    }
-                  }}
-                  onChangeAssignment={(value) => {
-                    if (AssignmentOptions.includes(value)) {
-                      setAssignment(value);
-                    }
-                  }}
-                  onChangeCategory={(value) => setCategoryFilter(value)}
-                />
+                <details className="group">
+                  <summary className="flex cursor-pointer items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-muted2">
+                    Filtre
+                    <span className="text-[11px] font-semibold text-muted2 transition group-open:rotate-180">▾</span>
+                  </summary>
+                  <div className="mt-3">
+                    <ReminderFiltersPanel
+                      locale={locale}
+                      kindFilter={kindFilter}
+                      createdBy={createdBy}
+                      assignment={assignment}
+                      category={categoryFilter}
+                      onChangeKind={(value) => setKindFilter(value)}
+                      onChangeCreatedBy={(value) => {
+                        if (CreatedOptions.includes(value)) {
+                          setCreatedBy(value);
+                        }
+                      }}
+                      onChangeAssignment={(value) => {
+                        if (AssignmentOptions.includes(value)) {
+                          setAssignment(value);
+                        }
+                      }}
+                      onChangeCategory={(value) => setCategoryFilter(value)}
+                    />
+                  </div>
+                </details>
               </div>
             ) : null}
           </div>
@@ -989,51 +1269,140 @@ export default function ReminderDashboardSection({
                 >
                   Taskuri
                 </button>
+                <button
+                  type="button"
+                  className={`premium-chip ${inboxView === 'lists' ? 'border-[color:rgba(59,130,246,0.4)] text-[color:rgb(var(--accent-2))]' : ''}`}
+                  onClick={() => setInboxView('lists')}
+                >
+                  Liste
+                </button>
               </div>
               {inboxView === 'tasks' ? (
-                taskItems.length ? (
-                  <div className="grid gap-3 list-optimized">
-                    {taskItems.map((item) => (
-                      <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
-                        <button
-                          type="button"
-                          className="mt-0.5 text-[color:rgb(var(--accent))]"
-                          aria-pressed={item.done}
-                          aria-label={item.done ? 'Marchează ca nefinalizat' : 'Marchează ca finalizat'}
-                          onClick={() => handleToggleTask(item)}
-                          disabled={taskPending}
-                        >
-                          {item.done ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
-                        </button>
-                        <div className="min-w-0 flex-1">
-                          <div className={`text-sm font-semibold ${item.done ? 'text-muted line-through' : 'text-ink'}`}>
-                            {item.title}
+                hasInboxTasks ? (
+                  <div className="space-y-4">
+                    {[
+                      { id: 'overdue', label: 'Restante', items: taskBuckets.overdue },
+                      { id: 'today', label: 'Azi', items: taskBuckets.today },
+                      { id: 'soon', label: 'Următoarele 7 zile', items: taskBuckets.soon },
+                      { id: 'later', label: 'Mai târziu', items: taskBuckets.later },
+                      { id: 'undated', label: 'Fără dată', items: taskBuckets.undated }
+                    ].map((section) =>
+                      section.items.length ? (
+                        <div key={section.id} className="space-y-2">
+                          <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">
+                            {section.label}
                           </div>
-                          {item.due_date ? (
-                            <div className="mt-1 text-xs text-muted">Scadență: {item.due_date}</div>
-                          ) : null}
+                          <div className="grid gap-3 list-optimized">
+                            {section.items.map((item) => (
+                              <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
+                                <button
+                                  type="button"
+                                  className="mt-0.5 text-[color:rgb(var(--accent))]"
+                                  aria-pressed={item.done}
+                                  aria-label={item.done ? 'Marchează ca nefinalizat' : 'Marchează ca finalizat'}
+                                  onClick={() => handleToggleTask(item)}
+                                  disabled={taskPending}
+                                >
+                                  {item.done ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
+                                </button>
+                                <div className="min-w-0 flex-1">
+                                  <div className={`text-sm font-semibold ${item.done ? 'text-muted line-through' : 'text-ink'}`}>
+                                    {item.title}
+                                  </div>
+                                  {item.due_date ? (
+                                    <div className="mt-1 text-xs text-muted">Scadență: {item.due_date}</div>
+                                  ) : null}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ) : null
+                    )}
                   </div>
                 ) : (
                   <div className="card text-sm text-muted">
                     Nu ai taskuri în Inbox.
                   </div>
                 )
-              ) : inboxReminderItems.length ? (
-                <div className="grid gap-3 list-optimized">
-                  {inboxReminderItems.map((occurrence) => (
-                    <ReminderCard
-                      key={occurrence.id}
-                      occurrence={occurrence}
-                      locale={locale}
-                      googleConnected={googleConnected}
-                      userTimeZone={effectiveTimeZone}
-                      urgency={urgencyStyles.scheduled}
-                      variant="row"
-                    />
-                  ))}
+              ) : inboxView === 'lists' ? (
+                listItems.length ? (
+                  <div className="grid gap-3 md:grid-cols-2 list-optimized">
+                    {listItems.map((list) => (
+                      <div key={list.id} className="premium-card space-y-2 px-4 py-3 transition hover:bg-surfaceMuted">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <Link href={`/app/lists/${list.id}`} className="text-sm font-semibold text-ink truncate">
+                              {list.name}
+                            </Link>
+                            <div className="text-xs text-tertiary">
+                              {list.doneCount}/{list.totalCount} finalizate
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <span className="chip">
+                              {list.type === 'shopping' ? 'Shopping' : 'Listă'}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <ListReminderButton listId={list.id} listTitle={list.name} />
+                              <ListShareSheet listId={list.id} members={householdMembers} shared={Boolean(list.household_id)} />
+                            </div>
+                          </div>
+                        </div>
+                        {list.household_id ? (
+                          <div className="text-[11px] font-semibold text-[color:rgb(var(--accent-2))]">
+                            Shared · {householdMembers.length}
+                          </div>
+                        ) : null}
+                        {list.previewItems.length ? (
+                          <div className="space-y-1 text-xs text-muted">
+                            {list.previewItems.map((item) => (
+                              <div key={item.id} className={item.done ? 'line-through text-tertiary' : ''}>
+                                • {item.title}{item.qty ? ` · ${item.qty}` : ''}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-tertiary">Nicio intrare încă.</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="card text-sm text-muted">
+                    Nu ai liste create.
+                  </div>
+                )
+              ) : hasInboxReminders ? (
+                <div className="space-y-4">
+                  {[
+                    { id: 'overdue', label: 'Restante', items: inboxOverdue },
+                    { id: 'today', label: 'Azi', items: inboxToday },
+                    { id: 'soon', label: 'Următoarele 7 zile', items: inboxSoon },
+                    { id: 'later', label: 'Mai târziu', items: inboxLater },
+                    { id: 'undated', label: 'Fără dată', items: inboxUndated }
+                  ].map((section) =>
+                    section.items.length ? (
+                      <div key={section.id} className="space-y-2">
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">
+                          {section.label}
+                        </div>
+                        <div className="grid gap-3 list-optimized">
+                          {section.items.map((occurrence) => (
+                            <ReminderCard
+                              key={occurrence.id}
+                              occurrence={occurrence}
+                              locale={locale}
+                              googleConnected={googleConnected}
+                              userTimeZone={effectiveTimeZone}
+                              urgency={urgencyStyles.scheduled}
+                              variant="row"
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ) : null
+                  )}
                 </div>
               ) : (
                 <div className="card text-sm text-muted">
