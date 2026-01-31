@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import QuickAddSheet from '@/components/mobile/QuickAddSheet';
@@ -8,6 +9,7 @@ import QuickActionsSheet from '@/components/mobile/QuickActionsSheet';
 
 export default function MobileFab() {
   const router = useRouter();
+  const [isNative, setIsNative] = useState(false);
   const [open, setOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [initialText, setInitialText] = useState<string | undefined>(undefined);
@@ -16,6 +18,7 @@ export default function MobileFab() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    setIsNative(Capacitor.isNativePlatform());
     const handleOpen = (event: Event) => {
       const detail = (event as CustomEvent<{ text?: string; voice?: boolean; mode?: 'ai' | 'task' | 'list' }>).detail;
       if (detail?.text) {
@@ -53,6 +56,10 @@ export default function MobileFab() {
         onSelect={(key) => {
           if (key === 'medication') {
             router.push('/app/medications/new');
+            return;
+          }
+          if (key === 'task' && isNative) {
+            router.push('/app/tasks');
             return;
           }
           if (key === 'tasks') {
