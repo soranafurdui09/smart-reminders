@@ -413,10 +413,7 @@ export default function QuickAddSheet({
       formData.set('kind', 'generic');
       formData.set('title', parsed?.title || trimmed);
       const baseNotes = parsed?.description || '';
-      const listSuffix = activeMode === 'list' && listName
-        ? `${baseNotes ? `${baseNotes}\n` : ''}Listă: ${listName}`
-        : baseNotes;
-      formData.set('notes', listSuffix);
+      formData.set('notes', baseNotes);
       const fallbackRule = buildRecurrenceRule();
       formData.set('recurrence_rule', parsed?.recurrenceRule || fallbackRule);
       formData.set('schedule_type', deriveScheduleType(parsed?.recurrenceRule || fallbackRule));
