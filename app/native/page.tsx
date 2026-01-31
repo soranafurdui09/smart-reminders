@@ -29,6 +29,7 @@ type DashboardPayload = {
   googleConnected: boolean;
   memberLabels: Record<string, string>;
   medicationDoses: any[];
+  inboxTasks: any[];
   occurrences: any[];
 };
 
@@ -265,6 +266,7 @@ export default function NativePage() {
                   userId={dashboard.user.id}
                   googleConnected={dashboard.googleConnected}
                   medicationDoses={dashboard.medicationDoses}
+                  inboxTasks={dashboard.inboxTasks}
                   memberLabels={dashboard.memberLabels}
                   initialCreatedBy="all"
                   initialAssignment="all"

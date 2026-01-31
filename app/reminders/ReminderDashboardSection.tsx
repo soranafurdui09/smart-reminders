@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Calendar, Clock, PencilLine, Pill, SunMedium, Users } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { AlertTriangle, Calendar, CheckCircle2, Circle, Clock, PencilLine, Pill, SunMedium, Users } from 'lucide-react';
 import SemanticSearch from '@/components/SemanticSearch';
 import HomeHeader from '@/components/home/HomeHeader';
 import NextUpCard from '@/components/home/NextUpCard';
@@ -26,6 +26,8 @@ import {
 } from '@/lib/dates';
 import { getReminderCategory, inferReminderCategoryId, type ReminderCategoryId } from '@/lib/categories';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
+import { toggleTaskDoneAction } from '@/app/app/tasks/actions';
+import type { TaskItem } from '@/lib/tasks';
 
 type CreatedByOption = 'all' | 'me' | 'others';
 type AssignmentOption = 'all' | 'assigned_to_me';
@@ -80,6 +82,7 @@ type Props = {
   userId: string;
   googleConnected: boolean;
   medicationDoses: MedicationDose[];
+  inboxTasks?: TaskItem[];
   memberLabels: Record<string, string>;
   householdId: string;
   initialCreatedBy?: CreatedByOption;
@@ -164,6 +167,7 @@ export default function ReminderDashboardSection({
   userId,
   googleConnected,
   medicationDoses,
+  inboxTasks = [],
   memberLabels,
   householdId,
   initialCreatedBy = 'all',
@@ -190,6 +194,9 @@ export default function ReminderDashboardSection({
   const [activeTab, setActiveTab] = useState<TabOption>(initialTab);
   const [mobileInboxLimit, setMobileInboxLimit] = useState(30);
   const [homeSegment, setHomeSegment] = useState<'today' | 'overdue' | 'soon'>('today');
+  const [inboxView, setInboxView] = useState<'reminders' | 'tasks'>('reminders');
+  const [taskItems, setTaskItems] = useState<TaskItem[]>(inboxTasks);
+  const [taskPending, startTaskTransition] = useTransition();
 
   const filteredOccurrences = useMemo(() => {
     const normalized = occurrences
@@ -233,10 +240,10 @@ export default function ReminderDashboardSection({
     return normalized;
   }, [occurrences, createdBy, assignment, membershipId, userId, kindFilter, categoryFilter]);
 
-  const inboxOccurrences = useMemo(
-    () => filteredOccurrences.filter((occurrence) => !occurrence.reminder?.due_at),
-    [filteredOccurrences]
-  );
+  const inboxReminderItems = useMemo(() => {
+    const unscheduled = filteredOccurrences.filter((occurrence) => !occurrence.reminder?.due_at);
+    return unscheduled.length ? unscheduled : filteredOccurrences;
+  }, [filteredOccurrences]);
 
   const datedOccurrences = useMemo(
     () => filteredOccurrences.filter((occurrence) => Boolean(occurrence.reminder?.due_at)),
@@ -399,8 +406,8 @@ export default function ReminderDashboardSection({
   }, [doseState, effectiveTimeZone]);
 
   const mobileInboxItems = useMemo(
-    () => inboxOccurrences.slice(0, mobileInboxLimit),
-    [inboxOccurrences, mobileInboxLimit]
+    () => inboxReminderItems.slice(0, mobileInboxLimit),
+    [inboxReminderItems, mobileInboxLimit]
   );
 
   useEffect(() => {
@@ -564,7 +571,9 @@ export default function ReminderDashboardSection({
     if (typeof window === 'undefined') return;
     const subtitle =
       activeTab === 'inbox'
-        ? `${inboxOccurrences.length} ${copy.dashboard.reminderCountLabel}`
+        ? inboxView === 'tasks'
+          ? `${taskItems.length} taskuri`
+          : `${inboxReminderItems.length} ${copy.dashboard.reminderCountLabel}`
         : `${todayOpenItems.length} ${copy.dashboard.todayTitle} • ${overdueItems.length} ${copy.dashboard.todayOverdue}`;
     window.dispatchEvent(new CustomEvent('topbar:subtitle', { detail: { subtitle } }));
     return () => {
@@ -572,13 +581,33 @@ export default function ReminderDashboardSection({
     };
   }, [
     activeTab,
-    inboxOccurrences.length,
+    inboxReminderItems.length,
+    inboxView,
+    taskItems.length,
     todayOpenItems.length,
     overdueItems.length,
     copy.dashboard.reminderCountLabel,
     copy.dashboard.todayTitle,
     copy.dashboard.todayOverdue
   ]);
+
+  useEffect(() => {
+    setTaskItems(inboxTasks);
+  }, [inboxTasks]);
+
+  useEffect(() => {
+    if (!inboxReminderItems.length && taskItems.length) {
+      setInboxView('tasks');
+    }
+  }, [inboxReminderItems.length, taskItems.length]);
+
+  const handleToggleTask = (item: TaskItem) => {
+    startTaskTransition(async () => {
+      const nextDone = !item.done;
+      setTaskItems((prev) => prev.map((row) => (row.id === item.id ? { ...row, done: nextDone } : row)));
+      await toggleTaskDoneAction(item.id, nextDone);
+    });
+  };
 
   if (isMobile) {
     return (
@@ -588,33 +617,53 @@ export default function ReminderDashboardSection({
             <div className="card-soft flex items-center justify-between px-[var(--space-3)] py-[var(--space-2)]">
               <div className="text-sm font-semibold text-text">Inbox</div>
               <div className="text-xs text-muted2">
-                {inboxOccurrences.length} {copy.dashboard.reminderCountLabel}
+                {inboxView === 'tasks'
+                  ? `${taskItems.length} taskuri`
+                  : `${inboxReminderItems.length} ${copy.dashboard.reminderCountLabel}`}
               </div>
             </div>
-            <div className="card-soft space-y-[var(--space-2)] p-[var(--space-3)]">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted2">
-                Filtre rapide
-              </div>
-              <ReminderFiltersPanel
-                locale={locale}
-                kindFilter={kindFilter}
-                createdBy={createdBy}
-                assignment={assignment}
-                category={categoryFilter}
-                onChangeKind={(value) => setKindFilter(value)}
-                onChangeCreatedBy={(value) => {
-                  if (CreatedOptions.includes(value)) {
-                    setCreatedBy(value);
-                  }
-                }}
-                onChangeAssignment={(value) => {
-                  if (AssignmentOptions.includes(value)) {
-                    setAssignment(value);
-                  }
-                }}
-                onChangeCategory={(value) => setCategoryFilter(value)}
-              />
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={`premium-chip ${inboxView === 'reminders' ? 'border-[color:rgba(59,130,246,0.4)] text-[color:rgb(var(--accent-2))]' : ''}`}
+                onClick={() => setInboxView('reminders')}
+              >
+                Remindere
+              </button>
+              <button
+                type="button"
+                className={`premium-chip ${inboxView === 'tasks' ? 'border-[color:rgba(59,130,246,0.4)] text-[color:rgb(var(--accent-2))]' : ''}`}
+                onClick={() => setInboxView('tasks')}
+              >
+                Taskuri
+              </button>
             </div>
+            {inboxView === 'reminders' ? (
+              <div className="card-soft space-y-[var(--space-2)] p-[var(--space-3)]">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-muted2">
+                  Filtre rapide
+                </div>
+                <ReminderFiltersPanel
+                  locale={locale}
+                  kindFilter={kindFilter}
+                  createdBy={createdBy}
+                  assignment={assignment}
+                  category={categoryFilter}
+                  onChangeKind={(value) => setKindFilter(value)}
+                  onChangeCreatedBy={(value) => {
+                    if (CreatedOptions.includes(value)) {
+                      setCreatedBy(value);
+                    }
+                  }}
+                  onChangeAssignment={(value) => {
+                    if (AssignmentOptions.includes(value)) {
+                      setAssignment(value);
+                    }
+                  }}
+                  onChangeCategory={(value) => setCategoryFilter(value)}
+                />
+              </div>
+            ) : null}
             <div className="flex flex-wrap gap-2">
               {[
                 { id: 'rent', label: 'Plată chirie', text: 'Plata chiriei pe 1 ale lunii la 9:00' },
@@ -637,7 +686,38 @@ export default function ReminderDashboardSection({
                 )
               )}
             </div>
-            {mobileInboxItems.length ? (
+            {inboxView === 'tasks' ? (
+              taskItems.length ? (
+                <div className="space-y-[var(--space-2)]">
+                  {taskItems.map((item) => (
+                    <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
+                      <button
+                        type="button"
+                        className="mt-0.5 text-[color:rgb(var(--accent))]"
+                        aria-pressed={item.done}
+                        aria-label={item.done ? 'Marchează ca nefinalizat' : 'Marchează ca finalizat'}
+                        onClick={() => handleToggleTask(item)}
+                        disabled={taskPending}
+                      >
+                        {item.done ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
+                      </button>
+                      <div className="min-w-0 flex-1">
+                        <div className={`text-sm font-semibold ${item.done ? 'text-muted line-through' : 'text-ink'}`}>
+                          {item.title}
+                        </div>
+                        {item.due_date ? (
+                          <div className="mt-1 text-xs text-muted">Scadență: {item.due_date}</div>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="premium-card p-[var(--space-3)] text-sm text-tertiary">
+                  Nu ai taskuri în Inbox.
+                </div>
+              )
+            ) : mobileInboxItems.length ? (
               <div className="space-y-[var(--space-2)]">
                 {mobileInboxItems.map((occurrence) => (
                   <ReminderRowMobile
@@ -654,7 +734,7 @@ export default function ReminderDashboardSection({
                 {copy.dashboard.empty}
               </div>
             )}
-            {inboxOccurrences.length > mobileInboxLimit ? (
+            {inboxView === 'reminders' && inboxReminderItems.length > mobileInboxLimit ? (
               <button
                 type="button"
                 className="text-xs font-semibold text-secondary"
@@ -841,9 +921,56 @@ export default function ReminderDashboardSection({
                 label="Inbox"
                 icon={<Calendar className="h-4 w-4 text-sky-500" aria-hidden="true" />}
               />
-              {inboxOccurrences.length ? (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className={`premium-chip ${inboxView === 'reminders' ? 'border-[color:rgba(59,130,246,0.4)] text-[color:rgb(var(--accent-2))]' : ''}`}
+                  onClick={() => setInboxView('reminders')}
+                >
+                  Remindere
+                </button>
+                <button
+                  type="button"
+                  className={`premium-chip ${inboxView === 'tasks' ? 'border-[color:rgba(59,130,246,0.4)] text-[color:rgb(var(--accent-2))]' : ''}`}
+                  onClick={() => setInboxView('tasks')}
+                >
+                  Taskuri
+                </button>
+              </div>
+              {inboxView === 'tasks' ? (
+                taskItems.length ? (
+                  <div className="grid gap-3 list-optimized">
+                    {taskItems.map((item) => (
+                      <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
+                        <button
+                          type="button"
+                          className="mt-0.5 text-[color:rgb(var(--accent))]"
+                          aria-pressed={item.done}
+                          aria-label={item.done ? 'Marchează ca nefinalizat' : 'Marchează ca finalizat'}
+                          onClick={() => handleToggleTask(item)}
+                          disabled={taskPending}
+                        >
+                          {item.done ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <div className={`text-sm font-semibold ${item.done ? 'text-muted line-through' : 'text-ink'}`}>
+                            {item.title}
+                          </div>
+                          {item.due_date ? (
+                            <div className="mt-1 text-xs text-muted">Scadență: {item.due_date}</div>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="card text-sm text-muted">
+                    Nu ai taskuri în Inbox.
+                  </div>
+                )
+              ) : inboxReminderItems.length ? (
                 <div className="grid gap-3 list-optimized">
-                  {inboxOccurrences.map((occurrence) => (
+                  {inboxReminderItems.map((occurrence) => (
                     <ReminderCard
                       key={occurrence.id}
                       occurrence={occurrence}
