@@ -58,9 +58,12 @@ export default function QuickAddSheet({
   const [error, setError] = useState<string | null>(null);
   const [listName, setListName] = useState('');
   const [activeMode, setActiveMode] = useState<'ai' | 'task' | 'list'>(mode);
+  const [parsingVisible, setParsingVisible] = useState(false);
   const autoStartOnceRef = useRef(false);
   const autoStartDisabledRef = useRef(false);
   const userStoppedRef = useRef(false);
+  const categorySelectRef = useRef<HTMLSelectElement | null>(null);
+  const parsingTimerRef = useRef<number | null>(null);
 
   const trimmed = text.trim();
   const canContinue = trimmed.length > 0;
@@ -245,11 +248,6 @@ export default function QuickAddSheet({
   const voiceTranscriptClean = voiceTranscript.trim();
   const voiceActive = ['starting', 'listening', 'transcribing', 'processing', 'parsing'].includes(voiceStatus);
   const showParsing = aiStatus === 'parsing' || voice.status === 'processing' || voice.status === 'parsing';
-  const previewStatus = voiceActive
-    ? 'Ascult…'
-    : showParsing
-      ? 'Procesez…'
-      : 'Previzualizare';
   // Preview visibility: show only when user starts typing, voice is active/processing,
   // transcript has content, or a parsed result exists.
   const showPreview = useMemo(() => {
@@ -258,6 +256,19 @@ export default function QuickAddSheet({
     if (voiceTranscriptClean.length > 0) return true;
     return Boolean(parsedResult);
   }, [parsedResult, trimmed.length, voiceActive, voiceTranscriptClean.length]);
+  const hasStructuredPreview = Boolean(
+    parsedResult
+    || dateValue
+    || timeValue
+    || remindBeforeValue
+    || categoryValue
+    || voiceTranscriptClean.length
+  );
+  const previewStatus = showParsing
+    ? 'Analizez…'
+    : hasStructuredPreview
+      ? 'Previzualizare'
+      : 'Ciornă';
 
   useEffect(() => {
     if (!open) return;
@@ -303,6 +314,28 @@ export default function QuickAddSheet({
     return () => window.clearTimeout(timer);
   }, [parsedResult]);
 
+  useEffect(() => {
+    if (!open) return;
+    if (showParsing) {
+      setParsingVisible(true);
+      if (parsingTimerRef.current) {
+        window.clearTimeout(parsingTimerRef.current);
+      }
+      return;
+    }
+    if (parsingTimerRef.current) {
+      window.clearTimeout(parsingTimerRef.current);
+    }
+    parsingTimerRef.current = window.setTimeout(() => {
+      setParsingVisible(false);
+    }, 280);
+    return () => {
+      if (parsingTimerRef.current) {
+        window.clearTimeout(parsingTimerRef.current);
+      }
+    };
+  }, [open, showParsing]);
+
   const parsePreReminder = () => {
     if (!remindBeforeValue) return '';
     if (remindBeforeValue.includes('10')) return '10';
@@ -341,6 +374,7 @@ export default function QuickAddSheet({
     setSaving(true);
     setError(null);
     try {
+      const startedAt = Date.now();
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
       let parsed: AiResult | null = null;
       if (activeMode === 'ai') {
@@ -379,6 +413,10 @@ export default function QuickAddSheet({
       userStoppedRef.current = true;
       resetVoice();
       onClose();
+      const elapsed = Date.now() - startedAt;
+      if (elapsed < 350) {
+        await new Promise((resolve) => window.setTimeout(resolve, 350 - elapsed));
+      }
     } catch (err) {
       const digest = (err as { digest?: string } | null)?.digest;
       if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) {
@@ -399,6 +437,13 @@ export default function QuickAddSheet({
     : activeMode === 'list'
       ? 'Adaugă în listă'
       : 'Adaugă rapid';
+  const previewDateLabel = parsedDate
+    ? parsedDate.replace('T', ' · ')
+    : dateValue
+      ? `${dateValue}${timeValue ? ` · ${timeValue}` : ''}`
+      : '';
+  const saveDateLabel = previewDateLabel ? previewDateLabel.replace(' · ', ' ') : '';
+  const previewValid = canContinue && !showParsing;
 
   return (
     <BottomSheet open={open} onClose={onClose} className="pb-[calc(env(safe-area-inset-bottom)_+_6px)]" ariaLabel="Adaugă reminder">
@@ -517,34 +562,55 @@ export default function QuickAddSheet({
         </div>
 
         <div
-          className={`overflow-hidden transition-all duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none ${
+          className={`overflow-hidden transition-all duration-300 ease-out motion-reduce:transition-none motion-reduce:transform-none motion-reduce:filter-none ${
             showPreview
-              ? 'max-h-[320px] translate-y-0 opacity-100'
-              : 'max-h-0 -translate-y-1 opacity-0 pointer-events-none'
+              ? 'max-h-[360px] translate-y-0 opacity-100 blur-0'
+              : 'max-h-0 translate-y-2 opacity-0 blur-[2px] pointer-events-none'
           }`}
           aria-hidden={!showPreview}
         >
           <Card
-            className={`relative overflow-hidden border border-[color:rgba(59,130,246,0.25)] bg-[linear-gradient(135deg,rgba(15,23,42,0.94),rgba(30,58,138,0.55))] px-[var(--space-3)] py-[var(--space-3)] text-xs text-white/80 shadow-[0_12px_30px_rgba(2,8,23,0.35)] ${highlightPreview ? 'ai-highlight' : ''}`}
+            className={`relative overflow-hidden border border-[color:rgba(59,130,246,0.25)] bg-[linear-gradient(135deg,rgba(15,23,42,0.94),rgba(30,58,138,0.55))] px-[var(--space-3)] py-[var(--space-3)] text-white/85 shadow-[0_12px_30px_rgba(2,8,23,0.35)] ${highlightPreview ? 'ai-highlight' : ''}`}
           >
             <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-white/70">
               <Sparkles className="h-3.5 w-3.5 text-[color:rgb(var(--accent-2))]" />
               <span>{previewStatus}</span>
             </div>
-            {showParsing ? (
+            {parsingVisible ? (
               <div className="mt-3 space-y-2">
                 <div className="h-4 w-2/3 animate-pulse rounded-full bg-white/10" />
                 <div className="h-3 w-1/2 animate-pulse rounded-full bg-white/10" />
               </div>
             ) : (
               <>
-                <div className="mt-2 text-sm font-semibold text-white/90 truncate">{previewTitle}</div>
-                <div className="mt-1 text-xs text-white/70">{previewLine}</div>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <Pill className="border border-white/10 bg-white/5 text-white/70">Activ · Reminder nou</Pill>
-                  <Pill className="bg-[color:rgba(59,130,246,0.2)] text-[color:rgb(var(--accent-2))]">
-                    {previewCategory}
-                  </Pill>
+                <div className="mt-2 text-base font-semibold text-white/95 truncate">{previewTitle}</div>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-white/80 transition active:scale-[0.98]">
+                    📅 {previewDateLabel || 'Data și ora'}
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-white/80 transition active:scale-[0.98]">
+                    🔔 {previewBefore || 'Fără reminder'}
+                  </span>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded-full border border-[color:rgba(59,130,246,0.35)] bg-[color:rgba(59,130,246,0.18)] px-2.5 py-1 text-[color:rgb(var(--accent-2))] transition active:scale-[0.98]"
+                    onClick={() => {
+                      setDetailsOpen(true);
+                      window.requestAnimationFrame(() => categorySelectRef.current?.focus());
+                    }}
+                  >
+                    🏷️ {previewCategory}
+                  </button>
+                </div>
+                <div className="mt-3 flex items-center justify-between text-[11px] text-white/70">
+                  <span>{previewLine}</span>
+                  <button
+                    type="button"
+                    className="text-[11px] font-semibold text-[color:rgb(var(--accent-2))] hover:text-white"
+                    onClick={() => setDetailsOpen(true)}
+                  >
+                    Editează detalii
+                  </button>
                 </div>
               </>
             )}
@@ -558,7 +624,7 @@ export default function QuickAddSheet({
                 <button
                   key={template.id}
                   type="button"
-                  className="surface-a1 rounded-2xl px-3 py-2 text-left text-xs font-semibold text-text transition"
+                  className="surface-a1 rounded-2xl px-3 py-2 text-left text-xs font-semibold text-text transition active:scale-[0.98]"
                   onClick={() => {
                     if (template.mode === 'medication') {
                       handleNavigate('medication');
@@ -658,6 +724,7 @@ export default function QuickAddSheet({
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-muted">Categorie</label>
                 <select
+                  ref={categorySelectRef}
                   className="premium-input w-full px-3 text-sm"
                   value={categoryValue}
                   onChange={(event) => setCategoryValue(event.target.value)}
@@ -685,9 +752,13 @@ export default function QuickAddSheet({
             type="button"
             className="premium-btn-primary inline-flex items-center justify-center px-4 text-sm"
             onClick={handleSave}
-            disabled={!canContinue || saving}
+            disabled={!previewValid || saving}
           >
-            {saving ? 'Se salvează...' : 'Salvează'}
+            {saving
+              ? 'Se salvează...'
+              : previewValid && saveDateLabel
+                ? `Salvează • ${saveDateLabel}`
+                : 'Salvează'}
           </button>
           <button
             type="button"
