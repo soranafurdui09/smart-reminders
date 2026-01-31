@@ -2,14 +2,12 @@ import Link from 'next/link';
 import AppShell from '@/components/AppShell';
 import { requireUser } from '@/lib/auth';
 import { getUserLocale } from '@/lib/data';
-import { messages } from '@/lib/i18n';
 import { getTaskItemsForList, getTaskLists } from '@/lib/tasks';
 import ListDetailClient from './ListDetailClient';
 
 export default async function ListDetailPage({ params }: { params: { id: string } }) {
   const user = await requireUser(`/app/lists/${params.id}`);
   const locale = await getUserLocale(user.id);
-  const copy = messages[locale];
   const lists = await getTaskLists(user.id);
   const list = lists.find((entry) => entry.id === params.id) || null;
 
