@@ -43,10 +43,12 @@ export default async function MedicationDetailPage({ params }: { params: { id: s
     .eq('medication_id', params.id)
     .maybeSingle();
 
-  const { data: caregivers } = await supabase
-    .from('medication_caregivers')
-    .select('id, patient_member_id, caregiver_member_id, can_edit, escalation_enabled, escalation_after_minutes, escalation_channels')
-    .eq('household_id', medication.household_id);
+  const { data: caregivers } = medication.household_id
+    ? await supabase
+        .from('medication_caregivers')
+        .select('id, patient_member_id, caregiver_member_id, can_edit, escalation_enabled, escalation_after_minutes, escalation_channels')
+        .eq('household_id', medication.household_id)
+    : { data: [] };
 
   const { data: doseHistory } = await supabase
     .from('medication_doses')
@@ -57,15 +59,16 @@ export default async function MedicationDetailPage({ params }: { params: { id: s
 
   const members = await getHouseholdMembers(membership.households.id);
   const memberLabels = new Map(
-    members.map((member: any) => [member.id, member.profiles?.name || member.profiles?.email || member.user_id])
+    (members ?? []).map((member: any) => [member.id, member.profiles?.name || member.profiles?.email || member.user_id])
   );
   const patientLabel = medication.patient_member_id ? memberLabels.get(medication.patient_member_id) : null;
 
+  const safeTimes = Array.isArray(schedule?.times_local) ? schedule?.times_local.filter(Boolean) : [];
   const dailyDoseCount = schedule ? estimateDailyDoseCount(schedule) : 0;
-  const daysLeft = stock
-    ? dailyDoseCount
-      ? Math.floor(Number(stock.quantity_on_hand) / Math.max(1, Number(stock.decrement_per_dose || 1)) / dailyDoseCount)
-      : null
+  const stockQty = typeof stock?.quantity_on_hand === 'number' ? Number(stock.quantity_on_hand) : null;
+  const stockDecrement = Number.isFinite(Number(stock?.decrement_per_dose || 1)) ? Number(stock?.decrement_per_dose || 1) : 1;
+  const daysLeft = stockQty !== null && dailyDoseCount
+    ? Math.floor(stockQty / Math.max(1, stockDecrement) / dailyDoseCount)
     : null;
   const scheduleTypeLabels: Record<string, string> = {
     daily: copy.medicationsHub.schedule_daily,
@@ -74,6 +77,8 @@ export default async function MedicationDetailPage({ params }: { params: { id: s
     interval: copy.medicationsHub.schedule_interval,
     prn: copy.medicationsHub.schedule_prn
   };
+  const caregiverRows = Array.isArray(caregivers) ? caregivers : [];
+  const doseHistoryRows = Array.isArray(doseHistory) ? doseHistory : [];
   const statusLabels: Record<string, string> = {
     pending: copy.medicationsHub.status_pending,
     taken: copy.medicationsHub.status_taken,
@@ -127,8 +132,8 @@ export default async function MedicationDetailPage({ params }: { params: { id: s
           {schedule ? (
             <div className="space-y-2 text-sm text-muted">
               <div>{copy.medicationsHub.scheduleTypeLabel}: {scheduleTypeLabels[schedule.schedule_type] ?? schedule.schedule_type}</div>
-              <div>{copy.medicationsHub.timesLabel}: {(schedule.times_local || []).join(', ')}</div>
-              <div>{copy.medicationsHub.startDateLabel}: {schedule.start_date}</div>
+              <div>{copy.medicationsHub.timesLabel}: {safeTimes.length ? safeTimes.join(', ') : '—'}</div>
+              <div>{copy.medicationsHub.startDateLabel}: {schedule.start_date || '—'}</div>
               {schedule.end_date ? <div>{copy.medicationsHub.endDateLabel}: {schedule.end_date}</div> : null}
               {schedule.interval_hours ? <div>{copy.medicationsHub.intervalLabel}: {schedule.interval_hours}h</div> : null}
             </div>
@@ -180,9 +185,9 @@ export default async function MedicationDetailPage({ params }: { params: { id: s
 
         <Card className="space-y-4">
           <div className="text-lg font-semibold text-ink">{copy.medicationsHub.caregiversTitle}</div>
-          {(caregivers ?? []).length ? (
+          {caregiverRows.length ? (
             <div className="space-y-3">
-              {(caregivers ?? []).map((caregiver: any) => (
+              {caregiverRows.map((caregiver: any) => (
                 <div key={caregiver.id} className="flex items-center justify-between rounded-xl border border-borderSubtle bg-surface p-3">
                   <div className="text-sm text-ink">
                     {memberLabels.get(caregiver.caregiver_member_id) || caregiver.caregiver_member_id}
@@ -202,7 +207,7 @@ export default async function MedicationDetailPage({ params }: { params: { id: s
             <div>
               <label className="text-xs font-semibold text-muted">{copy.medicationsHub.patientLabel}</label>
               <select name="patient_member_id" className="input">
-                {members.map((member: any) => (
+                {(members ?? []).map((member: any) => (
                   <option key={member.id} value={member.id}>
                     {memberLabels.get(member.id)}
                   </option>
@@ -212,7 +217,7 @@ export default async function MedicationDetailPage({ params }: { params: { id: s
             <div>
               <label className="text-xs font-semibold text-muted">{copy.medicationsHub.caregiverLabel}</label>
               <select name="caregiver_member_id" className="input">
-                {members.map((member: any) => (
+                {(members ?? []).map((member: any) => (
                   <option key={member.id} value={member.id}>
                     {memberLabels.get(member.id)}
                   </option>
@@ -249,9 +254,9 @@ export default async function MedicationDetailPage({ params }: { params: { id: s
 
         <Card className="space-y-3">
           <div className="text-lg font-semibold text-ink">{copy.medicationsHub.historyTitle}</div>
-          {(doseHistory ?? []).length ? (
+          {doseHistoryRows.length ? (
             <div className="space-y-2 text-sm text-muted">
-              {(doseHistory ?? []).map((dose: any) => (
+              {doseHistoryRows.map((dose: any) => (
                 <div key={dose.id} className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-sm text-ink">

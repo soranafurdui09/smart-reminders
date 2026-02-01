@@ -12,7 +12,7 @@ import {
   type MedicationRecord,
   type MedicationScheduleInput
 } from '@/lib/reminders/medication';
-import { scheduleNotificationJobsForMedication, scheduleNotificationJobsForReminder } from '@/lib/notifications/jobs';
+import { clearNotificationJobsForReminder, scheduleNotificationJobsForMedication, scheduleNotificationJobsForReminder } from '@/lib/notifications/jobs';
 import { resolveTimeZone } from '@/lib/time/schedule';
 
 const DEFAULT_FORM = 'pill';
@@ -499,5 +499,84 @@ export async function removeMedicationCaregiver(medicationId: string, caregiverI
     .eq('id', caregiverId);
   revalidatePath(`/app/medications/${medicationId}`);
   revalidatePath('/app/medications/caregiver');
+  return { ok: true };
+}
+
+export async function deleteMedication(medicationId: string) {
+  const user = await requireUser(`/app/medications/${medicationId}`);
+  const supabase = createServerClient();
+  const { data: medication } = await supabase
+    .from('medications')
+    .select('id, reminder_id')
+    .eq('id', medicationId)
+    .maybeSingle();
+
+  if (!medication) {
+    return { ok: false, error: 'not-found' as const };
+  }
+
+  if (medication.reminder_id) {
+    await clearNotificationJobsForReminder(medication.reminder_id);
+    const { error: occurrencesError } = await supabase
+      .from('reminder_occurrences')
+      .delete()
+      .eq('reminder_id', medication.reminder_id);
+    if (occurrencesError) {
+      console.error('[medication] delete reminder occurrences failed', occurrencesError);
+    }
+  }
+
+  const { error: doseDeleteError } = await supabase
+    .from('medication_doses')
+    .delete()
+    .eq('medication_id', medicationId);
+  if (doseDeleteError) {
+    console.error('[medication] delete doses failed', doseDeleteError);
+  }
+  const { error: scheduleDeleteError } = await supabase
+    .from('medication_schedules')
+    .delete()
+    .eq('medication_id', medicationId);
+  if (scheduleDeleteError) {
+    console.error('[medication] delete schedules failed', scheduleDeleteError);
+  }
+  const { error: stockDeleteError } = await supabase
+    .from('medication_stock')
+    .delete()
+    .eq('medication_id', medicationId);
+  if (stockDeleteError) {
+    console.error('[medication] delete stock failed', stockDeleteError);
+  }
+  const { error: eventsDeleteError } = await supabase
+    .from('medication_events')
+    .delete()
+    .eq('medication_id', medicationId);
+  if (eventsDeleteError) {
+    console.error('[medication] delete events failed', eventsDeleteError);
+  }
+
+  if (medication.reminder_id) {
+    const { error: reminderDeleteError } = await supabase
+      .from('reminders')
+      .delete()
+      .eq('id', medication.reminder_id);
+    if (reminderDeleteError) {
+      console.error('[medication] delete reminder failed', reminderDeleteError);
+      return { ok: false, error: 'delete-reminder' as const };
+    }
+  }
+
+  const { error: medicationDeleteError } = await supabase
+    .from('medications')
+    .delete()
+    .eq('id', medicationId);
+  if (medicationDeleteError) {
+    console.error('[medication] delete medication failed', medicationDeleteError);
+    return { ok: false, error: 'delete-medication' as const };
+  }
+
+  revalidatePath(`/app/medications/${medicationId}`);
+  revalidatePath('/app/medications');
+  revalidatePath('/app');
   return { ok: true };
 }

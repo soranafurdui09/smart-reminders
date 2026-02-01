@@ -30,6 +30,7 @@ export default function MedicationDoseList({
   locale,
   timeZone,
   labels,
+  variant = 'default',
   allowActions = true,
   canEditByDose
 }: {
@@ -37,10 +38,12 @@ export default function MedicationDoseList({
   locale: string;
   timeZone: string;
   labels: Labels;
+  variant?: 'default' | 'compact';
   allowActions?: boolean;
   canEditByDose?: (dose: MedicationDoseRow) => boolean;
 }) {
   const [items, setItems] = useState(doses);
+  const isCompact = variant === 'compact';
 
   const updateDose = useCallback((id: string, next: Partial<MedicationDoseRow>) => {
     setItems((prev) => prev.map((dose) => (dose.id === id ? { ...dose, ...next } : dose)));
@@ -97,37 +100,52 @@ export default function MedicationDoseList({
   );
 
   return (
-    <div className="space-y-3">
+    <div className={isCompact ? 'space-y-2' : 'space-y-3'}>
       {rows.map((dose) => (
-        <div key={dose.id} className="card flex flex-col gap-3">
-          <div className="flex items-start justify-between gap-4">
+        <div
+          key={dose.id}
+          className={`${isCompact ? 'surface-a1 rounded-2xl p-3' : 'card'} flex flex-col ${isCompact ? 'gap-2' : 'gap-3'}`}
+        >
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-sm font-semibold text-ink">
+              <div className={`${isCompact ? 'text-sm' : 'text-base'} font-semibold text-ink`}>
                 {dose.medication?.name || 'Medicament'}
               </div>
-              <div className="text-xs text-muted">{dose.timeLabel}</div>
+              <div className="text-[11px] text-muted">{dose.timeLabel}</div>
             </div>
-            <span className="chip">{dose.statusLabel}</span>
+            <span
+              className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
+                dose.status === 'taken'
+                  ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
+                  : dose.status === 'missed'
+                    ? 'border-rose-400/30 bg-rose-400/10 text-rose-200'
+                    : dose.status === 'skipped'
+                      ? 'border-amber-400/30 bg-amber-400/10 text-amber-200'
+                      : 'border-sky-400/30 bg-sky-400/10 text-sky-200'
+              }`}
+            >
+              {dose.statusLabel}
+            </span>
           </div>
           {allowActions && (canEditByDose ? canEditByDose(dose) : true) ? (
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                className="btn btn-primary h-9"
+                className={`btn btn-primary ${isCompact ? 'h-8 px-3 text-xs' : 'h-9'}`}
                 onClick={() => handleAction(dose.id, 'taken')}
               >
                 {labels.taken}
               </button>
               <button
                 type="button"
-                className="btn btn-secondary h-9"
+                className={`btn btn-secondary ${isCompact ? 'h-8 px-3 text-xs' : 'h-9'}`}
                 onClick={() => handleAction(dose.id, 'snoozed')}
               >
                 {labels.snooze}
               </button>
               <button
                 type="button"
-                className="btn btn-secondary h-9"
+                className={`btn btn-secondary ${isCompact ? 'h-8 px-3 text-xs' : 'h-9'}`}
                 onClick={() => handleAction(dose.id, 'skipped')}
               >
                 {labels.skip}
