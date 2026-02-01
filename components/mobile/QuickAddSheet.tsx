@@ -7,6 +7,7 @@ import { reminderCategories } from '@/lib/categories';
 import { createReminder } from '@/app/app/reminders/new/actions';
 import { createTaskListAction } from '@/app/app/lists/actions';
 import { useSpeechToReminder } from '@/hooks/useSpeechToReminder';
+import useKeyboardInset from '@/hooks/useKeyboardInset';
 import Card from '@/components/ui/Card';
 import Pill from '@/components/ui/Pill';
 import IconButton from '@/components/ui/IconButton';
@@ -65,6 +66,8 @@ export default function QuickAddSheet({
   const userStoppedRef = useRef(false);
   const categorySelectRef = useRef<HTMLSelectElement | null>(null);
   const parsingTimerRef = useRef<number | null>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const keyboardInset = useKeyboardInset();
 
   const trimmed = text.trim();
   const canContinue = activeMode === 'list'
@@ -339,6 +342,15 @@ export default function QuickAddSheet({
     };
   }, [open, showParsing]);
 
+  useEffect(() => {
+    if (!open || keyboardInset <= 0 || !showPreview) return;
+    const previewNode = previewRef.current;
+    if (!previewNode) return;
+    window.requestAnimationFrame(() => {
+      previewNode.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+  }, [keyboardInset, open, parsedResult, showPreview, trimmed]);
+
   const parsePreReminder = () => {
     if (!remindBeforeValue) return '';
     if (remindBeforeValue.includes('10')) return '10';
@@ -594,52 +606,61 @@ export default function QuickAddSheet({
           }`}
           aria-hidden={!showPreview}
         >
-          <Card
-            className={`relative overflow-hidden border border-[color:rgba(59,130,246,0.25)] bg-[linear-gradient(135deg,rgba(15,23,42,0.94),rgba(30,58,138,0.55))] px-[var(--space-3)] py-[var(--space-3)] text-white/85 shadow-[0_12px_30px_rgba(2,8,23,0.35)] ${highlightPreview ? 'ai-highlight' : ''}`}
+          <div
+            ref={previewRef}
+            className={keyboardInset > 0 ? 'sticky z-10' : ''}
+            style={keyboardInset > 0 ? { bottom: `calc(${keyboardInset}px + var(--space-2))` } : undefined}
           >
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-white/70">
-              <Sparkles className="h-3.5 w-3.5 text-[color:rgb(var(--accent-2))]" />
-              <span>{previewStatus}</span>
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-[color:rgb(var(--accent-2))]">
+              Previzualizare
             </div>
-            {parsingVisible ? (
-              <div className="mt-3 space-y-2">
-                <div className="h-4 w-2/3 animate-pulse rounded-full bg-white/10" />
-                <div className="h-3 w-1/2 animate-pulse rounded-full bg-white/10" />
+            <Card
+              className={`surface-accent relative overflow-hidden px-[var(--space-3)] py-[var(--space-3)] text-white/85 ${highlightPreview ? 'ai-highlight' : ''}`}
+            >
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-white/70">
+                <Sparkles className="h-3.5 w-3.5 text-[color:rgb(var(--accent-2))]" />
+                <span>{previewStatus}</span>
               </div>
-            ) : (
-              <>
-                <div className="mt-2 text-base font-semibold text-white/95 truncate">{previewTitle}</div>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-white/80 transition active:scale-[0.98]">
-                    📅 {previewDateLabel || 'Data și ora'}
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-white/80 transition active:scale-[0.98]">
-                    🔔 {previewBefore || 'Fără reminder'}
-                  </span>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 rounded-full border border-[color:rgba(59,130,246,0.35)] bg-[color:rgba(59,130,246,0.18)] px-2.5 py-1 text-[color:rgb(var(--accent-2))] transition active:scale-[0.98]"
-                    onClick={() => {
-                      setDetailsOpen(true);
-                      window.requestAnimationFrame(() => categorySelectRef.current?.focus());
-                    }}
-                  >
-                    🏷️ {previewCategory}
-                  </button>
+              {parsingVisible ? (
+                <div className="mt-3 space-y-2">
+                  <div className="h-4 w-2/3 animate-pulse rounded-full bg-white/10" />
+                  <div className="h-3 w-1/2 animate-pulse rounded-full bg-white/10" />
                 </div>
-                <div className="mt-3 flex items-center justify-between text-[11px] text-white/70">
-                  <span>{previewLine}</span>
-                  <button
-                    type="button"
-                    className="text-[11px] font-semibold text-[color:rgb(var(--accent-2))] hover:text-white"
-                    onClick={() => setDetailsOpen(true)}
-                  >
-                    Editează detalii
-                  </button>
-                </div>
-              </>
-            )}
-          </Card>
+              ) : (
+                <>
+                  <div className="mt-2 text-base font-semibold text-white/95 truncate">{previewTitle}</div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-white/80 transition active:scale-[0.98]">
+                      📅 {previewDateLabel || 'Data și ora'}
+                    </span>
+                    <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-white/80 transition active:scale-[0.98]">
+                      🔔 {previewBefore || 'Fără reminder'}
+                    </span>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 rounded-full border border-[color:rgba(59,130,246,0.35)] bg-[color:rgba(59,130,246,0.18)] px-2.5 py-1 text-[color:rgb(var(--accent-2))] transition active:scale-[0.98]"
+                      onClick={() => {
+                        setDetailsOpen(true);
+                        window.requestAnimationFrame(() => categorySelectRef.current?.focus());
+                      }}
+                    >
+                      🏷️ {previewCategory}
+                    </button>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-[11px] text-white/70">
+                    <span>{previewLine}</span>
+                    <button
+                      type="button"
+                      className="text-[11px] font-semibold text-[color:rgb(var(--accent-2))] hover:text-white"
+                      onClick={() => setDetailsOpen(true)}
+                    >
+                      Editează detalii
+                    </button>
+                  </div>
+                </>
+              )}
+            </Card>
+          </div>
         </div>
 
         {isAiMode ? (

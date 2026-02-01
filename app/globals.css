@@ -137,6 +137,16 @@ body {
   box-shadow: var(--shadow-lift);
 }
 
+.surface-accent {
+  border-radius: var(--radius-card);
+  background: linear-gradient(135deg, var(--accent-muted), var(--surface-1));
+  border: 1px solid var(--accent-ring);
+  box-shadow:
+    0 16px 34px rgba(2, 8, 23, 0.45),
+    0 0 22px var(--accent-glow),
+    inset 0 0 24px var(--accent-muted);
+}
+
 .premium-sheet {
   border-radius: 28px;
   background: var(--surface-2);
