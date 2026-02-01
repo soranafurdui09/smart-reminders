@@ -32,11 +32,10 @@ function toTimeZoneDate(value: DateInput, timeZone?: string | null) {
   }
 }
 
-export function formatDateTimeWithTimeZone(value: DateInput, timeZone?: string | null) {
+export function formatDateTimeWithTimeZone(value: DateInput | null | undefined, timeZone?: string | null) {
+  if (!value) return '';
   const safeDate = typeof value === 'string' ? new Date(value) : value;
-  if (Number.isNaN(safeDate.getTime())) {
-    return '';
-  }
+  if (!(safeDate instanceof Date) || Number.isNaN(safeDate.getTime())) return '';
   if (timeZone) {
     return formatInTimeZone(safeDate, timeZone, 'dd MMM yyyy HH:mm');
   }
