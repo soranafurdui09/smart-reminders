@@ -37,7 +37,11 @@ export function formatDateTimeWithTimeZone(value: DateInput | null | undefined, 
   const safeDate = typeof value === 'string' ? new Date(value) : value;
   if (!(safeDate instanceof Date) || Number.isNaN(safeDate.getTime())) return '';
   if (timeZone) {
-    return formatInTimeZone(safeDate, timeZone, 'dd MMM yyyy HH:mm');
+    try {
+      return formatInTimeZone(safeDate, timeZone, 'dd MMM yyyy HH:mm');
+    } catch {
+      return format(safeDate, 'dd MMM yyyy HH:mm');
+    }
   }
   return format(safeDate, 'dd MMM yyyy HH:mm');
 }
