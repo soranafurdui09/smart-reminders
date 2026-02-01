@@ -46,13 +46,11 @@ export default function DebugNavLogger() {
     };
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window.location as any).assign = (url: string) => {
+      window.location.assign = (url: string | URL) => {
         console.log('[nav-debug] location.assign', JSON.stringify({ ts: nowTs(), url }));
         return originalAssign?.(url);
       };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window.location as any).replace = (url: string) => {
+      window.location.replace = (url: string | URL) => {
         console.log('[nav-debug] location.replace', JSON.stringify({ ts: nowTs(), url }));
         return originalReplace?.(url);
       };
@@ -69,10 +67,8 @@ export default function DebugNavLogger() {
       window.history.pushState = originalPushState;
       window.history.replaceState = originalReplaceState;
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (originalAssign) (window.location as any).assign = originalAssign;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (originalReplace) (window.location as any).replace = originalReplace;
+        if (originalAssign) window.location.assign = originalAssign;
+        if (originalReplace) window.location.replace = originalReplace;
       } catch {
         // ignore
       }
