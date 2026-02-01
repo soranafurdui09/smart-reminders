@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  const DEV = process.env.NODE_ENV !== 'production';
 
   // Lăsăm orice nu începe cu /app să treacă liber
   if (!pathname.startsWith('/app')) {
@@ -17,7 +18,9 @@ export function middleware(request: NextRequest) {
   const userAgent = request.headers.get('user-agent') || '';
   const isWebView = /wv|SmartReminderWebView/i.test(userAgent);
   if (isWebView) {
-    console.log('[middleware] skip auth redirect for WebView', JSON.stringify({ path: pathname }));
+    if (DEV) {
+      console.log('[middleware] skip auth redirect for WebView', JSON.stringify({ ts: Date.now(), path: pathname }));
+    }
     return NextResponse.next();
   }
 
@@ -34,12 +37,22 @@ export function middleware(request: NextRequest) {
       );
     });
 
+  if (DEV) {
+    console.log('[middleware] auth check', JSON.stringify({
+      ts: Date.now(),
+      path: pathname,
+      hasSupabaseAuthCookie
+    }));
+  }
+
   if (!hasSupabaseAuthCookie) {
     // Nu pare logat -> redirect la /auth, cu parametru next=...
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/auth';
     redirectUrl.searchParams.set('next', pathname + search);
-    console.log('[middleware] redirect /auth', JSON.stringify({ path: pathname, hasSupabaseAuthCookie }));
+    if (DEV) {
+      console.log('[middleware] redirect /auth', JSON.stringify({ ts: Date.now(), path: pathname, hasSupabaseAuthCookie }));
+    }
     return NextResponse.redirect(redirectUrl);
   }
 

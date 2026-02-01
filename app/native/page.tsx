@@ -97,6 +97,14 @@ export default function NativePage() {
     const { allowed, isAndroid: android } = getNativeAllowed();
     setIsNativeAllowed(allowed);
     setIsAndroid(android);
+    if (DEV) {
+      console.log('[native] gate', JSON.stringify({
+        ts: new Date().toISOString(),
+        href: window.location.href,
+        allowed,
+        isAndroid: android
+      }));
+    }
     if (!allowed) {
       router.replace('/app');
       return;

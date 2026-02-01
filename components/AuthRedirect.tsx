@@ -13,9 +13,13 @@ export default function AuthRedirect({ next }: { next: string }) {
     let active = true;
 
     const checkSession = async () => {
+      const DEV = process.env.NODE_ENV !== 'production';
       const supabase = getSupabaseClient();
       const { data } = await supabase.auth.getUser();
       if (active && data.user) {
+        if (DEV) {
+          console.log('[auth-redirect] session found', JSON.stringify({ ts: new Date().toISOString(), next }));
+        }
         router.replace(next);
       }
     };
