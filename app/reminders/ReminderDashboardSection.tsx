@@ -1245,7 +1245,7 @@ export default function ReminderDashboardSection({
             ) : null}
           </div>
         ) : (
-          <div className="home-slate space-y-[18px] today-shell home-compact">
+          <div className="home-slate space-y-4 today-shell home-compact">
             <div className="home-slate-bg" aria-hidden="true" />
             <HomeHeader title={copy.dashboard.title} subtitle={homeSubtitle} />
             <div className="mx-4 mt-1 text-[11px] text-white/40">UI_COMPACT_TUNE_01</div>

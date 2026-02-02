@@ -29,7 +29,7 @@ export default function AtAGlanceRow({ metrics, activeId, onSelect, variant = 'p
           <button
             key={metric.id}
             type="button"
-            className={`stat-tile home-tile p-3 ${isSecondary ? 'stat-tile-secondary' : ''} ${
+            className={`stat-tile home-tile p-2.5 ${isSecondary ? 'stat-tile-secondary' : ''} ${
               metric.tileClass ?? ''
             } ${activeId === metric.id ? 'stat-tile-active' : ''}`}
             style={
@@ -43,10 +43,10 @@ export default function AtAGlanceRow({ metrics, activeId, onSelect, variant = 'p
           >
             <div className="flex items-center justify-between">
               <span className="h-2 w-2 rounded-full bg-[rgba(var(--tile-accent),0.9)]" aria-hidden="true" />
-              {metric.icon ? <metric.icon className="h-4 w-4 text-[color:var(--text-1)]" /> : null}
+              {metric.icon ? <metric.icon className="h-3.5 w-3.5 text-[color:var(--text-1)]" /> : null}
             </div>
             <div
-              className="mt-1 text-[clamp(1.1rem,3.6vw,1.35rem)] leading-tight font-semibold text-[color:var(--tile-ink,var(--text-0))]"
+              className="mt-1 text-[clamp(1.0rem,3.2vw,1.22rem)] leading-tight font-semibold text-[color:var(--tile-ink,var(--text-0))]"
             >
               {metric.count}
             </div>
