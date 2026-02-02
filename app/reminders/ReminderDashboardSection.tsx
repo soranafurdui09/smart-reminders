@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react';
 import { AlertTriangle, Calendar, CheckCircle2, Circle, MoreHorizontal, Pill, SunMedium, Users } from 'lucide-react';
+import '@/styles/home-slate-variant-b.css';
 import SemanticSearch from '@/components/SemanticSearch';
 import HomeHeader from '@/components/home/HomeHeader';
 import NextUpCard from '@/components/home/NextUpCard';

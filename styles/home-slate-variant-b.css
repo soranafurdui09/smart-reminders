@@ -1,0 +1,129 @@
+/* Variant B background */
+.home-slate.today-shell {
+  position: relative;
+  min-height: 100vh;
+  color: #fff;
+  /* tighten vertical rhythm */
+  --space-2: 12px;
+  --radius-lg: 22px;
+}
+
+/* Ensure the bg element actually renders the vignette */
+.home-slate.today-shell .home-slate-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(1200px 700px at 20% -10%, rgba(60,120,255,0.18), rgba(0,0,0,0) 55%),
+    radial-gradient(900px 600px at 85% 15%, rgba(0,200,180,0.12), rgba(0,0,0,0) 60%),
+    radial-gradient(1000px 700px at 50% 110%, rgba(0,0,0,0.85), rgba(0,0,0,0) 60%),
+    linear-gradient(180deg, #070B14 0%, #050812 45%, #04060F 100%);
+}
+
+/* Put content above background */
+.home-slate.today-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Next Reminder sizing */
+.home-slate.today-shell .next-reminder-card {
+  padding: 18px 18px 16px;
+  border-radius: 22px;
+}
+
+/* reduce vertical gaps created by Tailwind mt-* inside the card */
+.home-slate.today-shell .next-reminder-card .next-reminder-title {
+  margin-top: 8px !important;
+  font-size: 26px !important;
+  line-height: 1.12 !important;
+}
+
+.home-slate.today-shell .next-reminder-card .next-reminder-time {
+  margin-top: 8px !important;
+}
+
+.home-slate.today-shell .next-reminder-card .next-reminder-focus {
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.55);
+}
+
+/* make the “more” button look like mock (subtle circle) */
+.home-slate.today-shell .next-reminder-card .next-reminder-more {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Remove the extra panel around mini-cards */
+.home-slate.today-shell .home-glass-panel {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+/* tighten grid gap a bit */
+.home-slate.today-shell .home-glass-panel .grid {
+  gap: 12px !important;
+}
+
+/* Rebuild mini-cards to match mockup */
+.home-slate.today-shell .stat-tile {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 14px 40px rgba(0,0,0,0.45);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+/* Accent outline glow using --tile-accent */
+.home-slate.today-shell .stat-tile::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 20px;
+  background: radial-gradient(140px 90px at 20% 20%,
+    rgba(var(--tile-accent),0.38),
+    rgba(var(--tile-accent),0.10) 40%,
+    rgba(0,0,0,0) 75%);
+  filter: blur(10px);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+/* Subtle top highlight line */
+.home-slate.today-shell .stat-tile::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.22), rgba(255,255,255,0));
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Variant B tints per tile type */
+.home-slate.today-shell .stat-tile-today { background: rgba(11,22,51,0.55); border-color: rgba(77,125,255,0.22); }
+.home-slate.today-shell .stat-tile-soon  { background: rgba(7,31,36,0.55); border-color: rgba(46,230,197,0.18); }
+.home-slate.today-shell .stat-tile-meds  { background: rgba(23,18,55,0.55); border-color: rgba(154,123,255,0.18); }
+.home-slate.today-shell .stat-tile-overdue { background: rgba(42,30,11,0.50); border-color: rgba(240,177,90,0.22); }
+
+/* Active tile: slightly stronger ring (do NOT use white border) */
+.home-slate.today-shell .stat-tile-active {
+  border-color: rgba(255,255,255,0.14);
+  box-shadow: 0 16px 44px rgba(0,0,0,0.52);
+}
