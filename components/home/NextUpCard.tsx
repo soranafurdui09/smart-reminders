@@ -70,58 +70,60 @@ export default function NextUpCard({
     <div className={`next-reminder-card ${toneClassName}`}>
       <span className="next-reminder-topline" aria-hidden="true" />
       <span className="next-reminder-corner" aria-hidden="true" />
-      <div className="next-reminder-label">{title}</div>
+      <div className="flex items-start justify-between gap-1.5">
+        <div className="next-reminder-label">{title}</div>
+        {onMoreActions ? (
+          <button
+            type="button"
+            className="next-reminder-more"
+            aria-label={moreLabel ?? 'Mai multe acțiuni'}
+            onClick={onMoreActions}
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+        ) : null}
+      </div>
       {subtext ? <div className="next-reminder-subtitle">{subtext}</div> : null}
       {isEmpty ? (
-        <div className="mt-2 text-sm font-semibold text-[rgba(255,255,255,0.72)]">
+        <div className="mt-1.5 text-sm font-semibold text-[rgba(255,255,255,0.72)]">
           {emptyLabel}
         </div>
       ) : (
-        <div className="mt-2 space-y-2">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 space-y-1">
-              <div className="next-reminder-title line-clamp-2">{taskTitle}</div>
-              <div className="next-reminder-time">{timeLabel}</div>
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                {badge ? (
-                  <span className="next-reminder-pill" style={subtleBadgeStyle}>
-                    {badge}
-                  </span>
-                ) : null}
-                {tone === 'overdue' ? (
-                  <span className="next-reminder-overdue">
-                    {statusLabel ?? 'Întârziat'}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-            {onMoreActions ? (
-              <button
-                type="button"
-                className="next-reminder-more"
-                aria-label={moreLabel ?? 'Mai multe acțiuni'}
-                onClick={onMoreActions}
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </button>
+        <div className="mt-1.5 space-y-1.5">
+          <div className="flex items-center justify-between gap-1.5">
+            <div className="next-reminder-title line-clamp-2">{taskTitle}</div>
+            {action ? (
+              <form action={markDone}>
+                <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
+                <input type="hidden" name="reminderId" value={action.reminderId} />
+                <input type="hidden" name="occurAt" value={action.occurAt} />
+                <input type="hidden" name="done_comment" value="" />
+                <ActionSubmitButton
+                  className="next-reminder-primary"
+                  type="submit"
+                  data-action-feedback={action.feedbackLabel}
+                >
+                  {action.label}
+                </ActionSubmitButton>
+              </form>
             ) : null}
           </div>
-          {action ? (
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <form action={markDone}>
-                  <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
-                  <input type="hidden" name="reminderId" value={action.reminderId} />
-                  <input type="hidden" name="occurAt" value={action.occurAt} />
-                  <input type="hidden" name="done_comment" value="" />
-                  <ActionSubmitButton
-                    className="next-reminder-primary"
-                    type="submit"
-                    data-action-feedback={action.feedbackLabel}
-                  >
-                    {action.label}
-                  </ActionSubmitButton>
-                </form>
+          <div className="next-reminder-time">{timeLabel}</div>
+          <div className="flex flex-wrap items-center justify-between gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {badge ? (
+                <span className="next-reminder-pill" style={subtleBadgeStyle}>
+                  {badge}
+                </span>
+              ) : null}
+              {tone === 'overdue' ? (
+                <span className="next-reminder-overdue">
+                  {statusLabel ?? 'Întârziat'}
+                </span>
+              ) : null}
+            </div>
+            {action ? (
+              <div className="flex flex-wrap items-center gap-1.5">
                 <form action={snoozeOccurrence}>
                   <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
                   <input type="hidden" name="mode" value="30" />
@@ -137,11 +139,11 @@ export default function NextUpCard({
                   </ActionSubmitButton>
                 </form>
               </div>
-              <div className="next-reminder-focus">
-                {focusCopy ?? 'Un pas mic acum → zi mai ușoară.'}
-              </div>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
+          <div className="next-reminder-focus">
+            {focusCopy ?? 'Un pas mic acum → zi mai ușoară.'}
+          </div>
         </div>
       )}
     </div>
