@@ -92,7 +92,7 @@ export default function NextUpCard({
       ) : (
         <div className="mt-1 space-y-1">
           <div className="flex items-center justify-between gap-1.5">
-            <div className="next-reminder-title line-clamp-2 mt-1 text-[clamp(1.35rem,4vw,1.5rem)] leading-[1.12] font-semibold text-white">{taskTitle}</div>
+            <div className="next-reminder-title line-clamp-2 mt-1 text-[clamp(1.35rem,4vw,1.5rem)] leading-[1.12] font-semibold text-fuchsia-400">{taskTitle}</div>
             {action ? (
               <form action={markDone}>
                   <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
