@@ -88,8 +88,8 @@ export default function AppNavigation({
       <header className={`sticky top-0 z-30 border-b border-border ${headerClass} safe-top`}>
         <div className={`page-wrap flex flex-wrap items-center justify-between gap-4 ${headerPadding}`}>
           <Link href="/app" className="flex items-center gap-3 text-lg font-semibold tracking-tight text-ink">
-            <span className={`flex ${isCollapsed ? 'h-9 w-9' : 'h-10 w-10'} items-center justify-center rounded-full bg-gradient-to-br from-primaryStrong via-primary to-accent text-sm font-bold text-white shadow-md shadow-sky-500/30`}>
-              RI
+            <span className={`flex ${isCollapsed ? 'h-9 w-9' : 'h-10 w-10'} items-center justify-center rounded-full bg-surfaceMuted shadow-md`}>
+              <img src="/brand-icon.svg" alt="" className="h-8 w-8" aria-hidden="true" />
             </span>
             <span className={isCollapsed ? 'text-base' : ''}>{appName}</span>
           </Link>
@@ -103,11 +103,10 @@ export default function AppNavigation({
                       <div key={link.href} className="flex items-center gap-1">
                         <Link
                           href={link.href}
-                          className={`rounded-full px-4 py-2 transition-all ${
-                            active
+                          className={`rounded-full px-4 py-2 transition-all ${active
                               ? 'bg-[color:var(--accent-soft-bg)] text-ink shadow-sm'
                               : 'text-muted hover:bg-surface hover:text-ink'
-                          }`}
+                            }`}
                         >
                           {link.label}
                         </Link>
@@ -132,11 +131,10 @@ export default function AppNavigation({
                     <Link
                       key={link.href}
                       href={link.href}
-                      className={`rounded-full px-4 py-2 transition-all ${
-                        active
+                      className={`rounded-full px-4 py-2 transition-all ${active
                           ? 'bg-[color:var(--accent-soft-bg)] text-ink shadow-sm'
                           : 'text-muted hover:bg-surface hover:text-ink'
-                      }`}
+                        }`}
                     >
                       {link.label}
                     </Link>

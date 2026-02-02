@@ -7,5 +7,11 @@
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#1f2937",
-  "icons": []
+  "icons": [
+    {
+      "src": "/brand-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
 }

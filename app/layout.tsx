@@ -14,7 +14,12 @@ const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-space
 export const metadata: Metadata = {
   title: 'Reminder inteligent',
   description: 'Remindere inteligente pentru familie, fara stres.',
-  manifest: '/manifest.json'
+  manifest: '/manifest.json',
+  icons: {
+    icon: '/brand-icon.svg',
+    shortcut: '/brand-icon.svg',
+    apple: '/brand-icon.svg'
+  }
 };
 
 export const viewport = {
