@@ -164,7 +164,7 @@ export const messages = {
       smartSnoozeLaterToday: 'Mai târziu azi',
       smartSnoozeTomorrowMorning: 'Mâine dimineață',
       smartSnoozeInOneHour: '+1 oră',
-      smartSnoozePick: 'Alege…'
+      smartSnoozePick: 'Alege…',
       viewMoreMonths: 'Vezi mai multe luni'
     },
     you: {
