@@ -24,12 +24,12 @@ export default function AtAGlanceRow({ metrics, activeId, onSelect, variant = 'p
   const isSecondary = variant === 'secondary';
   return (
     <div className="home-glass-panel at-a-glance-panel rounded-[var(--radius-lg)] px-[var(--space-2)] py-[var(--space-2)]">
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         {metrics.map((metric) => (
           <button
             key={metric.id}
             type="button"
-            className={`stat-tile home-tile p-2.5 ${isSecondary ? 'stat-tile-secondary' : ''} ${
+            className={`stat-tile home-tile p-2 ${isSecondary ? 'stat-tile-secondary' : ''} ${
               metric.tileClass ?? ''
             } ${activeId === metric.id ? 'stat-tile-active' : ''}`}
             style={
@@ -43,20 +43,20 @@ export default function AtAGlanceRow({ metrics, activeId, onSelect, variant = 'p
           >
             <div className="flex items-center justify-between">
               <span className="h-2 w-2 rounded-full bg-[rgba(var(--tile-accent),0.9)]" aria-hidden="true" />
-              {metric.icon ? <metric.icon className="h-3.5 w-3.5 text-[color:var(--text-1)]" /> : null}
+              {metric.icon ? <metric.icon className="h-3 w-3 text-[color:var(--text-1)]" /> : null}
             </div>
             <div
-              className="mt-1 text-[clamp(1.0rem,3.2vw,1.22rem)] leading-tight font-semibold text-[color:var(--tile-ink,var(--text-0))]"
+              className="mt-0.5 text-[clamp(0.9rem,3vw,1.05rem)] leading-tight font-semibold text-[color:var(--tile-ink,var(--text-0))]"
             >
               {metric.count}
             </div>
             <div
-              className="mt-1 text-[0.7rem] font-semibold text-[color:var(--text-1)]"
+              className="mt-0.5 text-[0.62rem] font-semibold text-[color:var(--text-1)]"
             >
               {metric.label}
             </div>
             {metric.subLabel ? (
-              <div className="mt-1 text-[0.65rem] text-[color:var(--text-2)]">{metric.subLabel}</div>
+              <div className="mt-0.5 text-[0.58rem] text-[color:var(--text-2)]">{metric.subLabel}</div>
             ) : null}
           </button>
         ))}

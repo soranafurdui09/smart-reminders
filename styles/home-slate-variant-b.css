@@ -31,22 +31,22 @@
 .home-slate.today-shell .next-reminder-card {
   padding: 0.875rem 0.875rem 0.75rem;
   border-radius: var(--radius-lg);
-  outline: 2px solid rgba(255,255,255,0.12);
+  outline: 0.125rem solid rgba(255,255,255,0.12);
 }
 
 .home-slate.today-shell .next-reminder-card::before {
   content: "";
   position: absolute;
-  top: -2.125rem;
-  right: -4.375rem;
-  width: 16.25rem;
-  height: 10.625rem;
+  top: -2.25rem;
+  right: -4.75rem;
+  width: 17.5rem;
+  height: 11.25rem;
   background: radial-gradient(circle at 35% 35%,
-    rgba(214,161,74,0.40) 0%,
-    rgba(214,161,74,0.18) 38%,
+    rgba(214,161,74,0.46) 0%,
+    rgba(214,161,74,0.22) 40%,
     rgba(214,161,74,0.00) 72%);
-  filter: blur(0.625rem);
-  opacity: 0.95;
+  filter: blur(0.75rem);
+  opacity: 1;
   pointer-events: none;
   z-index: 0;
 }
@@ -62,7 +62,7 @@
     rgba(214,161,74,0) 0%,
     rgba(214,161,74,0.55) 45%,
     rgba(214,161,74,0) 100%);
-  opacity: 0.6;
+  opacity: 0.75;
   pointer-events: none;
   z-index: 0;
 }
@@ -153,12 +153,12 @@
   position: absolute;
   inset: -0.125rem;
   border-radius: 1.25rem;
-  background: radial-gradient(8.75rem 5.625rem at 20% 20%,
-    rgba(var(--tile-accent),0.38),
-    rgba(var(--tile-accent),0.10) 40%,
+  background: radial-gradient(9rem 6rem at 18% 12%,
+    rgba(var(--tile-accent),0.52),
+    rgba(var(--tile-accent),0.18) 45%,
     rgba(0,0,0,0) 75%);
-  filter: blur(0.625rem);
-  opacity: 0.85;
+  filter: blur(0.75rem);
+  opacity: 0.95;
   pointer-events: none;
 }
 
@@ -171,15 +171,39 @@
   right: 0.75rem;
   height: 0.0625rem;
   background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.22), rgba(255,255,255,0));
-  opacity: 0.6;
+  opacity: 0.75;
   pointer-events: none;
 }
 
 /* Variant B tints per tile type */
-.home-slate.today-shell .stat-tile-today { background: rgba(11,22,51,0.55); border-color: rgba(77,125,255,0.22); }
-.home-slate.today-shell .stat-tile-soon  { background: rgba(7,31,36,0.55); border-color: rgba(46,230,197,0.18); }
-.home-slate.today-shell .stat-tile-meds  { background: rgba(23,18,55,0.55); border-color: rgba(154,123,255,0.18); }
-.home-slate.today-shell .stat-tile-overdue { background: rgba(42,30,11,0.50); border-color: rgba(240,177,90,0.22); }
+.home-slate.today-shell .stat-tile-today {
+  background:
+    linear-gradient(165deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 55%),
+    linear-gradient(0deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0) 60%),
+    rgba(11,22,51,0.55);
+  border-color: rgba(77,125,255,0.22);
+}
+.home-slate.today-shell .stat-tile-soon  {
+  background:
+    linear-gradient(165deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 55%),
+    linear-gradient(0deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0) 60%),
+    rgba(7,31,36,0.55);
+  border-color: rgba(46,230,197,0.18);
+}
+.home-slate.today-shell .stat-tile-meds  {
+  background:
+    linear-gradient(165deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 55%),
+    linear-gradient(0deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0) 60%),
+    rgba(23,18,55,0.55);
+  border-color: rgba(154,123,255,0.18);
+}
+.home-slate.today-shell .stat-tile-overdue {
+  background:
+    linear-gradient(165deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 55%),
+    linear-gradient(0deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0) 60%),
+    rgba(42,30,11,0.50);
+  border-color: rgba(240,177,90,0.22);
+}
 
 /* Active tile: slightly stronger ring (do NOT use white border) */
 .home-slate.today-shell .stat-tile-active {
@@ -201,7 +225,7 @@
 
 /* Compact mode — NO layout restructuring */
 .home-slate.today-shell.home-compact {
-  --compact: 0.75;
+  --compact: 0.8;
 }
 
 /* Reduce overall typography slightly */
@@ -211,53 +235,53 @@
 
 /* Hero card: reduce padding + title size slightly */
 .home-slate.today-shell.home-compact .next-reminder-card {
-  padding: 0.65625rem 0.65625rem 0.5625rem !important;
+  padding: 0.7rem 0.7rem 0.6rem !important;
 }
 
 .home-slate.today-shell.home-compact .next-reminder-card .next-reminder-title {
-  font-size: clamp(0.95rem, 3.15vw, 1.1rem) !important;
+  font-size: clamp(1rem, 3.35vw, 1.16rem) !important;
   line-height: 1.1 !important;
-  margin-top: 0.28125rem !important;
+  margin-top: 0.3rem !important;
 }
 
 .home-slate.today-shell.home-compact .next-reminder-card .next-reminder-time {
-  margin-top: 0.28125rem !important;
-  font-size: clamp(0.615rem, 2.1vw, 0.69rem) !important;
+  margin-top: 0.3rem !important;
+  font-size: clamp(0.76rem, 2.6vw, 0.86rem) !important;
 }
 
 /* Chips and buttons a bit smaller but keep touch targets */
 .home-slate.today-shell.home-compact .next-reminder-pill,
 .home-slate.today-shell.home-compact .next-reminder-overdue {
-  font-size: 0.585rem !important;
-  padding: 0.2625rem 0.5625rem !important;
+  font-size: 0.62rem !important;
+  padding: 0.28rem 0.6rem !important;
 }
 
 .home-slate.today-shell.home-compact .next-reminder-primary {
-  padding: 0.45rem 0.825rem !important;
-  font-size: 0.675rem !important;
-  min-height: 2.0625rem;
+  padding: 0.48rem 0.88rem !important;
+  font-size: 0.72rem !important;
+  min-height: 2.2rem;
 }
 
 .home-slate.today-shell.home-compact .next-reminder-secondary {
-  padding: 0.4125rem 0.7125rem !important;
-  font-size: 0.6375rem !important;
-  min-height: 1.875rem;
+  padding: 0.44rem 0.76rem !important;
+  font-size: 0.68rem !important;
+  min-height: 2rem;
 }
 
 /* Mini tiles: reduce padding, radius, and big number */
 .home-slate.today-shell.home-compact .stat-tile {
-  padding: 0.5625rem !important;
+  padding: 0.6rem !important;
 }
 
 .home-slate.today-shell.home-compact .stat-tile > div:nth-child(2) {
-  font-size: clamp(1.0125rem, 3vw, 1.2rem) !important;
+  font-size: clamp(0.9rem, 2.9vw, 1.1rem) !important;
 }
 
 /* Reduce section vertical spacing coming from space-y */
 .home-slate.today-shell.home-compact > * + * {
-  margin-top: 0.9rem !important;
+  margin-top: 0.72rem !important;
 }
 
 .home-slate.today-shell.home-compact .at-a-glance-panel .grid {
-  gap: 0.46875rem !important;
+  gap: 0.5rem !important;
 }
