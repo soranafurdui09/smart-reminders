@@ -23,7 +23,7 @@ type Props = {
 export default function AtAGlanceRow({ metrics, activeId, onSelect, variant = 'primary' }: Props) {
   const isSecondary = variant === 'secondary';
   return (
-    <div className="home-glass-panel rounded-2xl px-[var(--space-2)] py-[var(--space-2)]">
+    <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-2)] py-[var(--space-2)]">
       <div className="grid grid-cols-2 gap-[var(--space-2)] md:grid-cols-4">
         {metrics.map((metric) => (
           <button
@@ -43,20 +43,20 @@ export default function AtAGlanceRow({ metrics, activeId, onSelect, variant = 'p
           >
             <div className="flex items-center justify-between">
               <span className="h-2 w-2 rounded-full bg-[rgba(var(--tile-accent),0.9)]" aria-hidden="true" />
-              {metric.icon ? <metric.icon className="h-4 w-4 text-[rgba(255,255,255,0.72)]" /> : null}
+              {metric.icon ? <metric.icon className="h-4 w-4 text-[color:var(--text-1)]" /> : null}
             </div>
             <div
-              className={`mt-2 ${isSecondary ? 'text-[24px]' : 'text-[26px]'} font-semibold ${
-                metric.accentClass ?? 'text-text'
-              }`}
+              className={`mt-2 ${isSecondary ? 'text-[24px]' : 'text-[26px]'} font-semibold text-[color:var(--tile-ink,var(--text-0))]`}
             >
               {metric.count}
             </div>
-            <div className={`mt-1 ${isSecondary ? 'text-[11px]' : 'text-[12px]'} font-semibold text-[rgba(255,255,255,0.72)]`}>
+            <div
+              className={`mt-1 ${isSecondary ? 'text-[11px]' : 'text-[12px]'} font-semibold text-[color:var(--text-1)]`}
+            >
               {metric.label}
             </div>
             {metric.subLabel ? (
-              <div className="mt-1 text-[11px] text-[rgba(255,255,255,0.56)]">{metric.subLabel}</div>
+              <div className="mt-1 text-[11px] text-[color:var(--text-2)]">{metric.subLabel}</div>
             ) : null}
           </button>
         ))}

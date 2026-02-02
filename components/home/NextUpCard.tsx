@@ -85,7 +85,7 @@ export default function NextUpCard({
       </div>
       {subtext ? <div className="next-reminder-subtitle">{subtext}</div> : null}
       {isEmpty ? (
-        <div className="mt-1.5 text-sm font-semibold text-[rgba(255,255,255,0.72)]">
+        <div className="mt-1.5 text-sm font-semibold text-[color:var(--text-1)]">
           {emptyLabel}
         </div>
       ) : (

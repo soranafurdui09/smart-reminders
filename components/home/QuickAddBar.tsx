@@ -13,11 +13,11 @@ export default function QuickAddBar() {
   };
 
   return (
-    <div className="home-glass-panel rounded-2xl px-[var(--space-3)] py-[var(--space-3)]">
+    <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-3)] py-[var(--space-3)]">
       <div className="flex items-center gap-2">
         <div className="home-input-pill flex h-11 flex-1 items-center px-3">
           <input
-            className="h-full w-full bg-transparent text-sm text-[rgba(255,255,255,0.92)] placeholder:text-[rgba(255,255,255,0.56)] focus:outline-none"
+            className="h-full w-full bg-transparent text-sm text-[color:var(--text-0)] placeholder:text-[color:var(--text-2)] focus:outline-none"
             placeholder="Adaugă rapid…"
             value={value}
             onChange={(event) => setValue(event.target.value)}
@@ -31,7 +31,7 @@ export default function QuickAddBar() {
         </div>
         <button
           type="button"
-          className="home-icon-btn h-11 w-11 text-[color:#4E7BFF]"
+          className="home-icon-btn h-11 w-11 text-[color:var(--brand-blue)]"
           aria-label="Dictează"
           onClick={() => openQuickAdd({ voice: true })}
         >
@@ -39,7 +39,7 @@ export default function QuickAddBar() {
         </button>
         <button
           type="button"
-          className="home-icon-btn h-11 w-11 text-[color:#4E7BFF]"
+          className="home-icon-btn h-11 w-11 text-[color:var(--brand-blue)]"
           aria-label="AI"
           onClick={() => openQuickAdd({ text: trimmed || undefined })}
         >

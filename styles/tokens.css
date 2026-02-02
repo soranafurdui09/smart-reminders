@@ -1,0 +1,44 @@
+:root {
+  --glass: rgba(255, 255, 255, 0.06);
+  --glass-strong: rgba(255, 255, 255, 0.09);
+  --stroke: rgba(255, 255, 255, 0.1);
+  --stroke-soft: rgba(255, 255, 255, 0.07);
+
+  --text-0: rgba(255, 255, 255, 0.92);
+
+  --shadow-1: 0 14px 40px rgba(0, 0, 0, 0.55);
+  --shadow-2: 0 10px 26px rgba(0, 0, 0, 0.45);
+
+  --radius-lg: 22px;
+  --radius-md: 18px;
+  --blur: 18px;
+
+  --brand-blue: #4c7dff;
+  --brand-blue-2: #2f5bff;
+
+  --warm-gold: #d6a14a;
+  --warm-gold-soft: rgba(214, 161, 74, 0.28);
+  --warm-gold-line: rgba(214, 161, 74, 0.55);
+
+  --today-blue-bg: rgba(76, 125, 255, 0.22);
+  --today-blue-stroke: rgba(76, 125, 255, 0.35);
+
+  --soon-teal-bg: rgba(46, 204, 198, 0.18);
+  --soon-teal-stroke: rgba(46, 204, 198, 0.32);
+
+  --meds-indigo-bg: rgba(130, 110, 255, 0.18);
+  --meds-indigo-stroke: rgba(130, 110, 255, 0.32);
+
+  --overdue-amber-bg: rgba(255, 176, 64, 0.18);
+  --overdue-amber-stroke: rgba(255, 176, 64, 0.35);
+
+  --critical-red-bg: rgba(255, 85, 85, 0.18);
+  --critical-red-stroke: rgba(255, 85, 85, 0.35);
+}
+
+.home-slate {
+  --bg-0: 7 10 18;
+  --bg-1: 10 16 32;
+  --text-1: rgba(255, 255, 255, 0.72);
+  --text-2: rgba(255, 255, 255, 0.52);
+}

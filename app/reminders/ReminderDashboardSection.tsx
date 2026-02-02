@@ -719,8 +719,8 @@ export default function ReminderDashboardSection({
     });
     return `${copy.dashboard.medicationsTileNext} ${nextTime}`;
   }, [copy.dashboard.medicationsTileEmpty, copy.dashboard.medicationsTileNext, localeTag, visibleDoses]);
-  const overdueOldestLabel = useMemo(() => {
-    if (!overdueItems.length) return copy.dashboard.overdueTileEmpty;
+  const overdueOldestDays = useMemo(() => {
+    if (!overdueItems.length) return 0;
     const oldest = overdueItems.reduce((prev, current) => {
       const prevDate = new Date(prev.occur_at ?? prev.effective_at ?? prev.snoozed_until ?? 0);
       const currentDate = new Date(current.occur_at ?? current.effective_at ?? current.snoozed_until ?? 0);
@@ -728,9 +728,14 @@ export default function ReminderDashboardSection({
     });
     const now = new Date();
     const compareDate = new Date(oldest.occur_at ?? oldest.effective_at ?? oldest.snoozed_until ?? now);
-    const dayDiff = Math.abs(diffDaysInTimeZone(compareDate, now, effectiveTimeZone || 'UTC'));
-    return copy.dashboard.overdueTileOldest.replace('{days}', String(dayDiff));
-  }, [copy.dashboard.overdueTileEmpty, copy.dashboard.overdueTileOldest, effectiveTimeZone, overdueItems]);
+    return Math.abs(diffDaysInTimeZone(compareDate, now, effectiveTimeZone || 'UTC'));
+  }, [effectiveTimeZone, overdueItems]);
+  const overdueOldestLabel = useMemo(() => {
+    if (!overdueItems.length) return copy.dashboard.overdueTileEmpty;
+    return copy.dashboard.overdueTileOldest.replace('{days}', String(overdueOldestDays));
+  }, [copy.dashboard.overdueTileEmpty, copy.dashboard.overdueTileOldest, overdueItems.length, overdueOldestDays]);
+  const isOverdueCritical = overdueItems.length > 20 || overdueOldestDays > 7;
+  const overdueTileClass = isOverdueCritical ? 'stat-tile-overdue stat-tile-overdue-critical' : 'stat-tile-overdue';
   const nextUpActionsSheet = nextOccurrence ? (
     <ReminderActionsSheet
       open={nextActionsOpen}
@@ -1241,7 +1246,7 @@ export default function ReminderDashboardSection({
             ) : null}
           </div>
         ) : (
-          <div className="home-slate space-y-[var(--space-3)] today-shell">
+          <div className="home-slate space-y-[18px] today-shell">
             <div className="home-slate-bg" aria-hidden="true" />
             <HomeHeader title={copy.dashboard.title} subtitle={homeSubtitle} />
 
@@ -1285,8 +1290,6 @@ export default function ReminderDashboardSection({
                   id: 'today',
                   label: copy.dashboard.todayTileTitle,
                   count: todayOpenItems.length,
-                  accentClass: 'text-[#3F6CFF]',
-                  accentRgb: '63 108 255',
                   subLabel: todayOpenItems.length ? copy.dashboard.todayTileHint : copy.dashboard.todayTileEmpty,
                   tileClass: 'stat-tile-today',
                   icon: SunMedium
@@ -1295,8 +1298,6 @@ export default function ReminderDashboardSection({
                   id: 'soon',
                   label: copy.dashboard.soonTileTitle,
                   count: soonItems.length,
-                  accentClass: 'text-[#39D6C8]',
-                  accentRgb: '57 214 200',
                   subLabel: copy.dashboard.soonTileHint,
                   tileClass: 'stat-tile-soon',
                   icon: Calendar
@@ -1305,8 +1306,6 @@ export default function ReminderDashboardSection({
                   id: 'meds',
                   label: copy.dashboard.medicationsTileTitle,
                   count: visibleDoses.length,
-                  accentClass: 'text-[#6B5CFF]',
-                  accentRgb: '107 92 255',
                   subLabel: nextDoseTileLabel,
                   tileClass: 'stat-tile-meds',
                   icon: Pill
@@ -1315,10 +1314,8 @@ export default function ReminderDashboardSection({
                   id: 'overdue',
                   label: copy.dashboard.todayOverdue,
                   count: overdueItems.length,
-                  accentClass: 'text-[#F2C77A]',
-                  accentRgb: '242 199 122',
                   subLabel: overdueOldestLabel,
-                  tileClass: 'stat-tile-overdue',
+                  tileClass: overdueTileClass,
                   icon: AlertTriangle
                 }
               ]}
@@ -1350,10 +1347,10 @@ export default function ReminderDashboardSection({
             {overdueTopItems.length ? (
               <section className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-[rgba(255,255,255,0.92)]">{copy.dashboard.overdueTopTitle}</div>
+                  <div className="text-sm font-semibold text-[color:var(--text-0)]">{copy.dashboard.overdueTopTitle}</div>
                   <button
                     type="button"
-                    className="text-xs font-semibold text-[color:#4E7BFF]"
+                    className="text-xs font-semibold text-[color:var(--brand-blue)]"
                     onClick={() => setShowRecover((prev) => !prev)}
                   >
                     {copy.dashboard.overdueTopCta}
@@ -1384,7 +1381,7 @@ export default function ReminderDashboardSection({
             ) : null}
 
             <section id="overdue-list" className="space-y-2">
-              <div className="flex items-center justify-between text-sm font-semibold text-[rgba(255,255,255,0.92)]">
+              <div className="flex items-center justify-between text-sm font-semibold text-[color:var(--text-0)]">
                 <span>
                   {homeSegment === 'overdue'
                     ? copy.dashboard.todayOverdue
@@ -1392,7 +1389,7 @@ export default function ReminderDashboardSection({
                       ? copy.dashboard.todaySoon
                       : copy.dashboard.todayTitle}
                 </span>
-                <span className="text-xs text-[rgba(255,255,255,0.56)]">
+                <span className="text-xs text-[color:var(--text-2)]">
                   {segmentItems.length} {copy.dashboard.reminderCountLabel}
                 </span>
               </div>
@@ -1410,7 +1407,7 @@ export default function ReminderDashboardSection({
                     ))}
                   </div>
                 ) : (
-                  <div className="home-glass-panel rounded-2xl p-[var(--space-3)] text-sm text-[rgba(255,255,255,0.56)]">
+                  <div className="home-glass-panel rounded-[var(--radius-lg)] p-[var(--space-3)] text-sm text-[color:var(--text-2)]">
                     {copy.dashboard.todayEmpty}
                   </div>
                 )

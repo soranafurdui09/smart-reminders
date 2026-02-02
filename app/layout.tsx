@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { Space_Grotesk } from 'next/font/google';
+import '../styles/tokens.css';
 import './globals.css';
 import ConfigGate from '@/components/ConfigGate';
 import { getLocaleFromCookie } from '@/lib/i18n/server';

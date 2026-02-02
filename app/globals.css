@@ -78,22 +78,6 @@
   --shadow-lift: 0 18px 32px rgba(0, 0, 0, 0.18);
   --glass-blur: blur(6px);
 
-  --home-bg0: #0a0d17;
-  --home-bg1: #101525;
-  --home-vignette: rgba(5, 7, 14, 0.75);
-  --home-text-primary: rgba(255, 255, 255, 0.92);
-  --home-text-secondary: rgba(255, 255, 255, 0.72);
-  --home-text-muted: rgba(255, 255, 255, 0.56);
-  --home-glass: rgba(18, 24, 40, 0.66);
-  --home-glass-2: rgba(18, 24, 40, 0.52);
-  --home-glass-border: rgba(255, 255, 255, 0.1);
-  --home-glass-border-strong: rgba(255, 255, 255, 0.14);
-  --home-shadow-soft: rgba(0, 0, 0, 0.45);
-  --home-gold-soft: #f2c77a;
-  --home-gold-inner: rgba(242, 199, 122, 0.12);
-  --home-gold-outer: rgba(242, 199, 122, 0.2);
-  --home-primary-blue: #4e7bff;
-
   --color-bg: var(--bg0);
   --color-surface: 15 23 42;
   --color-surface-muted: 19 30 52;
@@ -489,20 +473,23 @@ h3 {
   }
 
   .stat-tile {
-    border-radius: var(--radius-2);
-    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    padding: 12px;
     @apply text-left;
     position: relative;
     overflow: hidden;
     --tile-accent: 79 141 255;
-    min-height: 78px;
-    background: var(--home-glass-2);
-    border: 1px solid var(--home-glass-border-strong);
-    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.4);
+    --tile-bg: var(--glass);
+    --tile-stroke: var(--stroke);
+    min-height: 88px;
+    background: var(--glass);
+    border: 1px solid var(--tile-stroke);
+    box-shadow: var(--shadow-2);
+    backdrop-filter: blur(calc(var(--blur) * 0.7));
   }
 
   .stat-tile-secondary {
-    min-height: 84px;
+    min-height: 92px;
   }
 
   .stat-tile-strong {
@@ -519,8 +506,8 @@ h3 {
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(150px circle at 90% 8%, rgba(var(--tile-accent), 0.18), transparent 62%),
-      linear-gradient(160deg, rgba(var(--tile-accent), 0.12), var(--home-glass-2) 70%);
+      radial-gradient(150px circle at 90% 8%, rgba(var(--tile-accent), 0.22), transparent 62%),
+      linear-gradient(160deg, var(--tile-bg) 0%, rgba(7, 10, 18, 0) 70%);
     opacity: 1;
     pointer-events: none;
   }
@@ -531,32 +518,44 @@ h3 {
   }
 
   .stat-tile-today {
-    --tile-accent: 63 108 255;
-    border-color: rgba(63, 108, 255, 0.3);
-    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.4), 0 0 14px rgba(63, 108, 255, 0.16);
+    --tile-accent: 76 125 255;
+    --tile-bg: var(--today-blue-bg);
+    --tile-stroke: var(--today-blue-stroke);
+    --tile-ink: #4c7dff;
   }
 
   .stat-tile-soon {
-    --tile-accent: 57 214 200;
-    border-color: rgba(57, 214, 200, 0.3);
-    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.4), 0 0 14px rgba(57, 214, 200, 0.16);
+    --tile-accent: 46 204 198;
+    --tile-bg: var(--soon-teal-bg);
+    --tile-stroke: var(--soon-teal-stroke);
+    --tile-ink: #2eccc6;
   }
 
   .stat-tile-meds {
-    --tile-accent: 107 92 255;
-    border-color: rgba(107, 92, 255, 0.3);
-    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.4), 0 0 14px rgba(107, 92, 255, 0.16);
+    --tile-accent: 130 110 255;
+    --tile-bg: var(--meds-indigo-bg);
+    --tile-stroke: var(--meds-indigo-stroke);
+    --tile-ink: #826eff;
   }
 
   .stat-tile-overdue {
-    --tile-accent: 242 199 122;
-    border-color: rgba(242, 199, 122, 0.34);
-    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.4), 0 0 14px rgba(242, 199, 122, 0.16);
+    --tile-accent: 255 176 64;
+    --tile-bg: var(--overdue-amber-bg);
+    --tile-stroke: var(--overdue-amber-stroke);
+    --tile-ink: #ffb040;
+  }
+
+  .stat-tile-overdue-critical {
+    --tile-accent: 255 85 85;
+    --tile-bg: var(--critical-red-bg);
+    --tile-stroke: var(--critical-red-stroke);
+    --tile-ink: #ff5555;
   }
 
   .home-slate {
     position: relative;
     z-index: 0;
+    color: var(--text-0);
   }
 
   .home-slate > :not(.home-slate-bg) {
@@ -570,58 +569,62 @@ h3 {
     z-index: 0;
     pointer-events: none;
     background:
-      radial-gradient(720px circle at 50% -20%, rgba(78, 123, 255, 0.12), transparent 60%),
-      linear-gradient(180deg, var(--home-bg1) 0%, var(--home-bg0) 70%);
+      radial-gradient(720px circle at 50% -20%, rgba(255, 255, 255, 0.04), transparent 60%),
+      linear-gradient(180deg, rgb(var(--bg-1)) 0%, rgb(var(--bg-0)) 70%);
   }
 
   .home-slate-bg::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(120% 80% at 50% 0%, rgba(5, 7, 14, 0) 0%, var(--home-vignette) 70%);
+    background: radial-gradient(120% 80% at 50% 0%, rgba(5, 7, 14, 0) 0%, rgba(5, 7, 14, 0.75) 70%);
     opacity: 0.9;
   }
 
   .home-glass-panel {
-    background: var(--home-glass);
-    border: 1px solid var(--home-glass-border);
-    box-shadow: 0 18px 55px var(--home-shadow-soft);
-    backdrop-filter: blur(20px);
+    background: var(--glass);
+    border: 1px solid var(--stroke-soft);
+    box-shadow: var(--shadow-2);
+    backdrop-filter: blur(var(--blur));
   }
 
   .home-input-pill {
-    border-radius: 14px;
-    background: var(--home-glass-2);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    background: var(--glass);
+    border: 1px solid var(--stroke-soft);
   }
 
   .home-icon-btn {
     @apply inline-flex items-center justify-center rounded-full transition active:scale-[0.98];
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.82);
+    background: var(--glass);
+    border: 1px solid var(--stroke-soft);
+    color: var(--text-1);
   }
 
   .home-profile-btn {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--glass);
   }
 
   .home-primary-btn {
     @apply inline-flex items-center justify-center rounded-full transition active:scale-[0.98];
-    background: var(--home-primary-blue);
+    background: var(--brand-blue);
     color: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 10px 22px rgba(78, 123, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 10px 22px rgba(76, 125, 255, 0.3);
+  }
+
+  .home-primary-btn:active {
+    background: var(--brand-blue-2);
   }
 
   .home-chip {
     border-radius: 999px;
-    padding: 3px 10px;
+    padding: 4px 10px;
     font-size: 10.5px;
     font-weight: 600;
-    color: var(--home-text-secondary);
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-1);
+    background: var(--glass);
+    border: 1px solid var(--stroke-soft);
   }
 
   .home-header {
@@ -632,69 +635,69 @@ h3 {
   }
 
   .home-header-title {
-    font-size: 18px;
+    font-size: 22px;
     font-weight: 700;
-    color: var(--home-text-primary);
+    color: var(--text-0);
   }
 
   .home-header-subtitle {
-    font-size: 12px;
-    color: var(--home-text-muted);
+    font-size: 13px;
+    color: var(--text-2);
   }
 
   .home-priority-row {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 9px 12px;
-    border-radius: 16px;
-    background: var(--home-glass-2);
-    border: 1px solid var(--home-glass-border);
-    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.4);
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    background: var(--glass);
+    border: 1px solid var(--stroke-soft);
+    box-shadow: var(--shadow-2);
   }
 
   .home-priority-title {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
-    color: var(--home-text-primary);
+    color: var(--text-0);
   }
 
   .home-priority-meta {
-    font-size: 11px;
-    color: var(--home-text-secondary);
+    font-size: 12px;
+    color: var(--text-1);
   }
 
   .home-category-pill {
     display: inline-flex;
     align-items: center;
     border-radius: 999px;
-    padding: 2px 10px;
+    padding: 3px 10px;
     font-size: 11px;
     font-weight: 600;
-    color: var(--home-text-secondary);
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--text-1);
+    background: var(--glass);
+    border: 1px solid var(--stroke-soft);
   }
 
   .home-priority-primary {
     border-radius: 999px;
-    padding: 4px 10px;
-    font-size: 10.5px;
+    padding: 5px 12px;
+    font-size: 11px;
     font-weight: 600;
     color: rgba(255, 255, 255, 0.95);
-    background: var(--home-primary-blue);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 10px 18px rgba(78, 123, 255, 0.2);
+    background: var(--brand-blue);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 10px 18px rgba(76, 125, 255, 0.25);
   }
 
   .home-priority-secondary {
     border-radius: 999px;
-    padding: 4px 9px;
-    font-size: 10px;
+    padding: 5px 10px;
+    font-size: 11px;
     font-weight: 600;
-    color: var(--home-text-secondary);
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--text-1);
+    background: var(--glass);
+    border: 1px solid var(--stroke-soft);
   }
 
   .input-surface {
@@ -778,45 +781,45 @@ h3 {
   }
 
   .segment-overdue {
-    background: linear-gradient(135deg, rgba(242, 199, 122, 0.16), rgba(242, 199, 122, 0.06));
-    border: 1px solid rgba(242, 199, 122, 0.22);
-    box-shadow: 0 10px 24px rgba(242, 199, 122, 0.18);
+    background: linear-gradient(135deg, var(--overdue-amber-bg), rgba(255, 176, 64, 0.06));
+    border: 1px solid var(--overdue-amber-stroke);
+    box-shadow: var(--shadow-2);
   }
 
   .segment-today {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.04));
-    border: 1px solid rgba(59, 130, 246, 0.22);
-    box-shadow: 0 10px 24px rgba(59, 130, 246, 0.12);
+    background: linear-gradient(135deg, var(--today-blue-bg), rgba(76, 125, 255, 0.06));
+    border: 1px solid var(--today-blue-stroke);
+    box-shadow: var(--shadow-2);
   }
 
   .segment-soon {
-    background: linear-gradient(135deg, rgba(52, 211, 153, 0.12), rgba(52, 211, 153, 0.04));
-    border: 1px solid rgba(52, 211, 153, 0.22);
-    box-shadow: 0 10px 24px rgba(52, 211, 153, 0.12);
+    background: linear-gradient(135deg, var(--soon-teal-bg), rgba(46, 204, 198, 0.06));
+    border: 1px solid var(--soon-teal-stroke);
+    box-shadow: var(--shadow-2);
   }
 
   .next-reminder-card {
-    --nr-border: var(--home-glass-border-strong);
-    --nr-glow: var(--home-gold-outer);
+    --nr-border: var(--stroke-soft);
     position: relative;
     overflow: hidden;
-    border-radius: 20px;
-    padding: 10px 12px;
-    background: var(--home-glass);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+    background: var(--glass-strong);
     border: 1px solid var(--nr-border);
-    color: var(--home-text-primary);
-    box-shadow: 0 18px 55px var(--home-shadow-soft), 0 0 24px var(--nr-glow);
-    backdrop-filter: blur(22px);
+    color: var(--text-0);
+    box-shadow: var(--shadow-1);
+    backdrop-filter: blur(var(--blur));
   }
 
   .next-reminder-card::before {
     content: '';
     position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(160px circle at 85% 0%, var(--home-gold-inner), transparent 64%),
-      linear-gradient(160deg, rgba(242, 199, 122, 0.06), rgba(18, 24, 40, 0.66) 62%);
-    opacity: 0.9;
+    top: 0;
+    right: -15%;
+    width: 140%;
+    height: 55%;
+    background: linear-gradient(90deg, rgba(214, 161, 74, 0) 0%, rgba(214, 161, 74, 0.35) 45%, rgba(214, 161, 74, 0) 100%);
+    opacity: 0.6;
     pointer-events: none;
   }
 
@@ -826,12 +829,11 @@ h3 {
   }
 
   .next-reminder-card--overdue {
-    --nr-glow: rgba(242, 199, 122, 0.22);
+    --nr-border: var(--stroke);
   }
 
   .next-reminder-card--urgent {
-    --nr-border: var(--home-glass-border-strong);
-    --nr-glow: rgba(242, 199, 122, 0.23);
+    --nr-border: var(--stroke);
   }
 
   .next-reminder-topline {
@@ -840,18 +842,18 @@ h3 {
     right: 0;
     top: 0;
     height: 1px;
-    background: linear-gradient(90deg, rgba(242, 199, 122, 0.55), transparent 70%);
+    background: linear-gradient(90deg, rgba(214, 161, 74, 0) 0%, var(--warm-gold-line) 45%, rgba(214, 161, 74, 0) 100%);
     pointer-events: none;
     z-index: 2;
   }
 
   .next-reminder-corner {
     position: absolute;
-    top: -26px;
-    right: -26px;
-    width: 120px;
-    height: 120px;
-    background: radial-gradient(circle at top right, var(--home-gold-inner), transparent 72%);
+    top: -24px;
+    right: -24px;
+    width: 140px;
+    height: 140px;
+    background: radial-gradient(circle at top right, var(--warm-gold-soft), transparent 70%);
     pointer-events: none;
     z-index: 2;
   }
@@ -861,74 +863,75 @@ h3 {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--home-text-muted);
+    color: var(--text-2);
   }
 
   .next-reminder-subtitle {
     margin-top: 2px;
-    font-size: 11px;
-    color: var(--home-text-secondary);
+    font-size: 12px;
+    color: var(--text-2);
   }
 
   .next-reminder-title {
-    font-size: 20px;
+    font-size: 26px;
     font-weight: 700;
-    color: var(--home-text-primary);
+    color: var(--text-0);
     line-height: 1.2;
   }
 
   .next-reminder-time {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
-    color: var(--home-text-secondary);
+    color: var(--text-1);
     line-height: 1.2;
   }
 
   .next-reminder-pill {
     border-radius: 999px;
-    padding: 2px 8px;
+    padding: 3px 10px;
     font-size: 11px;
     font-weight: 600;
-    color: var(--home-text-secondary);
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--text-1);
+    background: var(--glass);
+    border: 1px solid var(--stroke-soft);
   }
 
   .next-reminder-overdue {
     border-radius: 999px;
-    padding: 2px 8px;
+    padding: 3px 10px;
     font-size: 11px;
     font-weight: 600;
-    color: #e7b15c;
-    background: rgba(231, 177, 92, 0.16);
-    border: 1px solid rgba(231, 177, 92, 0.24);
+    color: var(--warm-gold);
+    background: rgba(214, 161, 74, 0.2);
+    border: 1px solid rgba(214, 161, 74, 0.35);
   }
 
   .next-reminder-primary {
     border-radius: 999px;
-    padding: 5px 12px;
-    font-size: 11px;
+    padding: 6px 14px;
+    font-size: 12px;
     font-weight: 600;
     color: rgba(255, 255, 255, 0.95);
-    background: var(--home-primary-blue);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    box-shadow: 0 10px 24px rgba(78, 123, 255, 0.2);
+    background: var(--brand-blue);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 10px 24px rgba(76, 125, 255, 0.3);
     transition: transform 120ms ease, filter 120ms ease;
   }
 
   .next-reminder-primary:active {
     transform: scale(0.98);
-    filter: brightness(0.95);
+    filter: brightness(0.96);
+    background: var(--brand-blue-2);
   }
 
   .next-reminder-secondary {
     border-radius: 999px;
-    padding: 4px 10px;
-    font-size: 10px;
+    padding: 5px 12px;
+    font-size: 11px;
     font-weight: 600;
-    color: var(--home-text-secondary);
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--text-1);
+    background: var(--glass);
+    border: 1px solid var(--stroke-soft);
     transition: transform 120ms ease, filter 120ms ease;
   }
 
@@ -944,14 +947,14 @@ h3 {
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: var(--home-text-secondary);
+    background: var(--glass);
+    border: 1px solid var(--stroke-soft);
+    color: var(--text-1);
   }
 
   .next-reminder-focus {
-    font-size: 11px;
-    color: var(--home-text-muted);
+    font-size: 12px;
+    color: var(--text-2);
   }
 
   .page-title {

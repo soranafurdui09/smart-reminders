@@ -77,7 +77,7 @@ export default function OverdueDenseRow({
           <div className="home-priority-title line-clamp-2">{reminder?.title}</div>
           <div className="home-priority-meta">
             {displayLabel}
-            {relativeLabel ? <span className="text-[rgba(255,255,255,0.56)]"> · {relativeLabel}</span> : null}
+            {relativeLabel ? <span className="text-[color:var(--text-2)]"> · {relativeLabel}</span> : null}
           </div>
           <span className="home-category-pill" style={{ borderColor: category.color }}>
             {category.label}
