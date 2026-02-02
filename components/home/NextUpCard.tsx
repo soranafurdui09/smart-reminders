@@ -92,58 +92,58 @@ export default function NextUpCard({
       ) : (
         <div className="mt-1 space-y-1">
           <div className="flex items-center justify-between gap-1.5">
-            <div className="next-reminder-title line-clamp-2 mt-1.5 text-[clamp(1.35rem,4.5vw,1.55rem)] leading-[1.12] font-semibold text-white">{taskTitle}</div>
+            <div className="next-reminder-title line-clamp-2 mt-1 text-[clamp(1.35rem,4vw,1.5rem)] leading-[1.12] font-semibold text-white">{taskTitle}</div>
             {action ? (
               <form action={markDone}>
                   <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
                   <input type="hidden" name="reminderId" value={action.reminderId} />
                   <input type="hidden" name="occurAt" value={action.occurAt} />
                   <input type="hidden" name="done_comment" value="" />
-                  <ActionSubmitButton
-                    className="next-reminder-primary rounded-full px-6 py-3 bg-[#4D7DFF] text-white font-semibold shadow-[0_10px_24px_rgba(77,125,255,0.35)]"
-                    type="submit"
-                    data-action-feedback={action.feedbackLabel}
-                  >
-                    {action.label}
+                <ActionSubmitButton
+                  className="next-reminder-primary rounded-full px-5 py-2.5 text-[0.95rem] bg-[#4D7DFF] text-white font-semibold shadow-[0_10px_24px_rgba(77,125,255,0.35)]"
+                  type="submit"
+                  data-action-feedback={action.feedbackLabel}
+                >
+                  {action.label}
+                </ActionSubmitButton>
+              </form>
+            ) : null}
+          </div>
+          <div className="next-reminder-time mt-1 text-[clamp(0.9rem,3vw,1rem)] text-white/70">{timeLabel}</div>
+          <div className="flex flex-wrap items-center justify-between gap-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              {badge ? (
+                <span
+                  className="next-reminder-pill px-2.5 py-0.5 rounded-full text-[0.75rem] border border-white/12 bg-white/5 text-white/70 border-emerald-400/35 text-emerald-200/90 bg-emerald-400/10"
+                  style={subtleBadgeStyle}
+                >
+                  {badge}
+                </span>
+              ) : null}
+              {tone === 'overdue' ? (
+                <span className="next-reminder-overdue px-2.5 py-0.5 rounded-full text-[0.75rem] border border-white/12 bg-white/5 text-white/70 border-amber-300/35 text-amber-200/90 bg-amber-300/10">
+                  {statusLabel ?? 'Întârziat'}
+                </span>
+              ) : null}
+            </div>
+            {action ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <form action={snoozeOccurrence}>
+                  <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
+                  <input type="hidden" name="mode" value="30" />
+                  <ActionSubmitButton className="next-reminder-secondary rounded-full px-4 py-1.5 text-[0.9rem] bg-white/6 border border-white/10 text-white/70" type="submit">
+                    {secondaryLabels?.snooze30 ?? 'Amână 30m'}
                   </ActionSubmitButton>
                 </form>
-              ) : null}
-          </div>
-          <div className="next-reminder-time mt-1.5 text-[clamp(0.95rem,3.2vw,1.05rem)] text-white/70">{timeLabel}</div>
-            <div className="flex flex-wrap items-center justify-between gap-1.5">
-              <div className="flex flex-wrap items-center gap-2">
-                {badge ? (
-                  <span
-                    className="next-reminder-pill px-3 py-1 rounded-full text-[13px] border border-white/12 bg-white/5 text-white/70 border-emerald-400/35 text-emerald-200/90 bg-emerald-400/10"
-                    style={subtleBadgeStyle}
-                  >
-                    {badge}
-                  </span>
-                ) : null}
-                {tone === 'overdue' ? (
-                  <span className="next-reminder-overdue px-3 py-1 rounded-full text-[13px] border border-white/12 bg-white/5 text-white/70 border-amber-300/35 text-amber-200/90 bg-amber-300/10">
-                    {statusLabel ?? 'Întârziat'}
-                  </span>
-                ) : null}
+                <form action={snoozeOccurrence}>
+                  <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
+                  <input type="hidden" name="option_id" value="tomorrow" />
+                  <ActionSubmitButton className="next-reminder-secondary rounded-full px-4 py-1.5 text-[0.9rem] bg-white/6 border border-white/10 text-white/70" type="submit">
+                    {secondaryLabels?.snoozeTomorrow ?? 'Mută mâine'}
+                  </ActionSubmitButton>
+                </form>
               </div>
-              {action ? (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <form action={snoozeOccurrence}>
-                    <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
-                    <input type="hidden" name="mode" value="30" />
-                    <ActionSubmitButton className="next-reminder-secondary rounded-full px-5 py-2 bg-white/6 border border-white/10 text-white/70" type="submit">
-                      {secondaryLabels?.snooze30 ?? 'Amână 30m'}
-                    </ActionSubmitButton>
-                  </form>
-                  <form action={snoozeOccurrence}>
-                    <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
-                    <input type="hidden" name="option_id" value="tomorrow" />
-                    <ActionSubmitButton className="next-reminder-secondary rounded-full px-5 py-2 bg-white/6 border border-white/10 text-white/70" type="submit">
-                      {secondaryLabels?.snoozeTomorrow ?? 'Mută mâine'}
-                    </ActionSubmitButton>
-                  </form>
-                </div>
-              ) : null}
+            ) : null}
             </div>
             <div className="next-reminder-focus">
               {focusCopy ?? 'Un pas mic acum → zi mai ușoară.'}

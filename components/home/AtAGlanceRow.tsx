@@ -24,12 +24,12 @@ export default function AtAGlanceRow({ metrics, activeId, onSelect, variant = 'p
   const isSecondary = variant === 'secondary';
   return (
     <div className="home-glass-panel at-a-glance-panel rounded-[var(--radius-lg)] px-[var(--space-2)] py-[var(--space-2)]">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
         {metrics.map((metric) => (
           <button
             key={metric.id}
             type="button"
-            className={`stat-tile home-tile p-3.5 ${isSecondary ? 'stat-tile-secondary' : ''} ${
+            className={`stat-tile home-tile p-3 ${isSecondary ? 'stat-tile-secondary' : ''} ${
               metric.tileClass ?? ''
             } ${activeId === metric.id ? 'stat-tile-active' : ''}`}
             style={
@@ -46,17 +46,17 @@ export default function AtAGlanceRow({ metrics, activeId, onSelect, variant = 'p
               {metric.icon ? <metric.icon className="h-4 w-4 text-[color:var(--text-1)]" /> : null}
             </div>
             <div
-              className="mt-1.5 text-[clamp(1.25rem,4vw,1.5rem)] leading-tight font-semibold text-[color:var(--tile-ink,var(--text-0))]"
+              className="mt-1 text-[clamp(1.1rem,3.6vw,1.35rem)] leading-tight font-semibold text-[color:var(--tile-ink,var(--text-0))]"
             >
               {metric.count}
             </div>
             <div
-              className="mt-1 text-[0.75rem] font-semibold text-[color:var(--text-1)]"
+              className="mt-1 text-[0.7rem] font-semibold text-[color:var(--text-1)]"
             >
               {metric.label}
             </div>
             {metric.subLabel ? (
-              <div className="mt-1 text-[0.7rem] text-[color:var(--text-2)]">{metric.subLabel}</div>
+              <div className="mt-1 text-[0.65rem] text-[color:var(--text-2)]">{metric.subLabel}</div>
             ) : null}
           </button>
         ))}
