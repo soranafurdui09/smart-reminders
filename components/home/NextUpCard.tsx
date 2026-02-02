@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
@@ -53,32 +53,11 @@ export default function NextUpCard({
   focusCopy
 }: Props) {
   const isEmpty = !taskTitle || !timeLabel;
-  const [shimmering, setShimmering] = useState(false);
-  const shimmerTimeoutRef = useRef<number | null>(null);
-
   const toneClassName = useMemo(() => {
     if (tone === 'overdue') return 'next-reminder-card--overdue';
     if (tone === 'urgent') return 'next-reminder-card--urgent';
     return '';
   }, [tone]);
-
-  useEffect(() => {
-    return () => {
-      if (shimmerTimeoutRef.current) {
-        window.clearTimeout(shimmerTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const triggerShimmer = () => {
-    if (shimmerTimeoutRef.current) {
-      window.clearTimeout(shimmerTimeoutRef.current);
-    }
-    setShimmering(true);
-    shimmerTimeoutRef.current = window.setTimeout(() => {
-      setShimmering(false);
-    }, 180);
-  };
 
   const subtleBadgeStyle = useMemo(() => {
     if (!badgeStyle?.borderColor) return undefined;
@@ -91,7 +70,6 @@ export default function NextUpCard({
     <div className={`next-reminder-card ${toneClassName}`}>
       <span className="next-reminder-topline" aria-hidden="true" />
       <span className="next-reminder-corner" aria-hidden="true" />
-      <span className="next-reminder-sweep" aria-hidden="true" />
       <div className="next-reminder-label">{title}</div>
       {isEmpty ? (
         <div className="mt-2 text-sm font-semibold text-[rgba(255,255,255,0.72)]">
@@ -139,9 +117,7 @@ export default function NextUpCard({
                   <ActionSubmitButton
                     className="next-reminder-primary"
                     type="submit"
-                    data-shimmer={shimmering ? 'true' : 'false'}
                     data-action-feedback={action.feedbackLabel}
-                    onClick={triggerShimmer}
                   >
                     {action.label}
                   </ActionSubmitButton>

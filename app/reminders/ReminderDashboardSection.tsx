@@ -709,6 +709,28 @@ export default function ReminderDashboardSection({
   );
   const nextTone = nextIsOverdue ? 'overdue' : nextIsUrgent ? 'urgent' : 'normal';
   const overdueTopItems = useMemo(() => overdueItems.slice(0, 5), [overdueItems]);
+  const priorityItems = useMemo(() => (showRecover ? overdueTopItems : overdueTopItems.slice(0, 3)), [overdueTopItems, showRecover]);
+  const homeSubtitle = `${todayOpenItems.length} ${copy.dashboard.homeSubtitleToday} • ${overdueItems.length} ${copy.dashboard.homeSubtitleOverdue}`;
+  const nextDoseTileLabel = useMemo(() => {
+    if (!visibleDoses.length) return copy.dashboard.medicationsTileEmpty;
+    const nextTime = new Date(visibleDoses[0].scheduled_at).toLocaleTimeString(localeTag, {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    return `${copy.dashboard.medicationsTileNext} ${nextTime}`;
+  }, [copy.dashboard.medicationsTileEmpty, copy.dashboard.medicationsTileNext, localeTag, visibleDoses]);
+  const overdueOldestLabel = useMemo(() => {
+    if (!overdueItems.length) return copy.dashboard.overdueTileEmpty;
+    const oldest = overdueItems.reduce((prev, current) => {
+      const prevDate = new Date(prev.occur_at ?? prev.effective_at ?? prev.snoozed_until ?? 0);
+      const currentDate = new Date(current.occur_at ?? current.effective_at ?? current.snoozed_until ?? 0);
+      return prevDate.getTime() <= currentDate.getTime() ? prev : current;
+    });
+    const now = new Date();
+    const compareDate = new Date(oldest.occur_at ?? oldest.effective_at ?? oldest.snoozed_until ?? now);
+    const dayDiff = Math.abs(diffDaysInTimeZone(compareDate, now, effectiveTimeZone || 'UTC'));
+    return copy.dashboard.overdueTileOldest.replace('{days}', String(dayDiff));
+  }, [copy.dashboard.overdueTileEmpty, copy.dashboard.overdueTileOldest, effectiveTimeZone, overdueItems]);
   const nextUpActionsSheet = nextOccurrence ? (
     <ReminderActionsSheet
       open={nextActionsOpen}
@@ -1219,44 +1241,9 @@ export default function ReminderDashboardSection({
             ) : null}
           </div>
         ) : (
-          <div className="space-y-[var(--space-3)] today-shell">
-            <div className="hidden md:block">
-              <HomeHeader title={copy.dashboard.todayTitle} />
-            </div>
-
-            <QuickAddBar />
-
-            <AtAGlanceRow
-              metrics={[
-                { id: 'overdue', label: copy.dashboard.todayOverdue, count: overdueItems.length, accentClass: 'text-red-400', tone: 'danger', icon: AlertTriangle },
-                { id: 'today', label: copy.dashboard.todayTitle, count: todayOpenItems.length, accentClass: 'text-blue-300', tone: 'info', icon: SunMedium },
-                { id: 'soon', label: copy.dashboard.todaySoon, count: soonItems.length, accentClass: 'text-emerald-300', tone: 'success', icon: Calendar },
-                { id: 'meds', label: copy.dashboard.medicationsTitle, count: visibleDoses.length, accentClass: 'text-teal-300', tone: 'success', icon: Pill }
-              ]}
-              activeId={homeSegment}
-              variant="secondary"
-              onSelect={(id) => {
-                if (id === 'overdue') setHomeSegment('overdue');
-                if (id === 'today') setHomeSegment('today');
-                if (id === 'soon') setHomeSegment('soon');
-              }}
-            />
-
-            {visibleDoses.length ? (
-              <MedsTeaserCard
-                title={copy.dashboard.medicationsTitle}
-                subtitle={`Următoarea doză: ${new Date(visibleDoses[0].scheduled_at).toLocaleTimeString(localeTag, {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}`}
-                actionLabel={copy.medicationsHub.viewDetails}
-                onAction={() => {
-                  router.push('/app/medications');
-                }}
-              />
-            ) : (
-              <MedsTeaserCard title={copy.dashboard.medicationsTitle} subtitle={copy.dashboard.medicationsEmpty} />
-            )}
+          <div className="home-slate space-y-[var(--space-3)] today-shell">
+            <div className="home-slate-bg" aria-hidden="true" />
+            <HomeHeader title={copy.dashboard.title} subtitle={homeSubtitle} />
 
             <NextUpCard
               title={copy.dashboard.nextTitle}
@@ -1289,36 +1276,114 @@ export default function ReminderDashboardSection({
 
             {nextUpActionsSheet}
 
+            <QuickAddBar />
+
+            <AtAGlanceRow
+              metrics={[
+                {
+                  id: 'today',
+                  label: copy.dashboard.todayTileTitle,
+                  count: todayOpenItems.length,
+                  accentClass: 'text-[#3F6CFF]',
+                  accentRgb: '63 108 255',
+                  subLabel: todayOpenItems.length ? copy.dashboard.todayTileHint : copy.dashboard.todayTileEmpty,
+                  tileClass: 'stat-tile-today',
+                  icon: SunMedium
+                },
+                {
+                  id: 'soon',
+                  label: copy.dashboard.soonTileTitle,
+                  count: soonItems.length,
+                  accentClass: 'text-[#39D6C8]',
+                  accentRgb: '57 214 200',
+                  subLabel: copy.dashboard.soonTileHint,
+                  tileClass: 'stat-tile-soon',
+                  icon: Calendar
+                },
+                {
+                  id: 'meds',
+                  label: copy.dashboard.medicationsTileTitle,
+                  count: visibleDoses.length,
+                  accentClass: 'text-[#6B5CFF]',
+                  accentRgb: '107 92 255',
+                  subLabel: nextDoseTileLabel,
+                  tileClass: 'stat-tile-meds',
+                  icon: Pill
+                },
+                {
+                  id: 'overdue',
+                  label: copy.dashboard.todayOverdue,
+                  count: overdueItems.length,
+                  accentClass: 'text-[#F2C77A]',
+                  accentRgb: '242 199 122',
+                  subLabel: overdueOldestLabel,
+                  tileClass: 'stat-tile-overdue',
+                  icon: AlertTriangle
+                }
+              ]}
+              activeId={homeSegment}
+              variant="secondary"
+              onSelect={(id) => {
+                if (id === 'overdue') setHomeSegment('overdue');
+                if (id === 'today') setHomeSegment('today');
+                if (id === 'soon') setHomeSegment('soon');
+              }}
+            />
+
+            {visibleDoses.length ? (
+              <MedsTeaserCard
+                title={copy.dashboard.medicationsTitle}
+                subtitle={`Următoarea doză: ${new Date(visibleDoses[0].scheduled_at).toLocaleTimeString(localeTag, {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}`}
+                actionLabel={copy.medicationsHub.viewDetails}
+                onAction={() => {
+                  router.push('/app/medications');
+                }}
+              />
+            ) : (
+              <MedsTeaserCard title={copy.dashboard.medicationsTitle} subtitle={copy.dashboard.medicationsEmpty} />
+            )}
+
             {overdueTopItems.length ? (
               <section className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-ink">{copy.dashboard.overdueTopTitle}</div>
+                  <div className="text-sm font-semibold text-[rgba(255,255,255,0.92)]">{copy.dashboard.overdueTopTitle}</div>
                   <button
                     type="button"
-                    className="text-xs font-semibold text-[color:rgb(var(--accent))]"
+                    className="text-xs font-semibold text-[color:#4E7BFF]"
                     onClick={() => setShowRecover((prev) => !prev)}
                   >
                     {copy.dashboard.overdueTopCta}
                   </button>
                 </div>
-                {showRecover ? (
-                  <div className="space-y-2">
-                    {overdueTopItems.map((occurrence) => (
-                      <OverdueDenseRow
-                        key={occurrence.id}
-                        occurrence={occurrence}
-                        locale={locale}
-                        googleConnected={googleConnected}
-                        userTimeZone={effectiveTimeZone}
-                      />
-                    ))}
-                  </div>
-                ) : null}
+                <div className="flex flex-wrap items-center gap-2">
+                  {copy.dashboard.priorityFilters.map((label) => (
+                    <span key={label} className="home-chip">
+                      {label}
+                    </span>
+                  ))}
+                </div>
+                <div className="space-y-2">
+                  {priorityItems.map((occurrence) => (
+                    <OverdueDenseRow
+                      key={occurrence.id}
+                      occurrence={occurrence}
+                      locale={locale}
+                      googleConnected={googleConnected}
+                      userTimeZone={effectiveTimeZone}
+                      variant="priority"
+                      primaryLabel={copy.dashboard.nextUpAction}
+                      secondaryLabel={copy.dashboard.prioritySnooze}
+                    />
+                  ))}
+                </div>
               </section>
             ) : null}
 
             <section id="overdue-list" className="space-y-2">
-              <div className="flex items-center justify-between text-sm font-semibold text-ink">
+              <div className="flex items-center justify-between text-sm font-semibold text-[rgba(255,255,255,0.92)]">
                 <span>
                   {homeSegment === 'overdue'
                     ? copy.dashboard.todayOverdue
@@ -1326,7 +1391,7 @@ export default function ReminderDashboardSection({
                       ? copy.dashboard.todaySoon
                       : copy.dashboard.todayTitle}
                 </span>
-                <span className="text-xs text-muted">
+                <span className="text-xs text-[rgba(255,255,255,0.56)]">
                   {segmentItems.length} {copy.dashboard.reminderCountLabel}
                 </span>
               </div>
@@ -1344,7 +1409,9 @@ export default function ReminderDashboardSection({
                     ))}
                   </div>
                 ) : (
-                  <div className="card text-sm text-muted">{copy.dashboard.todayEmpty}</div>
+                  <div className="home-glass-panel rounded-2xl p-[var(--space-3)] text-sm text-[rgba(255,255,255,0.56)]">
+                    {copy.dashboard.todayEmpty}
+                  </div>
                 )
               ) : (
                 <FilteredTaskList

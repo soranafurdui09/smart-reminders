@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Check, MoreHorizontal } from 'lucide-react';
-import { markDone } from '@/app/app/actions';
+import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
 import { diffDaysInTimeZone, formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
@@ -20,13 +20,19 @@ type Props = {
   locale?: Locale;
   googleConnected?: boolean;
   userTimeZone?: string;
+  variant?: 'dense' | 'priority';
+  primaryLabel?: string;
+  secondaryLabel?: string;
 };
 
 export default function OverdueDenseRow({
   occurrence,
   locale = defaultLocale,
   googleConnected = false,
-  userTimeZone
+  userTimeZone,
+  variant = 'dense',
+  primaryLabel,
+  secondaryLabel
 }: Props) {
   const copy = messages[locale];
   const reminder = occurrence.reminder;
@@ -63,6 +69,49 @@ export default function OverdueDenseRow({
   });
   const category = getReminderCategory(categoryId);
   const categoryChipStyle = getCategoryChipStyle(category.color, true);
+
+  if (variant === 'priority') {
+    return (
+      <div className="home-priority-row">
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="home-priority-title line-clamp-2">{reminder?.title}</div>
+          <div className="home-priority-meta">
+            {displayLabel}
+            {relativeLabel ? <span className="text-[rgba(255,255,255,0.56)]"> · {relativeLabel}</span> : null}
+          </div>
+          <span className="home-category-pill" style={{ borderColor: category.color }}>
+            {category.label}
+          </span>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <form action={markDone}>
+            <input type="hidden" name="occurrenceId" value={occurrence.id} />
+            <input type="hidden" name="reminderId" value={reminderId ?? ''} />
+            <input type="hidden" name="occurAt" value={occurrence.occur_at ?? ''} />
+            <input type="hidden" name="done_comment" value="" />
+            <ActionSubmitButton
+              className="home-priority-primary"
+              type="submit"
+              data-action-feedback={copy.common.actionDone}
+            >
+              {primaryLabel ?? copy.dashboard.nextUpAction}
+            </ActionSubmitButton>
+          </form>
+          <form action={snoozeOccurrence}>
+            <input type="hidden" name="occurrenceId" value={occurrence.id} />
+            <input type="hidden" name="mode" value="30" />
+            <ActionSubmitButton
+              className="home-priority-secondary"
+              type="submit"
+              data-action-feedback={copy.common.actionSnoozed}
+            >
+              {secondaryLabel ?? copy.common.snooze}
+            </ActionSubmitButton>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
