@@ -201,7 +201,7 @@
 
 /* Compact mode — NO layout restructuring */
 .home-slate.today-shell.home-compact {
-  --compact: 0.86;
+  --compact: 0.75;
 }
 
 /* Reduce overall typography slightly */
@@ -211,49 +211,53 @@
 
 /* Hero card: reduce padding + title size slightly */
 .home-slate.today-shell.home-compact .next-reminder-card {
-  padding: 1rem !important;
+  padding: 0.65625rem 0.65625rem 0.5625rem !important;
 }
 
 .home-slate.today-shell.home-compact .next-reminder-card .next-reminder-title {
-  font-size: 1.6rem !important;
+  font-size: clamp(0.95rem, 3.15vw, 1.1rem) !important;
   line-height: 1.1 !important;
-  margin-top: 0.4rem !important;
+  margin-top: 0.28125rem !important;
 }
 
 .home-slate.today-shell.home-compact .next-reminder-card .next-reminder-time {
-  margin-top: 0.4rem !important;
+  margin-top: 0.28125rem !important;
+  font-size: clamp(0.615rem, 2.1vw, 0.69rem) !important;
 }
 
 /* Chips and buttons a bit smaller but keep touch targets */
 .home-slate.today-shell.home-compact .next-reminder-pill,
 .home-slate.today-shell.home-compact .next-reminder-overdue {
-  font-size: 0.78rem !important;
-  padding: 0.35rem 0.65rem !important;
+  font-size: 0.585rem !important;
+  padding: 0.2625rem 0.5625rem !important;
 }
 
 .home-slate.today-shell.home-compact .next-reminder-primary {
-  padding: 0.7rem 1.2rem !important;
-  font-size: 0.95rem !important;
-  min-height: 44px;
+  padding: 0.45rem 0.825rem !important;
+  font-size: 0.675rem !important;
+  min-height: 2.0625rem;
 }
 
 .home-slate.today-shell.home-compact .next-reminder-secondary {
-  padding: 0.55rem 1rem !important;
-  font-size: 0.9rem !important;
-  min-height: 40px;
+  padding: 0.4125rem 0.7125rem !important;
+  font-size: 0.6375rem !important;
+  min-height: 1.875rem;
 }
 
 /* Mini tiles: reduce padding, radius, and big number */
 .home-slate.today-shell.home-compact .stat-tile {
-  padding: 0.85rem !important;
-  border-radius: 1rem !important;
+  padding: 0.5625rem !important;
 }
 
 .home-slate.today-shell.home-compact .stat-tile > div:nth-child(2) {
-  font-size: 1.6rem !important;
+  font-size: clamp(1.0125rem, 3vw, 1.2rem) !important;
 }
 
 /* Reduce section vertical spacing coming from space-y */
 .home-slate.today-shell.home-compact > * + * {
   margin-top: 0.9rem !important;
+}
+
+.home-slate.today-shell.home-compact .at-a-glance-panel .grid {
+  gap: 0.46875rem !important;
 }
