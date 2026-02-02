@@ -15,24 +15,28 @@ type Props = {
   metrics: Metric[];
   activeId?: string | null;
   onSelect?: (id: string) => void;
+  variant?: 'primary' | 'secondary';
 };
 
-export default function AtAGlanceRow({ metrics, activeId, onSelect }: Props) {
+export default function AtAGlanceRow({ metrics, activeId, onSelect, variant = 'primary' }: Props) {
+  const isSecondary = variant === 'secondary';
   return (
-    <div className="surface-a1 rounded-2xl px-[var(--space-2)] py-[var(--space-2)]">
+    <div className={`surface-a1 rounded-2xl px-[var(--space-2)] py-[var(--space-2)] ${isSecondary ? 'opacity-80' : ''}`}>
       <div className="grid grid-cols-2 gap-[var(--space-2)] md:grid-cols-4">
         {metrics.map((metric) => (
           <button
             key={metric.id}
             type="button"
-            className={`stat-tile ${
-              metric.tone === 'danger'
-                ? 'stat-tile-strong stat-tile-danger'
-                : metric.tone === 'success'
-                  ? 'stat-tile-success'
-                  : metric.tone === 'warning'
-                    ? 'stat-tile-warning'
-                    : 'stat-tile-info'
+            className={`stat-tile ${isSecondary ? 'stat-tile-secondary' : ''} ${
+              !isSecondary
+                ? metric.tone === 'danger'
+                  ? 'stat-tile-strong stat-tile-danger'
+                  : metric.tone === 'success'
+                    ? 'stat-tile-success'
+                    : metric.tone === 'warning'
+                      ? 'stat-tile-warning'
+                      : 'stat-tile-info'
+                : ''
             } ${activeId === metric.id ? 'stat-tile-active' : ''}`}
             onClick={() => onSelect?.(metric.id)}
           >
@@ -51,8 +55,10 @@ export default function AtAGlanceRow({ metrics, activeId, onSelect }: Props) {
               />
               {metric.icon ? <metric.icon className="h-3.5 w-3.5 text-muted2" /> : null}
             </div>
-            <div className={`mt-2 text-lg font-semibold ${metric.accentClass ?? 'text-text'}`}>{metric.count}</div>
-            <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-muted2">{metric.label}</div>
+            <div className={`mt-2 ${isSecondary ? 'text-base' : 'text-lg'} font-semibold ${metric.accentClass ?? 'text-text'}`}>{metric.count}</div>
+            <div className={`mt-1 ${isSecondary ? 'text-[9px]' : 'text-[10px]'} font-semibold uppercase tracking-wide text-muted2`}>
+              {metric.label}
+            </div>
           </button>
         ))}
       </div>

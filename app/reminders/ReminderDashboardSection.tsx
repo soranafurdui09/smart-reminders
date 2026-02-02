@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react';
-import { AlertTriangle, Calendar, CheckCircle2, Circle, Clock, PencilLine, Pill, SunMedium, Users } from 'lucide-react';
+import { AlertTriangle, Calendar, CheckCircle2, Circle, MoreHorizontal, Pill, SunMedium, Users } from 'lucide-react';
 import SemanticSearch from '@/components/SemanticSearch';
 import HomeHeader from '@/components/home/HomeHeader';
 import NextUpCard from '@/components/home/NextUpCard';
 import QuickAddBar from '@/components/home/QuickAddBar';
 import AtAGlanceRow from '@/components/home/AtAGlanceRow';
 import FilteredTaskList from '@/components/home/FilteredTaskList';
+import OverdueDenseRow from '@/components/home/OverdueDenseRow';
 import MedsTeaserCard from '@/components/home/MedsTeaserCard';
 import ReminderRowMobile from '@/components/mobile/ReminderRowMobile';
 import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
@@ -17,6 +18,10 @@ import ReminderCard from '@/components/dashboard/ReminderCard';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import ListReminderButton from '@/components/lists/ListReminderButton';
 import ListShareSheet from '@/components/lists/ListShareSheet';
+import ReminderActionsSheet from '@/components/ReminderActionsSheet';
+import GoogleCalendarDeleteDialog from '@/components/GoogleCalendarDeleteDialog';
+import GoogleCalendarSyncButton from '@/components/GoogleCalendarSyncButton';
+import GoogleCalendarAutoBlockButton from '@/components/GoogleCalendarAutoBlockButton';
 import { messages, type Locale } from '@/lib/i18n';
 import {
   diffDaysInTimeZone,
@@ -27,8 +32,9 @@ import {
   resolveReminderTimeZone
 } from '@/lib/dates';
 import { getReminderCategory, inferReminderCategoryId, type ReminderCategoryId } from '@/lib/categories';
-import { markDone, snoozeOccurrence } from '@/app/app/actions';
+import { markDone } from '@/app/app/actions';
 import { toggleTaskDoneAction } from '@/app/app/tasks/actions';
+import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import type { TaskItem, TaskListPreview } from '@/lib/tasks';
 
 type CreatedByOption = 'all' | 'me' | 'others';
@@ -205,6 +211,7 @@ export default function ReminderDashboardSection({
   const [taskItems, setTaskItems] = useState<TaskItem[]>(safeInboxTasks);
   const [listItems] = useState<TaskListPreview[]>(safeInboxLists);
   const [taskPending, startTaskTransition] = useTransition();
+  const [nextActionsOpen, setNextActionsOpen] = useState(false);
 
   const filteredOccurrences = useMemo(() => {
     const normalized = occurrences
@@ -371,12 +378,46 @@ export default function ReminderDashboardSection({
     return { overdue, today, soon, todayAll, doneCount, totalCount: todayAll.length };
   }, [effectiveTimeZone, datedOccurrences]);
 
+  const openOccurrences = useMemo(
+    () => datedOccurrences.filter((occurrence) => occurrence.status !== 'done'),
+    [datedOccurrences]
+  );
+
+  const nextUpContext = useMemo(() => {
+    const now = new Date();
+    const nextDay = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const items = openOccurrences
+      .map((occurrence) => {
+        const compareDate = getCompareDate(occurrence, effectiveTimeZone);
+        if (Number.isNaN(compareDate.getTime())) return null;
+        return { occurrence, compareDate };
+      })
+      .filter(Boolean) as Array<{ occurrence: OccurrencePayload; compareDate: Date }>;
+    const overdue = items
+      .filter((item) => item.compareDate.getTime() < now.getTime())
+      .sort((a, b) => a.compareDate.getTime() - b.compareDate.getTime());
+    const today = items
+      .filter((item) => {
+        const dayDiff = diffDaysInTimeZone(item.compareDate, now, effectiveTimeZone);
+        return dayDiff === 0 && item.compareDate.getTime() >= now.getTime();
+      })
+      .sort((a, b) => a.compareDate.getTime() - b.compareDate.getTime());
+    const upcoming = items
+      .filter((item) => item.compareDate.getTime() >= now.getTime() && item.compareDate.getTime() <= nextDay.getTime())
+      .sort((a, b) => a.compareDate.getTime() - b.compareDate.getTime());
+    const next = overdue[0] ?? today[0] ?? upcoming[0] ?? null;
+    return { next, overdue, today, upcoming };
+  }, [effectiveTimeZone, openOccurrences]);
+
   const householdMembers = useMemo(
     () => Object.entries(memberLabels).map(([id, label]) => ({ id, label })),
     [memberLabels]
   );
 
-  const overdueItems = mobileBuckets.overdue;
+  const overdueItems = useMemo(
+    () => nextUpContext.overdue.map((item) => item.occurrence),
+    [nextUpContext.overdue]
+  );
   const todayOpenItems = mobileBuckets.today;
   const soonItems = mobileBuckets.soon;
 
@@ -511,7 +552,7 @@ export default function ReminderDashboardSection({
       return;
     }
     if (hasToday) {
-      if (todayBuckets.overdue.length) {
+      if (overdueItems.length) {
         setShowOverdue(true);
       } else if (todayItems.length) {
         setShowToday(true);
@@ -531,7 +572,7 @@ export default function ReminderDashboardSection({
     mobileBuckets.overdue.length,
     mobileBuckets.today.length,
     mobileBuckets.soon.length,
-    todayBuckets.overdue.length,
+    overdueItems.length,
     todayItems.length,
     visibleDoses.length
   ]);
@@ -554,7 +595,11 @@ export default function ReminderDashboardSection({
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get('tab');
+      const segmentParam = params.get('segment');
       setActiveTab(tabParam === 'inbox' ? 'inbox' : 'today');
+      if (segmentParam === 'overdue' || segmentParam === 'today' || segmentParam === 'soon') {
+        setHomeSegment(segmentParam);
+      }
     };
     window.addEventListener('popstate', handlePopState);
     handlePopState();
@@ -617,23 +662,24 @@ export default function ReminderDashboardSection({
     }
   };
 
-  const nextOccurrence = useMemo(() => {
-    const now = new Date();
-    return datedOccurrences.find((occurrence) => {
-      const compareDate = getCompareDate(occurrence, effectiveTimeZone);
-      return compareDate.getTime() >= now.getTime();
-    });
-  }, [effectiveTimeZone, datedOccurrences]);
+  const nextOccurrence = nextUpContext.next?.occurrence ?? null;
+  const nextOccurrenceDate = nextUpContext.next?.compareDate ?? null;
 
   const nextOccurrenceLabel = useMemo(() => {
-    if (!nextOccurrence) return null;
-    const displayAt = nextOccurrence.snoozed_until ?? nextOccurrence.effective_at ?? nextOccurrence.occur_at;
-    if (!displayAt) return null;
-    const reminderTimeZone = resolveReminderTimeZone(nextOccurrence.reminder?.tz ?? null, effectiveTimeZone);
-    return nextOccurrence.snoozed_until
-      ? formatDateTimeWithTimeZone(displayAt, reminderTimeZone)
-      : formatReminderDateTime(displayAt, reminderTimeZone, effectiveTimeZone);
-  }, [effectiveTimeZone, nextOccurrence]);
+    if (!nextOccurrenceDate) return null;
+    const diffMinutes = Math.round((nextOccurrenceDate.getTime() - Date.now()) / 60000);
+    const absMinutes = Math.abs(diffMinutes);
+    const rtf = new Intl.RelativeTimeFormat(locale === 'ro' ? 'ro-RO' : locale, { numeric: 'auto' });
+    if (absMinutes < 60) {
+      return rtf.format(diffMinutes, 'minute');
+    }
+    const diffHours = Math.round(diffMinutes / 60);
+    if (Math.abs(diffHours) < 24) {
+      return rtf.format(diffHours, 'hour');
+    }
+    const diffDays = Math.round(diffHours / 24);
+    return rtf.format(diffDays, 'day');
+  }, [locale, nextOccurrenceDate]);
 
   const nextCategory = useMemo(() => {
     if (!nextOccurrence) return null;
@@ -652,10 +698,130 @@ export default function ReminderDashboardSection({
       : homeSegment === 'soon'
         ? soonItems
         : todayOpenItems;
-  const segmentTone =
-    homeSegment === 'overdue' ? 'segment-overdue' : homeSegment === 'soon' ? 'segment-soon' : 'segment-today';
 
   const nextIsOverdue = Boolean(nextOccurrence && overdueItems.some((item) => item.id === nextOccurrence.id));
+  const overdueTopItems = useMemo(() => overdueItems.slice(0, 5), [overdueItems]);
+  const nextUpActions = nextOccurrence ? (
+    <div className="flex items-center gap-2">
+      <form action={markDone}>
+        <input type="hidden" name="occurrenceId" value={nextOccurrence.id} />
+        <input type="hidden" name="reminderId" value={nextOccurrence.reminder?.id ?? ''} />
+        <input type="hidden" name="occurAt" value={nextOccurrence.occur_at ?? ''} />
+        <input type="hidden" name="done_comment" value="" />
+        <ActionSubmitButton
+          className="btn btn-primary h-9 px-4 text-xs"
+          type="submit"
+          data-action-feedback={copy.common.actionDone}
+        >
+          {copy.dashboard.nextUpAction}
+        </ActionSubmitButton>
+      </form>
+      <button
+        type="button"
+        className="icon-btn h-9 w-9"
+        aria-label={copy.common.moreActions}
+        onClick={() => setNextActionsOpen(true)}
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+    </div>
+  ) : null;
+  const nextUpActionsSheet = nextOccurrence ? (
+    <ReminderActionsSheet
+      open={nextActionsOpen}
+      onClose={() => setNextActionsOpen(false)}
+      title={nextOccurrence.reminder?.title ?? copy.reminderDetail.title}
+      categoryLabel={nextCategory?.label}
+      categoryClassName="badge badge-blue"
+    >
+      <div className="space-y-2">
+        <Link
+          className="block w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-white/10 whitespace-normal break-words"
+          href={`/app/reminders/${nextOccurrence.reminder?.id}`}
+          onClick={() => setNextActionsOpen(false)}
+        >
+          {copy.common.details}
+        </Link>
+        <Link
+          className="block w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-white/10 whitespace-normal break-words"
+          href={`/app/reminders/${nextOccurrence.reminder?.id}/edit`}
+          onClick={() => setNextActionsOpen(false)}
+        >
+          {copy.common.edit}
+        </Link>
+        <form action={cloneReminder}>
+          <input type="hidden" name="reminderId" value={nextOccurrence.reminder?.id ?? ''} />
+          <ActionSubmitButton
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-white/10 whitespace-normal break-words"
+            type="submit"
+            onClick={() => setNextActionsOpen(false)}
+            data-action-feedback={copy.common.actionCloned}
+          >
+            {copy.reminderDetail.clone}
+          </ActionSubmitButton>
+        </form>
+        <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-semibold text-slate-400">
+          {copy.actions.calendar}
+          <div className="mt-2 space-y-2 text-sm font-semibold text-slate-100">
+            <div onClickCapture={() => setNextActionsOpen(false)}>
+              <GoogleCalendarSyncButton
+                reminderId={nextOccurrence.reminder?.id ?? ''}
+                connected={googleConnected}
+                variant="menu"
+                copy={{
+                  syncLabel: copy.actions.sendDirect,
+                  syncLoading: copy.reminderDetail.googleCalendarSyncing,
+                  syncSuccess: copy.reminderDetail.googleCalendarSyncSuccess,
+                  syncError: copy.reminderDetail.googleCalendarSyncError,
+                  connectFirst: copy.reminderDetail.googleCalendarConnectFirst,
+                  connectLink: copy.reminderDetail.googleCalendarConnectLink
+                }}
+              />
+            </div>
+            <div onClickCapture={() => setNextActionsOpen(false)}>
+              <GoogleCalendarAutoBlockButton
+                reminderId={nextOccurrence.reminder?.id ?? ''}
+                connected={googleConnected}
+                hasDueDate={Boolean(nextOccurrence.reminder?.due_at)}
+                variant="menu"
+                copy={{
+                  label: copy.actions.schedule,
+                  loading: copy.reminderDetail.googleCalendarAutoBlocking,
+                  success: copy.reminderDetail.googleCalendarAutoBlockSuccess,
+                  error: copy.reminderDetail.googleCalendarAutoBlockError,
+                  connectHint: copy.reminderDetail.googleCalendarConnectFirst,
+                  connectLink: copy.reminderDetail.googleCalendarConnectLink,
+                  missingDueDate: copy.reminderDetail.googleCalendarAutoBlockMissingDueDate,
+                  confirmIfBusy: copy.reminderDetail.googleCalendarAutoBlockConfirmBusy
+                }}
+              />
+            </div>
+          </div>
+        </div>
+        <div onClickCapture={() => setNextActionsOpen(false)}>
+          <GoogleCalendarDeleteDialog
+            reminderId={nextOccurrence.reminder?.id ?? ''}
+            hasGoogleEvent={Boolean(nextOccurrence.reminder?.google_event_id)}
+            copy={{
+              label: copy.common.delete,
+              dialogTitle: copy.reminderDetail.googleCalendarDeleteTitle,
+              dialogHint: copy.reminderDetail.googleCalendarDeleteHint,
+              justReminder: copy.reminderDetail.googleCalendarDeleteOnly,
+              reminderAndCalendar: copy.reminderDetail.googleCalendarDeleteBoth,
+              cancel: copy.reminderDetail.googleCalendarDeleteCancel
+            }}
+          />
+        </div>
+        <button
+          type="button"
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-slate-200 shadow-sm transition hover:bg-white/10"
+          onClick={() => setNextActionsOpen(false)}
+        >
+          {copy.common.back}
+        </button>
+      </div>
+    </ReminderActionsSheet>
+  ) : null;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1075,57 +1241,44 @@ export default function ReminderDashboardSection({
               <HomeHeader title={copy.dashboard.todayTitle} />
             </div>
 
-            {nextOccurrence && nextOccurrenceLabel ? (
-              <NextUpCard
-                title={copy.dashboard.nextTitle}
-                taskTitle={nextOccurrence.reminder?.title ?? copy.dashboard.nextTitle}
-                timeLabel={nextOccurrenceLabel}
-                badge={nextCategory?.label}
-                tone={nextIsOverdue ? 'overdue' : 'normal'}
-                statusLabel={copy.dashboard.todayOverdue}
-                subtext={`+${todayOpenItems.length} ${copy.dashboard.reminderCountLabel}`}
-                actions={
-                  <div className="flex flex-col items-end gap-2">
-                    <form action={markDone}>
-                      <input type="hidden" name="occurrenceId" value={nextOccurrence.id} />
-                      <input type="hidden" name="reminderId" value={nextOccurrence.reminder?.id ?? ''} />
-                      <input type="hidden" name="occurAt" value={nextOccurrence.occur_at ?? ''} />
-                      <input type="hidden" name="done_comment" value="" />
-                      <ActionSubmitButton
-                        className="primary-btn h-9 rounded-full px-4 text-xs"
-                        type="submit"
-                        data-action-feedback={copy.common.actionDone}
-                      >
-                        {copy.common.doneAction}
-                      </ActionSubmitButton>
-                    </form>
-                    <div className="flex items-center gap-2">
-                      <form action={snoozeOccurrence}>
-                        <input type="hidden" name="occurrenceId" value={nextOccurrence.id} />
-                        <input type="hidden" name="mode" value="30" />
-                        <ActionSubmitButton
-                          className="icon-btn h-9 w-9"
-                          type="submit"
-                          data-action-feedback={copy.common.snooze}
-                        >
-                          <Clock className="h-4 w-4" />
-                        </ActionSubmitButton>
-                      </form>
-                      {nextOccurrence.reminder?.id ? (
-                        <Link
-                          href={`/app/reminders/${nextOccurrence.reminder.id}/edit`}
-                          className="icon-btn h-9 w-9"
-                        >
-                          <PencilLine className="h-4 w-4" />
-                        </Link>
-                      ) : null}
-                    </div>
-                  </div>
-                }
-              />
-            ) : null}
+            <NextUpCard
+              title={copy.dashboard.nextUpTitle}
+              taskTitle={nextOccurrence?.reminder?.title ?? undefined}
+              timeLabel={nextOccurrenceLabel ?? undefined}
+              badge={nextCategory?.label}
+              tone={nextIsOverdue ? 'overdue' : 'normal'}
+              statusLabel={copy.dashboard.todayOverdue}
+              emptyLabel={copy.dashboard.nextUpEmpty}
+              actions={nextUpActions}
+            />
 
-            <QuickAddBar />
+            {nextUpActionsSheet}
+
+            {overdueTopItems.length ? (
+              <section className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-semibold text-ink">{copy.dashboard.overdueTopTitle}</div>
+                  <Link
+                    href="/app?tab=today&segment=overdue#overdue-list"
+                    className="text-xs font-semibold text-[color:rgb(var(--accent))]"
+                    onClick={() => setHomeSegment('overdue')}
+                  >
+                    {copy.dashboard.overdueTopCta}
+                  </Link>
+                </div>
+                <div className="space-y-2">
+                  {overdueTopItems.map((occurrence) => (
+                    <OverdueDenseRow
+                      key={occurrence.id}
+                      occurrence={occurrence}
+                      locale={locale}
+                      googleConnected={googleConnected}
+                      userTimeZone={effectiveTimeZone}
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
             <AtAGlanceRow
               metrics={[
@@ -1135,12 +1288,15 @@ export default function ReminderDashboardSection({
                 { id: 'meds', label: copy.dashboard.medicationsTitle, count: visibleDoses.length, accentClass: 'text-teal-300', tone: 'success', icon: Pill }
               ]}
               activeId={homeSegment}
+              variant="secondary"
               onSelect={(id) => {
                 if (id === 'overdue') setHomeSegment('overdue');
                 if (id === 'today') setHomeSegment('today');
                 if (id === 'soon') setHomeSegment('soon');
               }}
             />
+
+            <QuickAddBar />
 
             {visibleDoses.length ? (
               <MedsTeaserCard
@@ -1158,25 +1314,45 @@ export default function ReminderDashboardSection({
               <MedsTeaserCard title={copy.dashboard.medicationsTitle} subtitle={copy.dashboard.medicationsEmpty} />
             )}
 
-            <div className={`rounded-2xl p-3 ${segmentTone}`}>
-              <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-text">
-                {homeSegment === 'overdue'
-                  ? copy.dashboard.todayOverdue
-                  : homeSegment === 'soon'
-                    ? copy.dashboard.todaySoon
-                    : copy.dashboard.todayTitle}
+            <section id="overdue-list" className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-secondary">
+                <span>
+                  {homeSegment === 'overdue'
+                    ? copy.dashboard.todayOverdue
+                    : homeSegment === 'soon'
+                      ? copy.dashboard.todaySoon
+                      : copy.dashboard.todayTitle}
+                </span>
                 <span className="text-[10px] text-muted2">
                   {segmentItems.length} {copy.dashboard.reminderCountLabel}
                 </span>
               </div>
-              <FilteredTaskList
-                items={segmentItems}
-                locale={locale}
-                googleConnected={googleConnected}
-                userTimeZone={effectiveTimeZone}
-                emptyLabel={copy.dashboard.todayEmpty}
-              />
-            </div>
+              {homeSegment === 'overdue' ? (
+                overdueItems.length ? (
+                  <div className="space-y-2">
+                    {overdueItems.map((occurrence) => (
+                      <OverdueDenseRow
+                        key={occurrence.id}
+                        occurrence={occurrence}
+                        locale={locale}
+                        googleConnected={googleConnected}
+                        userTimeZone={effectiveTimeZone}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="card text-sm text-muted">{copy.dashboard.todayEmpty}</div>
+                )
+              ) : (
+                <FilteredTaskList
+                  items={segmentItems}
+                  locale={locale}
+                  googleConnected={googleConnected}
+                  userTimeZone={effectiveTimeZone}
+                  emptyLabel={copy.dashboard.todayEmpty}
+                />
+              )}
+            </section>
           </div>
         )}
       </section>
@@ -1248,6 +1424,46 @@ export default function ReminderDashboardSection({
 
         <div className="order-2 space-y-6 lg:order-1">
           <div className="h-px bg-white/10" />
+          {desktopTab === 'today' ? (
+            <section className="space-y-4">
+              <NextUpCard
+                title={copy.dashboard.nextUpTitle}
+                taskTitle={nextOccurrence?.reminder?.title ?? undefined}
+                timeLabel={nextOccurrenceLabel ?? undefined}
+                badge={nextCategory?.label}
+                tone={nextIsOverdue ? 'overdue' : 'normal'}
+                statusLabel={copy.dashboard.todayOverdue}
+                emptyLabel={copy.dashboard.nextUpEmpty}
+                actions={nextUpActions}
+              />
+              {nextUpActionsSheet}
+              {overdueTopItems.length ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-semibold text-ink">{copy.dashboard.overdueTopTitle}</div>
+                    <Link
+                      href="/app?tab=today&segment=overdue#overdue-list"
+                      className="text-xs font-semibold text-[color:rgb(var(--accent))]"
+                      onClick={() => setHomeSegment('overdue')}
+                    >
+                      {copy.dashboard.overdueTopCta}
+                    </Link>
+                  </div>
+                  <div className="space-y-2">
+                    {overdueTopItems.map((occurrence) => (
+                      <OverdueDenseRow
+                        key={occurrence.id}
+                        occurrence={occurrence}
+                        locale={locale}
+                        googleConnected={googleConnected}
+                        userTimeZone={effectiveTimeZone}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
           {desktopTab === 'inbox' ? (
             <section className="mt-8 space-y-4">
               <SectionHeading
@@ -1418,8 +1634,8 @@ export default function ReminderDashboardSection({
                 icon={<SunMedium className="h-4 w-4 text-amber-500" aria-hidden="true" />}
               />
 
-              {todayBuckets.overdue.length ? (
-                <div className="space-y-3">
+              {overdueItems.length ? (
+                <div id="overdue-list" className="space-y-3">
                   <button
                     type="button"
                     className="flex w-full items-center justify-between"
@@ -1431,7 +1647,7 @@ export default function ReminderDashboardSection({
                       {copy.dashboard.todayOverdue}
                     </div>
                     <span className="flex items-center gap-2 text-xs text-tertiary">
-                      {todayBuckets.overdue.length} {copy.dashboard.reminderCountLabel}
+                      {overdueItems.length} {copy.dashboard.reminderCountLabel}
                       <svg
                         aria-hidden="true"
                         className={`h-3.5 w-3.5 transition ${showOverdue ? 'rotate-180' : ''}`}
@@ -1449,16 +1665,14 @@ export default function ReminderDashboardSection({
                     </span>
                   </button>
                   {showOverdue ? (
-                    <div className="grid gap-3 list-optimized">
-                      {todayBuckets.overdue.map((occurrence) => (
-                        <ReminderCard
+                    <div className="space-y-2">
+                      {overdueItems.map((occurrence) => (
+                        <OverdueDenseRow
                           key={occurrence.id}
                           occurrence={occurrence}
                           locale={locale}
                           googleConnected={googleConnected}
                           userTimeZone={effectiveTimeZone}
-                          urgency={urgencyStyles.overdue}
-                          variant="row"
                         />
                       ))}
                     </div>
@@ -1519,7 +1733,7 @@ export default function ReminderDashboardSection({
                   ) : null}
                 </div>
               ) : (
-                !todayBuckets.overdue.length ? (
+                !overdueItems.length ? (
                   <div className="card text-sm text-muted">
                     {copy.dashboard.todayEmpty}
                   </div>
