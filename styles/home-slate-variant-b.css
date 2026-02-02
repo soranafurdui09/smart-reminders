@@ -3,9 +3,23 @@
   position: relative;
   min-height: 100vh;
   color: #fff;
-  /* tighten vertical rhythm */
-  --space-2: 12px;
-  --radius-lg: 22px;
+  --s0: 0.5rem;
+  --s1: 0.75rem;
+  --s2: 1rem;
+  --s3: 1.25rem;
+  --r1: 1rem;
+  --r2: 1.25rem;
+  --r3: 1.375rem;
+  --hero-title: clamp(1.5rem, 4.2vw, 1.85rem);
+  --hero-meta: 0.95rem;
+  --chip-text: 0.78rem;
+  --focus-text: 0.8rem;
+  --tile-number: clamp(1.35rem, 4.0vw, 1.6rem);
+  --tile-label: 0.78rem;
+  --tile-sublabel: 0.7rem;
+  --space-2: var(--s1);
+  --space-3: var(--s2);
+  --radius-lg: var(--r3);
 }
 
 /* Ensure the bg element actually renders the vignette */
@@ -15,9 +29,10 @@
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(1200px 700px at 20% -10%, rgba(60,120,255,0.18), rgba(0,0,0,0) 55%),
-    radial-gradient(900px 600px at 85% 15%, rgba(0,200,180,0.12), rgba(0,0,0,0) 60%),
-    radial-gradient(1000px 700px at 50% 110%, rgba(0,0,0,0.85), rgba(0,0,0,0) 60%),
+    radial-gradient(75rem 43.75rem at 20% -10%, rgba(60,120,255,0.18), rgba(0,0,0,0) 55%),
+    radial-gradient(56.25rem 37.5rem at 85% 15%, rgba(0,200,180,0.06), rgba(0,0,0,0) 60%),
+    radial-gradient(44rem 28rem at 88% 6%, rgba(214,161,74,0.12), rgba(0,0,0,0) 60%),
+    radial-gradient(62.5rem 43.75rem at 50% 110%, rgba(0,0,0,0.85), rgba(0,0,0,0) 60%),
     linear-gradient(180deg, #070B14 0%, #050812 45%, #04060F 100%);
 }
 
@@ -29,76 +44,143 @@
 
 /* Next Reminder sizing */
 .home-slate.today-shell .next-reminder-card {
-  padding: 18px 18px 16px;
-  border-radius: 22px;
+  padding: var(--s2);
+  border-radius: var(--r3);
+  position: relative;
 }
 
-/* reduce vertical gaps created by Tailwind mt-* inside the card */
-.home-slate.today-shell .next-reminder-card .next-reminder-title {
-  margin-top: 8px !important;
-  font-size: 26px !important;
-  line-height: 1.12 !important;
+.home-slate.today-shell .next-reminder-card::before {
+  content: "";
+  position: absolute;
+  top: -2.125rem;
+  right: -4.375rem;
+  width: 16.25rem;
+  height: 10.625rem;
+  background: radial-gradient(circle at 35% 35%,
+    rgba(214,161,74,0.40) 0%,
+    rgba(214,161,74,0.18) 38%,
+    rgba(214,161,74,0.00) 72%);
+  filter: blur(0.625rem);
+  opacity: 0.95;
+  pointer-events: none;
+  z-index: 0;
 }
 
-.home-slate.today-shell .next-reminder-card .next-reminder-time {
-  margin-top: 8px !important;
+.home-slate.today-shell .next-reminder-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0.875rem;
+  right: 0.875rem;
+  height: 0.0625rem;
+  background: linear-gradient(90deg,
+    rgba(214,161,74,0) 0%,
+    rgba(214,161,74,0.55) 45%,
+    rgba(214,161,74,0) 100%);
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 0;
 }
 
-.home-slate.today-shell .next-reminder-card .next-reminder-focus {
-  margin-top: 10px;
-  font-size: 12px;
-  color: rgba(255,255,255,0.55);
+.home-slate.today-shell .next-reminder-card .next-reminder-content {
+  position: relative;
+  z-index: 1;
 }
 
-/* make the “more” button look like mock (subtle circle) */
-.home-slate.today-shell .next-reminder-card .next-reminder-more {
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.home-slate.today-shell .next-reminder-title {
+  margin-top: var(--s1);
+  font-size: var(--hero-title);
+  line-height: 1.12;
 }
 
-/* Remove the extra panel around mini-cards */
-.home-slate.today-shell .home-glass-panel {
+.home-slate.today-shell .next-reminder-time {
+  margin-top: var(--s1);
+  font-size: var(--hero-meta);
+}
+
+.home-slate.today-shell .next-reminder-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+}
+
+.home-slate.today-shell .next-reminder-focus {
+  margin-top: var(--s1);
+  font-size: var(--focus-text);
+  opacity: 0.75;
+}
+
+.home-slate.today-shell .next-reminder-pill,
+.home-slate.today-shell .next-reminder-overdue {
+  font-size: var(--chip-text);
+  padding: 0.35rem 0.75rem;
+}
+
+.home-slate.today-shell .next-reminder-primary {
+  background-color: #4D7DFF;
+  font-size: 0.9rem;
+  padding: 0.6rem 1.1rem;
+}
+
+.home-slate.today-shell .next-reminder-secondary {
+  font-size: 0.85rem;
+  padding: 0.55rem 0.95rem;
+}
+
+.home-slate.today-shell .next-reminder-more {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 62.5rem;
+}
+
+/* Quick add compact */
+.home-slate.today-shell .home-input-pill {
+  height: 2.5rem;
+  padding-left: var(--s1);
+  padding-right: var(--s1);
+}
+
+.home-slate.today-shell .home-icon-btn,
+.home-slate.today-shell .home-primary-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+/* Mini cards panel */
+.home-slate.today-shell .at-a-glance-panel {
   background: transparent;
   border: 0;
   box-shadow: none;
   padding: 0;
 }
 
-/* tighten grid gap a bit */
-.home-slate.today-shell .home-glass-panel .grid {
-  gap: 12px !important;
+.home-slate.today-shell .at-a-glance-panel .grid {
+  gap: var(--s1);
 }
 
 /* Rebuild mini-cards to match mockup */
 .home-slate.today-shell .stat-tile {
   position: relative;
   overflow: hidden;
-  border-radius: 18px;
-  padding: 14px;
+  border-radius: var(--r2);
+  padding: var(--s1);
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 14px 40px rgba(0,0,0,0.45);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
+  box-shadow: 0 0.875rem 2.5rem rgba(0,0,0,0.45);
+  -webkit-backdrop-filter: blur(1rem);
+  backdrop-filter: blur(1rem);
 }
 
 /* Accent outline glow using --tile-accent */
 .home-slate.today-shell .stat-tile::before {
   content: "";
   position: absolute;
-  inset: -2px;
-  border-radius: 20px;
-  background: radial-gradient(140px 90px at 20% 20%,
+  inset: -0.125rem;
+  border-radius: 1.25rem;
+  background: radial-gradient(8.75rem 5.625rem at 20% 20%,
     rgba(var(--tile-accent),0.38),
     rgba(var(--tile-accent),0.10) 40%,
     rgba(0,0,0,0) 75%);
-  filter: blur(10px);
+  filter: blur(0.625rem);
   opacity: 0.85;
   pointer-events: none;
 }
@@ -108,9 +190,9 @@
   content: "";
   position: absolute;
   top: 0;
-  left: 12px;
-  right: 12px;
-  height: 1px;
+  left: 0.75rem;
+  right: 0.75rem;
+  height: 0.0625rem;
   background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.22), rgba(255,255,255,0));
   opacity: 0.6;
   pointer-events: none;
@@ -125,5 +207,17 @@
 /* Active tile: slightly stronger ring (do NOT use white border) */
 .home-slate.today-shell .stat-tile-active {
   border-color: rgba(255,255,255,0.14);
-  box-shadow: 0 16px 44px rgba(0,0,0,0.52);
+  box-shadow: 0 1rem 2.75rem rgba(0,0,0,0.52);
+}
+
+.home-slate.today-shell .stat-tile > div:nth-child(2) {
+  font-size: var(--tile-number);
+}
+
+.home-slate.today-shell .stat-tile > div:nth-child(3) {
+  font-size: var(--tile-label);
+}
+
+.home-slate.today-shell .stat-tile > div:nth-child(4) {
+  font-size: var(--tile-sublabel);
 }

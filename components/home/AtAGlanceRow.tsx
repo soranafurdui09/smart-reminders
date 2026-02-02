@@ -23,7 +23,7 @@ type Props = {
 export default function AtAGlanceRow({ metrics, activeId, onSelect, variant = 'primary' }: Props) {
   const isSecondary = variant === 'secondary';
   return (
-    <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-2)] py-[var(--space-2)]">
+    <div className="home-glass-panel at-a-glance-panel rounded-[var(--radius-lg)] px-[var(--space-2)] py-[var(--space-2)]">
       <div className="grid grid-cols-2 gap-[var(--space-2)] md:grid-cols-4">
         {metrics.map((metric) => (
           <button
