@@ -66,7 +66,7 @@ export default function OverdueDenseRow({
 
   return (
     <>
-      <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface2 px-3 py-2.5 text-text shadow-[0_10px_24px_rgba(0,0,0,0.35)]">
+      <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface2 px-3 py-2 text-text shadow-[0_10px_24px_rgba(0,0,0,0.32)]">
         <form action={markDone}>
           <input type="hidden" name="occurrenceId" value={occurrence.id} />
           <input type="hidden" name="reminderId" value={reminderId ?? ''} />
@@ -83,13 +83,13 @@ export default function OverdueDenseRow({
         </form>
 
         <div className="min-w-0 flex-1 space-y-1">
-          <div className="text-sm font-semibold text-text line-clamp-1">{reminder?.title}</div>
+          <div className="text-sm font-semibold text-text line-clamp-2">{reminder?.title}</div>
           <div className="text-xs text-muted">
             {displayLabel}
-            {relativeLabel ? <span className="text-muted2"> · {relativeLabel}</span> : null}
+            {relativeLabel ? <span className="text-muted"> · {relativeLabel}</span> : null}
           </div>
           <div className="flex items-center gap-2 text-[10px] font-semibold uppercase text-secondary">
-            <span className="badge badge-blue px-2 py-0.5" style={categoryChipStyle}>
+            <span className="badge badge-blue" style={categoryChipStyle}>
               {category.label}
             </span>
           </div>

@@ -123,7 +123,7 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
   return (
     <>
       <div
-        className="premium-card relative flex items-center gap-3 px-4 py-4 touch-pan-y"
+        className="premium-card relative flex items-center gap-3 px-4 py-3 touch-pan-y"
         onTouchStart={swipeHandlers.onTouchStart}
         onTouchMove={swipeHandlers.onTouchMove}
         onTouchEnd={swipeHandlers.onTouchEnd}
@@ -140,7 +140,7 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
             aria-label={copy.common.doneAction}
             data-action-feedback={copy.common.actionDone}
           >
-            <Check className="h-5 w-5" />
+            <Check className="h-4 w-4" />
           </ActionSubmitButton>
         </form>
 
@@ -148,10 +148,10 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
           <div className="text-sm font-semibold text-text line-clamp-2">{reminder?.title}</div>
           <div className={`text-xs ${statusTone.text}`}>
             {displayLabel}
-            {relativeLabel ? <span className="text-muted2"> · {relativeLabel}</span> : null}
+            {relativeLabel ? <span className="text-muted"> · {relativeLabel}</span> : null}
           </div>
           <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase text-secondary">
-            <span className="badge badge-blue px-2 py-0.5" style={categoryChipStyle}>
+            <span className="badge badge-blue" style={categoryChipStyle}>
               {category.label}
             </span>
             {assigneeLabel ? (

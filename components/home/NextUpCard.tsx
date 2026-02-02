@@ -31,7 +31,7 @@ export default function NextUpCard({
       {tone === 'overdue' ? (
         <span className="absolute left-0 top-0 h-full w-1 bg-red-500/80" aria-hidden="true" />
       ) : null}
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-[color:rgb(var(--info))]">{title}</div>
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">{title}</div>
       {isEmpty ? (
         <div className="mt-[var(--space-2)] text-sm font-semibold text-muted">
           {emptyLabel}
@@ -39,9 +39,9 @@ export default function NextUpCard({
       ) : (
         <div className="mt-[var(--space-2)] flex items-start justify-between gap-[var(--space-3)]">
           <div className="min-w-0">
-            <div className="truncate text-base font-semibold text-text">{taskTitle}</div>
+            <div className="text-base font-semibold text-text line-clamp-2">{taskTitle}</div>
             <div className="mt-[var(--space-1)] flex flex-wrap items-center gap-[var(--space-2)] text-xs text-muted">
-              <span className={tone === 'overdue' ? 'text-red-300' : 'text-text'}>{timeLabel}</span>
+              <span className={tone === 'overdue' ? 'text-red-300' : 'text-muted'}>{timeLabel}</span>
               {badge ? (
                 <span className="badge badge-blue">
                   {badge}

@@ -53,7 +53,7 @@ export default function AtAGlanceRow({ metrics, activeId, onSelect, variant = 'p
                 }`}
                 aria-hidden="true"
               />
-              {metric.icon ? <metric.icon className="h-3.5 w-3.5 text-muted2" /> : null}
+              {metric.icon ? <metric.icon className="h-4 w-4 text-muted" /> : null}
             </div>
             <div className={`mt-2 ${isSecondary ? 'text-base' : 'text-lg'} font-semibold ${metric.accentClass ?? 'text-text'}`}>{metric.count}</div>
             <div className={`mt-1 ${isSecondary ? 'text-[9px]' : 'text-[10px]'} font-semibold uppercase tracking-wide text-muted2`}>

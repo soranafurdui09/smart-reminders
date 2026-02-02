@@ -135,17 +135,17 @@ function ReminderCard({
         : Calendar;
   const isPrimary = variant === 'row';
   const cardClass = isPrimary
-    ? 'rounded-3xl border border-white/10 bg-[rgba(14,20,33,0.88)] text-slate-100 shadow-[0_24px_60px_rgba(6,12,24,0.45)] backdrop-blur transition-colors hover:bg-[rgba(18,24,38,0.92)]'
-    : 'rounded-3xl border border-white/10 bg-[rgba(14,20,33,0.88)] text-slate-200 shadow-[0_24px_60px_rgba(6,12,24,0.45)] backdrop-blur transition-colors hover:bg-[rgba(18,24,38,0.92)]';
+    ? 'rounded-3xl border border-borderSubtle bg-surface2 text-slate-100 shadow-[0_18px_45px_rgba(6,12,24,0.35)] backdrop-blur transition-colors hover:bg-surface2'
+    : 'rounded-3xl border border-borderSubtle bg-surface2 text-slate-200 shadow-[0_16px_38px_rgba(6,12,24,0.32)] backdrop-blur transition-colors hover:bg-surface2';
   const statusTextClass = urgencyKey === 'overdue'
-    ? 'text-red-600'
+    ? 'text-red-300'
     : urgencyKey === 'today'
-      ? 'text-blue-600'
+      ? 'text-blue-300'
       : urgencyKey === 'soon'
-        ? 'text-amber-600'
+        ? 'text-amber-300'
         : urgencyKey === 'completed'
-          ? 'text-gray-500'
-          : 'text-blue-600';
+          ? 'text-slate-300'
+          : 'text-blue-300';
   const relativeLabel = useMemo(() => {
     const parsed = new Date(displayAt);
     if (Number.isNaN(parsed.getTime())) return null;
@@ -224,7 +224,7 @@ function ReminderCard({
 
   return (
     <OccurrenceHighlightCard
-      className={`relative flex flex-col gap-3 p-4 touch-pan-y ${cardClass} ${isPrimary ? 'md:flex-row md:items-center md:gap-4' : ''}`}
+      className={`relative flex flex-col gap-3 p-3.5 touch-pan-y ${cardClass} ${isPrimary ? 'md:flex-row md:items-center md:gap-4' : ''}`}
       occurrenceId={occurrence.id}
       highlightKey={displayAt}
       onTouchStart={swipeHandlers.onTouchStart}
@@ -236,22 +236,22 @@ function ReminderCard({
       <div className={`flex-1 ${isPrimary ? 'space-y-2' : 'space-y-1.5'}`}>
         <div className="flex items-center justify-between gap-2">
           <span
-            className={`badge inline-flex max-w-[65%] items-center px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${categoryStyles.pillBg} ${categoryStyles.pillText} truncate whitespace-nowrap`}
+            className={`badge inline-flex max-w-[65%] items-center text-[11px] font-semibold uppercase tracking-wide ${categoryStyles.pillBg} ${categoryStyles.pillText} truncate whitespace-nowrap`}
             title={categoryStyles.label}
           >
             {categoryStyles.label}
           </span>
-          <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium ${urgencyClasses.status} ${statusTextClass}`}>
+          <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${urgencyClasses.status} ${statusTextClass}`}>
             <StatusIcon className="h-3.5 w-3.5" />
             {statusPillLabel}
           </span>
         </div>
 
-        <h3 className={`text-sm font-semibold text-slate-100 leading-snug line-clamp-2 ${isPrimary ? 'md:text-base' : ''}`}>
+        <h3 className={`text-sm font-semibold text-text leading-snug line-clamp-2 ${isPrimary ? 'md:text-base' : ''}`}>
           {reminder?.title}
         </h3>
 
-        <div className={`flex flex-wrap items-center gap-2 text-xs ${isPrimary ? 'text-slate-300' : 'text-slate-400'}`}>
+        <div className={`flex flex-wrap items-center gap-2 text-xs ${isPrimary ? 'text-muted' : 'text-muted2'}`}>
           <div className="flex items-center gap-1.5">
             <Calendar className="h-3.5 w-3.5" />
             <OccurrenceDateChip

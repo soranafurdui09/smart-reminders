@@ -1315,7 +1315,7 @@ export default function ReminderDashboardSection({
             )}
 
             <section id="overdue-list" className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-secondary">
+              <div className="flex items-center justify-between text-sm font-semibold text-ink">
                 <span>
                   {homeSegment === 'overdue'
                     ? copy.dashboard.todayOverdue
@@ -1323,7 +1323,7 @@ export default function ReminderDashboardSection({
                       ? copy.dashboard.todaySoon
                       : copy.dashboard.todayTitle}
                 </span>
-                <span className="text-[10px] text-muted2">
+                <span className="text-xs text-muted">
                   {segmentItems.length} {copy.dashboard.reminderCountLabel}
                 </span>
               </div>

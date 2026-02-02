@@ -74,7 +74,7 @@ export default function SmartSnoozeMenu({
   return (
     <details ref={detailsRef} className="relative" onToggle={handleToggle}>
       <summary
-        className={`dropdown-summary inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 ${
+        className={`dropdown-summary inline-flex items-center justify-center gap-2 rounded-full border border-borderSubtle bg-surface3 text-text shadow-sm transition hover:bg-surfaceMuted ${
           compact ? 'h-9 w-9' : 'h-10 px-4'
         }`}
         aria-label={copy.common.snooze}
