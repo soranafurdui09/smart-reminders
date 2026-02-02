@@ -577,7 +577,7 @@ h3 {
   .home-glass-panel {
     background: var(--home-glass);
     border: 1px solid var(--home-glass-border);
-    box-shadow: 0 18px 40px var(--home-shadow-soft);
+    box-shadow: 0 18px 55px var(--home-shadow-soft);
     backdrop-filter: blur(20px);
   }
 
@@ -624,7 +624,7 @@ h3 {
   }
 
   .home-header-title {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 700;
     color: var(--home-text-primary);
   }
