@@ -809,20 +809,18 @@ export default function ReminderDashboardSection({
             </div>
           </div>
         </div>
-        <div onClickCapture={() => setNextActionsOpen(false)}>
-          <GoogleCalendarDeleteDialog
-            reminderId={nextOccurrence.reminder?.id ?? ''}
-            hasGoogleEvent={Boolean(nextOccurrence.reminder?.google_event_id)}
-            copy={{
-              label: copy.common.delete,
-              dialogTitle: copy.reminderDetail.googleCalendarDeleteTitle,
-              dialogHint: copy.reminderDetail.googleCalendarDeleteHint,
-              justReminder: copy.reminderDetail.googleCalendarDeleteOnly,
-              reminderAndCalendar: copy.reminderDetail.googleCalendarDeleteBoth,
-              cancel: copy.reminderDetail.googleCalendarDeleteCancel
-            }}
-          />
-        </div>
+        <GoogleCalendarDeleteDialog
+          reminderId={nextOccurrence.reminder?.id ?? ''}
+          hasGoogleEvent={Boolean(nextOccurrence.reminder?.google_event_id)}
+          copy={{
+            label: copy.common.delete,
+            dialogTitle: copy.reminderDetail.googleCalendarDeleteTitle,
+            dialogHint: copy.reminderDetail.googleCalendarDeleteHint,
+            justReminder: copy.reminderDetail.googleCalendarDeleteOnly,
+            reminderAndCalendar: copy.reminderDetail.googleCalendarDeleteBoth,
+            cancel: copy.reminderDetail.googleCalendarDeleteCancel
+          }}
+        />
         <button
           type="button"
           className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-slate-200 shadow-sm transition hover:bg-white/10"

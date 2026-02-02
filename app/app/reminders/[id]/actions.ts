@@ -380,13 +380,16 @@ export async function deleteReminder(formData: FormData) {
   }
 
   const supabase = createServerClient();
-  const { error } = await supabase
+
+  const { data: deleted, error } = await supabase
     .from('reminders')
     .delete()
-    .eq('id', reminderId);
+    .eq('id', reminderId)
+    .select('id')
+    .maybeSingle();
 
-  if (error) {
-    redirect(`/app/reminders/${reminderId}?error=1`);
+  if (error || !deleted) {
+    redirect(`/app/reminders/${reminderId}?error=not-authorized`);
   }
 
   revalidatePath('/app');
