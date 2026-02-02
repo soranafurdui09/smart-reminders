@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Capacitor } from '@capacitor/core';
 import VoiceNavButton from '@/components/VoiceNavButton';
@@ -38,6 +38,7 @@ export default function AppNavigation({
   const [isNativeAndroid, setIsNativeAndroid] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const profileMenuRef = useRef<HTMLDetailsElement | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -69,6 +70,30 @@ export default function AppNavigation({
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isMobile]);
+
+  useEffect(() => {
+    const details = profileMenuRef.current;
+    if (!details) return;
+    const handlePointer = (event: MouseEvent | TouchEvent) => {
+      if (!details.open) return;
+      const target = event.target as Node | null;
+      if (target && details.contains(target)) return;
+      details.open = false;
+    };
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && details.open) {
+        details.open = false;
+      }
+    };
+    document.addEventListener('mousedown', handlePointer, true);
+    document.addEventListener('touchstart', handlePointer, true);
+    document.addEventListener('keydown', handleKey, true);
+    return () => {
+      document.removeEventListener('mousedown', handlePointer, true);
+      document.removeEventListener('touchstart', handlePointer, true);
+      document.removeEventListener('keydown', handleKey, true);
+    };
+  }, []);
 
   const currentPath = activePath || pathname || '';
   const isActive = useMemo(() => {
@@ -142,29 +167,27 @@ export default function AppNavigation({
                 })}
               </nav>
             ) : null}
-            <details className="relative">
+            <details ref={profileMenuRef} className="relative">
               <summary className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-primary/30 bg-gradient-to-br from-primaryStrong via-primary to-accent text-sm font-semibold text-white shadow-md shadow-sky-500/30 transition hover:brightness-110">
                 {userInitial}
               </summary>
-              <div className="absolute left-0 z-20 mt-3 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft sm:left-auto sm:right-0">
+              <div className="absolute left-0 z-20 mt-3 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-borderSubtle bg-[rgb(19_30_52)] p-2 shadow-soft sm:left-auto sm:right-0">
                 <div className="px-3 py-2 text-xs text-muted">{userEmail || profileLabel}</div>
                 <Link
                   href="/app/settings"
-                  className="block w-full rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-surfaceMuted"
+                  className="block w-full rounded-lg px-3 py-2 text-left text-sm text-ink transition hover:bg-surfaceMuted hover:translate-x-0.5"
                 >
                   {navLabelByHref.get('/app/settings') ?? 'Settings'}
                 </Link>
-                <button
-                  className="w-full rounded-lg px-3 py-2 text-left text-sm text-muted hover:bg-surfaceMuted"
-                  type="button"
-                  disabled
-                  title={comingSoonLabel}
+                <Link
+                  href="/app/you"
+                  className="block w-full rounded-lg px-3 py-2 text-left text-sm text-ink transition hover:bg-surfaceMuted hover:translate-x-0.5"
                 >
                   {profileLabel}
-                </button>
+                </Link>
                 <form action="/logout" method="post" className="mt-1">
                   <button
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-surfaceMuted"
+                    className="w-full rounded-lg px-3 py-2 text-left text-sm text-ink transition hover:bg-surfaceMuted hover:translate-x-0.5"
                     type="submit"
                     data-action-close="true"
                   >
