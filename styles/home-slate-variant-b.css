@@ -3,23 +3,8 @@
   position: relative;
   min-height: 100vh;
   color: #fff;
-  --s0: 0.5rem;
-  --s1: 0.75rem;
-  --s2: 1rem;
-  --s3: 1.25rem;
-  --r1: 1rem;
-  --r2: 1.25rem;
-  --r3: 1.375rem;
-  --hero-title: clamp(1.5rem, 4.2vw, 1.85rem);
-  --hero-meta: 0.95rem;
-  --chip-text: 0.78rem;
-  --focus-text: 0.8rem;
-  --tile-number: clamp(1.35rem, 4.0vw, 1.6rem);
-  --tile-label: 0.78rem;
-  --tile-sublabel: 0.7rem;
-  --space-2: var(--s1);
-  --space-3: var(--s2);
-  --radius-lg: var(--r3);
+  --space-2: 0.625rem;
+  --radius-lg: 1.125rem;
 }
 
 /* Ensure the bg element actually renders the vignette */
@@ -44,9 +29,9 @@
 
 /* Next Reminder sizing */
 .home-slate.today-shell .next-reminder-card {
-  padding: var(--s2);
-  border-radius: var(--r3);
-  position: relative;
+  padding: 0.875rem 0.875rem 0.75rem;
+  border-radius: var(--radius-lg);
+  outline: 2px solid rgba(255,255,255,0.12);
 }
 
 .home-slate.today-shell .next-reminder-card::before {
@@ -88,14 +73,13 @@
 }
 
 .home-slate.today-shell .next-reminder-title {
-  margin-top: var(--s1);
-  font-size: var(--hero-title);
-  line-height: 1.12;
+  margin-top: 0.375rem !important;
+  font-size: clamp(1.25rem, 4.2vw, 1.45rem) !important;
+  line-height: 1.12 !important;
 }
 
 .home-slate.today-shell .next-reminder-time {
-  margin-top: var(--s1);
-  font-size: var(--hero-meta);
+  margin-top: 0.375rem !important;
 }
 
 .home-slate.today-shell .next-reminder-label {
@@ -154,20 +138,13 @@
 }
 
 .home-slate.today-shell .at-a-glance-panel .grid {
-  gap: var(--s1);
+  gap: 0.625rem;
 }
 
 /* Rebuild mini-cards to match mockup */
 .home-slate.today-shell .stat-tile {
-  position: relative;
-  overflow: hidden;
-  border-radius: var(--r2);
-  padding: var(--s1);
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 0.875rem 2.5rem rgba(0,0,0,0.45);
-  -webkit-backdrop-filter: blur(1rem);
-  backdrop-filter: blur(1rem);
+  border-radius: 1rem;
+  padding: 0.75rem;
 }
 
 /* Accent outline glow using --tile-accent */
