@@ -46,13 +46,13 @@ export default function AtAGlanceRow({ metrics, activeId, onSelect, variant = 'p
               {metric.icon ? <metric.icon className="h-4 w-4 text-[rgba(255,255,255,0.72)]" /> : null}
             </div>
             <div
-              className={`mt-2 ${isSecondary ? 'text-[22px]' : 'text-[24px]'} font-semibold ${
+              className={`mt-2 ${isSecondary ? 'text-[24px]' : 'text-[26px]'} font-semibold ${
                 metric.accentClass ?? 'text-text'
               }`}
             >
               {metric.count}
             </div>
-            <div className={`mt-1 ${isSecondary ? 'text-[10px]' : 'text-[11px]'} font-semibold text-[rgba(255,255,255,0.56)]`}>
+            <div className={`mt-1 ${isSecondary ? 'text-[11px]' : 'text-[12px]'} font-semibold text-[rgba(255,255,255,0.72)]`}>
               {metric.label}
             </div>
             {metric.subLabel ? (

@@ -1247,6 +1247,7 @@ export default function ReminderDashboardSection({
 
             <NextUpCard
               title={copy.dashboard.nextTitle}
+              subtext={copy.dashboard.nextUpHelper}
               taskTitle={nextOccurrence?.reminder?.title ?? undefined}
               timeLabel={nextOccurrenceLabel ?? undefined}
               badge={nextCategory?.label}
@@ -1496,10 +1497,11 @@ export default function ReminderDashboardSection({
           <div className="h-px bg-white/10" />
           {desktopTab === 'today' ? (
             <section className="space-y-4">
-              <NextUpCard
-                title={copy.dashboard.nextTitle}
-                taskTitle={nextOccurrence?.reminder?.title ?? undefined}
-                timeLabel={nextOccurrenceLabel ?? undefined}
+            <NextUpCard
+              title={copy.dashboard.nextTitle}
+              subtext={copy.dashboard.nextUpHelper}
+              taskTitle={nextOccurrence?.reminder?.title ?? undefined}
+              timeLabel={nextOccurrenceLabel ?? undefined}
                 badge={nextCategory?.label}
                 badgeStyle={nextCategory ? getCategoryChipStyle(nextCategory.color, true) : undefined}
                 tone={nextTone}

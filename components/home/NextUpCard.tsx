@@ -71,12 +71,13 @@ export default function NextUpCard({
       <span className="next-reminder-topline" aria-hidden="true" />
       <span className="next-reminder-corner" aria-hidden="true" />
       <div className="next-reminder-label">{title}</div>
+      {subtext ? <div className="next-reminder-subtitle">{subtext}</div> : null}
       {isEmpty ? (
         <div className="mt-2 text-sm font-semibold text-[rgba(255,255,255,0.72)]">
           {emptyLabel}
         </div>
       ) : (
-        <div className="mt-3 space-y-3">
+        <div className="mt-2 space-y-2">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 space-y-1">
               <div className="next-reminder-title line-clamp-2">{taskTitle}</div>
@@ -93,7 +94,6 @@ export default function NextUpCard({
                   </span>
                 ) : null}
               </div>
-              {subtext ? <div className="text-xs text-[rgba(255,255,255,0.56)]">{subtext}</div> : null}
             </div>
             {onMoreActions ? (
               <button
@@ -122,8 +122,6 @@ export default function NextUpCard({
                     {action.label}
                   </ActionSubmitButton>
                 </form>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
                 <form action={snoozeOccurrence}>
                   <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
                   <input type="hidden" name="mode" value="30" />

@@ -490,19 +490,19 @@ h3 {
 
   .stat-tile {
     border-radius: var(--radius-2);
-    padding: var(--space-2) var(--space-3);
+    padding: 12px 12px;
     @apply text-left;
     position: relative;
     overflow: hidden;
     --tile-accent: 79 141 255;
-    min-height: 86px;
+    min-height: 82px;
     background: var(--home-glass);
-    border: 1px solid var(--home-glass-border);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
   }
 
   .stat-tile-secondary {
-    min-height: 96px;
+    min-height: 88px;
   }
 
   .stat-tile-strong {
@@ -519,9 +519,9 @@ h3 {
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(160px circle at 85% 0%, rgba(var(--tile-accent), 0.22), transparent 60%),
-      linear-gradient(150deg, rgba(var(--tile-accent), 0.16), rgba(18, 24, 40, 0.66) 60%);
-    opacity: 0.9;
+      radial-gradient(150px circle at 90% 8%, rgba(var(--tile-accent), 0.32), transparent 62%),
+      linear-gradient(160deg, rgba(var(--tile-accent), 0.2), rgba(18, 24, 40, 0.66) 68%);
+    opacity: 1;
     pointer-events: none;
   }
 
@@ -638,21 +638,21 @@ h3 {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 14px;
-    border-radius: 18px;
-    background: var(--home-glass-2);
-    border: 1px solid var(--home-glass-border);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+    padding: 10px 12px;
+    border-radius: 16px;
+    background: var(--home-glass);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.38);
   }
 
   .home-priority-title {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--home-text-primary);
   }
 
   .home-priority-meta {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--home-text-secondary);
   }
 
@@ -670,19 +670,19 @@ h3 {
 
   .home-priority-primary {
     border-radius: 999px;
-    padding: 6px 14px;
-    font-size: 12px;
+    padding: 4px 12px;
+    font-size: 11px;
     font-weight: 600;
     color: rgba(255, 255, 255, 0.95);
     background: var(--home-primary-blue);
     border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 10px 22px rgba(78, 123, 255, 0.22);
+    box-shadow: 0 10px 18px rgba(78, 123, 255, 0.2);
   }
 
   .home-priority-secondary {
     border-radius: 999px;
-    padding: 6px 12px;
-    font-size: 12px;
+    padding: 4px 10px;
+    font-size: 11px;
     font-weight: 600;
     color: var(--home-text-secondary);
     background: rgba(255, 255, 255, 0.06);
@@ -792,13 +792,29 @@ h3 {
     --nr-glow: var(--home-gold-outer);
     position: relative;
     overflow: hidden;
-    border-radius: 24px;
-    padding: 16px;
+    border-radius: 22px;
+    padding: 14px;
     background: var(--home-glass);
     border: 1px solid var(--nr-border);
     color: var(--home-text-primary);
     box-shadow: 0 18px 55px var(--home-shadow-soft), 0 0 28px var(--nr-glow);
     backdrop-filter: blur(22px);
+  }
+
+  .next-reminder-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(180px circle at 85% 0%, rgba(242, 199, 122, 0.18), transparent 62%),
+      linear-gradient(160deg, rgba(242, 199, 122, 0.08), rgba(18, 24, 40, 0.66) 60%);
+    opacity: 0.9;
+    pointer-events: none;
+  }
+
+  .next-reminder-card > :not(.next-reminder-topline):not(.next-reminder-corner) {
+    position: relative;
+    z-index: 1;
   }
 
   .next-reminder-card--overdue {
@@ -816,18 +832,20 @@ h3 {
     right: 0;
     top: 0;
     height: 1px;
-    background: linear-gradient(90deg, rgba(242, 199, 122, 0.5), transparent 70%);
+    background: linear-gradient(90deg, rgba(242, 199, 122, 0.55), transparent 70%);
     pointer-events: none;
+    z-index: 2;
   }
 
   .next-reminder-corner {
     position: absolute;
-    top: -40px;
-    right: -40px;
-    width: 180px;
-    height: 180px;
-    background: radial-gradient(circle at top right, var(--home-gold-inner), transparent 70%);
+    top: -32px;
+    right: -32px;
+    width: 140px;
+    height: 140px;
+    background: radial-gradient(circle at top right, var(--home-gold-inner), transparent 72%);
     pointer-events: none;
+    z-index: 2;
   }
 
   .next-reminder-label {
@@ -838,6 +856,12 @@ h3 {
     color: var(--home-text-muted);
   }
 
+  .next-reminder-subtitle {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--home-text-secondary);
+  }
+
   .next-reminder-title {
     font-size: 20px;
     font-weight: 700;
@@ -845,15 +869,15 @@ h3 {
   }
 
   .next-reminder-time {
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 600;
     color: var(--home-text-secondary);
   }
 
   .next-reminder-pill {
     border-radius: 999px;
-    padding: 2px 10px;
-    font-size: 12px;
+    padding: 2px 8px;
+    font-size: 11px;
     font-weight: 600;
     color: var(--home-text-secondary);
     background: rgba(255, 255, 255, 0.06);
@@ -862,8 +886,8 @@ h3 {
 
   .next-reminder-overdue {
     border-radius: 999px;
-    padding: 2px 10px;
-    font-size: 12px;
+    padding: 2px 8px;
+    font-size: 11px;
     font-weight: 600;
     color: #e7b15c;
     background: rgba(231, 177, 92, 0.16);
@@ -871,14 +895,14 @@ h3 {
   }
 
   .next-reminder-primary {
-    border-radius: 14px;
-    padding: 10px 18px;
-    font-size: 13px;
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 12px;
     font-weight: 600;
     color: rgba(255, 255, 255, 0.95);
     background: var(--home-primary-blue);
     border: 1px solid rgba(255, 255, 255, 0.14);
-    box-shadow: 0 10px 24px rgba(78, 123, 255, 0.22);
+    box-shadow: 0 10px 24px rgba(78, 123, 255, 0.2);
     transition: transform 120ms ease, filter 120ms ease;
   }
 
@@ -888,9 +912,9 @@ h3 {
   }
 
   .next-reminder-secondary {
-    border-radius: 14px;
-    padding: 8px 14px;
-    font-size: 12px;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 11px;
     font-weight: 600;
     color: var(--home-text-secondary);
     background: rgba(255, 255, 255, 0.06);
@@ -905,8 +929,8 @@ h3 {
 
   .next-reminder-more {
     display: inline-flex;
-    height: 36px;
-    width: 36px;
+    height: 32px;
+    width: 32px;
     align-items: center;
     justify-content: center;
     border-radius: 999px;
@@ -916,8 +940,7 @@ h3 {
   }
 
   .next-reminder-focus {
-    font-size: 13px;
-    font-style: italic;
+    font-size: 12px;
     color: var(--home-text-muted);
   }
 
