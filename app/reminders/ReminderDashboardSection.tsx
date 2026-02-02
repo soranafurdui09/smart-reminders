@@ -1245,140 +1245,139 @@ export default function ReminderDashboardSection({
             ) : null}
           </div>
         ) : (
-          <div className="home-slate space-y-[18px] today-shell">
+          <div className="home-slate space-y-[18px] today-shell home-compact">
             <div className="home-slate-bg" aria-hidden="true" />
-            <div className="home-scale-wrap">
-              <HomeHeader title={copy.dashboard.title} subtitle={homeSubtitle} />
+            <HomeHeader title={copy.dashboard.title} subtitle={homeSubtitle} />
 
-              <NextUpCard
-                title={copy.dashboard.nextTitle}
-                subtext={copy.dashboard.nextUpHelper}
-                taskTitle={nextOccurrence?.reminder?.title ?? undefined}
-                timeLabel={nextOccurrenceLabel ?? undefined}
-                badge={nextCategory?.label}
-                badgeStyle={nextCategory ? getCategoryChipStyle(nextCategory.color, true) : undefined}
-                tone={nextTone}
-                statusLabel={copy.dashboard.todayOverdue}
-                emptyLabel={copy.dashboard.nextUpEmpty}
-                action={
-                  nextOccurrence?.id && nextOccurrence?.reminder?.id && nextOccurrence?.occur_at
-                    ? {
-                        occurrenceId: nextOccurrence.id,
-                        reminderId: nextOccurrence.reminder.id,
-                        occurAt: nextOccurrence.occur_at,
-                        label: copy.dashboard.nextUpAction,
-                        feedbackLabel: copy.common.actionDone
-                      }
-                    : null
+            <NextUpCard
+              title={copy.dashboard.nextTitle}
+              subtext={copy.dashboard.nextUpHelper}
+              taskTitle={nextOccurrence?.reminder?.title ?? undefined}
+              timeLabel={nextOccurrenceLabel ?? undefined}
+              badge={nextCategory?.label}
+              badgeStyle={nextCategory ? getCategoryChipStyle(nextCategory.color, true) : undefined}
+              tone={nextTone}
+              statusLabel={copy.dashboard.todayOverdue}
+              emptyLabel={copy.dashboard.nextUpEmpty}
+              action={
+                nextOccurrence?.id && nextOccurrence?.reminder?.id && nextOccurrence?.occur_at
+                  ? {
+                      occurrenceId: nextOccurrence.id,
+                      reminderId: nextOccurrence.reminder.id,
+                      occurAt: nextOccurrence.occur_at,
+                      label: copy.dashboard.nextUpAction,
+                      feedbackLabel: copy.common.actionDone
+                    }
+                  : null
+              }
+              secondaryLabels={{
+                snooze30: copy.dashboard.nextUpSnooze30,
+                snoozeTomorrow: copy.dashboard.nextUpSnoozeTomorrow
+              }}
+              focusCopy={copy.dashboard.nextUpFocusLine}
+              moreLabel={copy.common.moreActions}
+              onMoreActions={nextOccurrence ? () => setNextActionsOpen(true) : undefined}
+            />
+
+            {nextUpActionsSheet}
+
+            <QuickAddBar />
+
+            <AtAGlanceRow
+              metrics={[
+                {
+                  id: 'today',
+                  label: copy.dashboard.todayTileTitle,
+                  count: todayOpenItems.length,
+                  subLabel: todayOpenItems.length ? copy.dashboard.todayTileHint : copy.dashboard.todayTileEmpty,
+                  tileClass: 'stat-tile-today',
+                  icon: SunMedium
+                },
+                {
+                  id: 'soon',
+                  label: copy.dashboard.soonTileTitle,
+                  count: soonItems.length,
+                  subLabel: copy.dashboard.soonTileHint,
+                  tileClass: 'stat-tile-soon',
+                  icon: Calendar
+                },
+                {
+                  id: 'meds',
+                  label: copy.dashboard.medicationsTileTitle,
+                  count: visibleDoses.length,
+                  subLabel: nextDoseTileLabel,
+                  tileClass: 'stat-tile-meds',
+                  icon: Pill
+                },
+                {
+                  id: 'overdue',
+                  label: copy.dashboard.todayOverdue,
+                  count: overdueItems.length,
+                  subLabel: overdueOldestLabel,
+                  tileClass: overdueTileClass,
+                  icon: AlertTriangle
                 }
-                secondaryLabels={{
-                  snooze30: copy.dashboard.nextUpSnooze30,
-                  snoozeTomorrow: copy.dashboard.nextUpSnoozeTomorrow
-                }}
-                focusCopy={copy.dashboard.nextUpFocusLine}
-                moreLabel={copy.common.moreActions}
-                onMoreActions={nextOccurrence ? () => setNextActionsOpen(true) : undefined}
-              />
+              ]}
+              activeId={homeSegment}
+              variant="secondary"
+              onSelect={(id) => {
+                if (id === 'overdue') setHomeSegment('overdue');
+                if (id === 'today') setHomeSegment('today');
+                if (id === 'soon') setHomeSegment('soon');
+              }}
+            />
 
-              {nextUpActionsSheet}
-
-              <QuickAddBar />
-
-              <AtAGlanceRow
-                metrics={[
-                  {
-                    id: 'today',
-                    label: copy.dashboard.todayTileTitle,
-                    count: todayOpenItems.length,
-                    subLabel: todayOpenItems.length ? copy.dashboard.todayTileHint : copy.dashboard.todayTileEmpty,
-                    tileClass: 'stat-tile-today',
-                    icon: SunMedium
-                  },
-                  {
-                    id: 'soon',
-                    label: copy.dashboard.soonTileTitle,
-                    count: soonItems.length,
-                    subLabel: copy.dashboard.soonTileHint,
-                    tileClass: 'stat-tile-soon',
-                    icon: Calendar
-                  },
-                  {
-                    id: 'meds',
-                    label: copy.dashboard.medicationsTileTitle,
-                    count: visibleDoses.length,
-                    subLabel: nextDoseTileLabel,
-                    tileClass: 'stat-tile-meds',
-                    icon: Pill
-                  },
-                  {
-                    id: 'overdue',
-                    label: copy.dashboard.todayOverdue,
-                    count: overdueItems.length,
-                    subLabel: overdueOldestLabel,
-                    tileClass: overdueTileClass,
-                    icon: AlertTriangle
-                  }
-                ]}
-                activeId={homeSegment}
-                variant="secondary"
-                onSelect={(id) => {
-                  if (id === 'overdue') setHomeSegment('overdue');
-                  if (id === 'today') setHomeSegment('today');
-                  if (id === 'soon') setHomeSegment('soon');
+            {visibleDoses.length ? (
+              <MedsTeaserCard
+                title={copy.dashboard.medicationsTitle}
+                subtitle={`Următoarea doză: ${new Date(visibleDoses[0].scheduled_at).toLocaleTimeString(localeTag, {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}`}
+                actionLabel={copy.medicationsHub.viewDetails}
+                onAction={() => {
+                  router.push('/app/medications');
                 }}
               />
+            ) : (
+              <MedsTeaserCard title={copy.dashboard.medicationsTitle} subtitle={copy.dashboard.medicationsEmpty} />
+            )}
 
-              {visibleDoses.length ? (
-                <MedsTeaserCard
-                  title={copy.dashboard.medicationsTitle}
-                  subtitle={`Următoarea doză: ${new Date(visibleDoses[0].scheduled_at).toLocaleTimeString(localeTag, {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}`}
-                  actionLabel={copy.medicationsHub.viewDetails}
-                  onAction={() => {
-                    router.push('/app/medications');
-                  }}
-                />
-              ) : (
-                <MedsTeaserCard title={copy.dashboard.medicationsTitle} subtitle={copy.dashboard.medicationsEmpty} />
-              )}
-
-              {overdueTopItems.length ? (
-                <section className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-semibold text-[color:var(--text-0)]">{copy.dashboard.overdueTopTitle}</div>
-                    <button
-                      type="button"
-                      className="text-xs font-semibold text-[color:var(--brand-blue)]"
-                      onClick={() => setShowRecover((prev) => !prev)}
-                    >
-                      {copy.dashboard.overdueTopCta}
-                    </button>
-                  </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {copy.dashboard.priorityFilters.map((label) => (
-                    <span key={label} className="home-chip">
-                      {label}
-                    </span>
-                  ))}
+            {overdueTopItems.length ? (
+              <section className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-semibold text-[color:var(--text-0)]">{copy.dashboard.overdueTopTitle}</div>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-[color:var(--brand-blue)]"
+                    onClick={() => setShowRecover((prev) => !prev)}
+                  >
+                    {copy.dashboard.overdueTopCta}
+                  </button>
                 </div>
-                <div className="space-y-2">
-                  {priorityItems.map((occurrence) => (
-                    <OverdueDenseRow
-                      key={occurrence.id}
-                      occurrence={occurrence}
-                      locale={locale}
-                      googleConnected={googleConnected}
-                      userTimeZone={effectiveTimeZone}
-                      variant="priority"
-                      primaryLabel={copy.dashboard.nextUpAction}
-                      secondaryLabel={copy.dashboard.prioritySnooze}
-                    />
-                  ))}
-                </div>
-              </section>
-            ) : null}
+              <div className="flex flex-wrap items-center gap-2">
+                {copy.dashboard.priorityFilters.map((label) => (
+                  <span key={label} className="home-chip">
+                    {label}
+                  </span>
+                ))}
+              </div>
+              <div className="space-y-2">
+                {priorityItems.map((occurrence) => (
+                  <OverdueDenseRow
+                    key={occurrence.id}
+                    occurrence={occurrence}
+                    locale={locale}
+                    googleConnected={googleConnected}
+                    userTimeZone={effectiveTimeZone}
+                    variant="priority"
+                    primaryLabel={copy.dashboard.nextUpAction}
+                    secondaryLabel={copy.dashboard.prioritySnooze}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
 
             <section id="overdue-list" className="space-y-2">
               <div className="flex items-center justify-between text-sm font-semibold text-[color:var(--text-0)]">
@@ -1421,7 +1420,6 @@ export default function ReminderDashboardSection({
                 />
               )}
             </section>
-            </div>
           </div>
         )}
       </section>

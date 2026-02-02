@@ -222,12 +222,61 @@
   font-size: var(--tile-sublabel);
 }
 
-.home-slate.today-shell .home-scale-wrap {
-  transform: scale(0.86);
-  transform-origin: top center;
-  width: calc(100% / 0.86);
+/* Compact mode — NO layout restructuring */
+.home-slate.today-shell.home-compact {
+  --compact: 0.86;
 }
 
-.home-slate.today-shell .home-scale-wrap > * + * {
-  margin-top: 0.8rem;
+/* Reduce overall typography slightly */
+.home-slate.today-shell.home-compact {
+  font-size: calc(1rem * var(--compact));
+}
+
+/* Hero card: reduce padding + title size slightly */
+.home-slate.today-shell.home-compact .next-reminder-card {
+  padding: 1rem !important;
+}
+
+.home-slate.today-shell.home-compact .next-reminder-card .next-reminder-title {
+  font-size: 1.6rem !important;
+  line-height: 1.1 !important;
+  margin-top: 0.4rem !important;
+}
+
+.home-slate.today-shell.home-compact .next-reminder-card .next-reminder-time {
+  margin-top: 0.4rem !important;
+}
+
+/* Chips and buttons a bit smaller but keep touch targets */
+.home-slate.today-shell.home-compact .next-reminder-pill,
+.home-slate.today-shell.home-compact .next-reminder-overdue {
+  font-size: 0.78rem !important;
+  padding: 0.35rem 0.65rem !important;
+}
+
+.home-slate.today-shell.home-compact .next-reminder-primary {
+  padding: 0.7rem 1.2rem !important;
+  font-size: 0.95rem !important;
+  min-height: 44px;
+}
+
+.home-slate.today-shell.home-compact .next-reminder-secondary {
+  padding: 0.55rem 1rem !important;
+  font-size: 0.9rem !important;
+  min-height: 40px;
+}
+
+/* Mini tiles: reduce padding, radius, and big number */
+.home-slate.today-shell.home-compact .stat-tile {
+  padding: 0.85rem !important;
+  border-radius: 1rem !important;
+}
+
+.home-slate.today-shell.home-compact .stat-tile > div:nth-child(2) {
+  font-size: 1.6rem !important;
+}
+
+/* Reduce section vertical spacing coming from space-y */
+.home-slate.today-shell.home-compact > * + * {
+  margin-top: 0.9rem !important;
 }
