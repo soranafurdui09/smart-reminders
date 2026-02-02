@@ -40,8 +40,8 @@ export default function ReminderNewClient({
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-4 py-8">
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold text-slate-900">{copy.remindersNew.title}</h1>
-        <p className="text-sm text-slate-600">{copy.remindersNew.subtitle}</p>
+        <h1 className="text-2xl font-semibold">{copy.remindersNew.title}</h1>
+        <p className="text-sm text-slate-200">{copy.remindersNew.subtitle}</p>
       </div>
 
       {error ? (

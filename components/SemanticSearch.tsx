@@ -74,7 +74,7 @@ export default function SemanticSearch({
   return (
     <div className="space-y-3">
       <div className="space-y-1">
-        <h2 className="text-sm font-semibold text-slate-900 md:text-base">{copy.title}</h2>
+        <h2 className="text-sm font-semibold md:text-base">{copy.title}</h2>
         <p className="hidden text-xs text-slate-500 md:block">{copy.hint}</p>
       </div>
       <form onSubmit={handleSearch} className="flex flex-col gap-3 md:flex-row md:items-center">
@@ -89,7 +89,7 @@ export default function SemanticSearch({
             </svg>
           </span>
           <input
-            className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-900 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-sky-200"
+            className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm shadow-sm transition focus:outline-none focus:ring-2 focus:ring-sky-200"
             placeholder={copy.placeholder}
             value={query}
             onChange={(event) => setQuery(event.target.value)}

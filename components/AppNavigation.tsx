@@ -145,7 +145,7 @@ export default function AppNavigation({
               </nav>
             ) : null}
             <details className="relative">
-              <summary className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-surfaceMuted text-sm font-semibold text-ink shadow-sm transition hover:bg-surface">
+              <summary className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-primary/30 bg-gradient-to-br from-primaryStrong via-primary to-accent text-sm font-semibold text-white shadow-md shadow-sky-500/30 transition hover:brightness-110">
                 {userInitial}
               </summary>
               <div className="absolute left-0 z-20 mt-3 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-borderSubtle bg-surface p-2 shadow-soft sm:left-auto sm:right-0">

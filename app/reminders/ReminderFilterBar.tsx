@@ -77,7 +77,7 @@ export default function ReminderFilterBar({
                 />
               </svg>
             </span>
-            <div className="text-sm font-semibold text-slate-900">Filtre</div>
+            <div className="text-sm font-semibold">Filtre</div>
             {activeFilters > 0 ? (
               <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
                 {activeFilters}

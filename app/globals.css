@@ -57,7 +57,8 @@
   --container-pad: clamp(0.75rem, 3.5vw, 1.5rem);
   --container-pad-y: clamp(0.75rem, 3vw, 1.5rem);
   --container-max-sm: 45rem;
-  --container-max-md: 60rem;
+  --container-max-md: 72rem;
+  --container-max-lg: 86rem;
   --section-gap: clamp(0.75rem, 2.8vw, 1.25rem);
 
   --bg-base: rgb(var(--bg0));
@@ -330,6 +331,12 @@ h3 {
   }
 }
 
+@media (min-width: 1280px) {
+  .page-wrap {
+    max-width: var(--container-max-lg);
+  }
+}
+
 .today-shell {
   padding-top: 0;
   padding-bottom: calc(var(--bottom-nav-h, 68px) + var(--safe-bottom) + var(--fab-clearance, 80px));
@@ -382,6 +389,13 @@ h3 {
 
 .card {
   @apply rounded-2xl border border-border bg-surface2 p-5 text-text shadow-[0_14px_35px_rgba(0,0,0,0.45)] transition-all;
+}
+
+.card :is(h1, h2, h3),
+.card .text-ink,
+.premium-card :is(h1, h2, h3),
+.premium-card .text-ink {
+  color: var(--text-1);
 }
 
 .btn {
