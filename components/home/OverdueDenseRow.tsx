@@ -66,7 +66,7 @@ export default function OverdueDenseRow({
 
   return (
     <>
-      <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface2 px-3 py-2 text-text shadow-[0_10px_24px_rgba(0,0,0,0.32)]">
+      <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface2 px-3 py-2 text-text shadow-[0_10px_24px_rgba(0,0,0,0.32)] segment-overdue">
         <form action={markDone}>
           <input type="hidden" name="occurrenceId" value={occurrence.id} />
           <input type="hidden" name="reminderId" value={reminderId ?? ''} />

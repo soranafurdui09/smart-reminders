@@ -134,9 +134,9 @@ function ReminderCard({
         ? Check
         : Calendar;
   const isPrimary = variant === 'row';
-  const cardClass = isPrimary
+  const cardClass = `${isPrimary
     ? 'rounded-3xl border border-borderSubtle bg-surface2 text-slate-100 shadow-[0_18px_45px_rgba(6,12,24,0.35)] backdrop-blur transition-colors hover:bg-surface2'
-    : 'rounded-3xl border border-borderSubtle bg-surface2 text-slate-200 shadow-[0_16px_38px_rgba(6,12,24,0.32)] backdrop-blur transition-colors hover:bg-surface2';
+    : 'rounded-3xl border border-borderSubtle bg-surface2 text-slate-200 shadow-[0_16px_38px_rgba(6,12,24,0.32)] backdrop-blur transition-colors hover:bg-surface2'} ${urgencyKey === 'overdue' ? 'segment-overdue' : ''}`;
   const statusTextClass = urgencyKey === 'overdue'
     ? 'text-red-300'
     : urgencyKey === 'today'

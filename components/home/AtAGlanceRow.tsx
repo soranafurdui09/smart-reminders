@@ -21,22 +21,20 @@ type Props = {
 export default function AtAGlanceRow({ metrics, activeId, onSelect, variant = 'primary' }: Props) {
   const isSecondary = variant === 'secondary';
   return (
-    <div className={`surface-a1 rounded-2xl px-[var(--space-2)] py-[var(--space-2)] ${isSecondary ? 'opacity-80' : ''}`}>
+    <div className="surface-a1 rounded-2xl px-[var(--space-2)] py-[var(--space-2)]">
       <div className="grid grid-cols-2 gap-[var(--space-2)] md:grid-cols-4">
         {metrics.map((metric) => (
           <button
             key={metric.id}
             type="button"
             className={`stat-tile ${isSecondary ? 'stat-tile-secondary' : ''} ${
-              !isSecondary
-                ? metric.tone === 'danger'
-                  ? 'stat-tile-strong stat-tile-danger'
-                  : metric.tone === 'success'
-                    ? 'stat-tile-success'
-                    : metric.tone === 'warning'
-                      ? 'stat-tile-warning'
-                      : 'stat-tile-info'
-                : ''
+              metric.tone === 'danger'
+                ? 'stat-tile-strong stat-tile-danger'
+                : metric.tone === 'success'
+                  ? 'stat-tile-success'
+                  : metric.tone === 'warning'
+                    ? 'stat-tile-warning'
+                    : 'stat-tile-info'
             } ${activeId === metric.id ? 'stat-tile-active' : ''}`}
             onClick={() => onSelect?.(metric.id)}
           >

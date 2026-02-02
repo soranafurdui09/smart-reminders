@@ -212,6 +212,7 @@ export default function ReminderDashboardSection({
   const [listItems] = useState<TaskListPreview[]>(safeInboxLists);
   const [taskPending, startTaskTransition] = useTransition();
   const [nextActionsOpen, setNextActionsOpen] = useState(false);
+  const [showRecover, setShowRecover] = useState(false);
 
   const filteredOccurrences = useMemo(() => {
     const normalized = occurrences
@@ -1241,44 +1242,7 @@ export default function ReminderDashboardSection({
               <HomeHeader title={copy.dashboard.todayTitle} />
             </div>
 
-            <NextUpCard
-              title={copy.dashboard.nextUpTitle}
-              taskTitle={nextOccurrence?.reminder?.title ?? undefined}
-              timeLabel={nextOccurrenceLabel ?? undefined}
-              badge={nextCategory?.label}
-              tone={nextIsOverdue ? 'overdue' : 'normal'}
-              statusLabel={copy.dashboard.todayOverdue}
-              emptyLabel={copy.dashboard.nextUpEmpty}
-              actions={nextUpActions}
-            />
-
-            {nextUpActionsSheet}
-
-            {overdueTopItems.length ? (
-              <section className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-ink">{copy.dashboard.overdueTopTitle}</div>
-                  <Link
-                    href="/app?tab=today&segment=overdue#overdue-list"
-                    className="text-xs font-semibold text-[color:rgb(var(--accent))]"
-                    onClick={() => setHomeSegment('overdue')}
-                  >
-                    {copy.dashboard.overdueTopCta}
-                  </Link>
-                </div>
-                <div className="space-y-2">
-                  {overdueTopItems.map((occurrence) => (
-                    <OverdueDenseRow
-                      key={occurrence.id}
-                      occurrence={occurrence}
-                      locale={locale}
-                      googleConnected={googleConnected}
-                      userTimeZone={effectiveTimeZone}
-                    />
-                  ))}
-                </div>
-              </section>
-            ) : null}
+            <QuickAddBar />
 
             <AtAGlanceRow
               metrics={[
@@ -1296,8 +1260,6 @@ export default function ReminderDashboardSection({
               }}
             />
 
-            <QuickAddBar />
-
             {visibleDoses.length ? (
               <MedsTeaserCard
                 title={copy.dashboard.medicationsTitle}
@@ -1313,6 +1275,47 @@ export default function ReminderDashboardSection({
             ) : (
               <MedsTeaserCard title={copy.dashboard.medicationsTitle} subtitle={copy.dashboard.medicationsEmpty} />
             )}
+
+            <NextUpCard
+              title={copy.dashboard.nextUpTitle}
+              taskTitle={nextOccurrence?.reminder?.title ?? undefined}
+              timeLabel={nextOccurrenceLabel ?? undefined}
+              badge={nextCategory?.label}
+              tone={nextIsOverdue ? 'overdue' : 'normal'}
+              statusLabel={copy.dashboard.todayOverdue}
+              emptyLabel={copy.dashboard.nextUpEmpty}
+              actions={nextUpActions}
+            />
+
+            {nextUpActionsSheet}
+
+            {overdueTopItems.length ? (
+              <section className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-semibold text-ink">{copy.dashboard.overdueTopTitle}</div>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-[color:rgb(var(--accent))]"
+                    onClick={() => setShowRecover((prev) => !prev)}
+                  >
+                    {copy.dashboard.overdueTopCta}
+                  </button>
+                </div>
+                {showRecover ? (
+                  <div className="space-y-2">
+                    {overdueTopItems.map((occurrence) => (
+                      <OverdueDenseRow
+                        key={occurrence.id}
+                        occurrence={occurrence}
+                        locale={locale}
+                        googleConnected={googleConnected}
+                        userTimeZone={effectiveTimeZone}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
 
             <section id="overdue-list" className="space-y-2">
               <div className="flex items-center justify-between text-sm font-semibold text-ink">
@@ -1441,25 +1444,27 @@ export default function ReminderDashboardSection({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="text-sm font-semibold text-ink">{copy.dashboard.overdueTopTitle}</div>
-                    <Link
-                      href="/app?tab=today&segment=overdue#overdue-list"
+                    <button
+                      type="button"
                       className="text-xs font-semibold text-[color:rgb(var(--accent))]"
-                      onClick={() => setHomeSegment('overdue')}
+                      onClick={() => setShowRecover((prev) => !prev)}
                     >
                       {copy.dashboard.overdueTopCta}
-                    </Link>
+                    </button>
                   </div>
-                  <div className="space-y-2">
-                    {overdueTopItems.map((occurrence) => (
-                      <OverdueDenseRow
-                        key={occurrence.id}
-                        occurrence={occurrence}
-                        locale={locale}
-                        googleConnected={googleConnected}
-                        userTimeZone={effectiveTimeZone}
-                      />
-                    ))}
-                  </div>
+                  {showRecover ? (
+                    <div className="space-y-2">
+                      {overdueTopItems.map((occurrence) => (
+                        <OverdueDenseRow
+                          key={occurrence.id}
+                          occurrence={occurrence}
+                          locale={locale}
+                          googleConnected={googleConnected}
+                          userTimeZone={effectiveTimeZone}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </section>
