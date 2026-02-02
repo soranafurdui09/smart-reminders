@@ -31,7 +31,7 @@ import {
   getMonthKeyInTimeZone,
   resolveReminderTimeZone
 } from '@/lib/dates';
-import { getReminderCategory, inferReminderCategoryId, type ReminderCategoryId } from '@/lib/categories';
+import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId, type ReminderCategoryId } from '@/lib/categories';
 import { markDone } from '@/app/app/actions';
 import { toggleTaskDoneAction } from '@/app/app/tasks/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
@@ -701,32 +701,14 @@ export default function ReminderDashboardSection({
         : todayOpenItems;
 
   const nextIsOverdue = Boolean(nextOccurrence && overdueItems.some((item) => item.id === nextOccurrence.id));
+  const nextIsUrgent = Boolean(
+    nextOccurrenceDate &&
+      !nextIsOverdue &&
+      nextOccurrenceDate.getTime() - Date.now() <= 30 * 60 * 1000 &&
+      nextOccurrenceDate.getTime() >= Date.now()
+  );
+  const nextTone = nextIsOverdue ? 'overdue' : nextIsUrgent ? 'urgent' : 'normal';
   const overdueTopItems = useMemo(() => overdueItems.slice(0, 5), [overdueItems]);
-  const nextUpActions = nextOccurrence ? (
-    <div className="flex items-center gap-2">
-      <form action={markDone}>
-        <input type="hidden" name="occurrenceId" value={nextOccurrence.id} />
-        <input type="hidden" name="reminderId" value={nextOccurrence.reminder?.id ?? ''} />
-        <input type="hidden" name="occurAt" value={nextOccurrence.occur_at ?? ''} />
-        <input type="hidden" name="done_comment" value="" />
-        <ActionSubmitButton
-          className="btn btn-primary h-9 px-4 text-xs"
-          type="submit"
-          data-action-feedback={copy.common.actionDone}
-        >
-          {copy.dashboard.nextUpAction}
-        </ActionSubmitButton>
-      </form>
-      <button
-        type="button"
-        className="icon-btn h-9 w-9"
-        aria-label={copy.common.moreActions}
-        onClick={() => setNextActionsOpen(true)}
-      >
-        <MoreHorizontal className="h-4 w-4" />
-      </button>
-    </div>
-  ) : null;
   const nextUpActionsSheet = nextOccurrence ? (
     <ReminderActionsSheet
       open={nextActionsOpen}
@@ -1277,14 +1259,32 @@ export default function ReminderDashboardSection({
             )}
 
             <NextUpCard
-              title={copy.dashboard.nextUpTitle}
+              title={copy.dashboard.nextTitle}
               taskTitle={nextOccurrence?.reminder?.title ?? undefined}
               timeLabel={nextOccurrenceLabel ?? undefined}
               badge={nextCategory?.label}
-              tone={nextIsOverdue ? 'overdue' : 'normal'}
+              badgeStyle={nextCategory ? getCategoryChipStyle(nextCategory.color, true) : undefined}
+              tone={nextTone}
               statusLabel={copy.dashboard.todayOverdue}
               emptyLabel={copy.dashboard.nextUpEmpty}
-              actions={nextUpActions}
+              action={
+                nextOccurrence?.id && nextOccurrence?.reminder?.id && nextOccurrence?.occur_at
+                  ? {
+                      occurrenceId: nextOccurrence.id,
+                      reminderId: nextOccurrence.reminder.id,
+                      occurAt: nextOccurrence.occur_at,
+                      label: copy.dashboard.nextUpAction,
+                      feedbackLabel: copy.common.actionDone
+                    }
+                  : null
+              }
+              secondaryLabels={{
+                snooze30: copy.dashboard.nextUpSnooze30,
+                snoozeTomorrow: copy.dashboard.nextUpSnoozeTomorrow
+              }}
+              focusCopy={copy.dashboard.nextUpFocusLine}
+              moreLabel={copy.common.moreActions}
+              onMoreActions={nextOccurrence ? () => setNextActionsOpen(true) : undefined}
             />
 
             {nextUpActionsSheet}
@@ -1430,14 +1430,32 @@ export default function ReminderDashboardSection({
           {desktopTab === 'today' ? (
             <section className="space-y-4">
               <NextUpCard
-                title={copy.dashboard.nextUpTitle}
+                title={copy.dashboard.nextTitle}
                 taskTitle={nextOccurrence?.reminder?.title ?? undefined}
                 timeLabel={nextOccurrenceLabel ?? undefined}
                 badge={nextCategory?.label}
-                tone={nextIsOverdue ? 'overdue' : 'normal'}
+                badgeStyle={nextCategory ? getCategoryChipStyle(nextCategory.color, true) : undefined}
+                tone={nextTone}
                 statusLabel={copy.dashboard.todayOverdue}
                 emptyLabel={copy.dashboard.nextUpEmpty}
-                actions={nextUpActions}
+                action={
+                  nextOccurrence?.id && nextOccurrence?.reminder?.id && nextOccurrence?.occur_at
+                    ? {
+                        occurrenceId: nextOccurrence.id,
+                        reminderId: nextOccurrence.reminder.id,
+                        occurAt: nextOccurrence.occur_at,
+                        label: copy.dashboard.nextUpAction,
+                        feedbackLabel: copy.common.actionDone
+                      }
+                    : null
+                }
+                secondaryLabels={{
+                  snooze30: copy.dashboard.nextUpSnooze30,
+                  snoozeTomorrow: copy.dashboard.nextUpSnoozeTomorrow
+                }}
+                focusCopy={copy.dashboard.nextUpFocusLine}
+                moreLabel={copy.common.moreActions}
+                onMoreActions={nextOccurrence ? () => setNextActionsOpen(true) : undefined}
               />
               {nextUpActionsSheet}
               {overdueTopItems.length ? (

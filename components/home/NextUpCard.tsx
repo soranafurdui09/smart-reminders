@@ -1,17 +1,39 @@
 "use client";
 
-import { ReactNode } from 'react';
+import type { CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { MoreHorizontal } from 'lucide-react';
+import ActionSubmitButton from '@/components/ActionSubmitButton';
+import { markDone, snoozeOccurrence } from '@/app/app/actions';
+
+type NextUpAction = {
+  occurrenceId: string;
+  reminderId: string;
+  occurAt: string;
+  label: string;
+  feedbackLabel?: string;
+};
+
+type SecondaryLabels = {
+  snooze30: string;
+  snoozeTomorrow: string;
+};
 
 type Props = {
   title: string;
   taskTitle?: string;
   timeLabel?: string;
   badge?: string;
+  badgeStyle?: CSSProperties;
   subtext?: string;
-  actions?: ReactNode;
-  tone?: 'overdue' | 'normal';
+  tone?: 'normal' | 'overdue' | 'urgent';
   statusLabel?: string;
   emptyLabel?: string;
+  action?: NextUpAction | null;
+  onMoreActions?: () => void;
+  moreLabel?: string;
+  secondaryLabels?: SecondaryLabels;
+  focusCopy?: string;
 };
 
 export default function NextUpCard({
@@ -19,43 +41,133 @@ export default function NextUpCard({
   taskTitle,
   timeLabel,
   badge,
+  badgeStyle,
   subtext,
-  actions,
   tone = 'normal',
   statusLabel,
-  emptyLabel
+  emptyLabel,
+  action,
+  onMoreActions,
+  moreLabel,
+  secondaryLabels,
+  focusCopy
 }: Props) {
   const isEmpty = !taskTitle || !timeLabel;
+  const [shimmering, setShimmering] = useState(false);
+  const shimmerTimeoutRef = useRef<number | null>(null);
+
+  const toneClassName = useMemo(() => {
+    if (tone === 'overdue') return 'next-reminder-card--overdue';
+    if (tone === 'urgent') return 'next-reminder-card--urgent';
+    return '';
+  }, [tone]);
+
+  useEffect(() => {
+    return () => {
+      if (shimmerTimeoutRef.current) {
+        window.clearTimeout(shimmerTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const triggerShimmer = () => {
+    if (shimmerTimeoutRef.current) {
+      window.clearTimeout(shimmerTimeoutRef.current);
+    }
+    setShimmering(true);
+    shimmerTimeoutRef.current = window.setTimeout(() => {
+      setShimmering(false);
+    }, 180);
+  };
+
+  const subtleBadgeStyle = useMemo(() => {
+    if (!badgeStyle?.borderColor) return undefined;
+    return {
+      borderColor: badgeStyle.borderColor
+    } satisfies CSSProperties;
+  }, [badgeStyle]);
+
   return (
-    <div className={`surface-a2 relative overflow-hidden rounded-2xl px-[var(--space-3)] py-[var(--space-3)] ${tone === 'overdue' ? 'segment-overdue' : ''}`}>
-      {tone === 'overdue' ? (
-        <span className="absolute left-0 top-0 h-full w-1 bg-red-500/80" aria-hidden="true" />
-      ) : null}
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">{title}</div>
+    <div className={`next-reminder-card ${toneClassName}`}>
+      <span className="next-reminder-topline" aria-hidden="true" />
+      <span className="next-reminder-corner" aria-hidden="true" />
+      <span className="next-reminder-sweep" aria-hidden="true" />
+      <div className="next-reminder-label">{title}</div>
       {isEmpty ? (
-        <div className="mt-[var(--space-2)] text-sm font-semibold text-muted">
+        <div className="mt-2 text-sm font-semibold text-[rgba(255,255,255,0.72)]">
           {emptyLabel}
         </div>
       ) : (
-        <div className="mt-[var(--space-2)] flex items-start justify-between gap-[var(--space-3)]">
-          <div className="min-w-0">
-            <div className="text-base font-semibold text-text line-clamp-2">{taskTitle}</div>
-            <div className="mt-[var(--space-1)] flex flex-wrap items-center gap-[var(--space-2)] text-xs text-muted">
-              <span className={tone === 'overdue' ? 'text-red-300' : 'text-muted'}>{timeLabel}</span>
-              {badge ? (
-                <span className="badge badge-blue">
-                  {badge}
-                </span>
-              ) : null}
-              {tone === 'overdue' ? (
-                <span className="badge badge-amber">
-                  {statusLabel ?? 'ÎNTÂRZIAT'}
-                </span>
-              ) : null}
+        <div className="mt-3 space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 space-y-1">
+              <div className="next-reminder-title line-clamp-2">{taskTitle}</div>
+              <div className="next-reminder-time">{timeLabel}</div>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                {badge ? (
+                  <span className="next-reminder-pill" style={subtleBadgeStyle}>
+                    {badge}
+                  </span>
+                ) : null}
+                {tone === 'overdue' ? (
+                  <span className="next-reminder-overdue">
+                    {statusLabel ?? 'Întârziat'}
+                  </span>
+                ) : null}
+              </div>
+              {subtext ? <div className="text-xs text-[rgba(255,255,255,0.56)]">{subtext}</div> : null}
             </div>
-            {subtext ? <div className="mt-[var(--space-2)] text-[11px] text-muted">{subtext}</div> : null}
+            {onMoreActions ? (
+              <button
+                type="button"
+                className="next-reminder-more"
+                aria-label={moreLabel ?? 'Mai multe acțiuni'}
+                onClick={onMoreActions}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            ) : null}
           </div>
-          {actions ? <div className="flex flex-col items-end gap-2">{actions}</div> : null}
+          {action ? (
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <form action={markDone}>
+                  <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
+                  <input type="hidden" name="reminderId" value={action.reminderId} />
+                  <input type="hidden" name="occurAt" value={action.occurAt} />
+                  <input type="hidden" name="done_comment" value="" />
+                  <ActionSubmitButton
+                    className="next-reminder-primary"
+                    type="submit"
+                    data-shimmer={shimmering ? 'true' : 'false'}
+                    data-action-feedback={action.feedbackLabel}
+                    onClick={triggerShimmer}
+                  >
+                    {action.label}
+                  </ActionSubmitButton>
+                </form>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <form action={snoozeOccurrence}>
+                  <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
+                  <input type="hidden" name="mode" value="30" />
+                  <ActionSubmitButton className="next-reminder-secondary" type="submit">
+                    {secondaryLabels?.snooze30 ?? 'Amână 30m'}
+                  </ActionSubmitButton>
+                </form>
+                <form action={snoozeOccurrence}>
+                  <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
+                  <input type="hidden" name="option_id" value="tomorrow" />
+                  <ActionSubmitButton className="next-reminder-secondary" type="submit">
+                    {secondaryLabels?.snoozeTomorrow ?? 'Mută mâine'}
+                  </ActionSubmitButton>
+                </form>
+              </div>
+              <div className="next-reminder-focus">
+                {focusCopy ?? 'Un pas mic acum → zi mai ușoară.'}
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
     </div>

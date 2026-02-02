@@ -617,6 +617,174 @@ h3 {
     box-shadow: 0 10px 24px rgba(52, 211, 153, 0.12);
   }
 
+  .next-reminder-card {
+    --nr-border: rgba(255, 255, 255, 0.08);
+    --nr-glow: rgba(242, 199, 122, 0.22);
+    --nr-sweep-opacity: 0.1;
+    position: relative;
+    overflow: hidden;
+    border-radius: 24px;
+    padding: 16px;
+    background: rgba(16, 22, 36, 0.62);
+    border: 1px solid var(--nr-border);
+    color: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 28px var(--nr-glow);
+    backdrop-filter: blur(22px);
+  }
+
+  .next-reminder-card--overdue {
+    --nr-glow: rgba(242, 199, 122, 0.242);
+  }
+
+  .next-reminder-card--urgent {
+    --nr-border: rgba(255, 255, 255, 0.1);
+    --nr-glow: rgba(242, 199, 122, 0.253);
+  }
+
+  .next-reminder-topline {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(242, 199, 122, 0.1), transparent 70%);
+    pointer-events: none;
+  }
+
+  .next-reminder-corner {
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 180px;
+    height: 180px;
+    background: radial-gradient(circle at top right, rgba(242, 199, 122, 0.1), transparent 70%);
+    pointer-events: none;
+  }
+
+  .next-reminder-sweep {
+    position: absolute;
+    top: -30px;
+    right: -50px;
+    width: 200px;
+    height: 200px;
+    background: linear-gradient(135deg, rgba(242, 199, 122, 0.12), rgba(242, 199, 122, 0) 60%);
+    opacity: var(--nr-sweep-opacity);
+    animation: next-reminder-sweep 2s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .next-reminder-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .next-reminder-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.92);
+  }
+
+  .next-reminder-time {
+    font-size: 17px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  .next-reminder-pill {
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.82);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .next-reminder-overdue {
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #e7b15c;
+    background: rgba(231, 177, 92, 0.16);
+    border: 1px solid rgba(231, 177, 92, 0.24);
+  }
+
+  .next-reminder-primary {
+    position: relative;
+    overflow: hidden;
+    border-radius: 999px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+    background: #4e7bff;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 10px 24px rgba(78, 123, 255, 0.22);
+    transition: transform 120ms ease, filter 120ms ease;
+  }
+
+  .next-reminder-primary:active {
+    transform: scale(0.98);
+    filter: brightness(0.95);
+  }
+
+  .next-reminder-primary::after {
+    content: '';
+    position: absolute;
+    inset: -10% 0;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.22) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    transform: translateX(-140%);
+    opacity: 0;
+  }
+
+  .next-reminder-primary[data-shimmer='true']::after {
+    opacity: 1;
+    animation: next-reminder-shimmer 180ms ease-out;
+  }
+
+  .next-reminder-secondary {
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.82);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 120ms ease, filter 120ms ease;
+  }
+
+  .next-reminder-secondary:active {
+    transform: scale(0.98);
+    filter: brightness(0.96);
+  }
+
+  .next-reminder-more {
+    display: inline-flex;
+    height: 36px;
+    width: 36px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.82);
+  }
+
+  .next-reminder-focus {
+    font-size: 13px;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.56);
+  }
+
   .page-title {
     @apply text-[22px] font-semibold tracking-tight text-text;
   }
@@ -656,6 +824,30 @@ h3 {
   }
   100% {
     box-shadow: 0 0 0 16px rgba(14, 165, 233, 0);
+  }
+}
+
+@keyframes next-reminder-sweep {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0.08;
+  }
+  50% {
+    transform: translate3d(24px, -18px, 0) rotate(2deg);
+    opacity: 0.12;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0.08;
+  }
+}
+
+@keyframes next-reminder-shimmer {
+  0% {
+    transform: translateX(-140%);
+  }
+  100% {
+    transform: translateX(140%);
   }
 }
 
