@@ -5,6 +5,9 @@
   color: #fff;
   --space-2: 0.625rem;
   --radius-lg: 1.125rem;
+  --warm-1: rgba(244,196,130,0.42);
+  --warm-2: rgba(244,196,130,0.18);
+  --warm-line: rgba(244,196,130,0.55);
 }
 
 /* Ensure the bg element actually renders the vignette */
@@ -15,8 +18,8 @@
   z-index: 0;
   background:
     radial-gradient(75rem 43.75rem at 20% -10%, rgba(60,120,255,0.18), rgba(0,0,0,0) 55%),
-    radial-gradient(56.25rem 37.5rem at 85% 15%, rgba(0,200,180,0.06), rgba(0,0,0,0) 60%),
-    radial-gradient(44rem 28rem at 88% 6%, rgba(214,161,74,0.12), rgba(0,0,0,0) 60%),
+    radial-gradient(56.25rem 37.5rem at 85% 15%, rgba(0,200,180,0.03), rgba(0,0,0,0) 60%),
+    radial-gradient(44rem 28rem at 88% 6%, var(--warm-2), rgba(0,0,0,0) 60%),
     radial-gradient(62.5rem 43.75rem at 50% 110%, rgba(0,0,0,0.85), rgba(0,0,0,0) 60%),
     linear-gradient(180deg, #070B14 0%, #050812 45%, #04060F 100%);
 }
@@ -32,6 +35,7 @@
   padding: 0.875rem 0.875rem 0.75rem;
   border-radius: var(--radius-lg);
   outline: 0.125rem solid rgba(255,255,255,0.12);
+  box-shadow: 0 1.125rem 3.4375rem rgba(0,0,0,0.55), inset 0 0 0 0.0625rem rgba(255,255,255,0.08);
 }
 
 .home-slate.today-shell .next-reminder-card::before {
@@ -42,9 +46,9 @@
   width: 17.5rem;
   height: 11.25rem;
   background: radial-gradient(circle at 35% 35%,
-    rgba(214,161,74,0.46) 0%,
-    rgba(214,161,74,0.22) 40%,
-    rgba(214,161,74,0.00) 72%);
+    var(--warm-1) 0%,
+    var(--warm-2) 40%,
+    rgba(0,0,0,0) 72%);
   filter: blur(0.75rem);
   opacity: 1;
   pointer-events: none;
@@ -59,9 +63,9 @@
   right: 0.875rem;
   height: 0.0625rem;
   background: linear-gradient(90deg,
-    rgba(214,161,74,0) 0%,
-    rgba(214,161,74,0.55) 45%,
-    rgba(214,161,74,0) 100%);
+    rgba(0,0,0,0) 0%,
+    var(--warm-line) 45%,
+    rgba(0,0,0,0) 100%);
   opacity: 0.75;
   pointer-events: none;
   z-index: 0;
@@ -145,6 +149,7 @@
 .home-slate.today-shell .stat-tile {
   border-radius: 1rem;
   padding: 0.75rem;
+  box-shadow: 0 0.875rem 2.5rem rgba(0,0,0,0.45), inset 0 0 0 0.0625rem rgba(255,255,255,0.08);
 }
 
 /* Accent outline glow using --tile-accent */
@@ -154,8 +159,8 @@
   inset: -0.125rem;
   border-radius: 1.25rem;
   background: radial-gradient(9rem 6rem at 18% 12%,
-    rgba(var(--tile-accent),0.52),
-    rgba(var(--tile-accent),0.18) 45%,
+    rgba(var(--tile-accent),0.60),
+    rgba(var(--tile-accent),0.22) 45%,
     rgba(0,0,0,0) 75%);
   filter: blur(0.75rem);
   opacity: 0.95;
@@ -178,6 +183,7 @@
 /* Variant B tints per tile type */
 .home-slate.today-shell .stat-tile-today {
   background:
+    linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 58%),
     linear-gradient(165deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 55%),
     linear-gradient(0deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0) 60%),
     rgba(11,22,51,0.55);
@@ -185,6 +191,7 @@
 }
 .home-slate.today-shell .stat-tile-soon  {
   background:
+    linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 58%),
     linear-gradient(165deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 55%),
     linear-gradient(0deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0) 60%),
     rgba(7,31,36,0.55);
@@ -192,6 +199,7 @@
 }
 .home-slate.today-shell .stat-tile-meds  {
   background:
+    linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 58%),
     linear-gradient(165deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 55%),
     linear-gradient(0deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0) 60%),
     rgba(23,18,55,0.55);
@@ -199,16 +207,18 @@
 }
 .home-slate.today-shell .stat-tile-overdue {
   background:
+    linear-gradient(140deg, rgba(244,196,130,0.12) 0%, rgba(0,0,0,0) 55%),
+    linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 58%),
     linear-gradient(165deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 55%),
     linear-gradient(0deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0) 60%),
-    rgba(42,30,11,0.50);
+    rgba(24,24,32,0.55);
   border-color: rgba(240,177,90,0.22);
 }
 
 /* Active tile: slightly stronger ring (do NOT use white border) */
 .home-slate.today-shell .stat-tile-active {
   border-color: rgba(255,255,255,0.14);
-  box-shadow: 0 1rem 2.75rem rgba(0,0,0,0.52);
+  box-shadow: 0 1rem 2.75rem rgba(0,0,0,0.52), inset 0 0 0 0.0625rem rgba(255,255,255,0.08);
 }
 
 .home-slate.today-shell .stat-tile > div:nth-child(2) {
