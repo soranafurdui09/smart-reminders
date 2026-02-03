@@ -918,8 +918,9 @@ export default function ReminderDashboardSection({
     });
   };
 
-  if (isMobile) {
-    return (
+  const desktopTab = activeTab === 'inbox' ? 'inbox' : 'today';
+
+  return isMobile ? (
       <section className="space-y-[var(--space-3)]">
         {activeTab === 'inbox' ? (
           <div className="space-y-[var(--space-3)]">
@@ -1537,12 +1538,7 @@ export default function ReminderDashboardSection({
           </div>
         )}
       </section>
-    );
-  }
-
-  const desktopTab = activeTab === 'inbox' ? 'inbox' : 'today';
-
-  return (
+    ) : (
     <section className="space-y-6">
       <div className="flex flex-wrap items-center gap-2 md:hidden">
         <button
