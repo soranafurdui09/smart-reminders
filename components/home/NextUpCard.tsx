@@ -110,17 +110,17 @@ export default function NextUpCard({
               ) : null}
             </div>
             <div className="next-reminder-time mt-0.5 text-[clamp(0.64rem,2vw,0.74rem)] text-white/70">{timeLabel}</div>
-            <div className="flex flex-wrap items-center gap-1">
+            <div className="flex items-center gap-1 min-w-0">
               {badge ? (
                 <span
-                  className="next-reminder-pill px-1.5 py-0.5 rounded-full text-[0.6rem] border border-white/12 bg-white/5 text-white/70 border-emerald-400/35 text-emerald-200/90 bg-emerald-400/10"
+                  className="next-reminder-pill px-1.5 py-0.5 rounded-full text-[0.6rem] border border-white/12 bg-white/5 text-white/70 border-emerald-400/35 text-emerald-200/90 bg-emerald-400/10 truncate"
                   style={subtleBadgeStyle}
                 >
                   {badge}
                 </span>
               ) : null}
               {tone === 'overdue' ? (
-                <span className="next-reminder-overdue px-1.5 py-0.5 rounded-full text-[0.6rem] border border-white/12 bg-white/5 text-white/70 border-amber-300/35 text-amber-200/90 bg-amber-300/10">
+                <span className="next-reminder-overdue px-1.5 py-0.5 rounded-full text-[0.6rem] border border-white/12 bg-white/5 text-white/70 border-amber-300/35 text-amber-200/90 bg-amber-300/10 truncate">
                   {statusLabel ?? 'Întârziat'}
                 </span>
               ) : null}
