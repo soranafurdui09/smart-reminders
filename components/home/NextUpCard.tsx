@@ -92,7 +92,7 @@ export default function NextUpCard({
       ) : (
         <div className="mt-1 space-y-0.5">
           <div className="flex items-center justify-between gap-1.5">
-            <div className="next-reminder-title line-clamp-2 mt-0.5 text-[clamp(1rem,3vw,1.1rem)] leading-[1.12] font-semibold text-white">{taskTitle}</div>
+            <div className="next-reminder-title line-clamp-2 mt-0.5 text-[clamp(0.96rem,2.9vw,1.08rem)] leading-[1.12] font-semibold text-white">{taskTitle}</div>
             {action ? (
               <form action={markDone}>
                 <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
@@ -100,7 +100,7 @@ export default function NextUpCard({
                 <input type="hidden" name="occurAt" value={action.occurAt} />
                 <input type="hidden" name="done_comment" value="" />
                 <ActionSubmitButton
-                  className="next-reminder-primary rounded-full px-2.5 py-1.5 text-[0.78rem] bg-[#4D7DFF] text-white font-semibold shadow-[0_10px_24px_rgba(77,125,255,0.35)]"
+                  className="next-reminder-primary rounded-full px-2 py-1.5 text-[0.76rem] bg-[#4D7DFF] text-white font-semibold shadow-[0_10px_24px_rgba(77,125,255,0.35)]"
                   type="submit"
                   data-action-feedback={action.feedbackLabel}
                 >
@@ -109,7 +109,7 @@ export default function NextUpCard({
               </form>
             ) : null}
           </div>
-          <div className="next-reminder-time mt-0.5 text-[clamp(0.68rem,2.2vw,0.78rem)] text-white/70">{timeLabel}</div>
+          <div className="next-reminder-time mt-0.5 text-[clamp(0.64rem,2vw,0.74rem)] text-white/70">{timeLabel}</div>
           <div className="flex flex-wrap items-center justify-between gap-1.5">
             <div className="flex flex-wrap items-center gap-2">
               {badge ? (
@@ -131,14 +131,14 @@ export default function NextUpCard({
                 <form action={snoozeOccurrence}>
                   <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
                   <input type="hidden" name="mode" value="30" />
-                  <ActionSubmitButton className="next-reminder-secondary rounded-full px-2.5 py-1 text-[0.7rem] bg-white/6 border border-white/10 text-white/70" type="submit">
+                  <ActionSubmitButton className="next-reminder-secondary rounded-full px-2 py-1 text-[0.68rem] bg-white/6 border border-white/10 text-white/70" type="submit">
                     {secondaryLabels?.snooze30 ?? 'Amână 30m'}
                   </ActionSubmitButton>
                 </form>
                 <form action={snoozeOccurrence}>
                   <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
                   <input type="hidden" name="option_id" value="tomorrow" />
-                  <ActionSubmitButton className="next-reminder-secondary rounded-full px-2.5 py-1 text-[0.7rem] bg-white/6 border border-white/10 text-white/70" type="submit">
+                  <ActionSubmitButton className="next-reminder-secondary rounded-full px-2 py-1 text-[0.68rem] bg-white/6 border border-white/10 text-white/70" type="submit">
                     {secondaryLabels?.snoozeTomorrow ?? 'Mută mâine'}
                   </ActionSubmitButton>
                 </form>

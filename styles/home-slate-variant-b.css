@@ -5,9 +5,10 @@
   color: #fff;
   --space-2: 0.625rem;
   --radius-lg: 1.125rem;
-  --warm-1: rgba(244,196,130,0.42);
-  --warm-2: rgba(244,196,130,0.18);
-  --warm-line: rgba(244,196,130,0.55);
+  --warm-1: rgba(255,196,120,0.38);
+  --warm-2: rgba(255,168,80,0.16);
+  --warm-line: rgba(255,200,140,0.55);
+  --rim: rgba(255,255,255,0.12);
 }
 
 /* Ensure the bg element actually renders the vignette */
@@ -19,7 +20,8 @@
   background:
     radial-gradient(75rem 43.75rem at 20% -10%, rgba(60,120,255,0.18), rgba(0,0,0,0) 55%),
     radial-gradient(56.25rem 37.5rem at 85% 15%, rgba(0,200,180,0.03), rgba(0,0,0,0) 60%),
-    radial-gradient(44rem 28rem at 88% 6%, var(--warm-2), rgba(0,0,0,0) 60%),
+    radial-gradient(44rem 28rem at 88% 6%, rgba(255,168,80,0.10), rgba(0,0,0,0) 60%),
+    radial-gradient(50rem 30rem at 70% -6%, rgba(120,170,255,0.08), rgba(0,0,0,0) 60%),
     radial-gradient(62.5rem 43.75rem at 50% 110%, rgba(0,0,0,0.85), rgba(0,0,0,0) 60%),
     linear-gradient(180deg, #070B14 0%, #050812 45%, #04060F 100%);
 }
@@ -49,8 +51,8 @@
     var(--warm-1) 0%,
     var(--warm-2) 40%,
     rgba(0,0,0,0) 72%);
-  filter: blur(0.75rem);
-  opacity: 1;
+  filter: blur(0.85rem);
+  opacity: 0.82;
   pointer-events: none;
   z-index: 0;
 }
@@ -149,7 +151,9 @@
 .home-slate.today-shell .stat-tile {
   border-radius: 1rem;
   padding: 0.75rem;
-  box-shadow: 0 0.875rem 2.5rem rgba(0,0,0,0.45), inset 0 0 0 0.0625rem rgba(255,255,255,0.08);
+  border: 0.0625rem solid rgba(255,255,255,0.10);
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  box-shadow: 0 0.875rem 2.5rem rgba(0,0,0,0.45), inset 0 0 0 0.0625rem var(--rim);
 }
 
 /* Accent outline glow using --tile-accent */
@@ -182,36 +186,40 @@
 
 /* Variant B tints per tile type */
 .home-slate.today-shell .stat-tile-today {
-  background:
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)),
     linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 58%),
     linear-gradient(165deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 55%),
-    linear-gradient(0deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0) 60%),
-    rgba(11,22,51,0.55);
+    linear-gradient(0deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0) 60%);
+  background-color: rgba(11,22,51,0.55);
   border-color: rgba(77,125,255,0.22);
 }
 .home-slate.today-shell .stat-tile-soon  {
-  background:
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)),
     linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 58%),
     linear-gradient(165deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 55%),
-    linear-gradient(0deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0) 60%),
-    rgba(7,31,36,0.55);
+    linear-gradient(0deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0) 60%);
+  background-color: rgba(7,31,36,0.55);
   border-color: rgba(46,230,197,0.18);
 }
 .home-slate.today-shell .stat-tile-meds  {
-  background:
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)),
     linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 58%),
     linear-gradient(165deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 55%),
-    linear-gradient(0deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0) 60%),
-    rgba(23,18,55,0.55);
+    linear-gradient(0deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0) 60%);
+  background-color: rgba(23,18,55,0.55);
   border-color: rgba(154,123,255,0.18);
 }
 .home-slate.today-shell .stat-tile-overdue {
-  background:
-    linear-gradient(140deg, rgba(244,196,130,0.12) 0%, rgba(0,0,0,0) 55%),
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)),
+    linear-gradient(140deg, rgba(255,196,120,0.12) 0%, rgba(0,0,0,0) 55%),
     linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 58%),
     linear-gradient(165deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 55%),
-    linear-gradient(0deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0) 60%),
-    rgba(24,24,32,0.55);
+    linear-gradient(0deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0) 60%);
+  background-color: rgba(24,24,32,0.55);
   border-color: rgba(240,177,90,0.22);
 }
 
@@ -249,14 +257,14 @@
 }
 
 .home-slate.today-shell.home-compact .next-reminder-card .next-reminder-title {
-  font-size: clamp(1rem, 3.35vw, 1.16rem) !important;
-  line-height: 1.1 !important;
+  font-size: clamp(0.96rem, 2.9vw, 1.08rem) !important;
+  line-height: 1.12 !important;
   margin-top: 0.3rem !important;
 }
 
 .home-slate.today-shell.home-compact .next-reminder-card .next-reminder-time {
   margin-top: 0.3rem !important;
-  font-size: clamp(0.76rem, 2.6vw, 0.86rem) !important;
+  font-size: clamp(0.64rem, 2vw, 0.74rem) !important;
 }
 
 /* Chips and buttons a bit smaller but keep touch targets */
@@ -276,6 +284,10 @@
   padding: 0.44rem 0.76rem !important;
   font-size: 0.68rem !important;
   min-height: 2rem;
+}
+
+.home-slate.today-shell.home-compact .next-reminder-focus {
+  display: none;
 }
 
 /* Mini tiles: reduce padding, radius, and big number */
