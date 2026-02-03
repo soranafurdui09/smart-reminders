@@ -13,6 +13,7 @@ import AtAGlanceRow from '@/components/home/AtAGlanceRow';
 import FilteredTaskList from '@/components/home/FilteredTaskList';
 import OverdueDenseRow from '@/components/home/OverdueDenseRow';
 import MedsTeaserCard from '@/components/home/MedsTeaserCard';
+import ModeToggle from '@/app/reminders/ModeToggle';
 import ReminderRowMobile from '@/components/mobile/ReminderRowMobile';
 import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
 import ReminderCard from '@/components/dashboard/ReminderCard';
@@ -214,6 +215,9 @@ export default function ReminderDashboardSection({
   const [taskPending, startTaskTransition] = useTransition();
   const [nextActionsOpen, setNextActionsOpen] = useState(false);
   const [showRecover, setShowRecover] = useState(false);
+  const [uiMode, setUiMode] = useState<'family' | 'focus'>('family');
+  const [homeTab, setHomeTab] = useState<'home' | 'overview'>('home');
+  const [sectionFlash, setSectionFlash] = useState<'today' | 'soon' | 'overdue' | null>(null);
 
   const filteredOccurrences = useMemo(() => {
     const normalized = occurrences
@@ -594,6 +598,28 @@ export default function ReminderDashboardSection({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    const savedMode = window.localStorage.getItem('ui_mode');
+    if (savedMode === 'family' || savedMode === 'focus') {
+      setUiMode(savedMode);
+    }
+    const savedTab = window.localStorage.getItem('home_tab');
+    if (savedTab === 'home' || savedTab === 'overview') {
+      setHomeTab(savedTab);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('ui_mode', uiMode);
+  }, [uiMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('home_tab', homeTab);
+  }, [homeTab]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get('tab');
@@ -831,6 +857,21 @@ export default function ReminderDashboardSection({
       </div>
     </ReminderActionsSheet>
   ) : null;
+
+  const handleSegmentSelect = (id: 'today' | 'soon' | 'overdue') => {
+    setHomeSegment(id);
+    if (homeTab !== 'home') {
+      setHomeTab('home');
+    }
+    if (typeof window === 'undefined') return;
+    requestAnimationFrame(() => {
+      const target = document.getElementById(`section-${id}`);
+      if (!target) return;
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setSectionFlash(id);
+      window.setTimeout(() => setSectionFlash(null), 320);
+    });
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1245,182 +1286,253 @@ export default function ReminderDashboardSection({
             ) : null}
           </div>
         ) : (
-          <div className="home-slate space-y-3 today-shell home-compact">
+          <div className={`home-slate space-y-3 today-shell home-compact ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'}`}>
             <div className="home-slate-bg" aria-hidden="true" />
             <HomeHeader title={copy.dashboard.title} subtitle={homeSubtitle} />
-            <div className="mx-4 mt-1 text-[11px] text-white/40">UI_COMPACT_TUNE_01</div>
+            <div className="mx-4 mt-1 flex flex-wrap items-center justify-between gap-2 text-[11px] text-white/40">
+              <ModeToggle value={uiMode} onChange={setUiMode} />
+              <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
+                <button
+                  type="button"
+                  className={`rounded-full px-3 py-1 transition ${
+                    homeTab === 'home' ? 'bg-white/10 text-white' : 'text-white/60'
+                  }`}
+                  onClick={() => setHomeTab('home')}
+                >
+                  Acasă
+                </button>
+                <button
+                  type="button"
+                  className={`rounded-full px-3 py-1 transition ${
+                    homeTab === 'overview' ? 'bg-white/10 text-white' : 'text-white/60'
+                  }`}
+                  onClick={() => setHomeTab('overview')}
+                >
+                  Overview
+                </button>
+              </div>
+            </div>
 
-            <NextUpCard
-              title={copy.dashboard.nextTitle}
-              subtext={copy.dashboard.nextUpHelper}
-              taskTitle={nextOccurrence?.reminder?.title ?? undefined}
-              timeLabel={nextOccurrenceLabel ?? undefined}
-              badge={nextCategory?.label}
-              badgeStyle={nextCategory ? getCategoryChipStyle(nextCategory.color, true) : undefined}
-              tone={nextTone}
-              statusLabel={copy.dashboard.todayOverdue}
-              emptyLabel={copy.dashboard.nextUpEmpty}
-              action={
-                nextOccurrence?.id && nextOccurrence?.reminder?.id && nextOccurrence?.occur_at
-                  ? {
-                      occurrenceId: nextOccurrence.id,
-                      reminderId: nextOccurrence.reminder.id,
-                      occurAt: nextOccurrence.occur_at,
-                      label: copy.dashboard.nextUpAction,
-                      feedbackLabel: copy.common.actionDone
-                    }
-                  : null
-              }
-              secondaryLabels={{
-                snooze30: copy.dashboard.nextUpSnooze30,
-                snoozeTomorrow: copy.dashboard.nextUpSnoozeTomorrow
-              }}
-              focusCopy={copy.dashboard.nextUpFocusLine}
-              moreLabel={copy.common.moreActions}
-              onMoreActions={nextOccurrence ? () => setNextActionsOpen(true) : undefined}
-            />
-
-            {nextUpActionsSheet}
-
-            <QuickAddBar />
-
-            <AtAGlanceRow
-              metrics={[
-                {
-                  id: 'today',
-                  label: copy.dashboard.todayTileTitle,
-                  count: todayOpenItems.length,
-                  subLabel: todayOpenItems.length ? copy.dashboard.todayTileHint : copy.dashboard.todayTileEmpty,
-                  tileClass: 'stat-tile-today',
-                  icon: SunMedium
-                },
-                {
-                  id: 'soon',
-                  label: copy.dashboard.soonTileTitle,
-                  count: soonItems.length,
-                  subLabel: copy.dashboard.soonTileHint,
-                  tileClass: 'stat-tile-soon',
-                  icon: Calendar
-                },
-                {
-                  id: 'meds',
-                  label: copy.dashboard.medicationsTileTitle,
-                  count: visibleDoses.length,
-                  subLabel: nextDoseTileLabel,
-                  tileClass: 'stat-tile-meds',
-                  icon: Pill
-                },
-                {
-                  id: 'overdue',
-                  label: copy.dashboard.todayOverdue,
-                  count: overdueItems.length,
-                  subLabel: overdueOldestLabel,
-                  tileClass: overdueTileClass,
-                  icon: AlertTriangle
-                }
-              ]}
-              activeId={homeSegment}
-              variant="secondary"
-              onSelect={(id) => {
-                if (id === 'overdue') setHomeSegment('overdue');
-                if (id === 'today') setHomeSegment('today');
-                if (id === 'soon') setHomeSegment('soon');
-              }}
-            />
-
-            {visibleDoses.length ? (
-              <MedsTeaserCard
-                title={copy.dashboard.medicationsTitle}
-                subtitle={`Următoarea doză: ${new Date(visibleDoses[0].scheduled_at).toLocaleTimeString(localeTag, {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}`}
-                actionLabel={copy.medicationsHub.viewDetails}
-                onAction={() => {
-                  router.push('/app/medications');
-                }}
-              />
-            ) : (
-              <MedsTeaserCard title={copy.dashboard.medicationsTitle} subtitle={copy.dashboard.medicationsEmpty} />
-            )}
-
-            {overdueTopItems.length ? (
-              <section className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-[color:var(--text-0)]">{copy.dashboard.overdueTopTitle}</div>
-                  <button
-                    type="button"
-                    className="text-xs font-semibold text-[color:var(--brand-blue)]"
-                    onClick={() => setShowRecover((prev) => !prev)}
-                  >
-                    {copy.dashboard.overdueTopCta}
-                  </button>
+            {homeTab === 'overview' ? (
+              <section className="space-y-3">
+                <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-2)] py-[var(--space-2)]">
+                  <div className="text-sm font-semibold text-[color:var(--text-0)]">Situația ta</div>
+                  <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-xs text-white/70">
+                      <div className="text-base font-semibold text-white">{todayOpenItems.length}</div>
+                      {copy.dashboard.todayTitle}
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-xs text-white/70">
+                      <div className="text-base font-semibold text-white">{soonItems.length}</div>
+                      {copy.dashboard.todaySoon}
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-xs text-white/70">
+                      <div className="text-base font-semibold text-white">{overdueItems.length}</div>
+                      {copy.dashboard.todayOverdue}
+                    </div>
+                  </div>
                 </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {copy.dashboard.priorityFilters.map((label) => (
-                  <span key={label} className="home-chip">
-                    {label}
-                  </span>
-                ))}
-              </div>
-              <div className="space-y-2">
-                {priorityItems.map((occurrence) => (
-                  <OverdueDenseRow
-                    key={occurrence.id}
-                    occurrence={occurrence}
-                    locale={locale}
-                    googleConnected={googleConnected}
-                    userTimeZone={effectiveTimeZone}
-                    variant="priority"
-                    primaryLabel={copy.dashboard.nextUpAction}
-                    secondaryLabel={copy.dashboard.prioritySnooze}
-                  />
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-            <section id="overdue-list" className="space-y-2">
-              <div className="flex items-center justify-between text-sm font-semibold text-[color:var(--text-0)]">
-                <span>
-                  {homeSegment === 'overdue'
-                    ? copy.dashboard.todayOverdue
-                    : homeSegment === 'soon'
-                      ? copy.dashboard.todaySoon
-                      : copy.dashboard.todayTitle}
-                </span>
-                <span className="text-xs text-[color:var(--text-2)]">
-                  {segmentItems.length} {copy.dashboard.reminderCountLabel}
-                </span>
-              </div>
-              {homeSegment === 'overdue' ? (
-                overdueItems.length ? (
-                  <div className="space-y-2">
-                    {overdueItems.map((occurrence) => (
-                      <OverdueDenseRow
-                        key={occurrence.id}
-                        occurrence={occurrence}
-                        locale={locale}
-                        googleConnected={googleConnected}
-                        userTimeZone={effectiveTimeZone}
-                      />
-                    ))}
+                <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-2)] py-[var(--space-2)]">
+                  <div className="text-sm font-semibold text-[color:var(--text-0)]">Medicamente</div>
+                  <div className="mt-2 flex items-center justify-between text-xs text-white/70">
+                    <span>{copy.dashboard.medicationsTileTitle}</span>
+                    <span>
+                      {medsTodayStats.taken}/{medsTodayStats.total}
+                    </span>
                   </div>
-                ) : (
-                  <div className="home-glass-panel rounded-[var(--radius-lg)] p-[var(--space-3)] text-sm text-[color:var(--text-2)]">
-                    {copy.dashboard.todayEmpty}
+                </div>
+                <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-2)] py-[var(--space-2)]">
+                  <div className="text-sm font-semibold text-[color:var(--text-0)]">Grupuri</div>
+                  <div className="mt-2 flex items-center justify-between text-xs text-white/70">
+                    <span>{copy.dashboard.householdTitle}</span>
+                    <span>{householdItems.length}</span>
                   </div>
-                )
-              ) : (
-                <FilteredTaskList
-                  items={segmentItems}
-                  locale={locale}
-                  googleConnected={googleConnected}
-                  userTimeZone={effectiveTimeZone}
-                  emptyLabel={copy.dashboard.todayEmpty}
+                </div>
+              </section>
+            ) : (
+              <>
+                <NextUpCard
+                  title={copy.dashboard.nextTitle}
+                  subtext={copy.dashboard.nextUpHelper}
+                  taskTitle={nextOccurrence?.reminder?.title ?? undefined}
+                  timeLabel={nextOccurrenceLabel ?? undefined}
+                  badge={nextCategory?.label}
+                  badgeStyle={nextCategory ? getCategoryChipStyle(nextCategory.color, true) : undefined}
+                  tone={nextTone}
+                  statusLabel={copy.dashboard.todayOverdue}
+                  emptyLabel={copy.dashboard.nextUpEmpty}
+                  action={
+                    nextOccurrence?.id && nextOccurrence?.reminder?.id && nextOccurrence?.occur_at
+                      ? {
+                          occurrenceId: nextOccurrence.id,
+                          reminderId: nextOccurrence.reminder.id,
+                          occurAt: nextOccurrence.occur_at,
+                          label: copy.dashboard.nextUpAction,
+                          feedbackLabel: copy.common.actionDone
+                        }
+                      : null
+                  }
+                  secondaryLabels={{
+                    snooze30: copy.dashboard.nextUpSnooze30,
+                    snoozeTomorrow: copy.dashboard.nextUpSnoozeTomorrow
+                  }}
+                  focusCopy={copy.dashboard.nextUpFocusLine}
+                  moreLabel={copy.common.moreActions}
+                  onMoreActions={nextOccurrence ? () => setNextActionsOpen(true) : undefined}
                 />
-              )}
-            </section>
+
+                {nextUpActionsSheet}
+
+                <QuickAddBar />
+
+                {uiMode === 'focus' ? null : (
+                  <AtAGlanceRow
+                    metrics={[
+                      {
+                        id: 'today',
+                        label: copy.dashboard.todayTileTitle,
+                        count: todayOpenItems.length,
+                        subLabel: todayOpenItems.length ? copy.dashboard.todayTileHint : copy.dashboard.todayTileEmpty,
+                        tileClass: 'stat-tile-today',
+                        icon: SunMedium
+                      },
+                      {
+                        id: 'soon',
+                        label: copy.dashboard.soonTileTitle,
+                        count: soonItems.length,
+                        subLabel: copy.dashboard.soonTileHint,
+                        tileClass: 'stat-tile-soon',
+                        icon: Calendar
+                      },
+                      {
+                        id: 'meds',
+                        label: copy.dashboard.medicationsTileTitle,
+                        count: visibleDoses.length,
+                        subLabel: nextDoseTileLabel,
+                        tileClass: 'stat-tile-meds',
+                        icon: Pill
+                      },
+                      {
+                        id: 'overdue',
+                        label: copy.dashboard.todayOverdue,
+                        count: overdueItems.length,
+                        subLabel: overdueOldestLabel,
+                        tileClass: overdueTileClass,
+                        icon: AlertTriangle
+                      }
+                    ]}
+                    activeId={homeSegment}
+                    variant="secondary"
+                    onSelect={(id) => {
+                      if (id === 'overdue') handleSegmentSelect('overdue');
+                      if (id === 'today') handleSegmentSelect('today');
+                      if (id === 'soon') handleSegmentSelect('soon');
+                    }}
+                  />
+                )}
+
+                {uiMode === 'focus' ? null : (
+                  visibleDoses.length ? (
+                    <MedsTeaserCard
+                      title={copy.dashboard.medicationsTitle}
+                      subtitle={`Următoarea doză: ${new Date(visibleDoses[0].scheduled_at).toLocaleTimeString(localeTag, {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}`}
+                      actionLabel={copy.medicationsHub.viewDetails}
+                      onAction={() => {
+                        router.push('/app/medications');
+                      }}
+                    />
+                  ) : (
+                    <MedsTeaserCard title={copy.dashboard.medicationsTitle} subtitle={copy.dashboard.medicationsEmpty} />
+                  )
+                )}
+
+                {uiMode === 'focus' || !overdueTopItems.length ? null : (
+                  <section className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-semibold text-[color:var(--text-0)]">{copy.dashboard.overdueTopTitle}</div>
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-[color:var(--brand-blue)]"
+                        onClick={() => setShowRecover((prev) => !prev)}
+                      >
+                        {copy.dashboard.overdueTopCta}
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {copy.dashboard.priorityFilters.map((label) => (
+                        <span key={label} className="home-chip">
+                          {label}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="space-y-2">
+                      {priorityItems.map((occurrence) => (
+                        <OverdueDenseRow
+                          key={occurrence.id}
+                          occurrence={occurrence}
+                          locale={locale}
+                          googleConnected={googleConnected}
+                          userTimeZone={effectiveTimeZone}
+                          variant="priority"
+                          primaryLabel={copy.dashboard.nextUpAction}
+                          secondaryLabel={copy.dashboard.prioritySnooze}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                <div id="section-today" aria-hidden="true" />
+                <div id="section-soon" aria-hidden="true" />
+                <div id="section-overdue" aria-hidden="true" />
+
+                <section id="overdue-list" className="space-y-2">
+                  <div className={`flex items-center justify-between text-sm font-semibold text-[color:var(--text-0)] ${
+                      sectionFlash === homeSegment ? 'section-focus' : ''
+                    }`}>
+                    <span>
+                      {homeSegment === 'overdue'
+                        ? copy.dashboard.todayOverdue
+                        : homeSegment === 'soon'
+                          ? copy.dashboard.todaySoon
+                          : copy.dashboard.todayTitle}
+                    </span>
+                    <span className="text-xs text-[color:var(--text-2)]">
+                      {segmentItems.length} {copy.dashboard.reminderCountLabel}
+                    </span>
+                  </div>
+                  {homeSegment === 'overdue' ? (
+                    overdueItems.length ? (
+                      <div className="space-y-2">
+                        {overdueItems.map((occurrence) => (
+                          <OverdueDenseRow
+                            key={occurrence.id}
+                            occurrence={occurrence}
+                            locale={locale}
+                            googleConnected={googleConnected}
+                            userTimeZone={effectiveTimeZone}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="home-glass-panel rounded-[var(--radius-lg)] p-[var(--space-3)] text-sm text-[color:var(--text-2)]">
+                        {copy.dashboard.todayEmpty}
+                      </div>
+                    )
+                  ) : (
+                    <FilteredTaskList
+                      items={segmentItems}
+                      locale={locale}
+                      googleConnected={googleConnected}
+                      userTimeZone={effectiveTimeZone}
+                      emptyLabel={copy.dashboard.todayEmpty}
+                    />
+                  )}
+                </section>
+              </>
           </div>
         )}
       </section>
