@@ -154,7 +154,7 @@
 /* Rebuild mini-cards to match mockup */
 .home-slate.today-shell .stat-tile {
   border-radius: 1rem;
-  padding: 0.65rem;
+  padding: 0.5rem;
   border: 0.0625rem solid rgba(255,255,255,0.10);
   background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
   box-shadow: 0 0.875rem 2.5rem rgba(0,0,0,0.45), inset 0 0 0 0.0625rem var(--rim);
@@ -167,11 +167,11 @@
   inset: -0.125rem;
   border-radius: 1.25rem;
   background: radial-gradient(9rem 6rem at 18% 12%,
-    rgba(var(--tile-accent),0.60),
-    rgba(var(--tile-accent),0.22) 45%,
+    rgba(var(--tile-accent),0.45),
+    rgba(var(--tile-accent),0.16) 45%,
     rgba(0,0,0,0) 75%);
   filter: blur(0.75rem);
-  opacity: 0.95;
+  opacity: 0.8;
   pointer-events: none;
 }
 
@@ -184,7 +184,7 @@
   right: 0.75rem;
   height: 0.0625rem;
   background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.22), rgba(255,255,255,0));
-  opacity: 0.75;
+  opacity: 0.6;
   pointer-events: none;
 }
 
@@ -276,7 +276,7 @@
 
 /* Hero card: reduce padding + title size slightly */
 .home-slate.today-shell.home-compact .next-reminder-card {
-  padding: 0.6rem !important;
+  padding: 0.5rem !important;
 }
 
 .home-slate.today-shell.home-compact .next-reminder-card .next-reminder-title {
@@ -315,7 +315,7 @@
 
 /* Mini tiles: reduce padding, radius, and big number */
 .home-slate.today-shell.home-compact .stat-tile {
-  padding: 0.55rem !important;
+  padding: 0.45rem !important;
 }
 
 .home-slate.today-shell.home-compact .stat-tile > div:nth-child(2) {
@@ -329,4 +329,10 @@
 
 .home-slate.today-shell.home-compact .at-a-glance-panel .grid {
   gap: 0.45rem !important;
+}
+
+.home-slate.today-shell .section-focus {
+  box-shadow: 0 0 0 0.0625rem rgba(123, 97, 255, 0.25);
+  background: linear-gradient(90deg, rgba(123, 97, 255, 0.12), rgba(0,0,0,0));
+  border-radius: 0.75rem;
 }
