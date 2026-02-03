@@ -1,0 +1,220 @@
+.homeRoot {
+  --bg-0: #0b1020;
+  --bg-1: #111827;
+  --surface-0: rgba(255, 255, 255, 0.06);
+  --surface-1: rgba(255, 255, 255, 0.08);
+  --border-0: rgba(255, 255, 255, 0.12);
+  --shadow-0: 0 16px 44px rgba(0, 0, 0, 0.42);
+  --text-0: rgba(255, 255, 255, 0.92);
+  --text-1: rgba(255, 255, 255, 0.72);
+  --text-2: rgba(255, 255, 255, 0.52);
+  --accent-family: #f5d48c;
+  --accent-family-rgb: 245 212 140;
+  --accent-focus: #6aa9ff;
+  --accent-focus-rgb: 106 169 255;
+  --accent: var(--accent-family);
+  --accent-rgb: var(--accent-family-rgb);
+  --cta: linear-gradient(180deg, rgba(255, 238, 200, 0.98) 0%, #f5d48c 100%);
+  --cta-shadow: 0 12px 28px rgba(245, 212, 140, 0.35);
+  --radius-lg: 1.125rem;
+  --radius-md: 0.875rem;
+  --blur-lg: 18px;
+  --blur-md: 12px;
+  position: relative;
+  min-height: 100vh;
+  color: var(--text-0);
+  background:
+    radial-gradient(900px 520px at 12% -6%, rgba(104, 146, 255, 0.14), transparent 60%),
+    radial-gradient(700px 460px at 88% 6%, rgba(var(--accent-rgb), 0.12), transparent 60%),
+    linear-gradient(180deg, var(--bg-1) 0%, var(--bg-0) 100%);
+}
+
+.homeRoot.modeFocus {
+  --accent: var(--accent-focus);
+  --accent-rgb: var(--accent-focus-rgb);
+  --cta: linear-gradient(180deg, rgba(168, 206, 255, 0.98) 0%, #6aa9ff 100%);
+  --cta-shadow: 0 12px 28px rgba(106, 169, 255, 0.35);
+}
+
+.homeRoot::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.025) 0,
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  opacity: 0.06;
+  mix-blend-mode: soft-light;
+}
+
+.homeRoot .home-slate-bg {
+  background:
+    radial-gradient(820px 520px at 18% -12%, rgba(120, 160, 255, 0.16), transparent 60%),
+    radial-gradient(640px 420px at 86% 8%, rgba(var(--accent-rgb), 0.12), transparent 58%),
+    radial-gradient(900px 680px at 50% 115%, rgba(0, 0, 0, 0.75), transparent 60%),
+    linear-gradient(180deg, var(--bg-1) 0%, var(--bg-0) 100%);
+}
+
+.homeRoot .homeTopControls {
+  opacity: 0.86;
+}
+
+.homeRoot .homeTabToggle {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.homeRoot .home-glass-panel,
+.homeRoot .home-input-pill {
+  background: var(--surface-0);
+  border: 1px solid var(--border-0);
+  box-shadow: var(--shadow-0);
+  -webkit-backdrop-filter: blur(var(--blur-md));
+  backdrop-filter: blur(var(--blur-md));
+}
+
+.homeRoot .home-input-pill {
+  border-radius: var(--radius-md);
+}
+
+.homeRoot .home-icon-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-0);
+  color: var(--accent);
+  -webkit-backdrop-filter: blur(var(--blur-md));
+  backdrop-filter: blur(var(--blur-md));
+}
+
+.homeRoot .home-primary-btn {
+  background: var(--cta);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: var(--cta-shadow);
+  color: #0f1422;
+}
+
+.homeRoot .nextUpCard,
+.homeRoot .next-reminder-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border-0);
+  box-shadow: var(--shadow-0);
+  border-radius: var(--radius-lg);
+  -webkit-backdrop-filter: blur(var(--blur-lg));
+  backdrop-filter: blur(var(--blur-lg));
+}
+
+.homeRoot .next-reminder-card::before {
+  content: "";
+  position: absolute;
+  top: -26px;
+  right: -48px;
+  width: 150px;
+  height: 120px;
+  background: radial-gradient(circle at 40% 40%, rgba(var(--accent-rgb), 0.28), rgba(var(--accent-rgb), 0.06) 60%, transparent 75%);
+  opacity: 0.8;
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+.homeRoot .next-reminder-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0.75rem;
+  right: 0.75rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.45), transparent);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.homeRoot .nextUpTitle,
+.homeRoot .next-reminder-title {
+  color: var(--text-0);
+}
+
+.homeRoot .nextUpMeta,
+.homeRoot .next-reminder-time,
+.homeRoot .next-reminder-subtitle {
+  color: var(--text-1);
+}
+
+.homeRoot .nextUpCta,
+.homeRoot .next-reminder-primary {
+  background: var(--cta);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: var(--cta-shadow);
+  color: #0f1422;
+}
+
+.homeRoot .next-reminder-secondary {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-0);
+  color: var(--text-1);
+}
+
+.homeRoot .next-reminder-pill,
+.homeRoot .next-reminder-overdue {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--text-1);
+}
+
+.homeRoot .glanceGrid {
+  gap: 0.5rem;
+}
+
+.homeRoot .glanceTile,
+.homeRoot .stat-tile {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--border-0);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  border-radius: var(--radius-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.homeRoot .stat-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120px 80px at 18% 18%, rgba(var(--tile-accent, var(--accent-rgb)), 0.18), transparent 70%);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.homeRoot .stat-tile::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0.6rem;
+  right: 0.6rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.homeRoot .stat-tile-active {
+  background:
+    linear-gradient(180deg, rgba(var(--tile-accent, var(--accent-rgb)), 0.18), rgba(255, 255, 255, 0.04));
+  border-color: rgba(var(--tile-accent, var(--accent-rgb)), 0.35);
+}
+
+.homeRoot .glanceNumber {
+  color: var(--text-0);
+}
+
+.homeRoot .glanceLabel {
+  color: var(--text-1);
+}
+
+.homeRoot .glanceSubLabel {
+  color: var(--text-2);
+}

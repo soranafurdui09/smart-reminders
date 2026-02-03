@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react';
 import { AlertTriangle, Calendar, CheckCircle2, Circle, MoreHorizontal, Pill, SunMedium, Users } from 'lucide-react';
 import '@/styles/home-slate-variant-b.css';
+import '@/styles/home-premium-theme.css';
 import SemanticSearch from '@/components/SemanticSearch';
 import HomeHeader from '@/components/home/HomeHeader';
 import NextUpCard from '@/components/home/NextUpCard';
@@ -921,7 +922,7 @@ export default function ReminderDashboardSection({
   const desktopTab = activeTab === 'inbox' ? 'inbox' : 'today';
 
   return isMobile ? (
-      <section className="space-y-[var(--space-3)]">
+      <section className={`homeRoot ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-[var(--space-3)]`}>
         {activeTab === 'inbox' ? (
           <div className="space-y-[var(--space-3)]">
             <div className="card-soft flex items-center justify-between px-[var(--space-3)] py-[var(--space-2)]">
@@ -1287,12 +1288,12 @@ export default function ReminderDashboardSection({
             ) : null}
           </div>
         ) : (
-          <div className={`home-slate space-y-3 today-shell home-compact ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'}`}>
+          <div className="home-slate space-y-3 today-shell home-compact">
             <div className="home-slate-bg" aria-hidden="true" />
             <HomeHeader title={copy.dashboard.title} subtitle={homeSubtitle} />
-            <div className="mx-4 mt-1 flex flex-wrap items-center justify-between gap-2 text-[11px] text-white/40">
+            <div className="homeTopControls mx-4 mt-1 flex flex-wrap items-center justify-between gap-2 text-[11px] text-white/40">
               <ModeToggle value={uiMode} onChange={setUiMode} />
-              <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
+              <div className="homeTabToggle flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
                 <button
                   type="button"
                   className={`rounded-full px-3 py-1 transition ${
@@ -1539,7 +1540,7 @@ export default function ReminderDashboardSection({
         )}
       </section>
     ) : (
-    <section className="space-y-6">
+    <section className={`homeRoot ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-6`}>
       <div className="flex flex-wrap items-center gap-2 md:hidden">
         <button
           type="button"

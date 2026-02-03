@@ -67,11 +67,11 @@ export default function NextUpCard({
   }, [badgeStyle]);
 
   return (
-    <div className={`next-reminder-card ${toneClassName} relative overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.06] shadow-[0_18px_55px_rgba(0,0,0,0.55)] backdrop-blur-[18px] p-2`}>
+    <div className={`nextUpCard next-reminder-card ${toneClassName} relative overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.06] shadow-[0_18px_55px_rgba(0,0,0,0.55)] backdrop-blur-[18px] p-2`}>
       <div className="next-reminder-content">
         <span className="next-reminder-topline" aria-hidden="true" />
         <span className="next-reminder-corner" aria-hidden="true" />
-        <div className="flex items-start justify-between gap-1.5">
+        <div className="nextUpHeader flex items-start justify-between gap-1.5">
           <div className="next-reminder-label text-[0.625rem] tracking-[0.18em] uppercase text-white/60">{title}</div>
           {onMoreActions ? (
             <button
@@ -92,7 +92,7 @@ export default function NextUpCard({
         ) : (
           <div className="mt-0.5 space-y-0.5">
             <div className="flex items-center justify-between gap-1.5">
-              <div className="next-reminder-title line-clamp-2 mt-0.5 text-[clamp(0.96rem,2.9vw,1.08rem)] leading-[1.12] font-semibold text-white">{taskTitle}</div>
+              <div className="nextUpTitle next-reminder-title line-clamp-2 mt-0.5 text-[clamp(0.96rem,2.9vw,1.08rem)] leading-[1.12] font-semibold text-white">{taskTitle}</div>
               {action ? (
                 <form action={markDone}>
                   <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
@@ -100,7 +100,7 @@ export default function NextUpCard({
                   <input type="hidden" name="occurAt" value={action.occurAt} />
                   <input type="hidden" name="done_comment" value="" />
                   <ActionSubmitButton
-                    className="next-reminder-primary rounded-full px-2 py-1.5 text-[0.76rem] text-white font-semibold"
+                    className="nextUpCta next-reminder-primary rounded-full px-2 py-1.5 text-[0.76rem] font-semibold"
                     type="submit"
                     data-action-feedback={action.feedbackLabel}
                   >
@@ -109,8 +109,8 @@ export default function NextUpCard({
                 </form>
               ) : null}
             </div>
-            <div className="next-reminder-time mt-0.5 text-[clamp(0.64rem,2vw,0.74rem)] text-white/70">{timeLabel}</div>
-            <div className="flex items-center gap-1 min-w-0">
+            <div className="nextUpMeta next-reminder-time mt-0.5 text-[clamp(0.64rem,2vw,0.74rem)] text-white/70">{timeLabel}</div>
+            <div className="nextUpChips flex items-center gap-1 min-w-0">
               {badge ? (
                 <span
                   className="next-reminder-pill px-1.5 py-0.5 rounded-full text-[0.6rem] border border-white/12 bg-white/5 text-white/70 border-emerald-400/35 text-emerald-200/90 bg-emerald-400/10 truncate"
