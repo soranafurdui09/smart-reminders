@@ -1533,6 +1533,7 @@ export default function ReminderDashboardSection({
                   )}
                 </section>
               </>
+            )}
           </div>
         )}
       </section>
