@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'rea
 import { AlertTriangle, Calendar, CheckCircle2, Circle, MoreHorizontal, Pill, SunMedium, Users } from 'lucide-react';
 import '@/styles/home-slate-variant-b.css';
 import '@/styles/home-premium-theme.css';
+import '@/styles/home-premium.css';
 import SemanticSearch from '@/components/SemanticSearch';
 import HomeHeader from '@/components/home/HomeHeader';
 import NextUpCard from '@/components/home/NextUpCard';
@@ -922,7 +923,7 @@ export default function ReminderDashboardSection({
   const desktopTab = activeTab === 'inbox' ? 'inbox' : 'today';
 
   return isMobile ? (
-      <section className={`homeRoot ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-[var(--space-3)]`}>
+      <section className={`homeRoot premium ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-[var(--space-3)]`}>
         {activeTab === 'inbox' ? (
           <div className="space-y-[var(--space-3)]">
             <div className="card-soft flex items-center justify-between px-[var(--space-3)] py-[var(--space-2)]">
@@ -1540,7 +1541,7 @@ export default function ReminderDashboardSection({
         )}
       </section>
     ) : (
-    <section className={`homeRoot ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-6`}>
+    <section className={`homeRoot premium ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-6`}>
       <div className="flex flex-wrap items-center gap-2 md:hidden">
         <button
           type="button"
