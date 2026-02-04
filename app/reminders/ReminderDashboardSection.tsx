@@ -967,6 +967,56 @@ export default function ReminderDashboardSection({
     );
   }
 
+  if (isMobile && isFocusMode) {
+    return (
+      <section className={`homeRoot premium ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-[var(--space-3)]`}>
+        <div className="home-slate space-y-3 today-shell home-compact">
+          <div className="home-slate-bg" aria-hidden="true" />
+          <HomeHeader
+            title={copy.dashboard.title}
+            subtitle={homeSubtitle}
+            modeSwitcher={
+              <ModeSwitcher
+                value={uiMode}
+                onChange={setUiMode}
+                remember={rememberMode}
+                onRememberChange={setRememberMode}
+              />
+            }
+          />
+          <FocusHome
+            copy={copy}
+            nextOccurrence={nextOccurrence}
+            nextOccurrenceLabel={nextOccurrenceLabel ?? undefined}
+            nextCategory={nextCategory ?? null}
+            nextTone={nextTone}
+            statusLabel={copy.dashboard.todayOverdue}
+            emptyLabel={copy.dashboard.nextUpEmpty}
+            action={
+              nextOccurrence?.id && nextOccurrence?.reminder?.id && nextOccurrence?.occur_at
+                ? {
+                    occurrenceId: nextOccurrence.id,
+                    reminderId: nextOccurrence.reminder.id,
+                    occurAt: nextOccurrence.occur_at,
+                    label: copy.dashboard.nextUpAction,
+                    feedbackLabel: copy.common.actionDone
+                  }
+                : null
+            }
+            secondaryLabels={{
+              snooze30: copy.dashboard.nextUpSnooze30,
+              snoozeTomorrow: copy.dashboard.nextUpSnoozeTomorrow
+            }}
+            focusCopy={copy.dashboard.nextUpFocusLine}
+            todayItems={focusItems}
+            locale={locale}
+            userTimeZone={effectiveTimeZone}
+          />
+        </div>
+      </section>
+    );
+  }
+
   return isMobile ? (
       <section className={`homeRoot premium ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-[var(--space-3)]`}>
         {activeTab === 'inbox' ? (
