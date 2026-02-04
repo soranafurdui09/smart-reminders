@@ -761,6 +761,22 @@ export default function ReminderDashboardSection({
   const overdueTopItems = useMemo(() => overdueItems.slice(0, 5), [overdueItems]);
   const priorityItems = useMemo(() => (showRecover ? overdueTopItems : overdueTopItems.slice(0, 3)), [overdueTopItems, showRecover]);
   const homeSubtitle = `${todayOpenItems.length} ${copy.dashboard.homeSubtitleToday} • ${overdueItems.length} ${copy.dashboard.homeSubtitleOverdue}`;
+  const headerTitle = uiMode === 'focus' ? 'Focus' : copy.dashboard.title;
+  const headerSubtitle = uiMode === 'focus' ? 'Doar ce contează. Minim de zgomot.' : homeSubtitle;
+  const headerNode = (
+    <HomeHeader
+      title={headerTitle}
+      subtitle={headerSubtitle}
+      modeSwitcher={
+        <ModeSwitcher
+          value={uiMode}
+          onChange={setUiMode}
+          remember={rememberMode}
+          onRememberChange={setRememberMode}
+        />
+      }
+    />
+  );
   const nextDoseTileLabel = useMemo(() => {
     if (!visibleDoses.length) return copy.dashboard.medicationsTileEmpty;
     const nextTime = new Date(visibleDoses[0].scheduled_at).toLocaleTimeString(localeTag, {
@@ -949,6 +965,7 @@ export default function ReminderDashboardSection({
       <section className={`homeRoot premium ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-6`}>
         <div className="home-slate space-y-3 today-shell home-compact">
           <div className="home-slate-bg" aria-hidden="true" />
+          {headerNode}
           <FocusHome
             copy={copy}
             nextOccurrence={nextOccurrence}
@@ -990,6 +1007,7 @@ export default function ReminderDashboardSection({
       <section className={`homeRoot premium ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-[var(--space-3)]`}>
         <div className="home-slate space-y-3 today-shell home-compact">
           <div className="home-slate-bg" aria-hidden="true" />
+          {headerNode}
           <FocusHome
             copy={copy}
             nextOccurrence={nextOccurrence}
@@ -1025,6 +1043,7 @@ export default function ReminderDashboardSection({
       </section>
     ) : (
       <FamilyHome
+        header={headerNode}
         uiMode={uiMode}
         activeTab={activeTab}
         inboxView={inboxView}

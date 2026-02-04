@@ -2,8 +2,7 @@
 
 import Link from 'next/link';
 import { AlertTriangle, Calendar, CheckCircle2, Circle, Pill, SunMedium } from 'lucide-react';
-import HomeHeader from '@/components/home/HomeHeader';
-import ModeSwitcher from '@/components/home/ModeSwitcher';
+import type { ReactNode } from 'react';
 import NextUpCard from '@/components/home/NextUpCard';
 import QuickAddBar from '@/components/home/QuickAddBar';
 import AtAGlanceRow from '@/components/home/AtAGlanceRow';
@@ -19,6 +18,7 @@ import { getCategoryChipStyle } from '@/lib/categories';
 type Props = Record<string, any>;
 
 export default function FamilyHome({
+  header,
   uiMode,
   activeTab,
   inboxView,
@@ -453,18 +453,7 @@ export default function FamilyHome({
         ) : (
           <div className="home-slate space-y-3 today-shell home-compact">
             <div className="home-slate-bg" aria-hidden="true" />
-            <HomeHeader
-              title={copy.dashboard.title}
-              subtitle={homeSubtitle}
-              modeSwitcher={
-                <ModeSwitcher
-                  value={uiMode}
-                  onChange={setUiMode}
-                  remember={rememberMode}
-                  onRememberChange={setRememberMode}
-                />
-              }
-            />
+            {header as ReactNode}
             <div className="homeTopControls mx-4 mt-1 flex flex-wrap items-center justify-between gap-2 text-[11px] text-white/40">
               <div className="homeTabToggle flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
                 <button
