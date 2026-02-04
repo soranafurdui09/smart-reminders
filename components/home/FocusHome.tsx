@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
-import NextUpCard from '@/components/home/NextUpCard';
 import QuickAddBar from '@/components/home/QuickAddBar';
 import { markDone } from '@/app/app/actions';
 import { diffDaysInTimeZone, formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
@@ -107,26 +106,55 @@ export default function FocusHome({
 
   return (
     <section className="space-y-3">
-      <NextUpCard
-        title={copy.dashboard.nextTitle}
-        subtext={copy.dashboard.nextUpHelper}
-        taskTitle={nextOccurrence?.reminder?.title ?? undefined}
-        timeLabel={nextOccurrenceLabel ?? undefined}
-        badge={nextCategory?.label}
-        badgeStyle={nextCategory ? getCategoryChipStyle(nextCategory.color, true) : undefined}
-        tone={nextTone}
-        statusLabel={statusLabel}
-        emptyLabel={emptyLabel}
-        action={action ?? null}
-        secondaryLabels={secondaryLabels}
-        focusCopy={focusCopy}
-      />
+      <div className="flex items-center justify-between">
+        <div className="text-[22px] font-semibold text-[color:var(--text-0)]">Focus</div>
+      </div>
+
+      <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-3)] py-[var(--space-2)]">
+        {nextOccurrence ? (
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--text-2)]">Next</div>
+              <div className="text-sm font-semibold text-[color:var(--text-0)] line-clamp-2">
+                {nextOccurrence.reminder?.title ?? emptyLabel}
+              </div>
+              <div className="text-xs text-[color:var(--text-2)]">
+                {getMetaLabel(nextOccurrence, locale, userTimeZone)}
+              </div>
+              {nextCategory ? (
+                <span className="home-category-pill" style={{ borderColor: nextCategory.color }}>
+                  {nextCategory.label}
+                </span>
+              ) : null}
+            </div>
+            {action ? (
+              <form action={markDone}>
+                <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
+                <input type="hidden" name="reminderId" value={action.reminderId} />
+                <input type="hidden" name="occurAt" value={action.occurAt} />
+                <input type="hidden" name="done_comment" value="" />
+                <ActionSubmitButton
+                  className="home-priority-primary"
+                  type="submit"
+                  data-action-feedback={action.feedbackLabel}
+                >
+                  {action.label}
+                </ActionSubmitButton>
+              </form>
+            ) : null}
+          </div>
+        ) : (
+          <div className="text-sm text-[color:var(--text-2)]">
+            {emptyLabel ?? copy.dashboard.nextUpEmpty}
+          </div>
+        )}
+      </div>
 
       <QuickAddBar />
 
       <section className="space-y-2">
         <div className="flex items-center justify-between text-sm font-semibold text-[color:var(--text-0)]">
-          <span>{copy.dashboard.todayTitle}</span>
+          <span>Azi</span>
           <span className="text-xs text-[color:var(--text-2)]">
             {todayItems.length} {copy.dashboard.reminderCountLabel}
           </span>
