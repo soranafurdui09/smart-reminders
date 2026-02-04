@@ -157,17 +157,23 @@ export default function FocusHome({
         </div>
 
         {visibleItems.length ? (
-          <div className="space-y-1.5">
-            {visibleItems.map((occurrence) => {
+          <>
+            <div className="rounded-2xl border border-white/10 bg-white/5">
+              {visibleItems.map((occurrence, index) => {
               const reminder = occurrence.reminder ?? null;
               const reminderId = reminder?.id ?? '';
               return (
-                <div key={occurrence.id} className="flex items-center justify-between gap-3">
+                <div
+                  key={occurrence.id}
+                  className={`flex items-center justify-between gap-3 px-4 py-3 ${
+                    index === 0 ? '' : 'border-t border-white/10'
+                  }`}
+                >
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold text-[color:var(--text-0)] line-clamp-2">
+                    <div className="text-sm font-medium text-[color:var(--text-0)] line-clamp-2">
                       {reminder?.title ?? copy.dashboard.nextUpEmpty}
                     </div>
-                    <div className="text-xs text-[color:var(--text-2)]">
+                    <div className="text-xs text-white/40">
                       {getMetaLabel(occurrence, locale, userTimeZone)}
                     </div>
                   </div>
@@ -177,7 +183,7 @@ export default function FocusHome({
                     <input type="hidden" name="occurAt" value={occurrence.occur_at ?? ''} />
                     <input type="hidden" name="done_comment" value="" />
                     <ActionSubmitButton
-                      className="home-priority-primary"
+                      className="rounded-full px-3 py-1.5 text-xs bg-white/10 text-white/80 border border-white/10"
                       type="submit"
                       data-action-feedback={copy.common.actionDone}
                     >
@@ -186,17 +192,18 @@ export default function FocusHome({
                   </form>
                 </div>
               );
-            })}
+              })}
+            </div>
             {todayItems.length > 5 ? (
               <button
                 type="button"
-                className="text-xs font-semibold text-[color:var(--text-1)]"
+                className="mt-2 text-xs font-semibold text-white/60 hover:text-white"
                 onClick={() => setShowAll((prev) => !prev)}
               >
                 {showAll ? 'Arată mai puține' : 'Arată mai multe'}
               </button>
             ) : null}
-          </div>
+          </>
         ) : (
           <div className="home-glass-panel rounded-[var(--radius-lg)] p-[var(--space-3)] text-sm text-[color:var(--text-2)]">
             Nu ai nimic urgent azi…
