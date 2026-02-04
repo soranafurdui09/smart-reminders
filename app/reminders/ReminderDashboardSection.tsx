@@ -390,6 +390,7 @@ export default function ReminderDashboardSection({
     [datedOccurrences]
   );
 
+
   const nextUpContext = useMemo(() => {
     const now = new Date();
     const nextDay = new Date(now.getTime() + 24 * 60 * 60 * 1000);
@@ -427,6 +428,24 @@ export default function ReminderDashboardSection({
   );
   const todayOpenItems = mobileBuckets.today;
   const soonItems = mobileBuckets.soon;
+  const focusWeekItems = useMemo(() => {
+    const items = [...overdueItems, ...todayOpenItems, ...soonItems];
+    return items
+      .map((occurrence) => ({ occurrence, compareDate: getCompareDate(occurrence, effectiveTimeZone) }))
+      .filter(({ compareDate }) => !Number.isNaN(compareDate.getTime()))
+      .sort((a, b) => a.compareDate.getTime() - b.compareDate.getTime())
+      .map(({ occurrence }) => occurrence);
+  }, [effectiveTimeZone, overdueItems, soonItems, todayOpenItems]);
+
+  const focusMonthItems = useMemo(() => {
+    const now = new Date();
+    const cutoff = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    return openOccurrences
+      .map((occurrence) => ({ occurrence, compareDate: getCompareDate(occurrence, effectiveTimeZone) }))
+      .filter(({ compareDate }) => !Number.isNaN(compareDate.getTime()) && compareDate.getTime() <= cutoff.getTime())
+      .sort((a, b) => a.compareDate.getTime() - b.compareDate.getTime())
+      .map(({ occurrence }) => occurrence);
+  }, [effectiveTimeZone, openOccurrences]);
 
   const householdItems = useMemo(
     () =>
@@ -680,6 +699,18 @@ export default function ReminderDashboardSection({
     } catch (error) {
       console.error('[medication] update dose failed', error);
     }
+  };
+
+  const handleFocusShowMore = (horizon: 'today' | '7d' | '30d') => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', 'today');
+    if (horizon === '7d' || horizon === '30d') {
+      params.set('segment', 'soon');
+    } else {
+      params.set('segment', 'today');
+    }
+    router.push(`/app?${params.toString()}`);
   };
 
   const nextOccurrence = nextUpContext.next?.occurrence ?? null;
@@ -943,6 +974,9 @@ export default function ReminderDashboardSection({
             }}
             focusCopy={copy.dashboard.nextUpFocusLine}
             todayItems={focusItems}
+            weekItems={focusWeekItems}
+            monthItems={focusMonthItems}
+            onShowMore={handleFocusShowMore}
             locale={locale}
             userTimeZone={effectiveTimeZone}
           />
@@ -981,6 +1015,9 @@ export default function ReminderDashboardSection({
             }}
             focusCopy={copy.dashboard.nextUpFocusLine}
             todayItems={focusItems}
+            weekItems={focusWeekItems}
+            monthItems={focusMonthItems}
+            onShowMore={handleFocusShowMore}
             locale={locale}
             userTimeZone={effectiveTimeZone}
           />

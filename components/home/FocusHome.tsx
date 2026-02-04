@@ -5,7 +5,6 @@ import ActionSubmitButton from '@/components/ActionSubmitButton';
 import QuickAddBar from '@/components/home/QuickAddBar';
 import { markDone } from '@/app/app/actions';
 import { diffDaysInTimeZone, formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
-import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
 
 type Locale = string | undefined;
 
@@ -51,6 +50,9 @@ type Props = {
   secondaryLabels?: SecondaryLabels;
   focusCopy?: string;
   todayItems: OccurrencePayload[];
+  weekItems: OccurrencePayload[];
+  monthItems: OccurrencePayload[];
+  onShowMore?: (horizon: 'today' | '7d' | '30d') => void;
   locale?: string;
   userTimeZone?: string;
 };
@@ -98,11 +100,25 @@ export default function FocusHome({
   secondaryLabels,
   focusCopy,
   todayItems,
+  weekItems,
+  monthItems,
+  onShowMore,
   locale,
   userTimeZone
 }: Props) {
-  const [showAll, setShowAll] = useState(false);
-  const visibleItems = useMemo(() => (showAll ? todayItems : todayItems.slice(0, 5)), [showAll, todayItems]);
+  const [horizon, setHorizon] = useState<'today' | '7d' | '30d'>('today');
+  const horizonItems = useMemo(() => {
+    if (horizon === '7d') return weekItems;
+    if (horizon === '30d') return monthItems;
+    return todayItems;
+  }, [horizon, monthItems, todayItems, weekItems]);
+  const visibleItems = useMemo(() => horizonItems.slice(0, 10), [horizonItems]);
+  const horizonLabel =
+    horizon === '7d'
+      ? 'Următoarele 7 zile'
+      : horizon === '30d'
+        ? 'Următoarele 30 zile'
+        : 'Azi';
 
   return (
     <section className="space-y-3">
@@ -149,10 +165,39 @@ export default function FocusHome({
       <QuickAddBar />
 
       <section className="space-y-2">
+        <div className="homeTabToggle flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
+          <button
+            type="button"
+            className={`rounded-full px-3 py-1 transition ${
+              horizon === 'today' ? 'bg-white/10 text-white' : 'text-white/60'
+            }`}
+            onClick={() => setHorizon('today')}
+          >
+            Azi
+          </button>
+          <button
+            type="button"
+            className={`rounded-full px-3 py-1 transition ${
+              horizon === '7d' ? 'bg-white/10 text-white' : 'text-white/60'
+            }`}
+            onClick={() => setHorizon('7d')}
+          >
+            7 zile
+          </button>
+          <button
+            type="button"
+            className={`rounded-full px-3 py-1 transition ${
+              horizon === '30d' ? 'bg-white/10 text-white' : 'text-white/60'
+            }`}
+            onClick={() => setHorizon('30d')}
+          >
+            30 zile
+          </button>
+        </div>
         <div className="flex items-center justify-between text-sm font-semibold text-[color:var(--text-0)]">
-          <span>Azi</span>
+          <span>{horizonLabel}</span>
           <span className="text-xs text-[color:var(--text-2)]">
-            {todayItems.length} {copy.dashboard.reminderCountLabel}
+            {horizonItems.length} {copy.dashboard.reminderCountLabel}
           </span>
         </div>
 
@@ -194,13 +239,13 @@ export default function FocusHome({
               );
               })}
             </div>
-            {todayItems.length > 5 ? (
+            {horizonItems.length > 10 ? (
               <button
                 type="button"
                 className="mt-2 text-xs font-semibold text-white/60 hover:text-white"
-                onClick={() => setShowAll((prev) => !prev)}
+                onClick={() => onShowMore?.(horizon)}
               >
-                {showAll ? 'Arată mai puține' : 'Arată mai multe'}
+                Arată mai multe
               </button>
             ) : null}
           </>
