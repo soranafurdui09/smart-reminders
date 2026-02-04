@@ -10,7 +10,7 @@ import '@/styles/home-premium.css';
 import SemanticSearch from '@/components/SemanticSearch';
 import HomeHeader from '@/components/home/HomeHeader';
 import NextUpCard from '@/components/home/NextUpCard';
-import ModeSwitcher from '@/components/home/ModeSwitcher';
+import ModeToggle from '@/app/reminders/ModeToggle';
 import FocusHome from '@/components/home/FocusHome';
 import FamilyHome from '@/components/home/FamilyHome';
 import OverdueDenseRow from '@/components/home/OverdueDenseRow';
@@ -762,17 +762,16 @@ export default function ReminderDashboardSection({
   const priorityItems = useMemo(() => (showRecover ? overdueTopItems : overdueTopItems.slice(0, 3)), [overdueTopItems, showRecover]);
   const homeSubtitle = `${todayOpenItems.length} ${copy.dashboard.homeSubtitleToday} • ${overdueItems.length} ${copy.dashboard.homeSubtitleOverdue}`;
   const headerTitle = uiMode === 'focus' ? 'Focus' : copy.dashboard.title;
-  const headerSubtitle = uiMode === 'focus' ? 'Doar ce contează. Minim de zgomot.' : homeSubtitle;
+  const headerSubtitle =
+    uiMode === 'focus' ? 'Doar ce contează. Minim de zgomot.' : 'Reminderele familiei tale.';
   const headerNode = (
     <HomeHeader
       title={headerTitle}
       subtitle={headerSubtitle}
       modeSwitcher={
-        <ModeSwitcher
+        <ModeToggle
           value={uiMode}
           onChange={setUiMode}
-          remember={rememberMode}
-          onRememberChange={setRememberMode}
         />
       }
     />

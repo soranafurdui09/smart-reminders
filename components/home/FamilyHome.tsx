@@ -512,6 +512,21 @@ export default function FamilyHome({
                     <span>{householdItems.length}</span>
                   </div>
                 </div>
+                {visibleDoses.length ? (
+                  <MedsTeaserCard
+                    title={copy.dashboard.medicationsTitle}
+                    subtitle={`Următoarea doză: ${new Date(visibleDoses[0].scheduled_at).toLocaleTimeString(localeTag, {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}`}
+                    actionLabel={copy.medicationsHub.viewDetails}
+                    onAction={() => {
+                      router.push('/app/medications');
+                    }}
+                  />
+                ) : (
+                  <MedsTeaserCard title={copy.dashboard.medicationsTitle} subtitle={copy.dashboard.medicationsEmpty} />
+                )}
               </section>
             ) : (
               <>
@@ -592,22 +607,6 @@ export default function FamilyHome({
                     if (id === 'soon') handleSegmentSelect('soon');
                   }}
                 />
-
-                {visibleDoses.length ? (
-                  <MedsTeaserCard
-                    title={copy.dashboard.medicationsTitle}
-                    subtitle={`Următoarea doză: ${new Date(visibleDoses[0].scheduled_at).toLocaleTimeString(localeTag, {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}`}
-                    actionLabel={copy.medicationsHub.viewDetails}
-                    onAction={() => {
-                      router.push('/app/medications');
-                    }}
-                  />
-                ) : (
-                  <MedsTeaserCard title={copy.dashboard.medicationsTitle} subtitle={copy.dashboard.medicationsEmpty} />
-                )}
 
                 {!overdueTopItems.length ? null : (
                   <section className="space-y-2">
