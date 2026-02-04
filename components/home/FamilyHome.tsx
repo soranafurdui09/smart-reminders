@@ -178,7 +178,7 @@ export default function FamilyHome({
                   {taskBuckets.overdue.length ? (
                     <div className="space-y-2">
                       <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Restante</div>
-                      {taskBuckets.overdue.map((item) => (
+                      {taskBuckets.overdue.map((item: any) => (
                         <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
                           <button
                             type="button"
@@ -205,7 +205,7 @@ export default function FamilyHome({
                   {taskBuckets.today.length ? (
                     <div className="space-y-2">
                       <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Azi</div>
-                      {taskBuckets.today.map((item) => (
+                      {taskBuckets.today.map((item: any) => (
                         <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
                           <button
                             type="button"
@@ -232,7 +232,7 @@ export default function FamilyHome({
                   {taskBuckets.soon.length ? (
                     <div className="space-y-2">
                       <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Următoarele 7 zile</div>
-                      {taskBuckets.soon.map((item) => (
+                      {taskBuckets.soon.map((item: any) => (
                         <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
                           <button
                             type="button"
@@ -259,7 +259,7 @@ export default function FamilyHome({
                   {taskBuckets.later.length ? (
                     <div className="space-y-2">
                       <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Mai târziu</div>
-                      {taskBuckets.later.map((item) => (
+                      {taskBuckets.later.map((item: any) => (
                         <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
                           <button
                             type="button"
@@ -286,7 +286,7 @@ export default function FamilyHome({
                   {taskBuckets.undated.length ? (
                     <div className="space-y-2">
                       <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Fără dată</div>
-                      {taskBuckets.undated.map((item) => (
+                      {taskBuckets.undated.map((item: any) => (
                         <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
                           <button
                             type="button"
@@ -316,7 +316,7 @@ export default function FamilyHome({
             ) : inboxView === 'lists' ? (
               listItems.length ? (
                 <div className="space-y-[var(--space-2)]">
-                  {listItems.map((list) => (
+                  {listItems.map((list: any) => (
                     <div key={list.id} className="premium-card space-y-2 px-4 py-3 transition hover:bg-surfaceMuted">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -344,7 +344,7 @@ export default function FamilyHome({
                       ) : null}
                       {list.previewItems.length ? (
                         <div className="space-y-1 text-xs text-muted">
-                          {list.previewItems.map((item) => (
+                          {list.previewItems.map((item: any) => (
                             <div key={item.id} className={item.done ? 'line-through text-tertiary' : ''}>
                               • {item.title}{item.qty ? ` · ${item.qty}` : ''}
                             </div>
@@ -366,7 +366,7 @@ export default function FamilyHome({
                 {inboxOverdue.length ? (
                   <div className="space-y-2">
                     <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Restante</div>
-                    {inboxOverdue.map((occurrence) => (
+                    {inboxOverdue.map((occurrence: any) => (
                       <ReminderRowMobile
                         key={occurrence.id}
                         occurrence={occurrence}
@@ -380,7 +380,7 @@ export default function FamilyHome({
                 {inboxToday.length ? (
                   <div className="space-y-2">
                     <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Azi</div>
-                    {inboxToday.map((occurrence) => (
+                    {inboxToday.map((occurrence: any) => (
                       <ReminderRowMobile
                         key={occurrence.id}
                         occurrence={occurrence}
@@ -394,7 +394,7 @@ export default function FamilyHome({
                 {inboxSoon.length ? (
                   <div className="space-y-2">
                     <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Următoarele 7 zile</div>
-                    {inboxSoon.map((occurrence) => (
+                    {inboxSoon.map((occurrence: any) => (
                       <ReminderRowMobile
                         key={occurrence.id}
                         occurrence={occurrence}
@@ -408,7 +408,7 @@ export default function FamilyHome({
                 {inboxLater.length ? (
                   <div className="space-y-2">
                     <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Mai târziu</div>
-                    {inboxLater.map((occurrence) => (
+                    {inboxLater.map((occurrence: any) => (
                       <ReminderRowMobile
                         key={occurrence.id}
                         occurrence={occurrence}
@@ -422,7 +422,7 @@ export default function FamilyHome({
                 {reminderUndatedLimited.length ? (
                   <div className="space-y-2">
                     <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Fără dată</div>
-                    {reminderUndatedLimited.map((occurrence) => (
+                    {reminderUndatedLimited.map((occurrence: any) => (
                       <ReminderRowMobile
                         key={occurrence.id}
                         occurrence={occurrence}
@@ -633,14 +633,14 @@ export default function FamilyHome({
                       </button>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      {copy.dashboard.priorityFilters.map((label) => (
+                      {copy.dashboard.priorityFilters.map((label: string) => (
                         <span key={label} className="home-chip">
                           {label}
                         </span>
                       ))}
                     </div>
                     <div className="space-y-2">
-                      {priorityItems.map((occurrence) => (
+                      {priorityItems.map((occurrence: any) => (
                         <OverdueDenseRow
                           key={occurrence.id}
                           occurrence={occurrence}
@@ -678,7 +678,7 @@ export default function FamilyHome({
                   {homeSegment === 'overdue' ? (
                     overdueItems.length ? (
                       <div className="space-y-2">
-                        {overdueItems.map((occurrence) => (
+                        {overdueItems.map((occurrence: any) => (
                           <OverdueDenseRow
                             key={occurrence.id}
                             occurrence={occurrence}
