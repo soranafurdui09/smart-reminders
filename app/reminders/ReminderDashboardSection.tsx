@@ -219,11 +219,15 @@ export default function ReminderDashboardSection({
   const [taskPending, startTaskTransition] = useTransition();
   const [nextActionsOpen, setNextActionsOpen] = useState(false);
   const [showRecover, setShowRecover] = useState(false);
-  const { mode: uiMode, setMode: setUiMode } = useModePreference();
+  const { mode: uiMode, setMode: setUiMode, remember: rememberMode, setRemember: setRememberMode } = useModePreference();
   const [homeTab, setHomeTab] = useState<'home' | 'overview'>('home');
   const [sectionFlash, setSectionFlash] = useState<'today' | 'soon' | 'overdue' | null>(null);
   const focusRedesignEnabled = process.env.NEXT_PUBLIC_FOCUS_REDESIGN === 'true';
   const isFocusRedesign = focusRedesignEnabled && uiMode === 'focus';
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[FocusRedesign]', { flag: process.env.NEXT_PUBLIC_FOCUS_REDESIGN, uiMode, isFocusRedesign });
+  }
 
   const filteredOccurrences = useMemo(() => {
     const normalized = occurrences
@@ -926,7 +930,14 @@ export default function ReminderDashboardSection({
           <HomeHeader
             title={copy.dashboard.title}
             subtitle={homeSubtitle}
-            modeSwitcher={<ModeSwitcher value={uiMode} onChange={setUiMode} />}
+            modeSwitcher={
+              <ModeSwitcher
+                value={uiMode}
+                onChange={setUiMode}
+                remember={rememberMode}
+                onRememberChange={setRememberMode}
+              />
+            }
           />
           <FocusHome
             copy={copy}
@@ -1337,6 +1348,8 @@ export default function ReminderDashboardSection({
                 <ModeSwitcher
                   value={uiMode}
                   onChange={setUiMode}
+                  remember={rememberMode}
+                  onRememberChange={setRememberMode}
                 />
               }
             />
@@ -1422,7 +1435,7 @@ export default function ReminderDashboardSection({
                     </span>
                   </div>
                 </div>
-                {uiMode === 'focus' ? null : (
+                {isFocusRedesign ? null : (
                   <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-2)] py-[var(--space-2)]">
                     <div className="text-sm font-semibold text-[color:var(--text-0)]">Grupuri</div>
                     <div className="mt-2 flex items-center justify-between text-xs text-white/70">
@@ -1468,7 +1481,7 @@ export default function ReminderDashboardSection({
 
                 <QuickAddBar />
 
-                {uiMode === 'focus' ? null : (
+                {isFocusRedesign ? null : (
                   <AtAGlanceRow
                     metrics={[
                       {
@@ -1514,7 +1527,7 @@ export default function ReminderDashboardSection({
                   />
                 )}
 
-                {uiMode === 'focus' ? null : (
+                {isFocusRedesign ? null : (
                   visibleDoses.length ? (
                     <MedsTeaserCard
                       title={copy.dashboard.medicationsTitle}
@@ -1532,7 +1545,7 @@ export default function ReminderDashboardSection({
                   )
                 )}
 
-                {uiMode === 'focus' || !overdueTopItems.length ? null : (
+                {isFocusRedesign || !overdueTopItems.length ? null : (
                   <section className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-semibold text-[color:var(--text-0)]">{copy.dashboard.overdueTopTitle}</div>
@@ -2186,7 +2199,7 @@ export default function ReminderDashboardSection({
             </section>
           ) : null}
 
-          {kindFilter !== 'medications' && desktopTab === 'today' && uiMode !== 'focus' ? (
+          {kindFilter !== 'medications' && desktopTab === 'today' && !isFocusRedesign ? (
             <section className="mt-8 space-y-4">
               <SectionHeading
                 label={copy.dashboard.householdTitle}

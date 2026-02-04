@@ -5,9 +5,10 @@ import ActionSubmitButton from '@/components/ActionSubmitButton';
 import NextUpCard from '@/components/home/NextUpCard';
 import QuickAddBar from '@/components/home/QuickAddBar';
 import { markDone } from '@/app/app/actions';
-import { defaultLocale, messages, type Locale } from '@/lib/i18n';
 import { diffDaysInTimeZone, formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
 import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
+
+type Locale = string;
 
 type OccurrencePayload = {
   id: string;
@@ -26,8 +27,6 @@ type OccurrencePayload = {
   } | null;
 };
 
-type MessageBundle = typeof messages[Locale];
-
 type NextUpAction = {
   occurrenceId: string;
   reminderId: string;
@@ -42,7 +41,7 @@ type SecondaryLabels = {
 };
 
 type Props = {
-  copy: MessageBundle;
+  copy: any;
   nextOccurrence: OccurrencePayload | null;
   nextOccurrenceLabel?: string;
   nextCategory: { label: string; color: string } | null;
@@ -100,7 +99,7 @@ export default function FocusHome({
   secondaryLabels,
   focusCopy,
   todayItems,
-  locale = defaultLocale,
+  locale = 'ro-RO',
   userTimeZone
 }: Props) {
   const [showAll, setShowAll] = useState(false);
