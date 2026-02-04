@@ -16,6 +16,7 @@ export function useModePreference(defaultMode: Mode = 'family') {
     const storedRemember = window.localStorage.getItem(REMEMBER_KEY);
     if (storedRemember === 'false') {
       setRemember(false);
+      setMode(defaultMode);
       return;
     }
     setRemember(true);

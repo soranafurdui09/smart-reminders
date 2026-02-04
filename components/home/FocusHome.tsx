@@ -8,7 +8,7 @@ import { markDone } from '@/app/app/actions';
 import { diffDaysInTimeZone, formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
 import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
 
-type Locale = string;
+type Locale = string | undefined;
 
 type OccurrencePayload = {
   id: string;
@@ -52,7 +52,7 @@ type Props = {
   secondaryLabels?: SecondaryLabels;
   focusCopy?: string;
   todayItems: OccurrencePayload[];
-  locale?: Locale;
+  locale?: string;
   userTimeZone?: string;
 };
 
@@ -99,7 +99,7 @@ export default function FocusHome({
   secondaryLabels,
   focusCopy,
   todayItems,
-  locale = 'ro-RO',
+  locale,
   userTimeZone
 }: Props) {
   const [showAll, setShowAll] = useState(false);

@@ -222,7 +222,9 @@ export default function ReminderDashboardSection({
   const { mode: uiMode, setMode: setUiMode, remember: rememberMode, setRemember: setRememberMode } = useModePreference();
   const [homeTab, setHomeTab] = useState<'home' | 'overview'>('home');
   const [sectionFlash, setSectionFlash] = useState<'today' | 'soon' | 'overdue' | null>(null);
-  const focusRedesignEnabled = process.env.NEXT_PUBLIC_FOCUS_REDESIGN === 'true';
+  const focusRedesignEnabled =
+    process.env.NEXT_PUBLIC_FOCUS_REDESIGN === 'true' ||
+    (typeof window !== 'undefined' && window.localStorage.getItem('sr_focus_redesign') === 'true');
   const isFocusRedesign = focusRedesignEnabled && uiMode === 'focus';
 
   if (process.env.NODE_ENV !== 'production') {
