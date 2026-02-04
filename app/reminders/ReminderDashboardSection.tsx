@@ -12,10 +12,10 @@ import HomeHeader from '@/components/home/HomeHeader';
 import NextUpCard from '@/components/home/NextUpCard';
 import QuickAddBar from '@/components/home/QuickAddBar';
 import AtAGlanceRow from '@/components/home/AtAGlanceRow';
+import ModeSwitcher from '@/components/home/ModeSwitcher';
 import FilteredTaskList from '@/components/home/FilteredTaskList';
 import OverdueDenseRow from '@/components/home/OverdueDenseRow';
 import MedsTeaserCard from '@/components/home/MedsTeaserCard';
-import ModeToggle from '@/app/reminders/ModeToggle';
 import ReminderRowMobile from '@/components/mobile/ReminderRowMobile';
 import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
 import ReminderCard from '@/components/dashboard/ReminderCard';
@@ -39,6 +39,7 @@ import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId, typ
 import { markDone } from '@/app/app/actions';
 import { toggleTaskDoneAction } from '@/app/app/tasks/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
+import { useModePreference } from '@/lib/hooks/useModePreference';
 import type { TaskItem, TaskListPreview } from '@/lib/tasks';
 
 type CreatedByOption = 'all' | 'me' | 'others';
@@ -217,7 +218,7 @@ export default function ReminderDashboardSection({
   const [taskPending, startTaskTransition] = useTransition();
   const [nextActionsOpen, setNextActionsOpen] = useState(false);
   const [showRecover, setShowRecover] = useState(false);
-  const [uiMode, setUiMode] = useState<'family' | 'focus'>('family');
+  const { mode: uiMode, setMode: setUiMode, remember: rememberMode, setRemember: setRememberMode } = useModePreference();
   const [homeTab, setHomeTab] = useState<'home' | 'overview'>('home');
   const [sectionFlash, setSectionFlash] = useState<'today' | 'soon' | 'overdue' | null>(null);
 
@@ -600,20 +601,11 @@ export default function ReminderDashboardSection({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const savedMode = window.localStorage.getItem('ui_mode');
-    if (savedMode === 'family' || savedMode === 'focus') {
-      setUiMode(savedMode);
-    }
     const savedTab = window.localStorage.getItem('home_tab');
     if (savedTab === 'home' || savedTab === 'overview') {
       setHomeTab(savedTab);
     }
   }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem('ui_mode', uiMode);
-  }, [uiMode]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1291,9 +1283,19 @@ export default function ReminderDashboardSection({
         ) : (
           <div className="home-slate space-y-3 today-shell home-compact">
             <div className="home-slate-bg" aria-hidden="true" />
-            <HomeHeader title={copy.dashboard.title} subtitle={homeSubtitle} />
+            <HomeHeader
+              title={copy.dashboard.title}
+              subtitle={homeSubtitle}
+              modeSwitcher={
+                <ModeSwitcher
+                  value={uiMode}
+                  onChange={setUiMode}
+                  remember={rememberMode}
+                  onRememberChange={setRememberMode}
+                />
+              }
+            />
             <div className="homeTopControls mx-4 mt-1 flex flex-wrap items-center justify-between gap-2 text-[11px] text-white/40">
-              <ModeToggle value={uiMode} onChange={setUiMode} />
               <div className="homeTabToggle flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
                 <button
                   type="button"
@@ -1344,13 +1346,15 @@ export default function ReminderDashboardSection({
                     </span>
                   </div>
                 </div>
-                <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-2)] py-[var(--space-2)]">
-                  <div className="text-sm font-semibold text-[color:var(--text-0)]">Grupuri</div>
-                  <div className="mt-2 flex items-center justify-between text-xs text-white/70">
-                    <span>{copy.dashboard.householdTitle}</span>
-                    <span>{householdItems.length}</span>
+                {uiMode === 'focus' ? null : (
+                  <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-2)] py-[var(--space-2)]">
+                    <div className="text-sm font-semibold text-[color:var(--text-0)]">Grupuri</div>
+                    <div className="mt-2 flex items-center justify-between text-xs text-white/70">
+                      <span>{copy.dashboard.householdTitle}</span>
+                      <span>{householdItems.length}</span>
+                    </div>
                   </div>
-                </div>
+                )}
               </section>
             ) : (
               <>
@@ -2106,7 +2110,7 @@ export default function ReminderDashboardSection({
             </section>
           ) : null}
 
-          {kindFilter !== 'medications' && desktopTab === 'today' ? (
+          {kindFilter !== 'medications' && desktopTab === 'today' && uiMode !== 'focus' ? (
             <section className="mt-8 space-y-4">
               <SectionHeading
                 label={copy.dashboard.householdTitle}

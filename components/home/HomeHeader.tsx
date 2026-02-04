@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from 'react';
 import { Search, User } from 'lucide-react';
 
 type Props = {
@@ -7,9 +8,10 @@ type Props = {
   subtitle?: string;
   onSearchClick?: () => void;
   onProfileClick?: () => void;
+  modeSwitcher?: ReactNode;
 };
 
-export default function HomeHeader({ title, subtitle, onSearchClick, onProfileClick }: Props) {
+export default function HomeHeader({ title, subtitle, onSearchClick, onProfileClick, modeSwitcher }: Props) {
   return (
     <div className="home-header">
       <div>
@@ -17,6 +19,7 @@ export default function HomeHeader({ title, subtitle, onSearchClick, onProfileCl
         {subtitle ? <div className="home-header-subtitle">{subtitle}</div> : null}
       </div>
       <div className="flex items-center gap-2">
+        {modeSwitcher ? <div>{modeSwitcher}</div> : null}
         <button
           type="button"
           className="home-icon-btn"
