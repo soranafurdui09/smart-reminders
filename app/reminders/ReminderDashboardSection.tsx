@@ -919,8 +919,8 @@ export default function ReminderDashboardSection({
         <div className="home-slate space-y-3 today-shell home-compact">
           <div className="home-slate-bg" aria-hidden="true" />
           <HomeHeader
-            title={copy.dashboard.title}
-            subtitle={homeSubtitle}
+            title="Focus"
+            subtitle="Doar ce contează. Minim de zgomot."
             modeSwitcher={
               <ModeSwitcher
                 value={uiMode}
@@ -969,8 +969,8 @@ export default function ReminderDashboardSection({
         <div className="home-slate space-y-3 today-shell home-compact">
           <div className="home-slate-bg" aria-hidden="true" />
           <HomeHeader
-            title={copy.dashboard.title}
-            subtitle={homeSubtitle}
+            title="Focus"
+            subtitle="Doar ce contează. Minim de zgomot."
             modeSwitcher={
               <ModeSwitcher
                 value={uiMode}
