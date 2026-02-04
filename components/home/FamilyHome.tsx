@@ -444,7 +444,7 @@ export default function FamilyHome({
               <button
                 type="button"
                 className="text-xs font-semibold text-secondary"
-                onClick={() => setMobileInboxLimit((prev) => prev + 20)}
+                onClick={() => setMobileInboxLimit((prev: number) => prev + 20)}
               >
                 {copy.dashboard.viewMoreMonths}
               </button>
@@ -627,7 +627,7 @@ export default function FamilyHome({
                       <button
                         type="button"
                         className="text-xs font-semibold text-[color:var(--brand-blue)]"
-                        onClick={() => setShowRecover((prev) => !prev)}
+                        onClick={() => setShowRecover((prev: boolean) => !prev)}
                       >
                         {copy.dashboard.overdueTopCta}
                       </button>
