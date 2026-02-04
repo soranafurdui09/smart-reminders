@@ -157,50 +157,33 @@ export default function FocusHome({
         </div>
 
         {visibleItems.length ? (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {visibleItems.map((occurrence) => {
               const reminder = occurrence.reminder ?? null;
               const reminderId = reminder?.id ?? '';
-              const categoryId = inferReminderCategoryId({
-                title: reminder?.title,
-                notes: reminder?.notes,
-                kind: reminder?.kind,
-                category: reminder?.category,
-                medicationDetails: reminder?.medication_details
-              });
-              const category = getReminderCategory(categoryId);
-              const categoryStyle = getCategoryChipStyle(category.color, true);
               return (
-                <div
-                  key={occurrence.id}
-                  className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-3)] py-[var(--space-2)]"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="text-sm font-semibold text-[color:var(--text-0)] line-clamp-2">
-                        {reminder?.title ?? copy.dashboard.nextUpEmpty}
-                      </div>
-                      <div className="text-xs text-[color:var(--text-2)]">
-                        {getMetaLabel(occurrence, locale, userTimeZone)}
-                      </div>
-                      <span className="home-category-pill" style={{ borderColor: category.color }}>
-                        {category.label}
-                      </span>
+                <div key={occurrence.id} className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold text-[color:var(--text-0)] line-clamp-2">
+                      {reminder?.title ?? copy.dashboard.nextUpEmpty}
                     </div>
-                    <form action={markDone}>
-                      <input type="hidden" name="occurrenceId" value={occurrence.id} />
-                      <input type="hidden" name="reminderId" value={reminderId} />
-                      <input type="hidden" name="occurAt" value={occurrence.occur_at ?? ''} />
-                      <input type="hidden" name="done_comment" value="" />
-                      <ActionSubmitButton
-                        className="home-priority-primary"
-                        type="submit"
-                        data-action-feedback={copy.common.actionDone}
-                      >
-                        {copy.dashboard.nextUpAction}
-                      </ActionSubmitButton>
-                    </form>
+                    <div className="text-xs text-[color:var(--text-2)]">
+                      {getMetaLabel(occurrence, locale, userTimeZone)}
+                    </div>
                   </div>
+                  <form action={markDone}>
+                    <input type="hidden" name="occurrenceId" value={occurrence.id} />
+                    <input type="hidden" name="reminderId" value={reminderId} />
+                    <input type="hidden" name="occurAt" value={occurrence.occur_at ?? ''} />
+                    <input type="hidden" name="done_comment" value="" />
+                    <ActionSubmitButton
+                      className="home-priority-primary"
+                      type="submit"
+                      data-action-feedback={copy.common.actionDone}
+                    >
+                      {copy.dashboard.nextUpAction}
+                    </ActionSubmitButton>
+                  </form>
                 </div>
               );
             })}
