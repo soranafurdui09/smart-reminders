@@ -54,6 +54,8 @@
 }
 
 .homeRoot .home-slate-bg {
+  pointer-events: none;
+  z-index: 0;
   background:
     radial-gradient(820px 520px at 18% -12%, rgba(120, 160, 255, 0.16), transparent 60%),
     radial-gradient(640px 420px at 86% 8%, rgba(var(--accent-rgb), 0.12), transparent 58%),

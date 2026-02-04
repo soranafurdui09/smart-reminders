@@ -1,5 +1,7 @@
 .homeRoot.premium .home-header {
   gap: 0.5rem;
+  position: relative;
+  z-index: 20;
 }
 
 .homeRoot.premium .home-header-title {
