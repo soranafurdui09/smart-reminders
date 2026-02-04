@@ -13,6 +13,7 @@ import NextUpCard from '@/components/home/NextUpCard';
 import QuickAddBar from '@/components/home/QuickAddBar';
 import AtAGlanceRow from '@/components/home/AtAGlanceRow';
 import ModeSwitcher from '@/components/home/ModeSwitcher';
+import FocusHome from '@/components/home/FocusHome';
 import FilteredTaskList from '@/components/home/FilteredTaskList';
 import OverdueDenseRow from '@/components/home/OverdueDenseRow';
 import MedsTeaserCard from '@/components/home/MedsTeaserCard';
@@ -218,9 +219,11 @@ export default function ReminderDashboardSection({
   const [taskPending, startTaskTransition] = useTransition();
   const [nextActionsOpen, setNextActionsOpen] = useState(false);
   const [showRecover, setShowRecover] = useState(false);
-  const { mode: uiMode, setMode: setUiMode, remember: rememberMode, setRemember: setRememberMode } = useModePreference();
+  const { mode: uiMode, setMode: setUiMode } = useModePreference();
   const [homeTab, setHomeTab] = useState<'home' | 'overview'>('home');
   const [sectionFlash, setSectionFlash] = useState<'today' | 'soon' | 'overdue' | null>(null);
+  const focusRedesignEnabled = process.env.NEXT_PUBLIC_FOCUS_REDESIGN === 'true';
+  const isFocusRedesign = focusRedesignEnabled && uiMode === 'focus';
 
   const filteredOccurrences = useMemo(() => {
     const normalized = occurrences
@@ -755,6 +758,7 @@ export default function ReminderDashboardSection({
     if (!overdueItems.length) return copy.dashboard.overdueTileEmpty;
     return copy.dashboard.overdueTileOldest.replace('{days}', String(overdueOldestDays));
   }, [copy.dashboard.overdueTileEmpty, copy.dashboard.overdueTileOldest, overdueItems.length, overdueOldestDays]);
+  const focusItems = useMemo(() => [...overdueItems, ...todayOpenItems], [overdueItems, todayOpenItems]);
   const isOverdueCritical = overdueItems.length > 20 || overdueOldestDays > 7;
   const overdueTileClass = isOverdueCritical ? 'stat-tile-overdue stat-tile-overdue-critical' : 'stat-tile-overdue';
   const nextUpActionsSheet = nextOccurrence ? (
@@ -913,6 +917,49 @@ export default function ReminderDashboardSection({
   };
 
   const desktopTab = activeTab === 'inbox' ? 'inbox' : 'today';
+
+  if (!isMobile && isFocusRedesign) {
+    return (
+      <section className={`homeRoot premium ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-6`}>
+        <div className="home-slate space-y-3 today-shell home-compact">
+          <div className="home-slate-bg" aria-hidden="true" />
+          <HomeHeader
+            title={copy.dashboard.title}
+            subtitle={homeSubtitle}
+            modeSwitcher={<ModeSwitcher value={uiMode} onChange={setUiMode} />}
+          />
+          <FocusHome
+            copy={copy}
+            nextOccurrence={nextOccurrence}
+            nextOccurrenceLabel={nextOccurrenceLabel ?? undefined}
+            nextCategory={nextCategory ?? null}
+            nextTone={nextTone}
+            statusLabel={copy.dashboard.todayOverdue}
+            emptyLabel={copy.dashboard.nextUpEmpty}
+            action={
+              nextOccurrence?.id && nextOccurrence?.reminder?.id && nextOccurrence?.occur_at
+                ? {
+                    occurrenceId: nextOccurrence.id,
+                    reminderId: nextOccurrence.reminder.id,
+                    occurAt: nextOccurrence.occur_at,
+                    label: copy.dashboard.nextUpAction,
+                    feedbackLabel: copy.common.actionDone
+                  }
+                : null
+            }
+            secondaryLabels={{
+              snooze30: copy.dashboard.nextUpSnooze30,
+              snoozeTomorrow: copy.dashboard.nextUpSnoozeTomorrow
+            }}
+            focusCopy={copy.dashboard.nextUpFocusLine}
+            todayItems={focusItems}
+            locale={locale}
+            userTimeZone={effectiveTimeZone}
+          />
+        </div>
+      </section>
+    );
+  }
 
   return isMobile ? (
       <section className={`homeRoot premium ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-[var(--space-3)]`}>
@@ -1290,35 +1337,64 @@ export default function ReminderDashboardSection({
                 <ModeSwitcher
                   value={uiMode}
                   onChange={setUiMode}
-                  remember={rememberMode}
-                  onRememberChange={setRememberMode}
                 />
               }
             />
-            <div className="homeTopControls mx-4 mt-1 flex flex-wrap items-center justify-between gap-2 text-[11px] text-white/40">
-              <div className="homeTabToggle flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
-                <button
-                  type="button"
-                  className={`rounded-full px-3 py-1 transition ${
-                    homeTab === 'home' ? 'bg-white/10 text-white' : 'text-white/60'
-                  }`}
-                  onClick={() => setHomeTab('home')}
-                >
-                  Acasă
-                </button>
-                <button
-                  type="button"
-                  className={`rounded-full px-3 py-1 transition ${
-                    homeTab === 'overview' ? 'bg-white/10 text-white' : 'text-white/60'
-                  }`}
-                  onClick={() => setHomeTab('overview')}
-                >
-                  Overview
-                </button>
+            {isFocusRedesign ? null : (
+              <div className="homeTopControls mx-4 mt-1 flex flex-wrap items-center justify-between gap-2 text-[11px] text-white/40">
+                <div className="homeTabToggle flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
+                  <button
+                    type="button"
+                    className={`rounded-full px-3 py-1 transition ${
+                      homeTab === 'home' ? 'bg-white/10 text-white' : 'text-white/60'
+                    }`}
+                    onClick={() => setHomeTab('home')}
+                  >
+                    Acasă
+                  </button>
+                  <button
+                    type="button"
+                    className={`rounded-full px-3 py-1 transition ${
+                      homeTab === 'overview' ? 'bg-white/10 text-white' : 'text-white/60'
+                    }`}
+                    onClick={() => setHomeTab('overview')}
+                  >
+                    Overview
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
-            {homeTab === 'overview' ? (
+            {isFocusRedesign ? (
+              <FocusHome
+                copy={copy}
+                nextOccurrence={nextOccurrence}
+                nextOccurrenceLabel={nextOccurrenceLabel ?? undefined}
+                nextCategory={nextCategory ?? null}
+                nextTone={nextTone}
+                statusLabel={copy.dashboard.todayOverdue}
+                emptyLabel={copy.dashboard.nextUpEmpty}
+                action={
+                  nextOccurrence?.id && nextOccurrence?.reminder?.id && nextOccurrence?.occur_at
+                    ? {
+                        occurrenceId: nextOccurrence.id,
+                        reminderId: nextOccurrence.reminder.id,
+                        occurAt: nextOccurrence.occur_at,
+                        label: copy.dashboard.nextUpAction,
+                        feedbackLabel: copy.common.actionDone
+                      }
+                    : null
+                }
+                secondaryLabels={{
+                  snooze30: copy.dashboard.nextUpSnooze30,
+                  snoozeTomorrow: copy.dashboard.nextUpSnoozeTomorrow
+                }}
+                focusCopy={copy.dashboard.nextUpFocusLine}
+                todayItems={focusItems}
+                locale={locale}
+                userTimeZone={effectiveTimeZone}
+              />
+            ) : homeTab === 'overview' ? (
               <section className="space-y-3">
                 <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-2)] py-[var(--space-2)]">
                   <div className="text-sm font-semibold text-[color:var(--text-0)]">Situația ta</div>

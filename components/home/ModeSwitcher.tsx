@@ -9,8 +9,6 @@ type Mode = 'family' | 'focus';
 type Props = {
   value: Mode;
   onChange: (mode: Mode) => void;
-  remember: boolean;
-  onRememberChange: (remember: boolean) => void;
 };
 
 const MODE_OPTIONS: Array<{ id: Mode; emoji: string; title: string; description: string }> = [
@@ -28,7 +26,7 @@ const MODE_OPTIONS: Array<{ id: Mode; emoji: string; title: string; description:
   }
 ];
 
-export default function ModeSwitcher({ value, onChange, remember, onRememberChange }: Props) {
+export default function ModeSwitcher({ value, onChange }: Props) {
   const [open, setOpen] = useState(false);
 
   const handleSelect = (mode: Mode) => {
@@ -76,15 +74,6 @@ export default function ModeSwitcher({ value, onChange, remember, onRememberChan
               </button>
             );
           })}
-          <label className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/70">
-            <span>Remember my choice</span>
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-white/20 bg-white/10 text-white/80"
-              checked={remember}
-              onChange={(event) => onRememberChange(event.target.checked)}
-            />
-          </label>
         </div>
       </BottomSheet>
     </>
