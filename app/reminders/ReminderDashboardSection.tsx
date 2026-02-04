@@ -918,18 +918,6 @@ export default function ReminderDashboardSection({
       <section className={`homeRoot premium ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-6`}>
         <div className="home-slate space-y-3 today-shell home-compact">
           <div className="home-slate-bg" aria-hidden="true" />
-          <HomeHeader
-            title="Focus"
-            subtitle="Doar ce contează. Minim de zgomot."
-            modeSwitcher={
-              <ModeSwitcher
-                value={uiMode}
-                onChange={setUiMode}
-                remember={rememberMode}
-                onRememberChange={setRememberMode}
-              />
-            }
-          />
           <FocusHome
             copy={copy}
             nextOccurrence={nextOccurrence}
@@ -968,18 +956,6 @@ export default function ReminderDashboardSection({
       <section className={`homeRoot premium ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-[var(--space-3)]`}>
         <div className="home-slate space-y-3 today-shell home-compact">
           <div className="home-slate-bg" aria-hidden="true" />
-          <HomeHeader
-            title="Focus"
-            subtitle="Doar ce contează. Minim de zgomot."
-            modeSwitcher={
-              <ModeSwitcher
-                value={uiMode}
-                onChange={setUiMode}
-                remember={rememberMode}
-                onRememberChange={setRememberMode}
-              />
-            }
-          />
           <FocusHome
             copy={copy}
             nextOccurrence={nextOccurrence}
