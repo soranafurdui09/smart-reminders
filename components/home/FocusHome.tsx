@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import QuickAddBar from '@/components/home/QuickAddBar';
 import { markDone } from '@/app/app/actions';
@@ -53,7 +53,6 @@ type Props = {
   todayItems: OccurrencePayload[];
   locale?: string;
   userTimeZone?: string;
-  modeSwitcher?: ReactNode;
 };
 
 const getMetaLabel = (
@@ -100,19 +99,13 @@ export default function FocusHome({
   focusCopy,
   todayItems,
   locale,
-  userTimeZone,
-  modeSwitcher
+  userTimeZone
 }: Props) {
   const [showAll, setShowAll] = useState(false);
   const visibleItems = useMemo(() => (showAll ? todayItems : todayItems.slice(0, 5)), [showAll, todayItems]);
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="text-[22px] font-semibold text-[color:var(--text-0)]">Focus</div>
-        {modeSwitcher}
-      </div>
-
       <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-3)] py-[var(--space-2)]">
         {nextOccurrence ? (
           <div className="flex items-center justify-between gap-3">
