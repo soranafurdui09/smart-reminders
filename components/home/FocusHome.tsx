@@ -106,15 +106,38 @@ export default function FocusHome({
   userTimeZone
 }: Props) {
   const [horizon, setHorizon] = useState<'today' | '7d' | '30d'>('today');
+  const horizonRange = useMemo(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    const dayOffset = horizon === '7d' ? 7 : horizon === '30d' ? 30 : 0;
+    end.setDate(end.getDate() + dayOffset);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  }, [horizon]);
+  const sourceItems = useMemo(() => {
+    const map = new Map<string, OccurrencePayload>();
+    [todayItems, weekItems, monthItems].forEach((items) => {
+      items.forEach((item) => map.set(item.id, item));
+    });
+    return Array.from(map.values());
+  }, [monthItems, todayItems, weekItems]);
   const horizonItems = useMemo(() => {
-    if (horizon === '7d') return weekItems;
-    if (horizon === '30d') return monthItems;
-    return todayItems;
-  }, [horizon, monthItems, todayItems, weekItems]);
+    const { start, end } = horizonRange;
+    return sourceItems
+      .map((item) => ({
+        item,
+        date: new Date(item.snoozed_until ?? item.effective_at ?? item.occur_at)
+      }))
+      .filter(({ date }) => !Number.isNaN(date.getTime()) && date >= start && date <= end)
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .map(({ item }) => item);
+  }, [horizonRange, sourceItems]);
+  const nextInRange = horizonItems[0] ?? null;
   const filteredItems = useMemo(() => {
-    if (!nextOccurrence?.id) return horizonItems;
-    return horizonItems.filter((item) => item.id !== nextOccurrence.id);
-  }, [horizonItems, nextOccurrence?.id]);
+    if (!nextInRange?.id) return horizonItems;
+    return horizonItems.filter((item) => item.id !== nextInRange.id);
+  }, [horizonItems, nextInRange?.id]);
   const visibleItems = useMemo(() => filteredItems.slice(0, 5), [filteredItems]);
   const horizonLabel =
     horizon === '7d'
@@ -126,27 +149,27 @@ export default function FocusHome({
   return (
     <section className="space-y-3">
       <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-3)] py-[var(--space-2)]">
-        {nextOccurrence ? (
+        {nextInRange ? (
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0 flex-1 space-y-1">
               <div className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--text-2)]">Next</div>
               <div className="text-sm font-semibold text-[color:var(--text-0)] line-clamp-2">
-                {nextOccurrence.reminder?.title ?? emptyLabel}
+                {nextInRange.reminder?.title ?? emptyLabel}
               </div>
               <div className="text-xs text-[color:var(--text-2)]">
-                {getMetaLabel(nextOccurrence, locale, userTimeZone).split(' · ')[0]}
+                {getMetaLabel(nextInRange, locale, userTimeZone).split(' · ')[0]}
               </div>
-              {nextCategory ? (
+              {nextCategory && nextOccurrence?.id === nextInRange.id ? (
                 <span className="home-category-pill" style={{ borderColor: nextCategory.color }}>
                   {nextCategory.label}
                 </span>
               ) : null}
             </div>
-            {action ? (
+            {action && nextInRange.reminder?.id ? (
               <form action={markDone}>
-                <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
-                <input type="hidden" name="reminderId" value={action.reminderId} />
-                <input type="hidden" name="occurAt" value={action.occurAt} />
+                <input type="hidden" name="occurrenceId" value={nextInRange.id} />
+                <input type="hidden" name="reminderId" value={nextInRange.reminder?.id ?? ''} />
+                <input type="hidden" name="occurAt" value={nextInRange.occur_at} />
                 <input type="hidden" name="done_comment" value="" />
                 <ActionSubmitButton
                   className="home-priority-primary"
