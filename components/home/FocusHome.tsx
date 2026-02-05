@@ -115,7 +115,7 @@ export default function FocusHome({
     if (!nextOccurrence?.id) return horizonItems;
     return horizonItems.filter((item) => item.id !== nextOccurrence.id);
   }, [horizonItems, nextOccurrence?.id]);
-  const visibleItems = useMemo(() => filteredItems.slice(0, 10), [filteredItems]);
+  const visibleItems = useMemo(() => filteredItems.slice(0, 5), [filteredItems]);
   const horizonLabel =
     horizon === '7d'
       ? 'Următoarele 7 zile'
@@ -134,7 +134,7 @@ export default function FocusHome({
                 {nextOccurrence.reminder?.title ?? emptyLabel}
               </div>
               <div className="text-xs text-[color:var(--text-2)]">
-                {getMetaLabel(nextOccurrence, locale, userTimeZone)}
+                {getMetaLabel(nextOccurrence, locale, userTimeZone).split(' · ')[0]}
               </div>
               {nextCategory ? (
                 <span className="home-category-pill" style={{ borderColor: nextCategory.color }}>
@@ -217,7 +217,7 @@ export default function FocusHome({
                       {reminder?.title ?? copy.dashboard.nextUpEmpty}
                     </div>
                     <div className="text-xs text-white/40">
-                      {getMetaLabel(occurrence, locale, userTimeZone)}
+                      {getMetaLabel(occurrence, locale, userTimeZone).split(' · ')[0]}
                     </div>
                   </div>
                   <form action={markDone}>
@@ -237,13 +237,13 @@ export default function FocusHome({
               );
               })}
             </div>
-            {filteredItems.length > 10 ? (
+            {filteredItems.length > 5 ? (
               <button
                 type="button"
                 className="mt-2 text-xs font-semibold text-white/60 hover:text-white"
                 onClick={() => onShowMore?.(horizon)}
               >
-                Arată mai multe
+                Arată toate
               </button>
             ) : null}
           </>
