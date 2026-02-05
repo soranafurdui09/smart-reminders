@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
-import QuickAddBar from '@/components/home/QuickAddBar';
 import { markDone } from '@/app/app/actions';
 import { diffDaysInTimeZone, formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
 
@@ -112,7 +111,11 @@ export default function FocusHome({
     if (horizon === '30d') return monthItems;
     return todayItems;
   }, [horizon, monthItems, todayItems, weekItems]);
-  const visibleItems = useMemo(() => horizonItems.slice(0, 10), [horizonItems]);
+  const filteredItems = useMemo(() => {
+    if (!nextOccurrence?.id) return horizonItems;
+    return horizonItems.filter((item) => item.id !== nextOccurrence.id);
+  }, [horizonItems, nextOccurrence?.id]);
+  const visibleItems = useMemo(() => filteredItems.slice(0, 10), [filteredItems]);
   const horizonLabel =
     horizon === '7d'
       ? 'Următoarele 7 zile'
@@ -162,8 +165,6 @@ export default function FocusHome({
         )}
       </div>
 
-      <QuickAddBar />
-
       <section className="space-y-2">
         <div className="homeTabToggle flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
           <button
@@ -196,9 +197,6 @@ export default function FocusHome({
         </div>
         <div className="flex items-center justify-between text-sm font-semibold text-[color:var(--text-0)]">
           <span>{horizonLabel}</span>
-          <span className="text-xs text-[color:var(--text-2)]">
-            {horizonItems.length} {copy.dashboard.reminderCountLabel}
-          </span>
         </div>
 
         {visibleItems.length ? (
@@ -239,7 +237,7 @@ export default function FocusHome({
               );
               })}
             </div>
-            {horizonItems.length > 10 ? (
+            {filteredItems.length > 10 ? (
               <button
                 type="button"
                 className="mt-2 text-xs font-semibold text-white/60 hover:text-white"
