@@ -13,6 +13,7 @@ import Pill from '@/components/ui/Pill';
 import IconButton from '@/components/ui/IconButton';
 import BottomSheet from '@/components/ui/BottomSheet';
 import { classTextPrimary, classTextSecondary } from '@/styles/tokens';
+import { inferAiDatetimeMeta } from '@/lib/ai/datetime';
 
 type AiResult = {
   title: string;
@@ -22,6 +23,9 @@ type AiResult = {
   preReminderMinutes: number | null;
   assignedMemberId: string | null;
   categoryId: string | null;
+  hasExplicitDatetime?: boolean;
+  parsedDatetime?: string | null;
+  parsedDatetimeConfidence?: number | null;
 };
 
 const templates = [
@@ -61,6 +65,7 @@ export default function QuickAddSheet({
   const [listName, setListName] = useState('');
   const [activeMode, setActiveMode] = useState<'ai' | 'task' | 'list'>(mode);
   const [parsingVisible, setParsingVisible] = useState(false);
+  const dateInputRef = useRef<HTMLInputElement | null>(null);
   const autoStartOnceRef = useRef(false);
   const autoStartDisabledRef = useRef(false);
   const userStoppedRef = useRef(false);
@@ -92,7 +97,7 @@ export default function QuickAddSheet({
     [toLocalInputValue]
   );
   const previewTitle = parsedResult?.title || trimmed || 'Titlul reminderului';
-  const parsedDate = parsedResult?.dueAt ? toLocalInputFromIso(parsedResult.dueAt) : '';
+  const parsedDate = parsedResult?.parsedDatetime ? toLocalInputFromIso(parsedResult.parsedDatetime) : '';
   const previewDate = parsedDate
     ? parsedDate.replace('T', ' · ')
     : dateValue
@@ -138,12 +143,7 @@ export default function QuickAddSheet({
     if (dateValue && timeValue) {
       return `${dateValue}T${timeValue}`;
     }
-    if (dateValue) {
-      return `${dateValue}T09:00`;
-    }
-    const fallback = new Date();
-    fallback.setMinutes(fallback.getMinutes() + 60);
-    return toLocalInputValue(fallback);
+    return '';
   };
 
   const buildRecurrenceRule = () => {
@@ -179,7 +179,15 @@ export default function QuickAddSheet({
           return null;
         }
         parsed = (await response.json()) as AiResult;
-        return parsed;
+        if (!parsed) return null;
+        const meta = inferAiDatetimeMeta({
+          text: trimmedText,
+          dueAt: parsed.dueAt,
+          hasExplicitDatetime: parsed.hasExplicitDatetime,
+          parsedDatetime: parsed.parsedDatetime,
+          parsedDatetimeConfidence: parsed.parsedDatetimeConfidence
+        });
+        return { ...parsed, ...meta, dueAt: meta.parsedDatetime ?? '' };
       } finally {
         if (!options?.silent) {
           setAiStatus(parsed ? 'ready' : 'idle');
@@ -427,22 +435,26 @@ export default function QuickAddSheet({
       const baseNotes = parsed?.description || '';
       formData.set('notes', baseNotes);
       const fallbackRule = buildRecurrenceRule();
-      formData.set('recurrence_rule', parsed?.recurrenceRule || fallbackRule);
-      formData.set('schedule_type', deriveScheduleType(parsed?.recurrenceRule || fallbackRule));
-      formData.set(
-        'pre_reminder_minutes',
-        parsed?.preReminderMinutes !== null && parsed?.preReminderMinutes !== undefined
-          ? String(parsed.preReminderMinutes)
-          : parsePreReminder()
-      );
       formData.set('assigned_member_id', parsed?.assignedMemberId || '');
       formData.set('context_category', parsed?.categoryId || categoryValue || '');
-      const localDueAt = parsed?.dueAt
-        ? toLocalInputFromIso(parsed.dueAt)
+      const localDueAt = parsed?.parsedDatetime
+        ? toLocalInputFromIso(parsed.parsedDatetime)
         : buildLocalFallback();
+      const hasDueAt = Boolean(localDueAt);
+      formData.set('recurrence_rule', hasDueAt ? (parsed?.recurrenceRule || fallbackRule) : '');
+      formData.set('schedule_type', hasDueAt ? deriveScheduleType(parsed?.recurrenceRule || fallbackRule) : 'once');
+      formData.set(
+        'pre_reminder_minutes',
+        hasDueAt
+          ? parsed?.preReminderMinutes !== null && parsed?.preReminderMinutes !== undefined
+            ? String(parsed.preReminderMinutes)
+            : parsePreReminder()
+          : ''
+      );
       formData.set('due_at', localDueAt);
       formData.set('due_at_iso', toIsoFromLocalInput(localDueAt));
       formData.set('tz', timezone);
+      formData.set('force_task', localDueAt ? '' : '1');
 
       await createReminder(formData);
       autoStartDisabledRef.current = true;
@@ -648,14 +660,35 @@ export default function QuickAddSheet({
                     </button>
                   </div>
                   <div className="mt-3 flex items-center justify-between text-[11px] text-white/70">
-                    <span>{previewLine}</span>
-                    <button
-                      type="button"
-                      className="text-[11px] font-semibold text-[color:rgb(var(--accent-2))] hover:text-white"
-                      onClick={() => setDetailsOpen(true)}
-                    >
-                      Editează detalii
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span>{previewLine}</span>
+                      {isAiMode && parsedResult && !parsedResult.parsedDatetime && !(dateValue && timeValue) ? (
+                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-white/70">
+                          Task
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {isAiMode && parsedResult && !parsedResult.parsedDatetime && !(dateValue && timeValue) ? (
+                        <button
+                          type="button"
+                          className="text-[11px] font-semibold text-[color:rgb(var(--accent-2))] hover:text-white"
+                          onClick={() => {
+                            setDetailsOpen(true);
+                            window.requestAnimationFrame(() => dateInputRef.current?.focus());
+                          }}
+                        >
+                          Setează ora (opțional)
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="text-[11px] font-semibold text-[color:rgb(var(--accent-2))] hover:text-white"
+                        onClick={() => setDetailsOpen(true)}
+                      >
+                        Editează detalii
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
@@ -717,6 +750,7 @@ export default function QuickAddSheet({
                     className="premium-input w-full px-3 text-sm"
                     value={dateValue}
                     onChange={(event) => setDateValue(event.target.value)}
+                    ref={dateInputRef}
                   />
                 </div>
                 <div className="space-y-1">

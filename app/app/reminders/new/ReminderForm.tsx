@@ -7,6 +7,7 @@ import { useSpeechToReminder, type SpeechStatus } from '@/hooks/useSpeechToRemin
 import { getDefaultContextSettings, isDefaultContextSettings, type ContextSettings, type DayOfWeek } from '@/lib/reminders/context';
 import type { MedicationDetails, MedicationFrequencyType } from '@/lib/reminders/medication';
 import { reminderCategories, type ReminderCategoryId } from '@/lib/categories';
+import { inferAiDatetimeMeta } from '@/lib/ai/datetime';
 
 type MemberOption = {
   id: string;
@@ -21,6 +22,9 @@ type AiResult = {
   preReminderMinutes: number | null;
   assignedMemberId: string | null;
   categoryId?: ReminderCategoryId | null;
+  hasExplicitDatetime?: boolean;
+  parsedDatetime?: string | null;
+  parsedDatetimeConfidence?: number | null;
 };
 
 type AiStatus = 'idle' | 'transcribing' | 'parsing' | 'ready' | 'creating' | 'created' | 'error';
@@ -693,7 +697,16 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
         setAiStatus('error');
         return null;
       }
-      return (await response.json()) as AiResult;
+      const parsed = (await response.json()) as AiResult;
+      if (!parsed) return null;
+      const meta = inferAiDatetimeMeta({
+        text: normalizedText,
+        dueAt: parsed.dueAt,
+        hasExplicitDatetime: parsed.hasExplicitDatetime,
+        parsedDatetime: parsed.parsedDatetime,
+        parsedDatetimeConfidence: parsed.parsedDatetimeConfidence
+      });
+      return { ...parsed, ...meta, dueAt: meta.parsedDatetime ?? '' };
     } catch (error) {
       console.error('[ai] parse reminder failed', error);
       if (showErrors) {
@@ -714,7 +727,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const applyParsedReminder = useCallback((data: AiResult) => {
     setTitle(data.title || '');
     setNotes(data.description || '');
-    setDueAt(data.dueAt ? toLocalInputValueFromAi(data.dueAt) : '');
+    setDueAt(data.parsedDatetime ? toLocalInputValueFromAi(data.parsedDatetime) : '');
     setRecurrenceRule(data.recurrenceRule || '');
     setPreReminderMinutes(
       data.preReminderMinutes !== null && data.preReminderMinutes !== undefined
@@ -722,7 +735,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
         : ''
     );
     setAssignedMemberId(data.assignedMemberId || '');
-    setScheduleType(deriveScheduleType(data.recurrenceRule));
+    setScheduleType(data.parsedDatetime ? deriveScheduleType(data.recurrenceRule) : 'once');
     setCategoryId(data.categoryId || '');
     setLastParsedResult(data);
     setAiStatus('ready');
@@ -735,7 +748,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     if (!data.title) {
       missing.push('title');
     }
-    if (!data.dueAt && !data.recurrenceRule) {
+    if (data.hasExplicitDatetime && !data.parsedDatetime && !data.recurrenceRule) {
       missing.push('due_at');
     }
     return { complete: missing.length === 0, missing };
@@ -743,7 +756,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
 
   const buildFormDataFromParsed = useCallback((data: AiResult, source: 'voice' | 'ai') => {
     const formData = new FormData();
-    const localDueAt = data.dueAt ? toLocalInputValueFromAi(data.dueAt) : '';
+    const localDueAt = data.parsedDatetime ? toLocalInputValueFromAi(data.parsedDatetime) : '';
     const preReminderValue =
       data.preReminderMinutes !== null && data.preReminderMinutes !== undefined
         ? String(data.preReminderMinutes)
@@ -754,9 +767,9 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     formData.set('kind', kind);
     formData.set('title', data.title || title);
     formData.set('notes', data.description || notes);
-    formData.set('schedule_type', deriveScheduleType(data.recurrenceRule));
-    formData.set('recurrence_rule', data.recurrenceRule || '');
-    formData.set('pre_reminder_minutes', preReminderValue || '');
+    formData.set('schedule_type', localDueAt ? deriveScheduleType(data.recurrenceRule) : 'once');
+    formData.set('recurrence_rule', localDueAt ? (data.recurrenceRule || '') : '');
+    formData.set('pre_reminder_minutes', localDueAt ? (preReminderValue || '') : '');
     formData.set('assigned_member_id', data.assignedMemberId || assignedMemberId);
     formData.set('medication_details', medicationDetailsJson);
     formData.set('medication_add_to_calendar', medAddToCalendar ? '1' : '');
@@ -764,6 +777,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     formData.set('due_at', localDueAt);
     formData.set('due_at_iso', localDueAt ? toIsoFromLocalInput(localDueAt) : '');
     formData.set('tz', Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+    formData.set('force_task', localDueAt ? '' : '1');
 
     if (timeWindowEnabled) {
       formData.set('context_time_window_enabled', '1');
@@ -797,7 +811,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     if (autoCreateInFlightRef.current) return;
     const signature = JSON.stringify({
       title: data.title,
-      dueAt: data.dueAt,
+      dueAt: data.parsedDatetime,
       recurrenceRule: data.recurrenceRule,
       preReminderMinutes: data.preReminderMinutes,
       assignedMemberId: data.assignedMemberId,
@@ -812,7 +826,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     if (source === 'voice' && typeof window !== 'undefined') {
       window.sessionStorage.setItem(
         'voice-create-summary',
-        JSON.stringify({ title: data.title, dueAt: data.dueAt || null, source: 'voice', ts: Date.now() })
+        JSON.stringify({ title: data.title, dueAt: data.parsedDatetime || null, source: 'voice', ts: Date.now() })
       );
     }
     try {
@@ -1084,7 +1098,7 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const aiBusy = aiStatus === 'parsing' || aiStatus === 'transcribing' || aiStatus === 'creating';
   const aiHasResult = Boolean(lastParsedResult);
   const aiMissingTitle = kind !== 'medication' && !title.trim();
-  const aiMissingDate = kind !== 'medication' && !dueAt && !recurrenceRule;
+  const aiMissingDate = kind !== 'medication' && !dueAt && !recurrenceRule && Boolean(lastParsedResult?.hasExplicitDatetime);
   const aiCompleteness = {
     complete: !(aiMissingTitle || aiMissingDate),
     missing: [aiMissingTitle ? 'title' : null, aiMissingDate ? 'due_at' : null].filter(Boolean)
@@ -1162,6 +1176,11 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
         type="hidden"
         name="due_at_iso"
         value={dueAt ? toIsoFromLocalInput(dueAt) : ''}
+      />
+      <input
+        type="hidden"
+        name="force_task"
+        value={createMode === 'ai' && aiHasResult && !dueAt ? '1' : ''}
       />
       <input
         type="hidden"
@@ -1610,6 +1629,11 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
               <span className="rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-0.5 text-[11px] text-muted">
                 {previewStatusLabel}
               </span>
+              {createMode === 'ai' && aiHasResult && !lastParsedResult?.parsedDatetime && !dueAt ? (
+                <span className="rounded-full border border-borderSubtle bg-surfaceMuted px-2 py-0.5 text-[11px] text-muted">
+                  Task
+                </span>
+              ) : null}
             </div>
             <div className="mt-2">
               {categoryId ? (
@@ -1635,6 +1659,18 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
             ) : null}
             {showPreviewHint ? (
               <p className="mt-3 text-xs text-muted">{copy.remindersNew.previewHint}</p>
+            ) : null}
+            {createMode === 'ai' && aiHasResult && !lastParsedResult?.parsedDatetime && !dueAt ? (
+              <button
+                type="button"
+                className="mt-3 text-xs font-semibold text-sky-600 transition hover:text-sky-700"
+                onClick={() => {
+                  setAdvancedOpen(true);
+                  window.requestAnimationFrame(() => dueAtRef.current?.focus());
+                }}
+              >
+                Setează ora (opțional)
+              </button>
             ) : null}
             {createMode === 'ai' && aiCreateError ? (
               <p className="mt-3 text-xs text-rose-600">{aiCreateError}</p>
@@ -1668,6 +1704,18 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
           ) : null}
 
           <div className={`mt-4 space-y-4 ${advancedOpen ? '' : 'hidden'}`}>
+          {createMode === 'ai' ? (
+            <div>
+              <label className="text-sm font-semibold">{copy.remindersNew.dateLabel}</label>
+              <input
+                type="datetime-local"
+                className="input"
+                value={dueAt}
+                onChange={(event) => setDueAt(event.target.value)}
+                ref={dueAtRef}
+              />
+            </div>
+          ) : null}
           <details className="rounded-2xl border border-borderSubtle bg-surface p-4">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
               <div>

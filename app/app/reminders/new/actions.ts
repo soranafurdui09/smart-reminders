@@ -115,6 +115,7 @@ export async function createReminder(formData: FormData) {
   const assignedMemberRaw = String(formData.get('assigned_member_id') || '').trim();
   const voiceAuto = String(formData.get('voice_auto') || '') === '1';
   const tz = String(formData.get('tz') || '').trim() || 'UTC';
+  const forceTask = String(formData.get('force_task') || '') === '1';
   const contextSettings = buildContextSettings(formData, contextDefaults);
   const listIdRaw = String(formData.get('context_list_id') || '').trim();
   const contextSettingsWithList = listIdRaw
@@ -154,7 +155,9 @@ export async function createReminder(formData: FormData) {
     ? medicationDetails
       ? new Date(getFirstMedicationDose(medicationDetails, tz) || new Date().toISOString())
       : new Date()
-    : resolveDueAtFromForm(dueAtIso, dueAtRaw, tz);
+    : forceTask
+      ? null
+      : resolveDueAtFromForm(dueAtIso, dueAtRaw, tz);
 
   if (process.env.NODE_ENV !== 'production') {
     console.log('[debug][createReminder] due_at inputs', {
@@ -162,7 +165,8 @@ export async function createReminder(formData: FormData) {
       dueAtIso,
       tz,
       resolvedLocal: dueAtRaw,
-      resolvedIso: dueAt.toISOString()
+      resolvedIso: dueAt ? dueAt.toISOString() : null,
+      forceTask
     });
   }
 
@@ -195,7 +199,7 @@ export async function createReminder(formData: FormData) {
       title: resolvedTitle,
       notes: resolvedNotes || null,
       schedule_type: scheduleType,
-      due_at: dueAt.toISOString(),
+      due_at: dueAt ? dueAt.toISOString() : null,
       tz,
       is_active: true,
       recurrence_rule: recurrenceRuleRaw || null,
@@ -251,7 +255,7 @@ export async function createReminder(formData: FormData) {
     console.error('[embeddings] create reminder failed', error);
   }
 
-  if (kind !== 'medication') {
+  if (kind !== 'medication' && dueAt) {
     const { error: occurrenceError } = await supabase.from('reminder_occurrences').insert({
       reminder_id: reminder.id,
       occur_at: dueAt.toISOString(),

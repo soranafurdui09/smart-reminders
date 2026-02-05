@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createRouteClient } from '@/lib/supabase/route';
 import { getOptionalEnv } from '@/lib/env';
 import { isReminderCategoryId, reminderCategories } from '@/lib/categories';
+import { inferAiDatetimeMeta } from '@/lib/ai/datetime';
 
 export const runtime = 'nodejs';
 
@@ -185,9 +186,11 @@ export async function POST(request: Request) {
   }
 
   const normalized = normalizeParsed(parsed, memberIds);
+  const datetimeMeta = inferAiDatetimeMeta({ text, dueAt: normalized.dueAt });
+  const safeDueAt = datetimeMeta.parsedDatetime ?? '';
   const hasAnySignal =
     Boolean(normalized.title) ||
-    Boolean(normalized.dueAt) ||
+    Boolean(safeDueAt) ||
     Boolean(normalized.recurrenceRule) ||
     normalized.preReminderMinutes !== null ||
     Boolean(normalized.assignedMemberId);
@@ -195,5 +198,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'AI could not parse the reminder.' }, { status: 422 });
   }
 
-  return NextResponse.json(normalized);
+  return NextResponse.json({
+    ...normalized,
+    dueAt: safeDueAt,
+    ...datetimeMeta
+  });
 }
