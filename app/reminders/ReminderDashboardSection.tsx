@@ -426,6 +426,10 @@ export default function ReminderDashboardSection({
     () => nextUpContext.overdue.map((item) => item.occurrence),
     [nextUpContext.overdue]
   );
+  const filteredOverdueItems = useMemo(
+    () => overdueItems.filter((item) => filteredOccurrences.some((occurrence) => occurrence.id === item.id)),
+    [filteredOccurrences, overdueItems]
+  );
   const todayOpenItems = mobileBuckets.today;
   const soonItems = mobileBuckets.soon;
   const focusWeekItems = useMemo(() => {
@@ -758,9 +762,22 @@ export default function ReminderDashboardSection({
       nextOccurrenceDate.getTime() >= Date.now()
   );
   const nextTone = nextIsOverdue ? 'overdue' : nextIsUrgent ? 'urgent' : 'normal';
-  const overdueTopItems = useMemo(() => overdueItems.slice(0, 5), [overdueItems]);
+  const overdueTopItems = useMemo(() => filteredOverdueItems.slice(0, 5), [filteredOverdueItems]);
   const priorityItems = useMemo(() => (showRecover ? overdueTopItems : overdueTopItems.slice(0, 3)), [overdueTopItems, showRecover]);
   const homeSubtitle = `${todayOpenItems.length} ${copy.dashboard.homeSubtitleToday} • ${overdueItems.length} ${copy.dashboard.homeSubtitleOverdue}`;
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    console.log('[filters] TODO REMOVE', { kindFilter, createdBy, assignment, categoryFilter });
+  }, [assignment, categoryFilter, createdBy, kindFilter]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    console.log('[filters-counts] TODO REMOVE', {
+      total: occurrences.length,
+      filtered: filteredOccurrences.length,
+      overdue: filteredOverdueItems.length
+    });
+  }, [filteredOverdueItems.length, filteredOccurrences.length, occurrences.length]);
   const headerTitle = uiMode === 'focus' ? 'Focus' : copy.dashboard.title;
   const headerSubtitle =
     uiMode === 'focus' ? 'Doar ce contează. Minim de zgomot.' : 'Reminderele familiei tale.';
