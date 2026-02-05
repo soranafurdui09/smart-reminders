@@ -217,6 +217,7 @@ export default function ReminderDashboardSection({
   const [showRecover, setShowRecover] = useState(false);
   const [activeBucket, setActiveBucket] = useState<'priority' | 'today' | 'soon' | 'overdue'>('priority');
   const [showAll, setShowAll] = useState(false);
+  const [controlSessionCount, setControlSessionCount] = useState(0);
   const { mode: uiMode, setMode: setUiMode, remember: rememberMode, setRemember: setRememberMode } = useModePreference();
   const [homeTab, setHomeTab] = useState<'home' | 'overview'>('home');
   const [sectionFlash, setSectionFlash] = useState<'today' | 'soon' | 'overdue' | null>(null);
@@ -1164,6 +1165,8 @@ export default function ReminderDashboardSection({
         bucketItems={visibleBucketItems}
         bucketTotal={bucketItems.length}
         onShowAll={handleShowAll}
+        controlSessionCount={controlSessionCount}
+        setControlSessionCount={setControlSessionCount}
         showRecover={showRecover}
         setShowRecover={setShowRecover}
         localeTag={localeTag}

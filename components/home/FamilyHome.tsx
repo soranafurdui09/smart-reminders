@@ -53,6 +53,8 @@ export default function FamilyHome({
   nextTone,
   filteredOverdueCount,
   filteredSoonItems,
+  controlSessionCount,
+  setControlSessionCount,
   nextUpActionsSheet,
   googleConnected,
   effectiveTimeZone,
@@ -70,6 +72,8 @@ export default function FamilyHome({
   const activeFilterLabel = activeCategory?.label ? `Afișezi: ${activeCategory.label} (${filteredOverdueCount})` : null;
   const soonPreview = filteredSoonItems.slice(0, 3);
   const hasMoreSoon = filteredSoonItems.length > soonPreview.length;
+  const controlSessionMax = 3;
+  const isControlSessionDone = controlSessionCount >= controlSessionMax;
   const getOverdueMeta = (occurrence: any) => {
     const reminder = occurrence.reminder ?? null;
     const displayAt = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
@@ -522,20 +526,25 @@ export default function FamilyHome({
 
                 {!overdueTopItems.length ? null : (
                   <div className="flex flex-wrap items-center gap-2">
-                    <form action={markDone}>
-                      <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
-                      <input type="hidden" name="reminderId" value={overdueTopItems[0]?.reminder?.id ?? ''} />
-                      <input type="hidden" name="occurAt" value={overdueTopItems[0]?.occur_at ?? ''} />
-                      <input type="hidden" name="done_comment" value="" />
-                      <ActionSubmitButton
-                        className="home-priority-primary"
-                        type="submit"
-                        data-action-feedback={copy.common.actionDone}
-                        disabled={!overdueTopItems[0]}
-                      >
-                        Rezolvă primul
-                      </ActionSubmitButton>
-                    </form>
+                    {!isControlSessionDone ? (
+                      <form action={markDone}>
+                        <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
+                        <input type="hidden" name="reminderId" value={overdueTopItems[0]?.reminder?.id ?? ''} />
+                        <input type="hidden" name="occurAt" value={overdueTopItems[0]?.occur_at ?? ''} />
+                        <input type="hidden" name="done_comment" value="" />
+                        <ActionSubmitButton
+                          className="home-priority-primary"
+                          type="submit"
+                          data-action-feedback={copy.common.actionDone}
+                          disabled={!overdueTopItems[0]}
+                          onClick={() => {
+                            setControlSessionCount((prev: number) => Math.min(prev + 1, controlSessionMax));
+                          }}
+                        >
+                          Rezolvă următorul ({Math.min(controlSessionCount + 1, controlSessionMax)}/{controlSessionMax})
+                        </ActionSubmitButton>
+                      </form>
+                    ) : null}
                     <form action={snoozeOccurrence}>
                       <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
                       <input type="hidden" name="option_id" value="tomorrow" />
@@ -559,6 +568,9 @@ export default function FamilyHome({
                     </button>
                   </div>
                 )}
+                {isControlSessionDone ? (
+                  <div className="text-xs text-[color:var(--text-2)]">Sesiune încheiată. Restul pot aștepta.</div>
+                ) : null}
 
                 {!overdueTopItems.length ? null : (
                   <section className="space-y-2">
@@ -570,7 +582,7 @@ export default function FamilyHome({
                       <div className="text-xs text-[color:var(--text-2)]">{activeFilterLabel}</div>
                     ) : null}
                     <div className="space-y-2">
-                      {overdueTopItems.slice(0, 5).map((occurrence: any) => {
+                      {overdueTopItems.slice(0, 5).map((occurrence: any, index: number) => {
                         const reminder = occurrence.reminder ?? null;
                         const categoryId = inferReminderCategoryId({
                           title: reminder?.title,
@@ -583,9 +595,16 @@ export default function FamilyHome({
                         const categoryStyle = getCategoryChipStyle(category.color, true);
 
                         return (
-                          <div key={occurrence.id} className="home-priority-row py-2 opacity-80">
+                          <div
+                            key={occurrence.id}
+                            className={`home-priority-row py-2 ${index === 0 ? '' : 'opacity-60'}`}
+                          >
                             <div className="min-w-0 flex-1 space-y-1">
-                              <div className="home-priority-title line-clamp-2 text-[color:var(--text-1)]">{reminder?.title}</div>
+                              <div
+                                className={`home-priority-title line-clamp-2 ${index === 0 ? 'text-[color:var(--text-0)]' : 'text-[color:var(--text-1)]'}`}
+                              >
+                                {reminder?.title}
+                              </div>
                               <div className="home-priority-meta text-[color:var(--text-2)]">{getOverdueMeta(occurrence)}</div>
                               {category?.label ? (
                                 <span className="home-category-pill" style={categoryStyle}>
