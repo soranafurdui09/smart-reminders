@@ -7,9 +7,7 @@ import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import QuickAddBar from '@/components/home/QuickAddBar';
 import AtAGlanceRow from '@/components/home/AtAGlanceRow';
-import FilteredTaskList from '@/components/home/FilteredTaskList';
 import OverdueDenseRow from '@/components/home/OverdueDenseRow';
-import MedsTeaserCard from '@/components/home/MedsTeaserCard';
 import ReminderRowMobile from '@/components/mobile/ReminderRowMobile';
 import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
 import ListReminderButton from '@/components/lists/ListReminderButton';
@@ -453,82 +451,7 @@ export default function FamilyHome({
           <div className="home-slate space-y-3 today-shell home-compact">
             <div className="home-slate-bg" aria-hidden="true" />
             {header as ReactNode}
-            <div className="homeTopControls mx-4 mt-1 flex flex-wrap items-center justify-between gap-2 text-[11px] text-white/40">
-              <div className="homeTabToggle flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
-                <button
-                  type="button"
-                  className={`rounded-full px-3 py-1 transition ${
-                    homeTab === 'home' ? 'bg-white/10 text-white' : 'text-white/60'
-                  }`}
-                  onClick={() => setHomeTab('home')}
-                >
-                  Acasă
-                </button>
-                <button
-                  type="button"
-                  className={`rounded-full px-3 py-1 transition ${
-                    homeTab === 'overview' ? 'bg-white/10 text-white' : 'text-white/60'
-                  }`}
-                  onClick={() => setHomeTab('overview')}
-                >
-                  Overview
-                </button>
-              </div>
-            </div>
-
-            {homeTab === 'overview' ? (
-              <section className="space-y-3">
-                <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-2)] py-[var(--space-2)]">
-                  <div className="text-sm font-semibold text-[color:var(--text-0)]">Situația ta</div>
-                  <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-xs text-white/70">
-                      <div className="text-base font-semibold text-white">{todayOpenItems.length}</div>
-                      {copy.dashboard.todayTitle}
-                    </div>
-                    <div className="rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-xs text-white/70">
-                      <div className="text-base font-semibold text-white">{soonItems.length}</div>
-                      {copy.dashboard.todaySoon}
-                    </div>
-                    <div className="rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-xs text-white/70">
-                      <div className="text-base font-semibold text-white">{overdueItems.length}</div>
-                      {copy.dashboard.todayOverdue}
-                    </div>
-                  </div>
-                </div>
-                <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-2)] py-[var(--space-2)]">
-                  <div className="text-sm font-semibold text-[color:var(--text-0)]">Medicamente</div>
-                  <div className="mt-2 flex items-center justify-between text-xs text-white/70">
-                    <span>{copy.dashboard.medicationsTileTitle}</span>
-                    <span>
-                      {medsTodayStats.taken}/{medsTodayStats.total}
-                    </span>
-                  </div>
-                </div>
-                <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-2)] py-[var(--space-2)]">
-                  <div className="text-sm font-semibold text-[color:var(--text-0)]">Grupuri</div>
-                  <div className="mt-2 flex items-center justify-between text-xs text-white/70">
-                    <span>{copy.dashboard.householdTitle}</span>
-                    <span>{householdItems.length}</span>
-                  </div>
-                </div>
-                {visibleDoses.length ? (
-                  <MedsTeaserCard
-                    title={copy.dashboard.medicationsTitle}
-                    subtitle={`Următoarea doză: ${new Date(visibleDoses[0].scheduled_at).toLocaleTimeString(localeTag, {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}`}
-                    actionLabel={copy.medicationsHub.viewDetails}
-                    onAction={() => {
-                      router.push('/app/medications');
-                    }}
-                  />
-                ) : (
-                  <MedsTeaserCard title={copy.dashboard.medicationsTitle} subtitle={copy.dashboard.medicationsEmpty} />
-                )}
-              </section>
-            ) : (
-              <>
+            <>
                 <div className={`next-reminder-card ${nextToneClassName}`}>
                   <span className="next-reminder-topline" aria-hidden="true" />
                   <span className="next-reminder-corner" aria-hidden="true" />
@@ -632,7 +555,7 @@ export default function FamilyHome({
                 {!overdueTopItems.length ? null : (
                   <section className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <div className="text-sm font-semibold text-[color:var(--text-0)]">{copy.dashboard.overdueTopTitle}</div>
+                      <div className="text-sm font-semibold text-[color:var(--text-0)]">Priorități de recuperat</div>
                       <button
                         type="button"
                         className="text-xs font-semibold text-[color:var(--brand-blue)]"
@@ -658,55 +581,16 @@ export default function FamilyHome({
                   </section>
                 )}
 
-                <div id="section-today" aria-hidden="true" />
-                <div id="section-soon" aria-hidden="true" />
-                <div id="section-overdue" aria-hidden="true" />
-
-                <section id="overdue-list" className="space-y-2">
-                  <div className={`flex items-center justify-between text-sm font-semibold text-[color:var(--text-0)] ${
-                      sectionFlash === homeSegment ? 'section-focus' : ''
-                    }`}>
-                    <span>
-                      {homeSegment === 'overdue'
-                        ? copy.dashboard.todayOverdue
-                        : homeSegment === 'soon'
-                          ? copy.dashboard.todaySoon
-                          : copy.dashboard.todayTitle}
-                    </span>
-                    <span className="text-xs text-[color:var(--text-2)]">
-                      {segmentItems.length} {copy.dashboard.reminderCountLabel}
-                    </span>
-                  </div>
-                  {homeSegment === 'overdue' ? (
-                    overdueItems.length ? (
-                      <div className="space-y-2">
-                        {overdueItems.map((occurrence: any) => (
-                          <OverdueDenseRow
-                            key={occurrence.id}
-                            occurrence={occurrence}
-                            locale={locale}
-                            googleConnected={googleConnected}
-                            userTimeZone={effectiveTimeZone}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="home-glass-panel rounded-[var(--radius-lg)] p-[var(--space-3)] text-sm text-[color:var(--text-2)]">
-                        {copy.dashboard.todayEmpty}
-                      </div>
-                    )
-                  ) : (
-                    <FilteredTaskList
-                      items={segmentItems}
-                      locale={locale}
-                      googleConnected={googleConnected}
-                      userTimeZone={effectiveTimeZone}
-                      emptyLabel={copy.dashboard.todayEmpty}
-                    />
-                  )}
-                </section>
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-secondary"
+                  onClick={() => {
+                    router.push(`/app?tab=today&segment=${homeSegment}`);
+                  }}
+                >
+                  Vezi toate
+                </button>
               </>
-            )}
           </div>
         )}
       </section>
