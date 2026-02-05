@@ -38,7 +38,8 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
   const displayLabel = occurrence.snoozed_until
     ? formatDateTimeWithTimeZone(displayAt, resolvedTimeZone)
     : formatReminderDateTime(displayAt, reminder?.tz ?? null, userTimeZone ?? null);
-  const assigneeLabel = reminder?.assigned_member_label;
+  const assigneeLabel = reminder?.assigned_member_label?.trim() ?? '';
+  const performedByLabel = occurrence.performed_by_label?.trim() ?? '';
   const categoryId = inferReminderCategoryId({
     title: reminder?.title,
     notes: reminder?.notes,
@@ -76,6 +77,7 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
     const diffDays = Math.round(diffHours / 24);
     return rtf.format(diffDays, 'day');
   }, [displayAt, locale]);
+  const doneByLabel = occurrence.status === 'done' && performedByLabel ? `Rezolvat de ${performedByLabel}` : null;
 
   const notifySwipeChange = (kind?: 'snooze' | 'done') => {
     if (typeof window === 'undefined') return;
@@ -149,15 +151,16 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
           <div className={`text-xs ${statusTone.text}`}>
             {displayLabel}
             {relativeLabel ? <span className="text-muted"> · {relativeLabel}</span> : null}
+            {doneByLabel ? <span className="text-muted"> · {doneByLabel}</span> : null}
           </div>
           <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase text-secondary">
             <span className="badge badge-blue" style={categoryChipStyle}>
               {category.label}
             </span>
             {assigneeLabel ? (
-              <span className="inline-flex items-center gap-1 text-[11px] text-tertiary">
+              <span className="inline-flex items-center gap-1 text-[11px] text-tertiary normal-case">
                 <User className="h-3.5 w-3.5" />
-                {assigneeLabel}
+                Asignat: {assigneeLabel}
               </span>
             ) : null}
           </div>
