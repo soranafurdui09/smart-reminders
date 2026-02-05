@@ -12,7 +12,7 @@ import ReminderRowMobile from '@/components/mobile/ReminderRowMobile';
 import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
 import ListReminderButton from '@/components/lists/ListReminderButton';
 import ListShareSheet from '@/components/lists/ListShareSheet';
-import { getCategoryChipStyle } from '@/lib/categories';
+import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
 import { diffDaysInTimeZone, formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
 
 type Props = Record<string, any>;
@@ -588,14 +588,32 @@ export default function FamilyHome({
                       </button>
                     </div>
                     <div className="space-y-2">
-                      {overdueTopItems.slice(0, 3).map((occurrence: any) => (
-                        <div key={occurrence.id} className="home-priority-row">
-                          <div className="min-w-0 flex-1 space-y-1">
-                            <div className="home-priority-title line-clamp-2">{occurrence.reminder?.title}</div>
-                            <div className="home-priority-meta">{getOverdueMeta(occurrence)}</div>
+                      {overdueTopItems.slice(0, 3).map((occurrence: any) => {
+                        const reminder = occurrence.reminder ?? null;
+                        const categoryId = inferReminderCategoryId({
+                          title: reminder?.title,
+                          notes: reminder?.notes,
+                          kind: reminder?.kind,
+                          category: reminder?.category,
+                          medicationDetails: reminder?.medication_details
+                        });
+                        const category = getReminderCategory(categoryId);
+                        const categoryStyle = getCategoryChipStyle(category.color, true);
+
+                        return (
+                          <div key={occurrence.id} className="home-priority-row">
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="home-priority-title line-clamp-2">{reminder?.title}</div>
+                              <div className="home-priority-meta">{getOverdueMeta(occurrence)}</div>
+                              {category?.label ? (
+                                <span className="home-category-pill" style={categoryStyle}>
+                                  {category.label}
+                                </span>
+                              ) : null}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <form action={markDone}>
