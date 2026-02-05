@@ -13,6 +13,7 @@ import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
 import ListReminderButton from '@/components/lists/ListReminderButton';
 import ListShareSheet from '@/components/lists/ListShareSheet';
 import { getCategoryChipStyle } from '@/lib/categories';
+import { diffDaysInTimeZone, formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
 
 type Props = Record<string, any>;
 
@@ -80,6 +81,28 @@ export default function FamilyHome({
   const hasNextAction = Boolean(nextOccurrence?.id && nextOccurrence?.reminder?.id && nextOccurrence?.occur_at);
   const isNextEmpty = !nextTitle || !nextOccurrenceLabel;
   const nextCategoryStyle = nextCategory ? getCategoryChipStyle(nextCategory.color, true) : undefined;
+  const getOverdueMeta = (occurrence: any) => {
+    const reminder = occurrence.reminder ?? null;
+    const displayAt = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
+    const resolvedTimeZone = resolveReminderTimeZone(reminder?.tz ?? null, effectiveTimeZone ?? null);
+    const displayLabel = occurrence.snoozed_until
+      ? formatDateTimeWithTimeZone(displayAt, resolvedTimeZone)
+      : formatReminderDateTime(displayAt, reminder?.tz ?? null, effectiveTimeZone ?? null);
+    const parsed = new Date(displayAt);
+    if (Number.isNaN(parsed.getTime())) return displayLabel;
+    const now = new Date();
+    const dayDiff = diffDaysInTimeZone(parsed, now, resolvedTimeZone || effectiveTimeZone || 'UTC');
+    const rtf = new Intl.RelativeTimeFormat(locale === 'ro' ? 'ro-RO' : locale, { numeric: 'auto' });
+    if (dayDiff !== 0) {
+      return `${displayLabel} · ${rtf.format(dayDiff, 'day')}`;
+    }
+    const diffMinutes = Math.round((parsed.getTime() - now.getTime()) / 60000);
+    const diffHours = Math.round(diffMinutes / 60);
+    if (Math.abs(diffHours) >= 1) {
+      return `${displayLabel} · ${rtf.format(diffHours, 'hour')}`;
+    }
+    return `${displayLabel} · ${rtf.format(diffMinutes, 'minute')}`;
+  };
 
   return (
       <section className={`homeRoot premium ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-[var(--space-3)]`}>
@@ -566,17 +589,48 @@ export default function FamilyHome({
                     </div>
                     <div className="space-y-2">
                       {overdueTopItems.slice(0, 3).map((occurrence: any) => (
-                        <OverdueDenseRow
-                          key={occurrence.id}
-                          occurrence={occurrence}
-                          locale={locale}
-                          googleConnected={googleConnected}
-                          userTimeZone={effectiveTimeZone}
-                          variant="priority"
-                          primaryLabel={copy.dashboard.nextUpAction}
-                          secondaryLabel="Amână"
-                        />
+                        <div key={occurrence.id} className="home-priority-row">
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="home-priority-title line-clamp-2">{occurrence.reminder?.title}</div>
+                            <div className="home-priority-meta">{getOverdueMeta(occurrence)}</div>
+                          </div>
+                        </div>
                       ))}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <form action={markDone}>
+                        <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
+                        <input type="hidden" name="reminderId" value={overdueTopItems[0]?.reminder?.id ?? ''} />
+                        <input type="hidden" name="occurAt" value={overdueTopItems[0]?.occur_at ?? ''} />
+                        <input type="hidden" name="done_comment" value="" />
+                        <ActionSubmitButton
+                          className="home-priority-primary"
+                          type="submit"
+                          data-action-feedback={copy.common.actionDone}
+                          disabled={!overdueTopItems[0]}
+                        >
+                          Rezolvă primul
+                        </ActionSubmitButton>
+                      </form>
+                      <form action={snoozeOccurrence}>
+                        <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
+                        <input type="hidden" name="option_id" value="tomorrow" />
+                        <ActionSubmitButton
+                          className="home-priority-secondary"
+                          type="submit"
+                          data-action-feedback={copy.common.actionSnoozed}
+                          disabled={!overdueTopItems[0]}
+                        >
+                          Mută pe mâine
+                        </ActionSubmitButton>
+                      </form>
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-[color:var(--brand-blue)]"
+                        onClick={() => handleSegmentSelect('overdue')}
+                      >
+                        Vezi toate
+                      </button>
                     </div>
                   </section>
                 )}
