@@ -49,6 +49,20 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
     ? memberMap.get(reminder.assigned_member_id) || copy.common.assigneeUnassigned
     : copy.common.assigneeUnassigned;
   const reminderTimeZone = resolveReminderTimeZone(reminder.tz ?? null, userTimeZone);
+  const notifyTimeLabel = reminder.due_at
+    ? (() => {
+        const leadMinutes = Number.isFinite(reminder.pre_reminder_minutes)
+          ? Number(reminder.pre_reminder_minutes)
+          : 30;
+        const notifyAt = new Date(new Date(reminder.due_at).getTime() - Math.max(0, leadMinutes) * 60000);
+        if (Number.isNaN(notifyAt.getTime())) return null;
+        return notifyAt.toLocaleTimeString(locale, {
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: reminderTimeZone ?? undefined
+        });
+      })()
+    : null;
 
   return (
     <AppShell locale={locale} userEmail={user.email}>
@@ -132,6 +146,9 @@ export default async function ReminderDetailPage({ params }: { params: { id: str
               <div className="text-sm text-muted">
                 {copy.reminderDetail.firstDate}: {formatReminderDateTime(reminder.due_at, reminderTimeZone, userTimeZone)}
               </div>
+            ) : null}
+            {notifyTimeLabel ? (
+              <div className="text-sm text-muted">🔔 Te anunț la {notifyTimeLabel}</div>
             ) : null}
             <div className="text-sm text-muted">
               {copy.common.assigneeLabel}: {assigneeLabel}

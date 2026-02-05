@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { memo, useMemo, useRef, useState } from 'react';
-import { Check, MoreHorizontal, User } from 'lucide-react';
+import { Bell, Check, MoreHorizontal, User } from 'lucide-react';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
@@ -32,6 +32,8 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
   const reminder = occurrence.reminder;
   const reminderId = reminder?.id;
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [notifyOpen, setNotifyOpen] = useState(false);
+  const [customNotifyAt, setCustomNotifyAt] = useState('');
   const swipeLockRef = useRef(false);
   const displayAt = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
   const resolvedTimeZone = resolveReminderTimeZone(reminder?.tz ?? null, userTimeZone ?? null);
@@ -49,6 +51,35 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
   });
   const category = getReminderCategory(categoryId);
   const categoryChipStyle = getCategoryChipStyle(category.color, true);
+  const hasDueAt = Boolean(reminder?.due_at);
+  const canSetNotify = !hasDueAt && occurrence.status !== 'done';
+
+  const toLocalInputValue = (date: Date) => {
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return [
+      date.getFullYear(),
+      pad(date.getMonth() + 1),
+      pad(date.getDate())
+    ].join('-') + 'T' + [pad(date.getHours()), pad(date.getMinutes())].join(':');
+  };
+
+  const notifyOptionTimes = useMemo(() => {
+    const now = new Date();
+    const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
+    const todayAt18 = new Date(now);
+    todayAt18.setHours(18, 0, 0, 0);
+    if (todayAt18.getTime() <= now.getTime()) {
+      todayAt18.setDate(todayAt18.getDate() + 1);
+    }
+    const tomorrowAt9 = new Date(now);
+    tomorrowAt9.setDate(tomorrowAt9.getDate() + 1);
+    tomorrowAt9.setHours(9, 0, 0, 0);
+    return {
+      inOneHour: toLocalInputValue(inOneHour),
+      todayAt18: toLocalInputValue(todayAt18),
+      tomorrowAt9: toLocalInputValue(tomorrowAt9)
+    };
+  }, [notifyOpen]);
 
   const statusTone = useMemo(() => {
     const now = new Date();
@@ -166,14 +197,29 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
           </div>
         </div>
 
-        <button
-          type="button"
-          className="icon-btn flex h-10 w-10 items-center justify-center text-secondary"
-          aria-label={copy.common.moreActions}
-          onClick={() => setActionsOpen(true)}
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          {canSetNotify ? (
+            <button
+              type="button"
+              className="icon-btn flex h-10 w-10 items-center justify-center text-secondary"
+              aria-label="Amintește-mi"
+              onClick={() => {
+                setCustomNotifyAt('');
+                setNotifyOpen(true);
+              }}
+            >
+              <Bell className="h-4 w-4" />
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="icon-btn flex h-10 w-10 items-center justify-center text-secondary"
+            aria-label={copy.common.moreActions}
+            onClick={() => setActionsOpen(true)}
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       <ReminderActionsSheet
@@ -279,6 +325,69 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
           >
             {copy.common.back}
           </button>
+        </div>
+      </ReminderActionsSheet>
+
+      <ReminderActionsSheet
+        open={notifyOpen}
+        onClose={() => setNotifyOpen(false)}
+        title="Amintește-mi"
+      >
+        <div className="space-y-2">
+          <form action={snoozeOccurrence}>
+            <input type="hidden" name="occurrenceId" value={occurrence.id} />
+            <input type="hidden" name="custom_at" value={notifyOptionTimes.inOneHour} />
+            <ActionSubmitButton
+              className="block w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-white/10"
+              type="submit"
+              onClick={() => setNotifyOpen(false)}
+            >
+              În 1 oră
+            </ActionSubmitButton>
+          </form>
+          <form action={snoozeOccurrence}>
+            <input type="hidden" name="occurrenceId" value={occurrence.id} />
+            <input type="hidden" name="custom_at" value={notifyOptionTimes.todayAt18} />
+            <ActionSubmitButton
+              className="block w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-white/10"
+              type="submit"
+              onClick={() => setNotifyOpen(false)}
+            >
+              Astăzi 18:00
+            </ActionSubmitButton>
+          </form>
+          <form action={snoozeOccurrence}>
+            <input type="hidden" name="occurrenceId" value={occurrence.id} />
+            <input type="hidden" name="custom_at" value={notifyOptionTimes.tomorrowAt9} />
+            <ActionSubmitButton
+              className="block w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-white/10"
+              type="submit"
+              onClick={() => setNotifyOpen(false)}
+            >
+              Mâine 09:00
+            </ActionSubmitButton>
+          </form>
+          <details className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-100">Alege dată/oră</summary>
+            <form action={snoozeOccurrence} className="mt-3 space-y-2">
+              <input type="hidden" name="occurrenceId" value={occurrence.id} />
+              <input
+                type="datetime-local"
+                name="custom_at"
+                value={customNotifyAt}
+                onChange={(event) => setCustomNotifyAt(event.target.value)}
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100"
+              />
+              <ActionSubmitButton
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-white/10"
+                type="submit"
+                onClick={() => setNotifyOpen(false)}
+                disabled={!customNotifyAt}
+              >
+                Setează
+              </ActionSubmitButton>
+            </form>
+          </details>
         </div>
       </ReminderActionsSheet>
     </>

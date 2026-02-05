@@ -24,8 +24,13 @@ function uniqueIsoTimes(times: Date[]) {
   return Array.from(unique.values()).sort((a, b) => a.getTime() - b.getTime());
 }
 
-export function buildNotificationTimes(dueAt: Date) {
-  return uniqueIsoTimes([new Date(dueAt)]);
+const DEFAULT_LEAD_MINUTES = 30;
+
+export function buildNotificationTimes(dueAt: Date, preReminderMinutes?: number | null) {
+  const resolvedLead = Number.isFinite(preReminderMinutes) ? Number(preReminderMinutes) : DEFAULT_LEAD_MINUTES;
+  const leadMinutes = Math.max(0, resolvedLead);
+  const notifyAt = addMinutes(dueAt, -leadMinutes);
+  return uniqueIsoTimes([notifyAt]);
 }
 
 function resolveChannels(channel: NotificationChannelPreference) {
@@ -103,7 +108,7 @@ export async function scheduleNotificationJobsForReminder(options: {
     now = new Date()
   } = options;
 
-  const times = buildNotificationTimes(dueAt).filter((time) => time.getTime() >= now.getTime());
+  const times = buildNotificationTimes(dueAt, preReminderMinutes).filter((time) => time.getTime() >= now.getTime());
   const channels = resolveChannels(channel);
   console.log('[notifications] schedule reminder jobs', {
     reminderId,

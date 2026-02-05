@@ -16,6 +16,8 @@ type OccurrencePayload = {
     id?: string;
     title?: string;
     due_at?: string | null;
+    notify_at?: string | null;
+    pre_reminder_minutes?: number | null;
     notes?: string | null;
     kind?: string | null;
     category?: string | null;
@@ -142,6 +144,24 @@ export default function FocusHome({
       ? formatDateTimeWithTimeZone(displayAt, resolvedTimeZone)
       : formatReminderDateTime(displayAt, nextInRange.reminder?.tz ?? null, userTimeZone ?? null);
   }, [nextInRange, userTimeZone]);
+  const nextNotifyTimeLabel = useMemo(() => {
+    const notifyAtRaw = nextInRange?.reminder?.notify_at ?? null;
+    const dueAt = nextInRange?.reminder?.due_at ?? null;
+    if (!notifyAtRaw && !dueAt) return null;
+    const leadMinutes = Number.isFinite(nextInRange?.reminder?.pre_reminder_minutes)
+      ? Number(nextInRange?.reminder?.pre_reminder_minutes)
+      : 30;
+    const notifyAt = notifyAtRaw
+      ? new Date(notifyAtRaw)
+      : new Date(new Date(dueAt as string).getTime() - Math.max(0, leadMinutes) * 60000);
+    if (Number.isNaN(notifyAt.getTime())) return null;
+    const resolvedTimeZone = resolveReminderTimeZone(nextInRange?.reminder?.tz ?? null, userTimeZone ?? null);
+    return notifyAt.toLocaleTimeString(locale ?? undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: resolvedTimeZone ?? undefined
+    });
+  }, [locale, nextInRange, userTimeZone]);
   const filteredItems = useMemo(() => {
     if (!nextInRange?.id) return horizonItems;
     return horizonItems.filter((item) => item.id !== nextInRange.id);
@@ -167,6 +187,11 @@ export default function FocusHome({
               <div className="text-xs text-[color:var(--text-2)]">
                 {nextDisplayLabel}
               </div>
+              {nextNotifyTimeLabel ? (
+                <div className="text-xs text-[color:var(--text-2)]">
+                  🔔 Te anunț la {nextNotifyTimeLabel}
+                </div>
+              ) : null}
               {nextCategory && nextOccurrence?.id === nextInRange.id ? (
                 <span className="home-category-pill" style={{ borderColor: nextCategory.color }}>
                   {nextCategory.label}

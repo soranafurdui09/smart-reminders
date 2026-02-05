@@ -7,7 +7,7 @@ import { getUserHousehold, getUserTimeZone } from '@/lib/data';
 import { createTaskList, deleteTaskList } from '@/lib/tasks';
 import { scheduleNotificationJobsForReminder } from '@/lib/notifications/jobs';
 import { localDateAndTimeToUtc, resolveTimeZone } from '@/lib/time/schedule';
-import { addDays } from 'date-fns';
+import { addDays, addMinutes } from 'date-fns';
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
 export async function createTaskListAction(input: { name: string; type?: 'generic' | 'shopping' }) {
@@ -49,7 +49,8 @@ export async function shareTaskListAction(listId: string) {
 
 export async function createListReminderAction(input: {
   listId: string;
-  preset: 'today_evening' | 'tomorrow_morning';
+  preset: 'today_evening' | 'tomorrow_morning' | 'in_1_hour' | 'today_18' | 'tomorrow_09' | 'custom';
+  customAt?: string;
 }) {
   const user = await requireUser('/app/lists');
   const membership = await getUserHousehold(user.id);
@@ -70,10 +71,31 @@ export async function createListReminderAction(input: {
   const userTimeZone = await getUserTimeZone(user.id);
   const tz = resolveTimeZone(userTimeZone || 'UTC');
   const now = new Date();
-  const base = input.preset === 'tomorrow_morning' ? addDays(toZonedTime(now, tz), 1) : toZonedTime(now, tz);
-  const dateKey = formatInTimeZone(base, tz, 'yyyy-MM-dd');
-  const timeKey = input.preset === 'today_evening' ? '20:00' : '09:00';
-  const dueAt = localDateAndTimeToUtc(dateKey, timeKey, tz);
+  const preset = input.preset === 'today_evening'
+    ? 'today_18'
+    : input.preset === 'tomorrow_morning'
+      ? 'tomorrow_09'
+      : input.preset;
+  let dueAt: Date | null = null;
+  if (preset === 'in_1_hour') {
+    dueAt = addMinutes(now, 60);
+  } else if (preset === 'today_18' || preset === 'tomorrow_09') {
+    const base = preset === 'tomorrow_09' ? addDays(toZonedTime(now, tz), 1) : toZonedTime(now, tz);
+    const dateKey = formatInTimeZone(base, tz, 'yyyy-MM-dd');
+    const timeKey = preset === 'today_18' ? '18:00' : '09:00';
+    dueAt = localDateAndTimeToUtc(dateKey, timeKey, tz);
+  } else if (preset === 'custom') {
+    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(input.customAt || '').trim());
+    if (match) {
+      const [, year, month, day, hour, minute] = match;
+      const dateKey = `${year}-${month}-${day}`;
+      const timeKey = `${hour}:${minute}`;
+      dueAt = localDateAndTimeToUtc(dateKey, timeKey, tz);
+    }
+  }
+  if (!dueAt || Number.isNaN(dueAt.getTime())) {
+    return { ok: false, error: 'invalid-time' as const };
+  }
 
   const { data: reminder, error } = await supabase
     .from('reminders')
@@ -87,7 +109,7 @@ export async function createListReminderAction(input: {
       tz,
       is_active: true,
       recurrence_rule: null,
-      pre_reminder_minutes: null,
+      pre_reminder_minutes: 0,
       assigned_member_id: null,
       kind: 'generic',
       context_settings: { list_id: list.id }

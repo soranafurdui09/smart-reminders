@@ -23,6 +23,7 @@ type Props = {
   title: string;
   taskTitle?: string;
   timeLabel?: string;
+  notifyTimeLabel?: string;
   badge?: string;
   badgeStyle?: CSSProperties;
   subtext?: string;
@@ -40,6 +41,7 @@ export default function NextUpCard({
   title,
   taskTitle,
   timeLabel,
+  notifyTimeLabel,
   badge,
   badgeStyle,
   subtext,
@@ -109,6 +111,11 @@ export default function NextUpCard({
               ) : null}
             </div>
             <div className="nextUpMeta next-reminder-time mt-0.5 text-[clamp(0.64rem,2vw,0.74rem)] text-white/70">{timeLabel}</div>
+            {notifyTimeLabel ? (
+              <div className="nextUpMeta next-reminder-time mt-0.5 text-[0.68rem] text-white/60">
+                🔔 Te anunț la {notifyTimeLabel}
+              </div>
+            ) : null}
             <div className="nextUpChips flex items-center gap-1 min-w-0">
               {badge ? (
                 <span

@@ -53,11 +53,13 @@ type OccurrencePayload = {
     id?: string;
     title?: string;
     due_at?: string | null;
+    notify_at?: string | null;
     created_by?: string | null;
     assigned_member_id?: string | null;
     is_active?: boolean;
     notes?: string | null;
     google_event_id?: string | null;
+    pre_reminder_minutes?: number | null;
     assigned_member_label?: string | null;
     kind?: string | null;
     category?: string | null;
@@ -257,10 +259,26 @@ export default function ReminderDashboardSection({
         }
         return true;
       })
-      .map((occurrence) => ({
-        ...occurrence,
-        effective_at: occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at
-      }))
+      .map((occurrence) => {
+        const reminder = occurrence.reminder ?? null;
+        const dueAt = reminder?.due_at ?? null;
+        const leadMinutes = Number.isFinite(reminder?.pre_reminder_minutes)
+          ? Number(reminder?.pre_reminder_minutes)
+          : 30;
+        const notifyAt = dueAt
+          ? new Date(new Date(dueAt).getTime() - Math.max(0, leadMinutes) * 60000)
+          : null;
+        return {
+          ...occurrence,
+          reminder: reminder
+            ? {
+                ...reminder,
+                notify_at: reminder.notify_at ?? (notifyAt && !Number.isNaN(notifyAt.getTime()) ? notifyAt.toISOString() : null)
+              }
+            : null,
+          effective_at: occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at
+        };
+      })
       .sort((a, b) => new Date(a.effective_at ?? a.occur_at).getTime() - new Date(b.effective_at ?? b.occur_at).getTime());
     return normalized;
   }, [occurrences, createdBy, assignment, membershipId, userId, kindFilter, categoryFilter]);
@@ -758,6 +776,30 @@ export default function ReminderDashboardSection({
     });
     return getReminderCategory(categoryId);
   }, [nextOccurrence]);
+  const nextNotifyTimeLabel = useMemo(() => {
+    const notifyAtRaw = nextOccurrence?.reminder?.notify_at ?? null;
+    const dueAt = nextOccurrence?.reminder?.due_at ?? null;
+    if (!notifyAtRaw && !dueAt) return null;
+    const leadMinutes = Number.isFinite(nextOccurrence?.reminder?.pre_reminder_minutes)
+      ? Number(nextOccurrence?.reminder?.pre_reminder_minutes)
+      : 30;
+    const notifyAt = notifyAtRaw
+      ? new Date(notifyAtRaw)
+      : new Date(new Date(dueAt as string).getTime() - Math.max(0, leadMinutes) * 60000);
+    if (Number.isNaN(notifyAt.getTime())) return null;
+    const resolvedTimeZone = resolveReminderTimeZone(nextOccurrence?.reminder?.tz ?? null, effectiveTimeZone ?? null);
+    return notifyAt.toLocaleTimeString(localeTag, {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: resolvedTimeZone ?? undefined
+    });
+  }, [
+    effectiveTimeZone,
+    localeTag,
+    nextOccurrence?.reminder?.due_at,
+    nextOccurrence?.reminder?.pre_reminder_minutes,
+    nextOccurrence?.reminder?.tz
+  ]);
   const segmentItems =
     homeSegment === 'overdue'
       ? overdueItems
@@ -1249,8 +1291,9 @@ export default function ReminderDashboardSection({
               subtext={copy.dashboard.nextUpHelper}
               taskTitle={nextOccurrence?.reminder?.title ?? undefined}
               timeLabel={nextOccurrenceLabel ?? undefined}
-                badge={nextCategory?.label}
-                badgeStyle={nextCategory ? getCategoryChipStyle(nextCategory.color, true) : undefined}
+              notifyTimeLabel={nextNotifyTimeLabel ?? undefined}
+              badge={nextCategory?.label}
+              badgeStyle={nextCategory ? getCategoryChipStyle(nextCategory.color, true) : undefined}
                 tone={nextTone}
                 statusLabel={copy.dashboard.todayOverdue}
                 emptyLabel={copy.dashboard.nextUpEmpty}

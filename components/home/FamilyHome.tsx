@@ -72,6 +72,24 @@ export default function FamilyHome({
   const activeFilterLabel = activeCategory?.label ? `Afișezi: ${activeCategory.label} (${filteredOverdueCount})` : null;
   const soonPreview = filteredSoonItems.slice(0, 3);
   const hasMoreSoon = filteredSoonItems.length > soonPreview.length;
+  const nextNotifyTimeLabel = (() => {
+    const notifyAtRaw = nextOccurrence?.reminder?.notify_at ?? null;
+    const dueAt = nextOccurrence?.reminder?.due_at ?? null;
+    if (!notifyAtRaw && !dueAt) return null;
+    const leadMinutes = Number.isFinite(nextOccurrence?.reminder?.pre_reminder_minutes)
+      ? Number(nextOccurrence?.reminder?.pre_reminder_minutes)
+      : 30;
+    const notifyAt = notifyAtRaw
+      ? new Date(notifyAtRaw)
+      : new Date(new Date(dueAt as string).getTime() - Math.max(0, leadMinutes) * 60000);
+    if (Number.isNaN(notifyAt.getTime())) return null;
+    const resolvedTimeZone = resolveReminderTimeZone(nextOccurrence?.reminder?.tz ?? null, effectiveTimeZone ?? null);
+    return notifyAt.toLocaleTimeString(localeTag, {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: resolvedTimeZone ?? undefined
+    });
+  })();
   const controlSessionMax = 3;
   const isControlSessionDone = controlSessionCount >= controlSessionMax;
   const getOverdueMeta = (occurrence: any) => {
@@ -478,6 +496,11 @@ export default function FamilyHome({
                     <>
                       <div className="next-reminder-title mt-2">{nextTitle}</div>
                       <div className="next-reminder-time mt-1">{nextOccurrenceLabel}</div>
+                      {nextNotifyTimeLabel ? (
+                        <div className="next-reminder-time mt-1 text-[color:var(--text-2)]">
+                          🔔 Te anunț la {nextNotifyTimeLabel}
+                        </div>
+                      ) : null}
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         {nextCategory ? (
                           <span className="next-reminder-pill" style={nextCategoryStyle}>

@@ -18,13 +18,18 @@ export default function ListReminderButton({
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [customAt, setCustomAt] = useState('');
 
-  const handlePreset = async (preset: 'today_evening' | 'tomorrow_morning') => {
+  const handlePreset = async (preset: 'in_1_hour' | 'today_18' | 'tomorrow_09' | 'custom', customAtValue?: string) => {
     if (pending) return;
     setPending(true);
     setError(null);
     try {
-      const result = await createListReminderAction({ listId, preset });
+      const result = await createListReminderAction({
+        listId,
+        preset,
+        customAt: customAtValue
+      });
       if (!result?.ok) {
         setError('Nu am reușit să creăm reminderul.');
         return;
@@ -39,48 +44,62 @@ export default function ListReminderButton({
     }
   };
 
-  const handleChoose = () => {
-    setOpen(false);
-    const quickText = `Verifică lista: ${listTitle}`;
-    router.push(`/app/reminders/new?mode=manual&quick=${encodeURIComponent(quickText)}&list_id=${encodeURIComponent(listId)}`);
-  };
-
   return (
     <>
       <button
         type="button"
         className={`text-xs font-semibold text-[color:rgb(var(--accent-2))] hover:text-white ${className}`}
         onClick={() => setOpen(true)}
+        aria-label={`Amintește-mi de listă: ${listTitle}`}
       >
-        Reamintește-mi
+        Amintește-mi de listă
       </button>
       <BottomSheet open={open} onClose={() => setOpen(false)} ariaLabel="Reamintește-mi">
-        <div className="text-sm font-semibold text-text">Reamintește-mi</div>
+        <div className="text-sm font-semibold text-text">Amintește-mi de listă</div>
         <div className="mt-4 space-y-2">
           <button
             type="button"
             className="surface-a2 w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold text-text transition"
-            onClick={() => handlePreset('today_evening')}
+            onClick={() => handlePreset('in_1_hour')}
             disabled={pending}
           >
-            Astăzi seara
+            În 1 oră
           </button>
           <button
             type="button"
             className="surface-a2 w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold text-text transition"
-            onClick={() => handlePreset('tomorrow_morning')}
+            onClick={() => handlePreset('today_18')}
             disabled={pending}
           >
-            Mâine dimineață
+            Astăzi 18:00
           </button>
           <button
             type="button"
             className="surface-a2 w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold text-text transition"
-            onClick={handleChoose}
+            onClick={() => handlePreset('tomorrow_09')}
             disabled={pending}
           >
-            Alege data/ora…
+            Mâine 09:00
           </button>
+          <details className="surface-a2 w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold text-text transition">
+            <summary className="cursor-pointer select-none">Alege data/ora…</summary>
+            <div className="mt-3 space-y-2">
+              <input
+                type="datetime-local"
+                value={customAt}
+                onChange={(event) => setCustomAt(event.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-text"
+              />
+              <button
+                type="button"
+                className="surface-a2 w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-text transition disabled:opacity-60"
+                onClick={() => handlePreset('custom', customAt)}
+                disabled={!customAt || pending}
+              >
+                Setează
+              </button>
+            </div>
+          </details>
         </div>
         {error ? <div className="mt-3 text-xs text-rose-600">{error}</div> : null}
       </BottomSheet>
