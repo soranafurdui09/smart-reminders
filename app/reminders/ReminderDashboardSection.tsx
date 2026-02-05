@@ -1141,6 +1141,8 @@ export default function ReminderDashboardSection({
         nextOccurrenceLabel={nextOccurrenceLabel ?? undefined}
         nextCategory={nextCategory ?? null}
         nextTone={nextTone}
+        filteredOverdueCount={filteredOverdueItems.length}
+        filteredSoonItems={filteredSoonItems}
         overdueTileClass={overdueTileClass}
         homeSegment={homeSegment}
         handleSegmentSelect={handleSegmentSelect}

@@ -1,13 +1,11 @@
 "use client";
 
 import Link from 'next/link';
-import { AlertTriangle, Calendar, CheckCircle2, Circle, Pill, SunMedium } from 'lucide-react';
+import { CheckCircle2, Circle } from 'lucide-react';
 import type { ReactNode } from 'react';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import QuickAddBar from '@/components/home/QuickAddBar';
-import AtAGlanceRow from '@/components/home/AtAGlanceRow';
-import OverdueDenseRow from '@/components/home/OverdueDenseRow';
 import ReminderRowMobile from '@/components/mobile/ReminderRowMobile';
 import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
 import ListReminderButton from '@/components/lists/ListReminderButton';
@@ -49,52 +47,29 @@ export default function FamilyHome({
   setCategoryFilter,
   CreatedOptions,
   AssignmentOptions,
-  homeTab,
-  setHomeTab,
   nextOccurrence,
   nextOccurrenceLabel,
   nextCategory,
   nextTone,
-  overdueTileClass,
-  homeSegment,
-  handleSegmentSelect,
-  todayOpenItems,
-  soonItems,
-  visibleDoses,
-  nextDoseTileLabel,
-  overdueItems,
-  overdueOldestLabel,
+  filteredOverdueCount,
+  filteredSoonItems,
   nextUpActionsSheet,
   googleConnected,
   effectiveTimeZone,
-  segmentItems,
   overdueTopItems,
-  activeBucket,
-  showAll,
-  bucketItems,
-  bucketTotal,
-  onShowAll,
   localeTag,
   router,
-  sectionFlash,
-  householdMembers,
-  medsTodayStats,
-  householdItems
+  householdMembers
 }: Props) {
-  const bucketTitle =
-    activeBucket === 'today'
-      ? copy.dashboard.todayTitle
-      : activeBucket === 'soon'
-        ? copy.dashboard.todaySoon
-        : activeBucket === 'overdue'
-          ? copy.dashboard.todayOverdue
-          : 'Priorități de recuperat';
-  const bucketEmptyLabel = activeBucket === 'soon' ? copy.dashboard.upcomingEmpty : copy.dashboard.todayEmpty;
   const nextToneClassName = nextTone === 'overdue' ? 'next-reminder-card--overdue' : nextTone === 'urgent' ? 'next-reminder-card--urgent' : '';
   const nextTitle = nextOccurrence?.reminder?.title ?? '';
   const hasNextAction = Boolean(nextOccurrence?.id && nextOccurrence?.reminder?.id && nextOccurrence?.occur_at);
   const isNextEmpty = !nextTitle || !nextOccurrenceLabel;
   const nextCategoryStyle = nextCategory ? getCategoryChipStyle(nextCategory.color, true) : undefined;
+  const activeCategory = categoryFilter !== 'all' ? getReminderCategory(categoryFilter) : null;
+  const activeFilterLabel = activeCategory?.label ? `Afișezi: ${activeCategory.label} (${filteredOverdueCount})` : null;
+  const soonPreview = filteredSoonItems.slice(0, 3);
+  const hasMoreSoon = filteredSoonItems.length > soonPreview.length;
   const getOverdueMeta = (occurrence: any) => {
     const reminder = occurrence.reminder ?? null;
     const displayAt = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
@@ -545,100 +520,57 @@ export default function FamilyHome({
 
                 <QuickAddBar />
 
-                <AtAGlanceRow
-                  metrics={[
-                    {
-                      id: 'today',
-                      label: copy.dashboard.todayTileTitle,
-                      count: todayOpenItems.length,
-                      subLabel: todayOpenItems.length ? copy.dashboard.todayTileHint : copy.dashboard.todayTileEmpty,
-                      tileClass: 'stat-tile-today',
-                      icon: SunMedium
-                    },
-                    {
-                      id: 'soon',
-                      label: copy.dashboard.soonTileTitle,
-                      count: soonItems.length,
-                      subLabel: copy.dashboard.soonTileHint,
-                      tileClass: 'stat-tile-soon',
-                      icon: Calendar
-                    },
-                    {
-                      id: 'meds',
-                      label: copy.dashboard.medicationsTileTitle,
-                      count: visibleDoses.length,
-                      subLabel: nextDoseTileLabel,
-                      tileClass: 'stat-tile-meds',
-                      icon: Pill
-                    },
-                    {
-                      id: 'overdue',
-                      label: copy.dashboard.todayOverdue,
-                      count: 'Top 5',
-                      subLabel: overdueOldestLabel,
-                      tileClass: overdueTileClass,
-                      icon: AlertTriangle
-                    }
-                  ]}
-                  activeId={homeSegment}
-                  variant="secondary"
-                  onSelect={(id) => {
-                    if (id === 'overdue') handleSegmentSelect('overdue');
-                    if (id === 'today') handleSegmentSelect('today');
-                    if (id === 'soon') handleSegmentSelect('soon');
-                  }}
-                />
+                {!overdueTopItems.length ? null : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <form action={markDone}>
+                      <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
+                      <input type="hidden" name="reminderId" value={overdueTopItems[0]?.reminder?.id ?? ''} />
+                      <input type="hidden" name="occurAt" value={overdueTopItems[0]?.occur_at ?? ''} />
+                      <input type="hidden" name="done_comment" value="" />
+                      <ActionSubmitButton
+                        className="home-priority-primary"
+                        type="submit"
+                        data-action-feedback={copy.common.actionDone}
+                        disabled={!overdueTopItems[0]}
+                      >
+                        Rezolvă primul
+                      </ActionSubmitButton>
+                    </form>
+                    <form action={snoozeOccurrence}>
+                      <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
+                      <input type="hidden" name="option_id" value="tomorrow" />
+                      <ActionSubmitButton
+                        className="home-priority-secondary"
+                        type="submit"
+                        data-action-feedback={copy.common.actionSnoozed}
+                        disabled={!overdueTopItems[0]}
+                      >
+                        Mută pe mâine
+                      </ActionSubmitButton>
+                    </form>
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-[color:var(--brand-blue)]"
+                      onClick={() => {
+                        router.push('/app?tab=today&segment=overdue');
+                      }}
+                    >
+                      Vezi toate
+                    </button>
+                  </div>
+                )}
 
                 {!overdueTopItems.length ? null : (
                   <section className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-semibold text-[color:var(--text-0)]">Priorități de recuperat</div>
-                      <button
-                        type="button"
-                        className="text-xs font-semibold text-[color:var(--brand-blue)]"
-                        onClick={() => handleSegmentSelect('overdue')}
-                      >
-                        {copy.dashboard.overdueTopCta}
-                      </button>
                     </div>
                     <div className="text-xs text-[color:var(--text-2)]">Rezolvă unul. Restul pot aștepta.</div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <form action={markDone}>
-                        <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
-                        <input type="hidden" name="reminderId" value={overdueTopItems[0]?.reminder?.id ?? ''} />
-                        <input type="hidden" name="occurAt" value={overdueTopItems[0]?.occur_at ?? ''} />
-                        <input type="hidden" name="done_comment" value="" />
-                        <ActionSubmitButton
-                          className="home-priority-primary"
-                          type="submit"
-                          data-action-feedback={copy.common.actionDone}
-                          disabled={!overdueTopItems[0]}
-                        >
-                          Rezolvă primul
-                        </ActionSubmitButton>
-                      </form>
-                      <form action={snoozeOccurrence}>
-                        <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
-                        <input type="hidden" name="option_id" value="tomorrow" />
-                        <ActionSubmitButton
-                          className="home-priority-secondary"
-                          type="submit"
-                          data-action-feedback={copy.common.actionSnoozed}
-                          disabled={!overdueTopItems[0]}
-                        >
-                          Mută pe mâine
-                        </ActionSubmitButton>
-                      </form>
-                      <button
-                        type="button"
-                        className="text-xs font-semibold text-[color:var(--brand-blue)]"
-                        onClick={() => handleSegmentSelect('overdue')}
-                      >
-                        Vezi toate
-                      </button>
-                    </div>
+                    {activeFilterLabel ? (
+                      <div className="text-xs text-[color:var(--text-2)]">{activeFilterLabel}</div>
+                    ) : null}
                     <div className="space-y-2">
-                      {overdueTopItems.slice(0, 3).map((occurrence: any) => {
+                      {overdueTopItems.slice(0, 5).map((occurrence: any) => {
                         const reminder = occurrence.reminder ?? null;
                         const categoryId = inferReminderCategoryId({
                           title: reminder?.title,
@@ -668,37 +600,33 @@ export default function FamilyHome({
                   </section>
                 )}
 
-                {activeBucket !== 'priority' ? (
+                {filteredSoonItems.length ? (
                   <section className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <div className="text-sm font-semibold text-[color:var(--text-0)]">{bucketTitle}</div>
-                      {!showAll && bucketTotal > bucketItems.length ? (
+                      <div className="text-sm font-semibold text-[color:var(--text-0)]">Urmează în curând</div>
+                      {hasMoreSoon ? (
                         <button
                           type="button"
                           className="text-xs font-semibold text-secondary"
-                          onClick={onShowAll}
+                          onClick={() => {
+                            router.push('/app?tab=today&segment=soon');
+                          }}
                         >
                           Vezi toate
                         </button>
                       ) : null}
                     </div>
-                    {bucketItems.length ? (
-                      <div className="space-y-2">
-                        {bucketItems.map((occurrence: any) => (
-                          <ReminderRowMobile
-                            key={occurrence.id}
-                            occurrence={occurrence}
-                            locale={locale}
-                            googleConnected={googleConnected}
-                            userTimeZone={effectiveTimeZone}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="home-glass-panel rounded-[var(--radius-lg)] p-[var(--space-3)] text-sm text-[color:var(--text-2)]">
-                        {bucketEmptyLabel}
-                      </div>
-                    )}
+                    <div className="space-y-2">
+                      {soonPreview.map((occurrence: any) => (
+                        <ReminderRowMobile
+                          key={occurrence.id}
+                          occurrence={occurrence}
+                          locale={locale}
+                          googleConnected={googleConnected}
+                          userTimeZone={effectiveTimeZone}
+                        />
+                      ))}
+                    </div>
                   </section>
                 ) : null}
               </>
