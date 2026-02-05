@@ -215,6 +215,8 @@ export default function ReminderDashboardSection({
   const [taskPending, startTaskTransition] = useTransition();
   const [nextActionsOpen, setNextActionsOpen] = useState(false);
   const [showRecover, setShowRecover] = useState(false);
+  const [activeBucket, setActiveBucket] = useState<'priority' | 'today' | 'soon' | 'overdue'>('priority');
+  const [showAll, setShowAll] = useState(false);
   const { mode: uiMode, setMode: setUiMode, remember: rememberMode, setRemember: setRememberMode } = useModePreference();
   const [homeTab, setHomeTab] = useState<'home' | 'overview'>('home');
   const [sectionFlash, setSectionFlash] = useState<'today' | 'soon' | 'overdue' | null>(null);
@@ -432,6 +434,14 @@ export default function ReminderDashboardSection({
   );
   const todayOpenItems = mobileBuckets.today;
   const soonItems = mobileBuckets.soon;
+  const filteredTodayItems = useMemo(
+    () => todayOpenItems.filter((item) => filteredOccurrences.some((occurrence) => occurrence.id === item.id)),
+    [filteredOccurrences, todayOpenItems]
+  );
+  const filteredSoonItems = useMemo(
+    () => soonItems.filter((item) => filteredOccurrences.some((occurrence) => occurrence.id === item.id)),
+    [filteredOccurrences, soonItems]
+  );
   const focusWeekItems = useMemo(() => {
     const items = [...overdueItems, ...todayOpenItems, ...soonItems];
     return items
@@ -765,6 +775,17 @@ export default function ReminderDashboardSection({
   const overdueTopItems = useMemo(() => filteredOverdueItems.slice(0, 5), [filteredOverdueItems]);
   const priorityItems = useMemo(() => (showRecover ? overdueTopItems : overdueTopItems.slice(0, 3)), [overdueTopItems, showRecover]);
   const homeSubtitle = `${todayOpenItems.length} ${copy.dashboard.homeSubtitleToday} • ${overdueItems.length} ${copy.dashboard.homeSubtitleOverdue}`;
+  const bucketItems = useMemo(() => {
+    if (activeBucket === 'today') return filteredTodayItems;
+    if (activeBucket === 'soon') return filteredSoonItems;
+    if (activeBucket === 'overdue') return filteredOverdueItems;
+    return filteredOverdueItems;
+  }, [activeBucket, filteredOverdueItems, filteredSoonItems, filteredTodayItems]);
+  const bucketLimit = activeBucket === 'priority' ? 3 : 5;
+  const visibleBucketItems = useMemo(
+    () => (showAll ? bucketItems : bucketItems.slice(0, bucketLimit)),
+    [bucketItems, bucketLimit, showAll]
+  );
   useEffect(() => {
     if (process.env.NODE_ENV === 'production') return;
     console.log('[filters] TODO REMOVE', { kindFilter, createdBy, assignment, categoryFilter });
@@ -778,6 +799,20 @@ export default function ReminderDashboardSection({
       overdue: filteredOverdueItems.length
     });
   }, [filteredOverdueItems.length, filteredOccurrences.length, occurrences.length]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    console.log('[control-bucket] TODO REMOVE', { activeBucket, showAll });
+  }, [activeBucket, showAll]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    console.log('[control-bucket-count] TODO REMOVE', {
+      activeBucket,
+      total: bucketItems.length,
+      visible: visibleBucketItems.length
+    });
+  }, [activeBucket, bucketItems.length, visibleBucketItems.length]);
   const headerTitle = uiMode === 'focus' ? 'Focus' : copy.dashboard.title;
   const headerSubtitle =
     uiMode === 'focus' ? 'Doar ce contează. Minim de zgomot.' : 'Reminderele familiei tale.';
@@ -915,6 +950,8 @@ export default function ReminderDashboardSection({
   ) : null;
 
   const handleSegmentSelect = (id: 'today' | 'soon' | 'overdue') => {
+    setActiveBucket(id);
+    setShowAll(true);
     setHomeSegment(id);
     if (homeTab !== 'home') {
       setHomeTab('home');
@@ -927,6 +964,9 @@ export default function ReminderDashboardSection({
       setSectionFlash(id);
       window.setTimeout(() => setSectionFlash(null), 320);
     });
+  };
+  const handleShowAll = () => {
+    setShowAll(true);
   };
 
   useEffect(() => {
@@ -1117,6 +1157,11 @@ export default function ReminderDashboardSection({
         segmentItems={segmentItems}
         priorityItems={priorityItems}
         overdueTopItems={overdueTopItems}
+        activeBucket={activeBucket}
+        showAll={showAll}
+        bucketItems={visibleBucketItems}
+        bucketTotal={bucketItems.length}
+        onShowAll={handleShowAll}
         showRecover={showRecover}
         setShowRecover={setShowRecover}
         localeTag={localeTag}

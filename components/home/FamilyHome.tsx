@@ -69,6 +69,11 @@ export default function FamilyHome({
   effectiveTimeZone,
   segmentItems,
   overdueTopItems,
+  activeBucket,
+  showAll,
+  bucketItems,
+  bucketTotal,
+  onShowAll,
   localeTag,
   router,
   sectionFlash,
@@ -76,6 +81,15 @@ export default function FamilyHome({
   medsTodayStats,
   householdItems
 }: Props) {
+  const bucketTitle =
+    activeBucket === 'today'
+      ? copy.dashboard.todayTitle
+      : activeBucket === 'soon'
+        ? copy.dashboard.todaySoon
+        : activeBucket === 'overdue'
+          ? copy.dashboard.todayOverdue
+          : 'Priorități de recuperat';
+  const bucketEmptyLabel = activeBucket === 'soon' ? copy.dashboard.upcomingEmpty : copy.dashboard.todayEmpty;
   const nextToneClassName = nextTone === 'overdue' ? 'next-reminder-card--overdue' : nextTone === 'urgent' ? 'next-reminder-card--urgent' : '';
   const nextTitle = nextOccurrence?.reminder?.title ?? '';
   const hasNextAction = Boolean(nextOccurrence?.id && nextOccurrence?.reminder?.id && nextOccurrence?.occur_at);
@@ -654,15 +668,39 @@ export default function FamilyHome({
                   </section>
                 )}
 
-                <button
-                  type="button"
-                  className="text-xs font-semibold text-secondary"
-                  onClick={() => {
-                    router.push(`/app?tab=today&segment=${homeSegment}`);
-                  }}
-                >
-                  Vezi toate
-                </button>
+                {activeBucket !== 'priority' ? (
+                  <section className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-semibold text-[color:var(--text-0)]">{bucketTitle}</div>
+                      {!showAll && bucketTotal > bucketItems.length ? (
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-secondary"
+                          onClick={onShowAll}
+                        >
+                          Vezi toate
+                        </button>
+                      ) : null}
+                    </div>
+                    {bucketItems.length ? (
+                      <div className="space-y-2">
+                        {bucketItems.map((occurrence: any) => (
+                          <ReminderRowMobile
+                            key={occurrence.id}
+                            occurrence={occurrence}
+                            locale={locale}
+                            googleConnected={googleConnected}
+                            userTimeZone={effectiveTimeZone}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="home-glass-panel rounded-[var(--radius-lg)] p-[var(--space-3)] text-sm text-[color:var(--text-2)]">
+                        {bucketEmptyLabel}
+                      </div>
+                    )}
+                  </section>
+                ) : null}
               </>
           </div>
         )}
