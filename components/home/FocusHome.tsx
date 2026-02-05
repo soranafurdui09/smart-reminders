@@ -134,6 +134,14 @@ export default function FocusHome({
       .map(({ item }) => item);
   }, [horizonRange, sourceItems]);
   const nextInRange = horizonItems[0] ?? null;
+  const nextDisplayLabel = useMemo(() => {
+    if (!nextInRange) return '';
+    const displayAt = nextInRange.snoozed_until ?? nextInRange.effective_at ?? nextInRange.occur_at;
+    const resolvedTimeZone = resolveReminderTimeZone(nextInRange.reminder?.tz ?? null, userTimeZone ?? null);
+    return nextInRange.snoozed_until
+      ? formatDateTimeWithTimeZone(displayAt, resolvedTimeZone)
+      : formatReminderDateTime(displayAt, nextInRange.reminder?.tz ?? null, userTimeZone ?? null);
+  }, [nextInRange, userTimeZone]);
   const filteredItems = useMemo(() => {
     if (!nextInRange?.id) return horizonItems;
     return horizonItems.filter((item) => item.id !== nextInRange.id);
@@ -157,7 +165,7 @@ export default function FocusHome({
                 {nextInRange.reminder?.title ?? emptyLabel}
               </div>
               <div className="text-xs text-[color:var(--text-2)]">
-                {getMetaLabel(nextInRange, locale, userTimeZone).split(' · ')[0]}
+                {nextDisplayLabel}
               </div>
               {nextCategory && nextOccurrence?.id === nextInRange.id ? (
                 <span className="home-category-pill" style={{ borderColor: nextCategory.color }}>
