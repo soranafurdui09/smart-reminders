@@ -16,7 +16,7 @@ type OccurrencePayload = {
     id?: string;
     title?: string;
     due_at?: string | null;
-    notify_at?: string | null;
+    user_notify_at?: string | null;
     pre_reminder_minutes?: number | null;
     notes?: string | null;
     kind?: string | null;
@@ -145,15 +145,15 @@ export default function FocusHome({
       : formatReminderDateTime(displayAt, nextInRange.reminder?.tz ?? null, userTimeZone ?? null);
   }, [nextInRange, userTimeZone]);
   const nextNotifyTimeLabel = useMemo(() => {
-    const notifyAtRaw = nextInRange?.reminder?.notify_at ?? null;
+    const userNotifyAt = nextInRange?.reminder?.user_notify_at ?? null;
     const dueAt = nextInRange?.reminder?.due_at ?? null;
-    if (!notifyAtRaw && !dueAt) return null;
+    if (!userNotifyAt && !dueAt) return null;
     const leadMinutes = Number.isFinite(nextInRange?.reminder?.pre_reminder_minutes)
       ? Number(nextInRange?.reminder?.pre_reminder_minutes)
       : 30;
-    const notifyAt = notifyAtRaw
-      ? new Date(notifyAtRaw)
-      : new Date(new Date(dueAt as string).getTime() - Math.max(0, leadMinutes) * 60000);
+    const notifyAt = dueAt
+      ? new Date(new Date(dueAt as string).getTime() - Math.max(0, leadMinutes) * 60000)
+      : new Date(userNotifyAt as string);
     if (Number.isNaN(notifyAt.getTime())) return null;
     const resolvedTimeZone = resolveReminderTimeZone(nextInRange?.reminder?.tz ?? null, userTimeZone ?? null);
     return notifyAt.toLocaleTimeString(locale ?? undefined, {

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from 'next/link';
-import { memo, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { useFormState } from 'react-dom';
 import { Bell, Check, MoreHorizontal, User } from 'lucide-react';
-import { markDone, snoozeOccurrence } from '@/app/app/actions';
+import { clearReminderNotifyAt, markDone, setReminderNotifyAt, snoozeOccurrence } from '@/app/app/actions';
 import { cloneReminder } from '@/app/app/reminders/[id]/actions';
 import { defaultLocale, messages, type Locale } from '@/lib/i18n';
 import { diffDaysInTimeZone, formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
@@ -34,6 +35,9 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
   const [actionsOpen, setActionsOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [customNotifyAt, setCustomNotifyAt] = useState('');
+  const [notifyToast, setNotifyToast] = useState<string | null>(null);
+  const [notifyState, notifyAction] = useFormState(setReminderNotifyAt, { error: null });
+  const notifySubmitRef = useRef(false);
   const swipeLockRef = useRef(false);
   const displayAt = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
   const resolvedTimeZone = resolveReminderTimeZone(reminder?.tz ?? null, userTimeZone ?? null);
@@ -53,6 +57,15 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
   const categoryChipStyle = getCategoryChipStyle(category.color, true);
   const hasDueAt = Boolean(reminder?.due_at);
   const canSetNotify = !hasDueAt && occurrence.status !== 'done';
+  const notifyTimeLabel = useMemo(() => {
+    if (hasDueAt || !reminder?.user_notify_at) return null;
+    const notifyAt = new Date(reminder.user_notify_at);
+    if (Number.isNaN(notifyAt.getTime())) return null;
+    return notifyAt.toLocaleTimeString(locale === 'ro' ? 'ro-RO' : locale, {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }, [hasDueAt, locale, reminder?.user_notify_at]);
 
   const toLocalInputValue = (date: Date) => {
     const pad = (value: number) => String(value).padStart(2, '0');
@@ -80,6 +93,24 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
       tomorrowAt9: toLocalInputValue(tomorrowAt9)
     };
   }, [notifyOpen]);
+
+  useEffect(() => {
+    if (!notifySubmitRef.current) return;
+    if (notifyState.error) {
+      setNotifyToast(notifyState.error);
+      const timeout = window.setTimeout(() => setNotifyToast(null), 3500);
+      notifySubmitRef.current = false;
+      return () => window.clearTimeout(timeout);
+    }
+    setNotifyOpen(false);
+    setCustomNotifyAt('');
+    notifySubmitRef.current = false;
+    return undefined;
+  }, [notifyState]);
+
+  const handleNotifySubmit = () => {
+    notifySubmitRef.current = true;
+  };
 
   const statusTone = useMemo(() => {
     const now = new Date();
@@ -184,6 +215,9 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
             {relativeLabel ? <span className="text-muted"> · {relativeLabel}</span> : null}
             {doneByLabel ? <span className="text-muted"> · {doneByLabel}</span> : null}
           </div>
+          {notifyTimeLabel ? (
+            <div className="text-xs text-muted">🔔 Te anunț la {notifyTimeLabel}</div>
+          ) : null}
           <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase text-secondary">
             <span className="badge badge-blue" style={categoryChipStyle}>
               {category.label}
@@ -328,49 +362,42 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
         </div>
       </ReminderActionsSheet>
 
-      <ReminderActionsSheet
-        open={notifyOpen}
-        onClose={() => setNotifyOpen(false)}
-        title="Amintește-mi"
-      >
+      <ReminderActionsSheet open={notifyOpen} onClose={() => setNotifyOpen(false)} title="Amintește-mi">
         <div className="space-y-2">
-          <form action={snoozeOccurrence}>
-            <input type="hidden" name="occurrenceId" value={occurrence.id} />
+          <form action={notifyAction} onSubmit={handleNotifySubmit}>
+            <input type="hidden" name="reminderId" value={reminderId ?? ''} />
             <input type="hidden" name="custom_at" value={notifyOptionTimes.inOneHour} />
             <ActionSubmitButton
               className="block w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-white/10"
               type="submit"
-              onClick={() => setNotifyOpen(false)}
             >
               În 1 oră
             </ActionSubmitButton>
           </form>
-          <form action={snoozeOccurrence}>
-            <input type="hidden" name="occurrenceId" value={occurrence.id} />
+          <form action={notifyAction} onSubmit={handleNotifySubmit}>
+            <input type="hidden" name="reminderId" value={reminderId ?? ''} />
             <input type="hidden" name="custom_at" value={notifyOptionTimes.todayAt18} />
             <ActionSubmitButton
               className="block w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-white/10"
               type="submit"
-              onClick={() => setNotifyOpen(false)}
             >
               Astăzi 18:00
             </ActionSubmitButton>
           </form>
-          <form action={snoozeOccurrence}>
-            <input type="hidden" name="occurrenceId" value={occurrence.id} />
+          <form action={notifyAction} onSubmit={handleNotifySubmit}>
+            <input type="hidden" name="reminderId" value={reminderId ?? ''} />
             <input type="hidden" name="custom_at" value={notifyOptionTimes.tomorrowAt9} />
             <ActionSubmitButton
               className="block w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-white/10"
               type="submit"
-              onClick={() => setNotifyOpen(false)}
             >
               Mâine 09:00
             </ActionSubmitButton>
           </form>
           <details className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
             <summary className="cursor-pointer text-sm font-semibold text-slate-100">Alege dată/oră</summary>
-            <form action={snoozeOccurrence} className="mt-3 space-y-2">
-              <input type="hidden" name="occurrenceId" value={occurrence.id} />
+            <form action={notifyAction} className="mt-3 space-y-2" onSubmit={handleNotifySubmit}>
+              <input type="hidden" name="reminderId" value={reminderId ?? ''} />
               <input
                 type="datetime-local"
                 name="custom_at"
@@ -381,15 +408,33 @@ const ReminderRowMobile = memo(function ReminderRowMobile({
               <ActionSubmitButton
                 className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-slate-100 shadow-sm transition hover:bg-white/10"
                 type="submit"
-                onClick={() => setNotifyOpen(false)}
                 disabled={!customNotifyAt}
               >
                 Setează
               </ActionSubmitButton>
             </form>
           </details>
+          {reminder?.user_notify_at ? (
+            <form action={clearReminderNotifyAt}>
+              <input type="hidden" name="reminderId" value={reminderId ?? ''} />
+              <button
+                type="submit"
+                className="block w-full rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-left text-sm font-semibold text-rose-200 transition hover:bg-rose-500/15"
+                onClick={() => setNotifyOpen(false)}
+              >
+                Șterge notificarea
+              </button>
+            </form>
+          ) : null}
         </div>
       </ReminderActionsSheet>
+      {notifyToast ? (
+        <div className="fixed bottom-6 right-6 z-50 w-[min(92vw,360px)] toast-pop" role="status" aria-live="polite">
+          <div className="rounded-2xl border border-rose-400/40 bg-white/95 p-4 text-sm font-semibold text-rose-600 shadow-xl backdrop-blur">
+            {notifyToast}
+          </div>
+        </div>
+      ) : null}
     </>
   );
 });

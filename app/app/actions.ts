@@ -169,3 +169,69 @@ export async function snoozeOccurrence(formData: FormData) {
   revalidatePath('/app');
   revalidatePath('/app/calendar');
 }
+
+export async function setReminderNotifyAt(
+  prevState: { error: string | null },
+  formData: FormData
+) {
+  const reminderId = String(formData.get('reminderId'));
+  const customAtRaw = String(formData.get('custom_at') || '').trim();
+  if (!reminderId || !customAtRaw) {
+    return { error: 'Date invalide.' };
+  }
+  const user = await requireUser();
+  const supabase = createServerClient();
+  const { data: reminder } = await supabase
+    .from('reminders')
+    .select('id, due_at, created_by')
+    .eq('id', reminderId)
+    .maybeSingle();
+  if (!reminder || reminder.due_at) {
+    return { error: 'Nu se poate seta notificarea pentru acest reminder.' };
+  }
+  const target = parseDateTimeLocal(customAtRaw);
+  if (!target || target.getTime() <= Date.now()) {
+    return { error: 'Ora aleasă nu este validă.' };
+  }
+  const { error } = await supabase
+    .from('reminders')
+    .update({ user_notify_at: target.toISOString(), user_notify_policy: 'ONCE' })
+    .eq('id', reminderId);
+  if (error) {
+    console.error('[reminders] set user_notify_at failed', error);
+    return { error: 'Nu am putut salva notificarea.' };
+  }
+  await scheduleNotificationJobsForReminder({
+    reminderId,
+    userId: reminder.created_by || user.id,
+    dueAt: target,
+    preReminderMinutes: 0,
+    channel: 'both'
+  });
+  revalidatePath('/app');
+  revalidatePath('/app/calendar');
+  return { error: null };
+}
+
+export async function clearReminderNotifyAt(formData: FormData) {
+  const reminderId = String(formData.get('reminderId'));
+  if (!reminderId) return;
+  const supabase = createServerClient();
+  const { data: reminder } = await supabase
+    .from('reminders')
+    .select('id, due_at, created_by')
+    .eq('id', reminderId)
+    .maybeSingle();
+  if (!reminder || reminder.due_at) return;
+  const { error } = await supabase
+    .from('reminders')
+    .update({ user_notify_at: null })
+    .eq('id', reminderId);
+  if (error) {
+    console.error('[reminders] clear user_notify_at failed', error);
+    return;
+  }
+  await clearNotificationJobsForReminder(reminderId);
+  revalidatePath('/app');
+  revalidatePath('/app/calendar');
+}

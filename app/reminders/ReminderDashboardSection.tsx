@@ -54,6 +54,8 @@ type OccurrencePayload = {
     title?: string;
     due_at?: string | null;
     notify_at?: string | null;
+    user_notify_at?: string | null;
+    user_notify_policy?: string | null;
     created_by?: string | null;
     assigned_member_id?: string | null;
     is_active?: boolean;
@@ -273,7 +275,7 @@ export default function ReminderDashboardSection({
           reminder: reminder
             ? {
                 ...reminder,
-                notify_at: reminder.notify_at ?? (notifyAt && !Number.isNaN(notifyAt.getTime()) ? notifyAt.toISOString() : null)
+                notify_at: notifyAt && !Number.isNaN(notifyAt.getTime()) ? notifyAt.toISOString() : null
               }
             : null,
           effective_at: occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at
@@ -777,15 +779,15 @@ export default function ReminderDashboardSection({
     return getReminderCategory(categoryId);
   }, [nextOccurrence]);
   const nextNotifyTimeLabel = useMemo(() => {
-    const notifyAtRaw = nextOccurrence?.reminder?.notify_at ?? null;
+    const userNotifyAt = nextOccurrence?.reminder?.user_notify_at ?? null;
     const dueAt = nextOccurrence?.reminder?.due_at ?? null;
-    if (!notifyAtRaw && !dueAt) return null;
+    if (!userNotifyAt && !dueAt) return null;
     const leadMinutes = Number.isFinite(nextOccurrence?.reminder?.pre_reminder_minutes)
       ? Number(nextOccurrence?.reminder?.pre_reminder_minutes)
       : 30;
-    const notifyAt = notifyAtRaw
-      ? new Date(notifyAtRaw)
-      : new Date(new Date(dueAt as string).getTime() - Math.max(0, leadMinutes) * 60000);
+    const notifyAt = dueAt
+      ? new Date(new Date(dueAt as string).getTime() - Math.max(0, leadMinutes) * 60000)
+      : new Date(userNotifyAt as string);
     if (Number.isNaN(notifyAt.getTime())) return null;
     const resolvedTimeZone = resolveReminderTimeZone(nextOccurrence?.reminder?.tz ?? null, effectiveTimeZone ?? null);
     return notifyAt.toLocaleTimeString(localeTag, {
@@ -798,7 +800,8 @@ export default function ReminderDashboardSection({
     localeTag,
     nextOccurrence?.reminder?.due_at,
     nextOccurrence?.reminder?.pre_reminder_minutes,
-    nextOccurrence?.reminder?.tz
+    nextOccurrence?.reminder?.tz,
+    nextOccurrence?.reminder?.user_notify_at
   ]);
   const segmentItems =
     homeSegment === 'overdue'

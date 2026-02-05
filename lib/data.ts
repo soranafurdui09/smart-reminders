@@ -141,7 +141,7 @@ export async function getOpenOccurrencesForHousehold(householdId: string): Promi
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('reminder_occurrences')
-    .select('id, occur_at, status, snoozed_until, performed_by, performed_at, reminder:reminders!inner(id, title, notes, due_at, schedule_type, created_by, household_id, is_active, assigned_member_id, google_event_id, google_calendar_id, kind, medication_details, tz, context_settings)')
+    .select('id, occur_at, status, snoozed_until, performed_by, performed_at, reminder:reminders!inner(id, title, notes, due_at, user_notify_at, schedule_type, created_by, household_id, is_active, assigned_member_id, google_event_id, google_calendar_id, kind, medication_details, tz, context_settings)')
     .eq('reminders.household_id', householdId)
     .in('status', ['open', 'snoozed'])
     .order('occur_at');
@@ -167,7 +167,7 @@ export async function getOpenOccurrencesForHouseholdRange(
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('reminder_occurrences')
-    .select('id, occur_at, status, snoozed_until, performed_by, performed_at, reminder:reminders!inner(id, title, notes, due_at, schedule_type, created_by, household_id, is_active, assigned_member_id, google_event_id, google_calendar_id, kind, medication_details, tz, context_settings)')
+    .select('id, occur_at, status, snoozed_until, performed_by, performed_at, reminder:reminders!inner(id, title, notes, due_at, user_notify_at, schedule_type, created_by, household_id, is_active, assigned_member_id, google_event_id, google_calendar_id, kind, medication_details, tz, context_settings)')
     .eq('reminders.household_id', householdId)
     .in('status', ['open', 'snoozed'])
     .or(
