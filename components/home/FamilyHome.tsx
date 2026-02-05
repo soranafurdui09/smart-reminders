@@ -587,34 +587,7 @@ export default function FamilyHome({
                         {copy.dashboard.overdueTopCta}
                       </button>
                     </div>
-                    <div className="space-y-2">
-                      {overdueTopItems.slice(0, 3).map((occurrence: any) => {
-                        const reminder = occurrence.reminder ?? null;
-                        const categoryId = inferReminderCategoryId({
-                          title: reminder?.title,
-                          notes: reminder?.notes,
-                          kind: reminder?.kind,
-                          category: reminder?.category,
-                          medicationDetails: reminder?.medication_details
-                        });
-                        const category = getReminderCategory(categoryId);
-                        const categoryStyle = getCategoryChipStyle(category.color, true);
-
-                        return (
-                          <div key={occurrence.id} className="home-priority-row">
-                            <div className="min-w-0 flex-1 space-y-1">
-                              <div className="home-priority-title line-clamp-2">{reminder?.title}</div>
-                              <div className="home-priority-meta">{getOverdueMeta(occurrence)}</div>
-                              {category?.label ? (
-                                <span className="home-category-pill" style={categoryStyle}>
-                                  {category.label}
-                                </span>
-                              ) : null}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <div className="text-xs text-[color:var(--text-2)]">Rezolvă unul. Restul pot aștepta.</div>
                     <div className="flex flex-wrap items-center gap-2">
                       <form action={markDone}>
                         <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
@@ -649,6 +622,34 @@ export default function FamilyHome({
                       >
                         Vezi toate
                       </button>
+                    </div>
+                    <div className="space-y-2">
+                      {overdueTopItems.slice(0, 3).map((occurrence: any) => {
+                        const reminder = occurrence.reminder ?? null;
+                        const categoryId = inferReminderCategoryId({
+                          title: reminder?.title,
+                          notes: reminder?.notes,
+                          kind: reminder?.kind,
+                          category: reminder?.category,
+                          medicationDetails: reminder?.medication_details
+                        });
+                        const category = getReminderCategory(categoryId);
+                        const categoryStyle = getCategoryChipStyle(category.color, true);
+
+                        return (
+                          <div key={occurrence.id} className="home-priority-row py-2 opacity-80">
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="home-priority-title line-clamp-2 text-[color:var(--text-1)]">{reminder?.title}</div>
+                              <div className="home-priority-meta text-[color:var(--text-2)]">{getOverdueMeta(occurrence)}</div>
+                              {category?.label ? (
+                                <span className="home-category-pill" style={categoryStyle}>
+                                  {category.label}
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </section>
                 )}
