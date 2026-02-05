@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { AlertTriangle, Calendar, CheckCircle2, Circle, Pill, SunMedium } from 'lucide-react';
 import type { ReactNode } from 'react';
-import NextUpCard from '@/components/home/NextUpCard';
+import ActionSubmitButton from '@/components/ActionSubmitButton';
+import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import QuickAddBar from '@/components/home/QuickAddBar';
 import AtAGlanceRow from '@/components/home/AtAGlanceRow';
 import FilteredTaskList from '@/components/home/FilteredTaskList';
@@ -49,12 +50,8 @@ export default function FamilyHome({
   setCategoryFilter,
   CreatedOptions,
   AssignmentOptions,
-  homeSubtitle,
   homeTab,
   setHomeTab,
-  setUiMode,
-  rememberMode,
-  setRememberMode,
   nextOccurrence,
   nextOccurrenceLabel,
   nextCategory,
@@ -72,18 +69,20 @@ export default function FamilyHome({
   googleConnected,
   effectiveTimeZone,
   segmentItems,
-  priorityItems,
   overdueTopItems,
-  showRecover,
-  setShowRecover,
   localeTag,
   router,
   sectionFlash,
   householdMembers,
   medsTodayStats,
-  householdItems,
-  setNextActionsOpen
+  householdItems
 }: Props) {
+  const nextToneClassName = nextTone === 'overdue' ? 'next-reminder-card--overdue' : nextTone === 'urgent' ? 'next-reminder-card--urgent' : '';
+  const nextTitle = nextOccurrence?.reminder?.title ?? '';
+  const hasNextAction = Boolean(nextOccurrence?.id && nextOccurrence?.reminder?.id && nextOccurrence?.occur_at);
+  const isNextEmpty = !nextTitle || !nextOccurrenceLabel;
+  const nextCategoryStyle = nextCategory ? getCategoryChipStyle(nextCategory.color, true) : undefined;
+
   return (
       <section className={`homeRoot premium ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-[var(--space-3)]`}>
         {activeTab === 'inbox' ? (
@@ -530,35 +529,57 @@ export default function FamilyHome({
               </section>
             ) : (
               <>
-                <NextUpCard
-                  title={copy.dashboard.nextTitle}
-                  subtext={copy.dashboard.nextUpHelper}
-                  taskTitle={nextOccurrence?.reminder?.title ?? undefined}
-                  timeLabel={nextOccurrenceLabel ?? undefined}
-                  badge={nextCategory?.label}
-                  badgeStyle={nextCategory ? getCategoryChipStyle(nextCategory.color, true) : undefined}
-                  tone={nextTone}
-                  statusLabel={copy.dashboard.todayOverdue}
-                  emptyLabel={copy.dashboard.nextUpEmpty}
-                  action={
-                    nextOccurrence?.id && nextOccurrence?.reminder?.id && nextOccurrence?.occur_at
-                      ? {
-                          occurrenceId: nextOccurrence.id,
-                          reminderId: nextOccurrence.reminder.id,
-                          occurAt: nextOccurrence.occur_at,
-                          label: copy.dashboard.nextUpAction,
-                          feedbackLabel: copy.common.actionDone
-                        }
-                      : null
-                  }
-                  secondaryLabels={{
-                    snooze30: copy.dashboard.nextUpSnooze30,
-                    snoozeTomorrow: copy.dashboard.nextUpSnoozeTomorrow
-                  }}
-                  focusCopy={copy.dashboard.nextUpFocusLine}
-                  moreLabel={copy.common.moreActions}
-                  onMoreActions={nextOccurrence ? () => setNextActionsOpen(true) : undefined}
-                />
+                <div className={`next-reminder-card ${nextToneClassName}`}>
+                  <span className="next-reminder-topline" aria-hidden="true" />
+                  <span className="next-reminder-corner" aria-hidden="true" />
+                  <div className="next-reminder-label">{copy.dashboard.nextTitle}</div>
+                  {isNextEmpty ? (
+                    <div className="next-reminder-time mt-2">{copy.dashboard.nextUpEmpty}</div>
+                  ) : (
+                    <>
+                      <div className="next-reminder-title mt-2">{nextTitle}</div>
+                      <div className="next-reminder-time mt-1">{nextOccurrenceLabel}</div>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        {nextCategory ? (
+                          <span className="next-reminder-pill" style={nextCategoryStyle}>
+                            {nextCategory.label}
+                          </span>
+                        ) : null}
+                        {nextTone === 'overdue' ? (
+                          <span className="next-reminder-overdue">{copy.dashboard.todayOverdue}</span>
+                        ) : null}
+                      </div>
+                      {hasNextAction ? (
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <form action={markDone}>
+                            <input type="hidden" name="occurrenceId" value={nextOccurrence?.id ?? ''} />
+                            <input type="hidden" name="reminderId" value={nextOccurrence?.reminder?.id ?? ''} />
+                            <input type="hidden" name="occurAt" value={nextOccurrence?.occur_at ?? ''} />
+                            <input type="hidden" name="done_comment" value="" />
+                            <ActionSubmitButton
+                              className="next-reminder-primary"
+                              type="submit"
+                              data-action-feedback={copy.common.actionDone}
+                            >
+                              {copy.dashboard.nextUpAction}
+                            </ActionSubmitButton>
+                          </form>
+                          <form action={snoozeOccurrence}>
+                            <input type="hidden" name="occurrenceId" value={nextOccurrence?.id ?? ''} />
+                            <input type="hidden" name="mode" value="30" />
+                            <ActionSubmitButton
+                              className="next-reminder-secondary"
+                              type="submit"
+                              data-action-feedback={copy.common.actionSnoozed}
+                            >
+                              Amână
+                            </ActionSubmitButton>
+                          </form>
+                        </div>
+                      ) : null}
+                    </>
+                  )}
+                </div>
 
                 {nextUpActionsSheet}
 
@@ -593,7 +614,7 @@ export default function FamilyHome({
                     {
                       id: 'overdue',
                       label: copy.dashboard.todayOverdue,
-                      count: overdueItems.length,
+                      count: 'Top 5',
                       subLabel: overdueOldestLabel,
                       tileClass: overdueTileClass,
                       icon: AlertTriangle
@@ -615,20 +636,13 @@ export default function FamilyHome({
                       <button
                         type="button"
                         className="text-xs font-semibold text-[color:var(--brand-blue)]"
-                        onClick={() => setShowRecover((prev: boolean) => !prev)}
+                        onClick={() => handleSegmentSelect('overdue')}
                       >
                         {copy.dashboard.overdueTopCta}
                       </button>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {copy.dashboard.priorityFilters.map((label: string) => (
-                        <span key={label} className="home-chip">
-                          {label}
-                        </span>
-                      ))}
-                    </div>
                     <div className="space-y-2">
-                      {priorityItems.map((occurrence: any) => (
+                      {overdueTopItems.slice(0, 3).map((occurrence: any) => (
                         <OverdueDenseRow
                           key={occurrence.id}
                           occurrence={occurrence}
@@ -637,7 +651,7 @@ export default function FamilyHome({
                           userTimeZone={effectiveTimeZone}
                           variant="priority"
                           primaryLabel={copy.dashboard.nextUpAction}
-                          secondaryLabel={copy.dashboard.prioritySnooze}
+                          secondaryLabel="Amână"
                         />
                       ))}
                     </div>

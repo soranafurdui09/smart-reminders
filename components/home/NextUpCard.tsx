@@ -72,7 +72,7 @@ export default function NextUpCard({
         <span className="next-reminder-topline" aria-hidden="true" />
         <span className="next-reminder-corner" aria-hidden="true" />
         <div className="nextUpHeader flex items-start justify-between gap-1.5">
-          <div className="next-reminder-label text-[0.625rem] tracking-[0.18em] uppercase text-white/60">{title}</div>
+          <div className="next-reminder-label text-[0.625rem] tracking-[0.18em] uppercase text-white/60">URMĂTORUL</div>
           {onMoreActions ? (
             <button
               type="button"
@@ -84,7 +84,6 @@ export default function NextUpCard({
             </button>
           ) : null}
         </div>
-        {subtext ? <div className="next-reminder-subtitle">{subtext}</div> : null}
         {isEmpty ? (
           <div className="mt-0.5 text-sm font-semibold text-[color:var(--text-1)]">
             {emptyLabel}
@@ -131,21 +130,11 @@ export default function NextUpCard({
                   <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
                   <input type="hidden" name="mode" value="30" />
                   <ActionSubmitButton className="next-reminder-secondary rounded-full px-2 py-1 text-[0.68rem] bg-white/6 border border-white/10 text-white/70" type="submit">
-                    {secondaryLabels?.snooze30 ?? 'Amână 30m'}
-                  </ActionSubmitButton>
-                </form>
-                <form action={snoozeOccurrence}>
-                  <input type="hidden" name="occurrenceId" value={action.occurrenceId} />
-                  <input type="hidden" name="option_id" value="tomorrow" />
-                  <ActionSubmitButton className="next-reminder-secondary rounded-full px-2 py-1 text-[0.68rem] bg-white/6 border border-white/10 text-white/70" type="submit">
-                    {secondaryLabels?.snoozeTomorrow ?? 'Mută mâine'}
+                    Amână
                   </ActionSubmitButton>
                 </form>
               </div>
             ) : null}
-            <div className="next-reminder-focus">
-              {focusCopy ?? 'Un pas mic acum → zi mai ușoară.'}
-            </div>
           </div>
         )}
       </div>

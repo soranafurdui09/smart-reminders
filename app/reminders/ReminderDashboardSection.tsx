@@ -1176,7 +1176,7 @@ export default function ReminderDashboardSection({
         <div className="order-2 space-y-6 lg:order-1">
           <div className="h-px bg-white/10" />
           {desktopTab === 'today' ? (
-            <section className="space-y-4">
+            <section className="space-y-5">
             <NextUpCard
               title={copy.dashboard.nextTitle}
               subtext={copy.dashboard.nextUpHelper}
@@ -1210,28 +1210,29 @@ export default function ReminderDashboardSection({
               {overdueTopItems.length ? (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="text-sm font-semibold text-ink">{copy.dashboard.overdueTopTitle}</div>
+                    <div className="text-sm font-semibold text-ink">Priorități de recuperat</div>
                     <button
                       type="button"
                       className="text-xs font-semibold text-[color:rgb(var(--accent))]"
-                      onClick={() => setShowRecover((prev) => !prev)}
+                      onClick={() => handleSegmentSelect('overdue')}
                     >
-                      {copy.dashboard.overdueTopCta}
+                      Arată (Top 5)
                     </button>
                   </div>
-                  {showRecover ? (
-                    <div className="space-y-2">
-                      {overdueTopItems.map((occurrence) => (
-                        <OverdueDenseRow
-                          key={occurrence.id}
-                          occurrence={occurrence}
-                          locale={locale}
-                          googleConnected={googleConnected}
-                          userTimeZone={effectiveTimeZone}
-                        />
-                      ))}
-                    </div>
-                  ) : null}
+                  <div className="space-y-2">
+                    {overdueTopItems.slice(0, 3).map((occurrence) => (
+                      <OverdueDenseRow
+                        key={occurrence.id}
+                        occurrence={occurrence}
+                        locale={locale}
+                        googleConnected={googleConnected}
+                        userTimeZone={effectiveTimeZone}
+                        variant="priority"
+                        primaryLabel={copy.dashboard.nextUpAction}
+                        secondaryLabel="Amână"
+                      />
+                    ))}
+                  </div>
                 </div>
               ) : null}
             </section>

@@ -1,11 +1,11 @@
 "use client";
 
-import type { ComponentType, CSSProperties } from 'react';
+import type { ComponentType, CSSProperties, ReactNode } from 'react';
 
 type Metric = {
   id: string;
   label: string;
-  count: number;
+  count: ReactNode;
   accentClass?: string;
   accentRgb?: string;
   subLabel?: string;
@@ -25,7 +25,9 @@ export default function AtAGlanceRow({ metrics, activeId, onSelect, variant = 'p
   return (
     <div className="home-glass-panel at-a-glance-panel rounded-[var(--radius-lg)] px-[var(--space-2)] py-[var(--space-2)]">
       <div className="glanceGrid grid grid-cols-2 gap-2 md:grid-cols-4">
-        {metrics.map((metric) => (
+        {metrics.map((metric) => {
+          const displayCount = metric.id === 'overdue' ? 'Top 5' : metric.count;
+          return (
           <button
             key={metric.id}
             type="button"
@@ -48,7 +50,7 @@ export default function AtAGlanceRow({ metrics, activeId, onSelect, variant = 'p
             <div
               className="glanceNumber mt-0.5 text-[clamp(0.9rem,3vw,1.05rem)] leading-tight font-semibold text-[color:var(--tile-ink,var(--text-0))]"
             >
-              {metric.count}
+              {displayCount}
             </div>
             <div
               className="glanceLabel mt-0.5 text-[0.62rem] font-semibold text-[color:var(--text-1)]"
@@ -59,7 +61,8 @@ export default function AtAGlanceRow({ metrics, activeId, onSelect, variant = 'p
               <div className="glanceSubLabel mt-0.5 text-[0.58rem] text-[color:var(--text-2)]">{metric.subLabel}</div>
             ) : null}
           </button>
-        ))}
+        );
+        })}
       </div>
     </div>
   );
