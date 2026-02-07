@@ -79,6 +79,11 @@ export default function QuickAddSheet({
       console.log('[quick-add dbg]', label, obj);
     }
   };
+  const dbgRace = (label: string, obj: Record<string, unknown>) => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[quick-add race]', label, obj); // TODO REMOVE
+    }
+  };
 
   const trimmed = text.trim();
   const canContinue = activeMode === 'list'
@@ -434,6 +439,13 @@ export default function QuickAddSheet({
     try {
       const parsed = data ?? (activeMode === 'ai' ? await parseReminderText(buildFullText(), { silent: true }) : null);
       const localDueAt = getUserOrAiLocalDueAt(parsed);
+      dbgRace('save-task', {
+        activeMode,
+        parsedResult,
+        dateValue,
+        timeValue,
+        localDueAt
+      });
       dbg('save-task:start', {
         activeMode,
         trimmed,
@@ -484,6 +496,13 @@ export default function QuickAddSheet({
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
       const parsed = data ?? (activeMode === 'ai' ? await parseReminderText(buildFullText(), { silent: true }) : null);
       const localDueAt = getUserOrAiLocalDueAt(parsed);
+      dbgRace('save-reminder', {
+        activeMode,
+        parsedResult,
+        dateValue,
+        timeValue,
+        localDueAt
+      });
       dbg('save-reminder:start', {
         activeMode,
         trimmed,
@@ -549,6 +568,18 @@ export default function QuickAddSheet({
       setSaving(false);
       dbg('saving', { saving: false, handler: 'reminder' });
     }
+  };
+
+  const handlePrimarySave = async (data?: AiResult | null) => {
+    if (saving) return;
+    if (!trimmed) return;
+    const parsed = data ?? (activeMode === 'ai' ? await parseReminderText(buildFullText(), { silent: true }) : null);
+    const localDueAt = getUserOrAiLocalDueAt(parsed);
+    if (localDueAt) {
+      await handleSaveReminder(parsed);
+      return;
+    }
+    await handleSaveTask(parsed);
   };
 
   if (!open) return null;
@@ -913,7 +944,7 @@ export default function QuickAddSheet({
               <button
                 type="button"
                 className="premium-btn-primary inline-flex items-center justify-center px-4 text-sm"
-                onClick={() => handleSaveReminder(parsedResult)}
+                onClick={() => handlePrimarySave(parsedResult)}
                 disabled={!previewValid || saving}
               >
                 {saving
@@ -936,7 +967,7 @@ export default function QuickAddSheet({
               <button
                 type="button"
                 className="premium-btn-primary inline-flex items-center justify-center px-4 text-sm"
-                onClick={() => handleSaveTask(parsedResult)}
+                onClick={() => handlePrimarySave(parsedResult)}
                 disabled={!previewValid || saving}
               >
                 {saving ? 'Se salvează...' : 'Salvează'}
