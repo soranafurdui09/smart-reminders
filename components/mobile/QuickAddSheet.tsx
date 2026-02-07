@@ -74,6 +74,11 @@ export default function QuickAddSheet({
   const parsingTimerRef = useRef<number | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const keyboardInset = useKeyboardInset();
+  const dbg = (label: string, obj: Record<string, unknown>) => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[quick-add dbg]', label, obj);
+    }
+  };
 
   const trimmed = text.trim();
   const canContinue = activeMode === 'list'
@@ -424,13 +429,30 @@ export default function QuickAddSheet({
     }
     if (!trimmed) return;
     setSaving(true);
+    dbg('saving', { saving: true, handler: 'task' });
     setError(null);
     try {
       const parsed = data ?? (activeMode === 'ai' ? await parseReminderText(buildFullText(), { silent: true }) : null);
-      await createTaskItemAction({
+      const localDueAt = getUserOrAiLocalDueAt(parsed);
+      dbg('save-task:start', {
+        activeMode,
+        trimmed,
+        hasExplicitDatetime: parsed?.hasExplicitDatetime,
+        parsedDatetime: parsed?.parsedDatetime,
+        dateValue,
+        timeValue,
+        localDueAt
+      });
+      const payload = {
         title: parsed?.title || trimmed,
         notes: parsed?.description || '',
         dueDate: activeMode === 'task' && dateValue ? dateValue : null
+      };
+      dbg('save-task:payload', payload);
+      await createTaskItemAction({
+        title: payload.title,
+        notes: payload.notes,
+        dueDate: payload.dueDate
       });
       autoStartDisabledRef.current = true;
       autoStartOnceRef.current = true;
@@ -447,6 +469,7 @@ export default function QuickAddSheet({
       setError('Nu am reușit să salvăm taskul.');
     } finally {
       setSaving(false);
+      dbg('saving', { saving: false, handler: 'task' });
     }
   };
 
@@ -454,13 +477,24 @@ export default function QuickAddSheet({
     if (saving) return;
     if (!trimmed) return;
     setSaving(true);
+    dbg('saving', { saving: true, handler: 'reminder' });
     setError(null);
     try {
       const startedAt = Date.now();
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
       const parsed = data ?? (activeMode === 'ai' ? await parseReminderText(buildFullText(), { silent: true }) : null);
       const localDueAt = getUserOrAiLocalDueAt(parsed);
+      dbg('save-reminder:start', {
+        activeMode,
+        trimmed,
+        hasExplicitDatetime: parsed?.hasExplicitDatetime,
+        parsedDatetime: parsed?.parsedDatetime,
+        dateValue,
+        timeValue,
+        localDueAt
+      });
       if (!localDueAt) {
+        dbg('save-reminder:missing-datetime', { localDueAt });
         setDetailsOpen(true);
         window.requestAnimationFrame(() => dateInputRef.current?.focus());
         return;
@@ -485,6 +519,14 @@ export default function QuickAddSheet({
       formData.set('due_at', localDueAt);
       formData.set('due_at_iso', toIsoFromLocalInput(localDueAt));
       formData.set('tz', timezone);
+      dbg('save-reminder:payload', {
+        due_at: localDueAt,
+        due_at_iso: toIsoFromLocalInput(localDueAt),
+        tz: timezone,
+        recurrence_rule: parsed?.recurrenceRule || fallbackRule,
+        schedule_type: deriveScheduleType(parsed?.recurrenceRule || fallbackRule),
+        localDueAtNull: !localDueAt
+      });
 
       await createReminder(formData);
       autoStartDisabledRef.current = true;
@@ -505,6 +547,7 @@ export default function QuickAddSheet({
       setError('Nu am reușit să salvăm reminderul.');
     } finally {
       setSaving(false);
+      dbg('saving', { saving: false, handler: 'reminder' });
     }
   };
 
@@ -521,9 +564,14 @@ export default function QuickAddSheet({
     : dateValue
       ? `${dateValue}${timeValue ? ` · ${timeValue}` : ''}`
       : '';
-  const saveDateLabel = previewDateLabel ? previewDateLabel.replace(' · ', ' ') : '';
-  const aiHasExplicitDatetime = Boolean(parsedResult?.hasExplicitDatetime);
-  const aiCanSaveReminder = Boolean(parsedResult?.parsedDatetime || (dateValue && timeValue));
+  const userPickedDatetime = Boolean(dateValue && timeValue);
+  const aiParsedDatetime = Boolean(parsedResult?.parsedDatetime);
+  const canSaveReminder = userPickedDatetime || aiParsedDatetime;
+  const saveDateLabel = userPickedDatetime
+    ? `${dateValue} ${timeValue}`
+    : aiParsedDatetime
+      ? previewDateLabel.replace(' · ', ' ')
+      : '';
   const previewValid = canContinue && !showParsing;
 
   return (
@@ -860,13 +908,13 @@ export default function QuickAddSheet({
       </div>
 
       <div className="mt-[var(--space-3)] grid gap-[var(--space-2)] sticky bottom-0 bg-[color:var(--surface-2)] pt-[var(--space-2)] pb-[calc(env(safe-area-inset-bottom)_+_14px)]">
-          {activeMode === 'ai' && aiHasExplicitDatetime ? (
+          {activeMode === 'ai' && canSaveReminder ? (
             <>
               <button
                 type="button"
                 className="premium-btn-primary inline-flex items-center justify-center px-4 text-sm"
                 onClick={() => handleSaveReminder(parsedResult)}
-                disabled={!previewValid || saving || !aiCanSaveReminder}
+                disabled={!previewValid || saving}
               >
                 {saving
                   ? 'Se salvează...'
