@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Mic, Sparkles, X } from 'lucide-react';
 import { reminderCategories } from '@/lib/categories';
 import { createReminder } from '@/app/app/reminders/new/actions';
+import { createTaskItemAction } from '@/app/app/tasks/actions';
 import { createTaskListAction } from '@/app/app/lists/actions';
 import { useSpeechToReminder } from '@/hooks/useSpeechToReminder';
 import useKeyboardInset from '@/hooks/useKeyboardInset';
@@ -139,11 +140,14 @@ export default function QuickAddSheet({
     return parsed.toISOString();
   };
 
-  const buildLocalFallback = () => {
+  const getUserOrAiLocalDueAt = (data?: AiResult | null) => {
+    if (data?.hasExplicitDatetime && data?.parsedDatetime) {
+      return toLocalInputFromIso(data.parsedDatetime);
+    }
     if (dateValue && timeValue) {
       return `${dateValue}T${timeValue}`;
     }
-    return '';
+    return null;
   };
 
   const buildRecurrenceRule = () => {
@@ -392,7 +396,7 @@ export default function QuickAddSheet({
     router.push(`/app/reminders/new?quick=${encodeURIComponent(fullText)}`);
   };
 
-  const handleSave = async () => {
+  const handleSaveTask = async (data?: AiResult | null) => {
     if (saving) return;
     if (activeMode === 'list') {
       const name = (listName || trimmed).trim();
@@ -422,11 +426,44 @@ export default function QuickAddSheet({
     setSaving(true);
     setError(null);
     try {
+      const parsed = data ?? (activeMode === 'ai' ? await parseReminderText(buildFullText(), { silent: true }) : null);
+      await createTaskItemAction({
+        title: parsed?.title || trimmed,
+        notes: parsed?.description || '',
+        dueDate: activeMode === 'task' && dateValue ? dateValue : null
+      });
+      autoStartDisabledRef.current = true;
+      autoStartOnceRef.current = true;
+      userStoppedRef.current = true;
+      resetVoice();
+      onClose();
+      router.refresh();
+    } catch (err) {
+      const digest = (err as { digest?: string } | null)?.digest;
+      if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) {
+        return;
+      }
+      console.error('[quick-add] save task failed', err);
+      setError('Nu am reușit să salvăm taskul.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveReminder = async (data?: AiResult | null) => {
+    if (saving) return;
+    if (!trimmed) return;
+    setSaving(true);
+    setError(null);
+    try {
       const startedAt = Date.now();
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-      let parsed: AiResult | null = null;
-      if (activeMode === 'ai') {
-        parsed = await parseReminderText(buildFullText(), { silent: true });
+      const parsed = data ?? (activeMode === 'ai' ? await parseReminderText(buildFullText(), { silent: true }) : null);
+      const localDueAt = getUserOrAiLocalDueAt(parsed);
+      if (!localDueAt) {
+        setDetailsOpen(true);
+        window.requestAnimationFrame(() => dateInputRef.current?.focus());
+        return;
       }
 
       const formData = new FormData();
@@ -437,24 +474,17 @@ export default function QuickAddSheet({
       const fallbackRule = buildRecurrenceRule();
       formData.set('assigned_member_id', parsed?.assignedMemberId || '');
       formData.set('context_category', parsed?.categoryId || categoryValue || '');
-      const localDueAt = parsed?.parsedDatetime
-        ? toLocalInputFromIso(parsed.parsedDatetime)
-        : buildLocalFallback();
-      const hasDueAt = Boolean(localDueAt);
-      formData.set('recurrence_rule', hasDueAt ? (parsed?.recurrenceRule || fallbackRule) : '');
-      formData.set('schedule_type', hasDueAt ? deriveScheduleType(parsed?.recurrenceRule || fallbackRule) : 'once');
+      formData.set('recurrence_rule', parsed?.recurrenceRule || fallbackRule);
+      formData.set('schedule_type', deriveScheduleType(parsed?.recurrenceRule || fallbackRule));
       formData.set(
         'pre_reminder_minutes',
-        hasDueAt
-          ? parsed?.preReminderMinutes !== null && parsed?.preReminderMinutes !== undefined
-            ? String(parsed.preReminderMinutes)
-            : parsePreReminder()
-          : ''
+        parsed?.preReminderMinutes !== null && parsed?.preReminderMinutes !== undefined
+          ? String(parsed.preReminderMinutes)
+          : parsePreReminder()
       );
       formData.set('due_at', localDueAt);
       formData.set('due_at_iso', toIsoFromLocalInput(localDueAt));
       formData.set('tz', timezone);
-      formData.set('force_task', localDueAt ? '' : '1');
 
       await createReminder(formData);
       autoStartDisabledRef.current = true;
@@ -471,7 +501,7 @@ export default function QuickAddSheet({
       if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) {
         return;
       }
-      console.error('[quick-add] save failed', err);
+      console.error('[quick-add] save reminder failed', err);
       setError('Nu am reușit să salvăm reminderul.');
     } finally {
       setSaving(false);
@@ -492,6 +522,8 @@ export default function QuickAddSheet({
       ? `${dateValue}${timeValue ? ` · ${timeValue}` : ''}`
       : '';
   const saveDateLabel = previewDateLabel ? previewDateLabel.replace(' · ', ' ') : '';
+  const aiHasExplicitDatetime = Boolean(parsedResult?.hasExplicitDatetime);
+  const aiCanSaveReminder = Boolean(parsedResult?.parsedDatetime || (dateValue && timeValue));
   const previewValid = canContinue && !showParsing;
 
   return (
@@ -828,18 +860,58 @@ export default function QuickAddSheet({
       </div>
 
       <div className="mt-[var(--space-3)] grid gap-[var(--space-2)] sticky bottom-0 bg-[color:var(--surface-2)] pt-[var(--space-2)] pb-[calc(env(safe-area-inset-bottom)_+_14px)]">
-          <button
-            type="button"
-            className="premium-btn-primary inline-flex items-center justify-center px-4 text-sm"
-            onClick={handleSave}
-            disabled={!previewValid || saving}
-          >
-            {saving
-              ? 'Se salvează...'
-              : previewValid && saveDateLabel
-                ? `Salvează • ${saveDateLabel}`
-                : 'Salvează'}
-          </button>
+          {activeMode === 'ai' && aiHasExplicitDatetime ? (
+            <>
+              <button
+                type="button"
+                className="premium-btn-primary inline-flex items-center justify-center px-4 text-sm"
+                onClick={() => handleSaveReminder(parsedResult)}
+                disabled={!previewValid || saving || !aiCanSaveReminder}
+              >
+                {saving
+                  ? 'Se salvează...'
+                  : previewValid && saveDateLabel
+                    ? `Confirmă reminder • ${saveDateLabel}`
+                    : 'Confirmă reminder'}
+              </button>
+              <button
+                type="button"
+                className="premium-btn-secondary inline-flex items-center justify-center px-4 text-sm"
+                onClick={() => handleSaveTask(parsedResult)}
+                disabled={!previewValid || saving}
+              >
+                Salvează ca task
+              </button>
+            </>
+          ) : activeMode === 'ai' ? (
+            <>
+              <button
+                type="button"
+                className="premium-btn-primary inline-flex items-center justify-center px-4 text-sm"
+                onClick={() => handleSaveTask(parsedResult)}
+                disabled={!previewValid || saving}
+              >
+                {saving ? 'Se salvează...' : 'Salvează'}
+              </button>
+              <button
+                type="button"
+                className="premium-btn-secondary inline-flex items-center justify-center px-4 text-sm"
+                onClick={() => handleSaveReminder(parsedResult)}
+                disabled={!previewValid || saving}
+              >
+                Adaugă reminder
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="premium-btn-primary inline-flex items-center justify-center px-4 text-sm"
+              onClick={() => handleSaveTask(null)}
+              disabled={!previewValid || saving}
+            >
+              {saving ? 'Se salvează...' : 'Salvează'}
+            </button>
+          )}
           <button
             type="button"
             className="text-xs font-semibold text-muted"
