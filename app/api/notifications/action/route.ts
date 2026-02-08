@@ -73,12 +73,13 @@ async function handleAction(payload: { action: ActionName; jobId: string; token:
           .eq('id', dose.id);
       }
     } else {
+      const occurrenceAt = job.occurrence_at_utc ?? job.notify_at;
       const { data: occurrence } = await admin
         .from('reminder_occurrences')
         .select('id, occur_at, snoozed_until')
         .eq('reminder_id', job.reminder_id)
         .in('status', ['open', 'snoozed'])
-        .or(`snoozed_until.eq.${job.notify_at},occur_at.eq.${job.notify_at}`)
+        .or(`snoozed_until.eq.${occurrenceAt},occur_at.eq.${occurrenceAt}`)
         .maybeSingle();
 
       if (occurrence?.id) {
@@ -139,12 +140,13 @@ async function handleAction(payload: { action: ActionName; jobId: string; token:
         occurrence_at_utc: target.toISOString()
       });
     } else {
+      const occurrenceAt = job.occurrence_at_utc ?? job.notify_at;
       const { data: occurrence } = await admin
         .from('reminder_occurrences')
         .select('id')
         .eq('reminder_id', job.reminder_id)
         .in('status', ['open', 'snoozed'])
-        .or(`snoozed_until.eq.${job.notify_at},occur_at.eq.${job.notify_at}`)
+        .or(`snoozed_until.eq.${occurrenceAt},occur_at.eq.${occurrenceAt}`)
         .maybeSingle();
       if (occurrence?.id) {
         await admin
