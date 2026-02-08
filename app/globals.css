@@ -346,6 +346,27 @@ h3 {
   padding-bottom: calc(env(safe-area-inset-bottom) + 5rem);
 }
 
+.native-android .backdrop-blur-md,
+.native-android .backdrop-blur-xl,
+.native-android .backdrop-blur-\[18px\],
+.native-android .sheet,
+.native-android .navbar,
+.native-android .home-glass-panel,
+.native-android .stat-tile,
+.native-android .icon-btn,
+.native-android .next-reminder-card {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.native-android .premium-card,
+.native-android .premium-sheet,
+.native-android .next-reminder-card,
+.native-android .home-glass-panel,
+.native-android .stat-tile {
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25) !important;
+}
+
 .has-bottom-nav .app-content {
   padding-bottom: calc(var(--bottom-nav-h, 72px) + var(--safe-bottom) + 12px + var(--keyboard-offset));
 }
