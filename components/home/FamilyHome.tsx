@@ -512,14 +512,14 @@ export default function FamilyHome({
             <div className="home-slate-bg" aria-hidden="true" />
             {header as ReactNode}
             {tilesReady ? (
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="grid grid-cols-2 gap-2">
                 {metrics.map((metric) => {
                   const displayCount = metric.id === 'overdue' ? 'Top 5' : metric.count;
                   return (
                     <button
                       key={metric.id}
                       type="button"
-                      className={`min-w-[120px] shrink-0 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left ${metric.tileClass ?? ''}`}
+                      className={`rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left ${metric.tileClass ?? ''}`}
                       onClick={() => {
                         if (metric.id === 'today' || metric.id === 'soon' || metric.id === 'overdue') {
                           handleSegmentSelect(metric.id);
@@ -529,7 +529,7 @@ export default function FamilyHome({
                       <div className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-2)]">
                         {metric.label}
                       </div>
-                      <div className="mt-0.5 text-sm font-semibold text-[color:var(--tile-ink,var(--text-0))]">
+                      <div className="mt-0.5 text-base font-semibold text-[color:var(--tile-ink,var(--text-0))]">
                         {displayCount}
                       </div>
                     </button>
@@ -537,9 +537,9 @@ export default function FamilyHome({
                 })}
               </div>
             ) : (
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="grid grid-cols-2 gap-2">
                 {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={`tile-skeleton-${index}`} className="h-12 w-28 shrink-0 rounded-2xl bg-surfaceMuted/70" />
+                  <div key={`tile-skeleton-${index}`} className="h-14 rounded-2xl bg-surfaceMuted/70" />
                 ))}
               </div>
             )}
