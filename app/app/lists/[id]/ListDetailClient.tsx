@@ -17,6 +17,8 @@ type Props = {
 };
 
 export default function ListDetailClient({ list, items: initialItems, members }: Props) {
+  const isAndroidNative = typeof document !== 'undefined'
+    && document.documentElement.classList.contains('native-android');
   const router = useRouter();
   const [items, setItems] = useState<TaskItem[]>(initialItems);
   const [title, setTitle] = useState('');
@@ -54,7 +56,9 @@ export default function ListDetailClient({ list, items: initialItems, members }:
       const nextDone = !item.done;
       setItems((prev) => prev.map((row) => (row.id === item.id ? { ...row, done: nextDone } : row)));
       await toggleTaskDoneAction(item.id, nextDone);
-      router.refresh();
+      if (!isAndroidNative) {
+        router.refresh();
+      }
     });
   };
 
@@ -69,7 +73,9 @@ export default function ListDetailClient({ list, items: initialItems, members }:
       });
       setTitle('');
       setQty('');
-      router.refresh();
+      if (!isAndroidNative) {
+        router.refresh();
+      }
     });
   };
 

@@ -49,6 +49,8 @@ export default function QuickAddSheet({
   autoVoice?: boolean;
   mode?: 'ai' | 'task' | 'list';
 }) {
+  const isAndroidNative = typeof document !== 'undefined'
+    && document.documentElement.classList.contains('native-android');
   const router = useRouter();
   const [text, setText] = useState('');
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -66,6 +68,7 @@ export default function QuickAddSheet({
   const [listName, setListName] = useState('');
   const [activeMode, setActiveMode] = useState<'ai' | 'task' | 'list'>(mode);
   const [parsingVisible, setParsingVisible] = useState(false);
+  const [androidToast, setAndroidToast] = useState<string | null>(null);
   const dateInputRef = useRef<HTMLInputElement | null>(null);
   const autoStartOnceRef = useRef(false);
   const autoStartDisabledRef = useRef(false);
@@ -73,6 +76,7 @@ export default function QuickAddSheet({
   const categorySelectRef = useRef<HTMLSelectElement | null>(null);
   const parsingTimerRef = useRef<number | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
   const keyboardInset = useKeyboardInset();
   const dbg = (label: string, obj: Record<string, unknown>) => {
     if (process.env.NODE_ENV !== 'production') {
@@ -121,6 +125,16 @@ export default function QuickAddSheet({
       ? `cu ${remindBeforeValue}`
       : '';
   const previewLine = [previewDate, previewBefore].filter(Boolean).join(' · ');
+  const showAndroidToast = (message: string) => {
+    if (!isAndroidNative) return;
+    setAndroidToast(message);
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+    toastTimerRef.current = window.setTimeout(() => {
+      setAndroidToast(null);
+    }, 3200);
+  };
 
   const buildFullText = () => {
     if (!trimmed) return '';
@@ -365,6 +379,14 @@ export default function QuickAddSheet({
   }, [open, showParsing]);
 
   useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!open || keyboardInset <= 0 || !showPreview) return;
     const previewNode = previewRef.current;
     if (!previewNode) return;
@@ -418,12 +440,19 @@ export default function QuickAddSheet({
       setError(null);
       try {
         await createTaskListAction({ name, type: 'generic' });
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('tasklist:created', { detail: { name } }));
+        }
         autoStartDisabledRef.current = true;
         autoStartOnceRef.current = true;
         userStoppedRef.current = true;
         resetVoice();
         onClose();
-        router.refresh();
+        if (!isAndroidNative) {
+          router.refresh();
+        } else {
+          showAndroidToast('Listă salvată.');
+        }
       } catch (err) {
         console.error('[quick-add] list save failed', err);
         setError('Nu am reușit să salvăm lista.');
@@ -461,17 +490,30 @@ export default function QuickAddSheet({
         dueDate: activeMode === 'task' && dateValue ? dateValue : null
       };
       dbg('save-task:payload', payload);
-      await createTaskItemAction({
+      const created = await createTaskItemAction({
         title: payload.title,
         notes: payload.notes,
         dueDate: payload.dueDate
       });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('taskitem:created', {
+          detail: {
+            title: created?.title ?? payload.title,
+            listId: created?.list_id ?? null,
+            dueDate: created?.due_date ?? payload.dueDate ?? null
+          }
+        }));
+      }
       autoStartDisabledRef.current = true;
       autoStartOnceRef.current = true;
       userStoppedRef.current = true;
       resetVoice();
       onClose();
-      router.refresh();
+      if (!isAndroidNative) {
+        router.refresh();
+      } else {
+        showAndroidToast('Salvat. Vezi în Tasks.');
+      }
     } catch (err) {
       const digest = (err as { digest?: string } | null)?.digest;
       if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) {
@@ -582,7 +624,7 @@ export default function QuickAddSheet({
     await handleSaveTask(parsed);
   };
 
-  if (!open) return null;
+  if (!open && !androidToast) return null;
 
   const isAiMode = activeMode === 'ai';
   const sheetTitle = activeMode === 'task'
@@ -606,22 +648,23 @@ export default function QuickAddSheet({
   const previewValid = canContinue && !showParsing;
 
   return (
-    <BottomSheet open={open} onClose={onClose} className="pb-[calc(env(safe-area-inset-bottom)_+_6px)]" ariaLabel="Adaugă reminder">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className={`text-sm font-semibold ${classTextPrimary}`}>{sheetTitle}</div>
-          <p className={`mt-1 text-xs ${classTextSecondary}`}>
-            {activeMode === 'ai'
-              ? 'Scrie sau dictează un reminder scurt.'
-              : activeMode === 'task'
-                ? 'Adaugă un task rapid și opțional o dată.'
-                : 'Adaugă un element într-o listă simplă.'}
-          </p>
+    <>
+      <BottomSheet open={open} onClose={onClose} className="pb-[calc(env(safe-area-inset-bottom)_+_6px)]" ariaLabel="Adaugă reminder">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className={`text-sm font-semibold ${classTextPrimary}`}>{sheetTitle}</div>
+            <p className={`mt-1 text-xs ${classTextSecondary}`}>
+              {activeMode === 'ai'
+                ? 'Scrie sau dictează un reminder scurt.'
+                : activeMode === 'task'
+                  ? 'Adaugă un task rapid și opțional o dată.'
+                  : 'Adaugă un element într-o listă simplă.'}
+            </p>
+          </div>
+          <IconButton aria-label="Închide" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </IconButton>
         </div>
-        <IconButton aria-label="Închide" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </IconButton>
-      </div>
 
       <div className="mt-[var(--space-4)] space-y-[var(--space-3)]">
         <div className="space-y-[var(--space-2)]">
@@ -1004,7 +1047,21 @@ export default function QuickAddSheet({
           </button>
         </div>
 
-      {error ? <p className="mt-3 text-xs text-rose-600">{error}</p> : null}
-    </BottomSheet>
+        {error ? <p className="mt-3 text-xs text-rose-600">{error}</p> : null}
+      </BottomSheet>
+
+      {androidToast ? (
+        <div className="fixed bottom-6 right-6 z-50 w-[min(92vw,360px)] toast-pop" role="status" aria-live="polite">
+          <div className="flex items-center gap-3 rounded-2xl border border-primary/40 bg-white/95 p-4 text-sm font-semibold text-ink shadow-xl backdrop-blur">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primaryStrong via-primary to-accent text-white shadow-md">
+              <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+                <path stroke="currentColor" strokeWidth="1.5" d="M5 13l4 4L19 7" />
+              </svg>
+            </span>
+            <span>{androidToast}</span>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

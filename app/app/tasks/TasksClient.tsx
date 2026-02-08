@@ -15,6 +15,8 @@ type Props = {
 };
 
 export default function TasksClient({ inbox, lists, items: initialItems }: Props) {
+  const isAndroidNative = typeof document !== 'undefined'
+    && document.documentElement.classList.contains('native-android');
   const router = useRouter();
   const [filter, setFilter] = useState<'all' | 'open' | 'done'>('all');
   const [items, setItems] = useState<TaskItem[]>(initialItems);
@@ -35,7 +37,9 @@ export default function TasksClient({ inbox, lists, items: initialItems }: Props
       const nextDone = !item.done;
       setItems((prev) => prev.map((row) => (row.id === item.id ? { ...row, done: nextDone } : row)));
       await toggleTaskDoneAction(item.id, nextDone);
-      router.refresh();
+      if (!isAndroidNative) {
+        router.refresh();
+      }
     });
   };
 
@@ -51,7 +55,9 @@ export default function TasksClient({ inbox, lists, items: initialItems }: Props
       setTitle('');
       setDueDate('');
       setSheetOpen(false);
-      router.refresh();
+      if (!isAndroidNative) {
+        router.refresh();
+      }
     });
   };
 

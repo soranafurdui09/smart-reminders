@@ -194,6 +194,8 @@ export default function ReminderDashboardSection({
   userTimeZone
 }: Props) {
   const router = useRouter();
+  const isAndroidNative = typeof document !== 'undefined'
+    && document.documentElement.classList.contains('native-android');
   const [createdBy, setCreatedBy] = useState<CreatedByOption>(initialCreatedBy);
   const [assignment, setAssignment] = useState<AssignmentOption>(initialAssignment);
   const [kindFilter, setKindFilter] = useState<'all' | 'tasks' | 'medications'>('all');
@@ -690,6 +692,33 @@ export default function ReminderDashboardSection({
     window.addEventListener('dashboard:tab', handleTabEvent as EventListener);
     return () => window.removeEventListener('dashboard:tab', handleTabEvent as EventListener);
   }, []);
+
+  useEffect(() => {
+    if (!isAndroidNative || typeof window === 'undefined') return;
+    const handleTaskCreated = (event: Event) => {
+      const detail = (event as CustomEvent<{ title?: string; listId?: string | null; dueDate?: string | null }>).detail;
+      if (!detail?.title) return;
+      const now = new Date().toISOString();
+      const tempItem: TaskItem = {
+        id: `temp-${Date.now()}`,
+        list_id: detail.listId || '',
+        owner_id: '',
+        household_id: null,
+        title: detail.title,
+        notes: null,
+        qty: null,
+        due_date: detail.dueDate ?? null,
+        priority: null,
+        done: false,
+        done_at: null,
+        created_at: now,
+        updated_at: now
+      };
+      setTaskItems((prev) => [tempItem, ...prev]);
+    };
+    window.addEventListener('taskitem:created', handleTaskCreated as EventListener);
+    return () => window.removeEventListener('taskitem:created', handleTaskCreated as EventListener);
+  }, [isAndroidNative]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
