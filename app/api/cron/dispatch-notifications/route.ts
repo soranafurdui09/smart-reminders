@@ -45,6 +45,8 @@ type ReminderRecord = {
   kind?: string | null;
   medication_details?: any;
   tz?: string | null;
+  user_notify_policy?: string | null;
+  user_notify_interval_minutes?: number | null;
 };
 
 export async function GET() {
@@ -492,7 +494,7 @@ export async function GET() {
 
   const { data: reminders, error: reminderError } = await admin
     .from('reminders')
-    .select('id, title, household_id, is_active, created_by, context_settings, kind, medication_details, tz')
+    .select('id, title, household_id, is_active, created_by, context_settings, kind, medication_details, tz, user_notify_policy, user_notify_interval_minutes')
     .in('id', reminderIds);
 
   if (reminderError) {
@@ -555,7 +557,7 @@ export async function GET() {
     .select('id, reminder_id, occur_at, snoozed_until, status')
     .in('reminder_id', reminderIds)
     .in('status', ['open', 'snoozed']);
-  const occurrenceMap = new Map<string, { id: string; occur_at: string; snoozed_until?: string | null }>();
+  const occurrenceMap = new Map<string, { id: string; occur_at: string; snoozed_until?: string | null; status: string }>();
   (occurrences ?? []).forEach((occurrence: any) => {
     const times = [occurrence.occur_at, occurrence.snoozed_until].filter(Boolean);
     times.forEach((time) => {
@@ -708,6 +710,52 @@ export async function GET() {
     return { skip: false, id: data?.id ?? null };
   };
 
+  const scheduleNextReminderEscalation = async (options: {
+    job: NotificationJob;
+    reminder: ReminderRecord;
+    occurrence: { id: string; status: string } | null;
+    occurrenceAtUtc: string;
+  }) => {
+    if (options.reminder.kind === 'medication') return;
+    if (options.job.entity_type && options.job.entity_type !== 'reminder') return;
+    if (!options.occurrence || options.occurrence.status === 'done') return;
+    if (options.reminder.user_notify_policy !== 'UNTIL_DONE') return;
+    const intervalMinutes = Number.isFinite(options.reminder.user_notify_interval_minutes)
+      ? Math.max(1, Math.floor(options.reminder.user_notify_interval_minutes as number))
+      : 120;
+    const nextNotifyAt = new Date(now.getTime() + intervalMinutes * 60 * 1000);
+    const { data: existing, error: existingError } = await admin
+      .from('notification_jobs')
+      .select('id')
+      .eq('entity_type', 'reminder')
+      .eq('entity_id', options.reminder.id)
+      .in('status', ['pending', 'processing'])
+      .gt('notify_at', nowIso)
+      .limit(1);
+    if (existingError) {
+      console.warn('[notifications] escalation dedupe failed', existingError);
+      return;
+    }
+    if (existing?.length) {
+      return;
+    }
+    const { error: insertError } = await admin
+      .from('notification_jobs')
+      .insert({
+        reminder_id: options.reminder.id,
+        user_id: options.job.user_id,
+        notify_at: nextNotifyAt.toISOString(),
+        channel: options.job.channel,
+        status: 'pending',
+        entity_type: 'reminder',
+        entity_id: options.reminder.id,
+        occurrence_at_utc: options.occurrenceAtUtc
+      });
+    if (insertError) {
+      console.warn('[notifications] escalation insert failed', insertError);
+    }
+  };
+
   const toWallClockDate = (date: Date, timeZone: string) => {
     const formatter = new Intl.DateTimeFormat('en-US', {
       timeZone,
@@ -840,7 +888,10 @@ export async function GET() {
       }
     }
 
-    const occurrenceId = !isMedication ? occurrenceMap.get(`${reminder.id}:${job.notify_at}`)?.id ?? null : null;
+    const occurrenceAtUtc = job.occurrence_at_utc ?? job.notify_at;
+    const occurrenceKey = `${reminder.id}:${occurrenceAtUtc}`;
+    const occurrence = !isMedication ? occurrenceMap.get(occurrenceKey) ?? null : null;
+    const occurrenceId = !isMedication ? occurrence?.id ?? null : null;
     if (!isMedication && !occurrenceId) {
       await markJobSkipped(job.id, 'stale_occurrence');
       skippedCount += 1;
@@ -850,7 +901,6 @@ export async function GET() {
     const profile = profileMap.get(job.user_id);
     const userTimeZone = profile?.timeZone || 'UTC';
     const displayTimeZone = resolveReminderTimeZone(reminder.tz ?? null, userTimeZone);
-    const occurrenceAtUtc = job.occurrence_at_utc ?? job.notify_at;
     const occurAtLabel = formatDateTimeWithTimeZone(notifyAt, displayTimeZone);
     const settings = settingsMap.get(reminder.id)
       ?? parseContextSettings(
@@ -878,14 +928,11 @@ export async function GET() {
         jobId: job.id,
         nextScheduledAt
       });
-      if (reminder.kind !== 'medication') {
-        const occurrence = occurrenceMap.get(`${reminder.id}:${job.notify_at}`);
-        if (occurrence) {
-          await admin
-            .from('reminder_occurrences')
-            .update({ snoozed_until: nextScheduledAt, status: 'snoozed' })
-            .eq('id', occurrence.id);
-        }
+      if (reminder.kind !== 'medication' && occurrence) {
+        await admin
+          .from('reminder_occurrences')
+          .update({ snoozed_until: nextScheduledAt, status: 'snoozed' })
+          .eq('id', occurrence.id);
       }
       await rescheduleNotificationJob({ jobId: job.id, notifyAt: new Date(nextScheduledAt) });
       continue;
@@ -1129,6 +1176,12 @@ export async function GET() {
 
     await markJobSent(job.id);
     sentCount += 1;
+    await scheduleNextReminderEscalation({
+      job,
+      reminder,
+      occurrence,
+      occurrenceAtUtc
+    });
   }
 
   console.log('[cron] run summary', {

@@ -672,7 +672,7 @@ async function processBatch(now) {
   const userIds = Array.from(new Set(jobs.map((job) => job.user_id)));
 
   const [{ data: reminders }, { data: profiles }, { data: occurrences }] = await Promise.all([
-    supabase.from('reminders').select('id, title, household_id, is_active, created_by, context_settings, kind, medication_details, tz').in('id', reminderIds),
+    supabase.from('reminders').select('id, title, household_id, is_active, created_by, context_settings, kind, medication_details, tz, user_notify_policy, user_notify_interval_minutes').in('id', reminderIds),
     supabase.from('profiles').select('user_id, email, time_zone, context_defaults, notify_by_push').in('user_id', userIds),
     supabase.from('reminder_occurrences').select('id, reminder_id, occur_at, snoozed_until, status').in('reminder_id', reminderIds).in('status', ['open', 'snoozed'])
   ]);
@@ -765,6 +765,47 @@ async function processBatch(now) {
     }
   }
 
+  const scheduleNextReminderEscalation = async ({ job, reminder, occurrence, occurrenceAtUtc }) => {
+    if (reminder.kind === 'medication') return;
+    if (job.entity_type && job.entity_type !== 'reminder') return;
+    if (!occurrence || occurrence.status === 'done') return;
+    if (reminder.user_notify_policy !== 'UNTIL_DONE') return;
+    const intervalMinutes = Number.isFinite(reminder.user_notify_interval_minutes)
+      ? Math.max(1, Math.floor(reminder.user_notify_interval_minutes))
+      : 120;
+    const nextNotifyAt = new Date(now.getTime() + intervalMinutes * 60 * 1000);
+    const { data: existing, error: existingError } = await supabase
+      .from('notification_jobs')
+      .select('id')
+      .eq('entity_type', 'reminder')
+      .eq('entity_id', reminder.id)
+      .in('status', ['pending', 'processing'])
+      .gt('notify_at', nowIso)
+      .limit(1);
+    if (existingError) {
+      console.warn('[worker] escalation dedupe failed', existingError);
+      return;
+    }
+    if (existing?.length) {
+      return;
+    }
+    const { error: insertError } = await supabase
+      .from('notification_jobs')
+      .insert({
+        reminder_id: reminder.id,
+        user_id: job.user_id,
+        notify_at: nextNotifyAt.toISOString(),
+        channel: job.channel,
+        status: 'pending',
+        entity_type: 'reminder',
+        entity_id: reminder.id,
+        occurrence_at_utc: occurrenceAtUtc
+      });
+    if (insertError) {
+      console.warn('[worker] escalation insert failed', insertError);
+    }
+  };
+
   let sent = 0;
   let failed = 0;
   let skipped = 0;
@@ -803,7 +844,10 @@ async function processBatch(now) {
       }
     }
 
-    const occurrenceId = !isMedication ? occurrenceMap.get(`${reminder.id}:${job.notify_at}`)?.id ?? null : null;
+    const occurrenceAtUtc = job.occurrence_at_utc ?? job.notify_at;
+    const occurrenceKey = `${reminder.id}:${occurrenceAtUtc}`;
+    const occurrence = !isMedication ? occurrenceMap.get(occurrenceKey) ?? null : null;
+    const occurrenceId = !isMedication ? occurrence?.id ?? null : null;
     if (!isMedication && !occurrenceId) {
       await markJobSkipped(job.id, nowIso, 'stale_occurrence');
       skipped += 1;
@@ -833,14 +877,11 @@ async function processBatch(now) {
     if (decision.type === 'auto_snooze') {
       const snoozeMinutes = settings.calendarBusy?.snoozeMinutes ?? 15;
       const nextScheduledAt = computePostponeUntil(now, snoozeMinutes, busyInterval).toISOString();
-      if (reminder.kind !== 'medication') {
-        const occurrence = occurrenceMap.get(`${reminder.id}:${job.notify_at}`);
-        if (occurrence) {
-          await supabase
-            .from('reminder_occurrences')
-            .update({ snoozed_until: nextScheduledAt, status: 'snoozed' })
-            .eq('id', occurrence.id);
-        }
+      if (reminder.kind !== 'medication' && occurrence) {
+        await supabase
+          .from('reminder_occurrences')
+          .update({ snoozed_until: nextScheduledAt, status: 'snoozed' })
+          .eq('id', occurrence.id);
       }
       await rescheduleJob(job.id, new Date(nextScheduledAt), nowIso);
       return;
@@ -871,7 +912,6 @@ async function processBatch(now) {
       return;
     }
 
-    const occurrenceAtUtc = job.occurrence_at_utc ?? job.notify_at;
     const actionToken = await ensureActionToken(job);
     const title = isMedication
       ? `💊 ${(reminder.medication_details?.name ?? reminder.title)}`
@@ -998,6 +1038,12 @@ async function processBatch(now) {
 
     await markJobSent(job.id, nowIso);
     sent += 1;
+    await scheduleNextReminderEscalation({
+      job,
+      reminder,
+      occurrence,
+      occurrenceAtUtc
+    });
   });
 
   return { claimed: jobs.length, sent, failed, skipped, maxLagSeconds };
