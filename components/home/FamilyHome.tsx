@@ -512,24 +512,24 @@ export default function FamilyHome({
             <div className="home-slate-bg" aria-hidden="true" />
             {header as ReactNode}
             {tilesReady ? (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="family-status-grid grid grid-cols-2 gap-2">
                 {metrics.map((metric) => {
                   const displayCount = metric.id === 'overdue' ? 'Top 5' : metric.count;
                   return (
                     <button
                       key={metric.id}
                       type="button"
-                      className={`rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left ${metric.tileClass ?? ''}`}
+                      className={`family-status-tile rounded-2xl px-3 py-2 text-left ${metric.tileClass ?? ''}`}
                       onClick={() => {
                         if (metric.id === 'today' || metric.id === 'soon' || metric.id === 'overdue') {
                           handleSegmentSelect(metric.id);
                         }
                       }}
                     >
-                      <div className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-2)]">
+                      <div className="family-status-label text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-2)]">
                         {metric.label}
                       </div>
-                      <div className="mt-0.5 text-base font-semibold text-[color:var(--tile-ink,var(--text-0))]">
+                      <div className="family-status-value mt-0.5 text-base font-semibold text-[color:var(--tile-ink,var(--text-0))]">
                         {displayCount}
                       </div>
                     </button>
@@ -537,9 +537,9 @@ export default function FamilyHome({
                 })}
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="family-status-grid grid grid-cols-2 gap-2">
                 {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={`tile-skeleton-${index}`} className="h-14 rounded-2xl bg-surfaceMuted/70" />
+                  <div key={`tile-skeleton-${index}`} className="family-status-skeleton h-12 rounded-2xl bg-surfaceMuted/70" />
                 ))}
               </div>
             )}
@@ -606,7 +606,7 @@ export default function FamilyHome({
                 <QuickAddBar />
 
                 {!overdueTopItems.length ? null : (
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="space-y-2">
                     {!isControlSessionDone ? (
                       <form action={markDone}>
                         <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
@@ -626,27 +626,29 @@ export default function FamilyHome({
                         </ActionSubmitButton>
                       </form>
                     ) : null}
-                    <form action={snoozeOccurrence}>
-                      <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
-                      <input type="hidden" name="option_id" value="tomorrow" />
-                      <ActionSubmitButton
-                        className="home-priority-secondary"
-                        type="submit"
-                        data-action-feedback={copy.common.actionSnoozed}
-                        disabled={!overdueTopItems[0]}
+                    <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold text-[color:var(--text-2)]">
+                      <form action={snoozeOccurrence}>
+                        <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
+                        <input type="hidden" name="option_id" value="tomorrow" />
+                        <ActionSubmitButton
+                          className="underline underline-offset-4 decoration-white/20 text-[color:var(--text-2)] hover:text-[color:var(--text-0)]"
+                          type="submit"
+                          data-action-feedback={copy.common.actionSnoozed}
+                          disabled={!overdueTopItems[0]}
+                        >
+                          Mută pe mâine
+                        </ActionSubmitButton>
+                      </form>
+                      <button
+                        type="button"
+                        className="underline underline-offset-4 decoration-white/20 text-[color:var(--text-2)] hover:text-[color:var(--text-0)]"
+                        onClick={() => {
+                          router.push('/app?tab=today&segment=overdue');
+                        }}
                       >
-                        Mută pe mâine
-                      </ActionSubmitButton>
-                    </form>
-                    <button
-                      type="button"
-                      className="text-xs font-semibold text-[color:var(--brand-blue)]"
-                      onClick={() => {
-                        router.push('/app?tab=today&segment=overdue');
-                      }}
-                    >
-                      Vezi toate
-                    </button>
+                        Vezi toate
+                      </button>
+                    </div>
                   </div>
                 )}
                 {isControlSessionDone ? (

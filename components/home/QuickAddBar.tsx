@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Mic, Sparkles, Plus } from 'lucide-react';
+import { Mic, Sparkles } from 'lucide-react';
 
 export default function QuickAddBar() {
   const [value, setValue] = useState('');
@@ -44,14 +44,6 @@ export default function QuickAddBar() {
           onClick={() => openQuickAdd({ text: trimmed || undefined })}
         >
           <Sparkles className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          className="home-primary-btn h-11 w-11"
-          onClick={() => openQuickAdd({ text: trimmed || undefined })}
-          aria-label="Adaugă"
-        >
-          <Plus className="h-4 w-4" />
         </button>
       </div>
     </div>

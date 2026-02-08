@@ -601,6 +601,18 @@ select.premium-input optgroup {
     --tile-ink: #ff5555;
   }
 
+  .family-status-tile {
+    background: var(--surface-2);
+    border: 1px solid var(--border-1);
+    box-shadow: none;
+    min-height: 56px;
+  }
+
+  .family-status-tile:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
   .home-slate {
     position: relative;
     z-index: 0;
