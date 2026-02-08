@@ -6,7 +6,6 @@ import type { ReactNode } from 'react';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import QuickAddBar from '@/components/home/QuickAddBar';
-import AtAGlanceRow from '@/components/home/AtAGlanceRow';
 import ReminderRowMobile from '@/components/mobile/ReminderRowMobile';
 import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
 import ListReminderButton from '@/components/lists/ListReminderButton';
@@ -144,25 +143,6 @@ export default function FamilyHome({
 
   return (
       <section className={`homeRoot premium ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-[var(--space-3)]`}>
-        {tilesReady ? (
-          <AtAGlanceRow
-            metrics={metrics}
-            activeId={homeSegment}
-            onSelect={(id) => {
-              if (id === 'today' || id === 'soon' || id === 'overdue') {
-                handleSegmentSelect(id);
-              }
-            }}
-          />
-        ) : (
-          <div className="home-glass-panel at-a-glance-panel rounded-[var(--radius-lg)] px-[var(--space-2)] py-[var(--space-2)]">
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div key={`tile-skeleton-${index}`} className="h-20 rounded-2xl bg-surfaceMuted/70" />
-              ))}
-            </div>
-          </div>
-        )}
         {activeTab === 'inbox' ? (
           <div className="space-y-[var(--space-3)]">
             <div className="card-soft flex items-center justify-between px-[var(--space-3)] py-[var(--space-2)]">
@@ -531,6 +511,38 @@ export default function FamilyHome({
           <div className="home-slate space-y-3 today-shell home-compact">
             <div className="home-slate-bg" aria-hidden="true" />
             {header as ReactNode}
+            {tilesReady ? (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {metrics.map((metric) => {
+                  const displayCount = metric.id === 'overdue' ? 'Top 5' : metric.count;
+                  return (
+                    <button
+                      key={metric.id}
+                      type="button"
+                      className={`min-w-[120px] shrink-0 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left ${metric.tileClass ?? ''}`}
+                      onClick={() => {
+                        if (metric.id === 'today' || metric.id === 'soon' || metric.id === 'overdue') {
+                          handleSegmentSelect(metric.id);
+                        }
+                      }}
+                    >
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-2)]">
+                        {metric.label}
+                      </div>
+                      <div className="mt-0.5 text-sm font-semibold text-[color:var(--tile-ink,var(--text-0))]">
+                        {displayCount}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={`tile-skeleton-${index}`} className="h-12 w-28 shrink-0 rounded-2xl bg-surfaceMuted/70" />
+                ))}
+              </div>
+            )}
             <>
                 <div className={`next-reminder-card ${nextToneClassName}`}>
                   <span className="next-reminder-topline" aria-hidden="true" />
