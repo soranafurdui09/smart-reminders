@@ -242,7 +242,7 @@ export async function updateReminder(formData: FormData) {
     payload.tz = tz;
   }
   if (hasNotifyPolicy) {
-    const notifyIntervalMinutes = notifyIntervalRaw ? Number(notifyIntervalRaw) : null;
+    const notifyIntervalMinutes = notifyIntervalRaw ? Number(notifyIntervalRaw) : Number.NaN;
     const notifyIntervalValue = Number.isFinite(notifyIntervalMinutes)
       ? Math.min(1440, Math.max(1, Math.floor(notifyIntervalMinutes)))
       : null;

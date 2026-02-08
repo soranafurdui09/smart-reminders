@@ -193,7 +193,7 @@ export async function createReminder(formData: FormData) {
   }
   const preReminderMinutes = preReminderRaw ? Number(preReminderRaw) : null;
   const preReminderValue = Number.isFinite(preReminderMinutes) ? preReminderMinutes : null;
-  const notifyIntervalMinutes = notifyIntervalRaw ? Number(notifyIntervalRaw) : null;
+  const notifyIntervalMinutes = notifyIntervalRaw ? Number(notifyIntervalRaw) : Number.NaN;
   const notifyIntervalValue = Number.isFinite(notifyIntervalMinutes)
     ? Math.min(1440, Math.max(1, Math.floor(notifyIntervalMinutes)))
     : null;
