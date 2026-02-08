@@ -411,6 +411,8 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
   const [scheduleType, setScheduleType] = useState<ScheduleType>('once');
   const [recurrenceRule, setRecurrenceRule] = useState('');
   const [preReminderMinutes, setPreReminderMinutes] = useState('');
+  const [notifyUntilDone, setNotifyUntilDone] = useState(false);
+  const [notifyIntervalMinutes, setNotifyIntervalMinutes] = useState('');
   const [assignedMemberId, setAssignedMemberId] = useState('');
   const [kind, setKind] = useState<'generic' | 'medication'>('generic');
   const [medName, setMedName] = useState('');
@@ -515,6 +517,13 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
       return next;
     });
   }, [medFrequencyType, medTimesPerDay]);
+
+  useEffect(() => {
+    if (!notifyUntilDone) return;
+    if (!notifyIntervalMinutes) {
+      setNotifyIntervalMinutes('120');
+    }
+  }, [notifyIntervalMinutes, notifyUntilDone]);
 
   useEffect(() => {
     if (medFrequencyType === 'once_per_day' || medFrequencyType === 'every_n_hours') {
@@ -770,6 +779,10 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     formData.set('schedule_type', localDueAt ? deriveScheduleType(data.recurrenceRule) : 'once');
     formData.set('recurrence_rule', localDueAt ? (data.recurrenceRule || '') : '');
     formData.set('pre_reminder_minutes', localDueAt ? (preReminderValue || '') : '');
+    formData.set('user_notify_until_done', notifyUntilDone ? '1' : '0');
+    if (notifyUntilDone) {
+      formData.set('user_notify_interval_minutes', notifyIntervalMinutes || '120');
+    }
     formData.set('assigned_member_id', data.assignedMemberId || assignedMemberId);
     formData.set('medication_details', medicationDetailsJson);
     formData.set('medication_add_to_calendar', medAddToCalendar ? '1' : '');
@@ -799,6 +812,8 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
     medAddToCalendar,
     medicationDetailsJson,
     notes,
+    notifyIntervalMinutes,
+    notifyUntilDone,
     preReminderMinutes,
     timeWindowDays,
     timeWindowEnabled,
@@ -1771,6 +1786,37 @@ const ReminderForm = forwardRef<ReminderFormVoiceHandle, ReminderFormProps>(func
                   value={preReminderMinutes}
                   onChange={(event) => setPreReminderMinutes(event.target.value)}
                 />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <input
+                    id="user-notify-until-done"
+                    type="checkbox"
+                    name="user_notify_until_done"
+                    value="1"
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                    checked={notifyUntilDone}
+                    onChange={(event) => setNotifyUntilDone(event.target.checked)}
+                  />
+                  <label htmlFor="user-notify-until-done">Notifică-mă până o bifez</label>
+                </div>
+                <input type="hidden" name="user_notify_until_done" value="0" />
+                {notifyUntilDone ? (
+                  <div className="max-w-xs">
+                    <label className="text-xs font-semibold text-muted">Interval (minute)</label>
+                    <select
+                      name="user_notify_interval_minutes"
+                      className="input"
+                      value={notifyIntervalMinutes}
+                      onChange={(event) => setNotifyIntervalMinutes(event.target.value)}
+                    >
+                      <option value="60">60</option>
+                      <option value="120">120</option>
+                      <option value="240">240</option>
+                      <option value="1440">1440</option>
+                    </select>
+                  </div>
+                ) : null}
               </div>
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink">

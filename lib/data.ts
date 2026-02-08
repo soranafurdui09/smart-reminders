@@ -28,6 +28,9 @@ type ReminderPreview = {
   created_by?: string;
   is_active?: boolean;
   assigned_member_id?: string | null;
+  user_notify_at?: string | null;
+  user_notify_policy?: 'ONCE' | 'UNTIL_DONE' | null;
+  user_notify_interval_minutes?: number | null;
   tz?: string | null;
   kind?: string;
   medication_details?: any;

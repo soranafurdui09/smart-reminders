@@ -55,7 +55,8 @@ type OccurrencePayload = {
     due_at?: string | null;
     notify_at?: string | null;
     user_notify_at?: string | null;
-    user_notify_policy?: string | null;
+    user_notify_policy?: 'ONCE' | 'UNTIL_DONE' | null;
+    user_notify_interval_minutes?: number | null;
     created_by?: string | null;
     assigned_member_id?: string | null;
     is_active?: boolean;

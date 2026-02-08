@@ -112,6 +112,8 @@ export async function createReminder(formData: FormData) {
   const dueAtIso = String(formData.get('due_at_iso') || '').trim();
   const recurrenceRuleRaw = String(formData.get('recurrence_rule') || '').trim();
   const preReminderRaw = String(formData.get('pre_reminder_minutes') || '').trim();
+  const notifyUntilDone = String(formData.get('user_notify_until_done') || '') === '1';
+  const notifyIntervalRaw = String(formData.get('user_notify_interval_minutes') || '').trim();
   const assignedMemberRaw = String(formData.get('assigned_member_id') || '').trim();
   const voiceAuto = String(formData.get('voice_auto') || '') === '1';
   const tz = String(formData.get('tz') || '').trim() || 'UTC';
@@ -191,6 +193,10 @@ export async function createReminder(formData: FormData) {
   }
   const preReminderMinutes = preReminderRaw ? Number(preReminderRaw) : null;
   const preReminderValue = Number.isFinite(preReminderMinutes) ? preReminderMinutes : null;
+  const notifyIntervalMinutes = notifyIntervalRaw ? Number(notifyIntervalRaw) : null;
+  const notifyIntervalValue = Number.isFinite(notifyIntervalMinutes)
+    ? Math.min(1440, Math.max(1, Math.floor(notifyIntervalMinutes)))
+    : null;
   const { data: reminder, error } = await supabase
     .from('reminders')
     .insert({
@@ -204,6 +210,8 @@ export async function createReminder(formData: FormData) {
       is_active: true,
       recurrence_rule: recurrenceRuleRaw || null,
       pre_reminder_minutes: preReminderValue,
+      user_notify_policy: notifyUntilDone ? 'UNTIL_DONE' : 'ONCE',
+      user_notify_interval_minutes: notifyUntilDone ? (notifyIntervalValue ?? 120) : null,
       assigned_member_id: assignedMemberId,
       context_settings: contextSettingsWithList,
       kind,

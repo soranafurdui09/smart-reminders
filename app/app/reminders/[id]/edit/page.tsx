@@ -9,6 +9,7 @@ import { messages } from '@/lib/i18n';
 import { parseContextSettings, type DayOfWeek } from '@/lib/reminders/context';
 import type { MedicationDetails, MedicationFrequencyType } from '@/lib/reminders/medication';
 import { getUserGoogleConnection } from '@/lib/google/calendar';
+import { createServerClient } from '@/lib/supabase/server';
 import { updateReminder } from '../actions';
 
 function toLocalInputValue(iso?: string | null) {
@@ -40,6 +41,20 @@ export default async function EditReminderPage({ params }: { params: { id: strin
       </AppShell>
     );
   }
+
+  const supabase = createServerClient();
+  const { data: notifySettings } = await supabase
+    .from('reminders')
+    .select('user_notify_policy, user_notify_interval_minutes')
+    .eq('id', reminder.id)
+    .maybeSingle();
+  const notifyPolicy = notifySettings?.user_notify_policy === 'UNTIL_DONE' ? 'UNTIL_DONE' : 'ONCE';
+  const notifyIntervalMinutes =
+    notifyPolicy === 'UNTIL_DONE'
+      ? typeof notifySettings?.user_notify_interval_minutes === 'number'
+        ? notifySettings.user_notify_interval_minutes
+        : 120
+      : 120;
 
   const members = reminder.household_id
     ? await getHouseholdMembers(reminder.household_id)
@@ -272,6 +287,33 @@ export default async function EditReminderPage({ params }: { params: { id: strin
                       {member.label}
                     </option>
                   ))}
+                </select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <input
+                  id="user-notify-until-done"
+                  type="checkbox"
+                  name="user_notify_until_done"
+                  value="1"
+                  className="peer h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                  defaultChecked={notifyPolicy === 'UNTIL_DONE'}
+                />
+                <label htmlFor="user-notify-until-done">Notifică-mă până o bifez</label>
+              </div>
+              <input type="hidden" name="user_notify_until_done" value="0" />
+              <div className="ml-6 hidden max-w-xs peer-checked:block">
+                <label className="text-xs font-semibold text-muted">Interval (minute)</label>
+                <select
+                  name="user_notify_interval_minutes"
+                  className="input"
+                  defaultValue={String(notifyIntervalMinutes)}
+                >
+                  <option value="60">60</option>
+                  <option value="120">120</option>
+                  <option value="240">240</option>
+                  <option value="1440">1440</option>
                 </select>
               </div>
             </div>

@@ -92,6 +92,9 @@ export async function updateReminder(formData: FormData) {
   const reminderId = String(formData.get('reminderId'));
   const user = await requireUser(`/app/reminders/${reminderId}`);
   const contextDefaults = await getUserContextDefaults(user.id);
+  const hasNotifyPolicy = formData.has('user_notify_until_done');
+  const notifyUntilDone = String(formData.get('user_notify_until_done') || '') === '1';
+  const notifyIntervalRaw = String(formData.get('user_notify_interval_minutes') || '').trim();
 
   const supabase = createServerClient();
   const { data: reminderRecord } = await supabase
@@ -237,6 +240,14 @@ export async function updateReminder(formData: FormData) {
   const tz = String(formData.get('tz') || '').trim();
   if (tz) {
     payload.tz = tz;
+  }
+  if (hasNotifyPolicy) {
+    const notifyIntervalMinutes = notifyIntervalRaw ? Number(notifyIntervalRaw) : null;
+    const notifyIntervalValue = Number.isFinite(notifyIntervalMinutes)
+      ? Math.min(1440, Math.max(1, Math.floor(notifyIntervalMinutes)))
+      : null;
+    payload.user_notify_policy = notifyUntilDone ? 'UNTIL_DONE' : 'ONCE';
+    payload.user_notify_interval_minutes = notifyUntilDone ? (notifyIntervalValue ?? 120) : null;
   }
 
   const { error } = await supabase.from('reminders').update(payload).eq('id', reminderId);
