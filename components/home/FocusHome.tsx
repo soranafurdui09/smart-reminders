@@ -167,6 +167,36 @@ export default function FocusHome({
     return horizonItems.filter((item) => item.id !== nextInRange.id);
   }, [horizonItems, nextInRange?.id]);
   const visibleItems = useMemo(() => filteredItems.slice(0, 5), [filteredItems]);
+  const focusCounts = useMemo(() => {
+    const nowMs = Date.now();
+    const nextWindowMs = nowMs + 2 * 60 * 60 * 1000;
+    let overdue = 0;
+    let nextTwoHours = 0;
+    for (const item of todayItems) {
+      const displayAt = item.snoozed_until ?? item.effective_at ?? item.occur_at;
+      const ts = new Date(displayAt).getTime();
+      if (Number.isNaN(ts)) continue;
+      if (ts < nowMs) {
+        overdue += 1;
+        continue;
+      }
+      if (ts <= nextWindowMs) {
+        nextTwoHours += 1;
+      }
+    }
+    const important = Math.max(0, todayItems.length - overdue);
+    return { overdue, nextTwoHours, important };
+  }, [todayItems]);
+  const nextTileValue = focusCounts.nextTwoHours > 0
+    ? String(focusCounts.nextTwoHours)
+    : (nextDisplayLabel || '—');
+  const focusTiles = [
+    { id: 'next', label: 'Următorul', value: nextTileValue, className: 'stat-tile-today' },
+    { id: 'important', label: 'Important', value: String(focusCounts.important), className: 'stat-tile-soon' }
+  ];
+  if (focusCounts.overdue > 0) {
+    focusTiles.push({ id: 'overdue', label: 'Restante', value: String(focusCounts.overdue), className: 'stat-tile-overdue' });
+  }
   const horizonLabel =
     horizon === '7d'
       ? 'Următoarele 7 zile'
@@ -176,6 +206,18 @@ export default function FocusHome({
 
   return (
     <section className="space-y-3">
+      <div className={`grid ${focusTiles.length === 3 ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
+        {focusTiles.map((tile) => (
+          <div key={tile.id} className={`stat-tile home-tile p-2 ${tile.className}`}>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-2)]">
+              {tile.label}
+            </div>
+            <div className="mt-0.5 text-sm font-semibold text-[color:var(--tile-ink,var(--text-0))]">
+              {tile.value}
+            </div>
+          </div>
+        ))}
+      </div>
       <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-3)] py-[var(--space-2)]">
         {nextInRange ? (
           <div className="flex items-center justify-between gap-3">

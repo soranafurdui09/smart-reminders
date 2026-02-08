@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import QuickAddBar from '@/components/home/QuickAddBar';
+import AtAGlanceRow from '@/components/home/AtAGlanceRow';
 import ReminderRowMobile from '@/components/mobile/ReminderRowMobile';
 import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
 import ListReminderButton from '@/components/lists/ListReminderButton';
@@ -61,7 +62,15 @@ export default function FamilyHome({
   overdueTopItems,
   localeTag,
   router,
-  householdMembers
+  householdMembers,
+  todayOpenItems,
+  soonItems,
+  visibleDoses,
+  overdueItems,
+  overdueTileClass,
+  homeSegment,
+  handleSegmentSelect,
+  medsTodayStats
 }: Props) {
   const nextToneClassName = nextTone === 'overdue' ? 'next-reminder-card--overdue' : nextTone === 'urgent' ? 'next-reminder-card--urgent' : '';
   const nextTitle = nextOccurrence?.reminder?.title ?? '';
@@ -72,6 +81,24 @@ export default function FamilyHome({
   const activeFilterLabel = activeCategory?.label ? `Afișezi: ${activeCategory.label} (${filteredOverdueCount})` : null;
   const soonPreview = filteredSoonItems.slice(0, 3);
   const hasMoreSoon = filteredSoonItems.length > soonPreview.length;
+  const tilesReady =
+    Array.isArray(todayOpenItems)
+    && Array.isArray(soonItems)
+    && Array.isArray(overdueItems)
+    && (Array.isArray(visibleDoses) || Number.isFinite(medsTodayStats?.total));
+  const medsCount = Number.isFinite(medsTodayStats?.total)
+    ? medsTodayStats.total
+    : Array.isArray(visibleDoses)
+      ? visibleDoses.length
+      : 0;
+  const metrics = tilesReady
+    ? ([
+        { id: 'today', label: copy.dashboard.todayTitle, count: todayOpenItems.length, tileClass: 'stat-tile-today' },
+        { id: 'soon', label: copy.dashboard.upcomingTitle, count: soonItems.length, tileClass: 'stat-tile-soon' },
+        { id: 'meds', label: copy.dashboard.medicationsTitle, count: medsCount, tileClass: 'stat-tile-meds' },
+        { id: 'overdue', label: copy.dashboard.todayOverdue, count: overdueItems.length, tileClass: overdueTileClass }
+      ])
+    : [];
   const nextNotifyTimeLabel = (() => {
     const userNotifyAt = nextOccurrence?.reminder?.user_notify_at ?? null;
     const dueAt = nextOccurrence?.reminder?.due_at ?? null;
@@ -117,6 +144,25 @@ export default function FamilyHome({
 
   return (
       <section className={`homeRoot premium ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-[var(--space-3)]`}>
+        {tilesReady ? (
+          <AtAGlanceRow
+            metrics={metrics}
+            activeId={homeSegment}
+            onSelect={(id) => {
+              if (id === 'today' || id === 'soon' || id === 'overdue') {
+                handleSegmentSelect(id);
+              }
+            }}
+          />
+        ) : (
+          <div className="home-glass-panel at-a-glance-panel rounded-[var(--radius-lg)] px-[var(--space-2)] py-[var(--space-2)]">
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={`tile-skeleton-${index}`} className="h-20 rounded-2xl bg-surfaceMuted/70" />
+              ))}
+            </div>
+          </div>
+        )}
         {activeTab === 'inbox' ? (
           <div className="space-y-[var(--space-3)]">
             <div className="card-soft flex items-center justify-between px-[var(--space-3)] py-[var(--space-2)]">
