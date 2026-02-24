@@ -180,9 +180,9 @@ export default function FamilyHome({
             </div>
             {inboxView === 'reminders' ? (
               <details className="card-soft group p-[var(--space-3)]">
-                <summary className="flex cursor-pointer items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-muted2">
+                <summary className="flex cursor-pointer items-center justify-between text-[0.6875rem] font-semibold uppercase tracking-wide text-muted2">
                   Filtre
-                  <span className="text-[11px] font-semibold text-muted2 group-open:rotate-180 transition">▾</span>
+                  <span className="text-[0.6875rem] font-semibold text-muted2 group-open:rotate-180 transition">▾</span>
                 </summary>
                 <div className="mt-[var(--space-2)]">
                   <ReminderFiltersPanel
@@ -234,7 +234,7 @@ export default function FamilyHome({
                 <div className="space-y-[var(--space-3)]">
                   {taskBuckets.overdue.length ? (
                     <div className="space-y-2">
-                      <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Restante</div>
+                      <div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-tertiary">Restante</div>
                       {taskBuckets.overdue.map((item: any) => (
                         <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
                           <button
@@ -261,7 +261,7 @@ export default function FamilyHome({
                   ) : null}
                   {taskBuckets.today.length ? (
                     <div className="space-y-2">
-                      <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Azi</div>
+                      <div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-tertiary">Azi</div>
                       {taskBuckets.today.map((item: any) => (
                         <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
                           <button
@@ -288,7 +288,7 @@ export default function FamilyHome({
                   ) : null}
                   {taskBuckets.soon.length ? (
                     <div className="space-y-2">
-                      <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Următoarele 7 zile</div>
+                      <div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-tertiary">Următoarele 7 zile</div>
                       {taskBuckets.soon.map((item: any) => (
                         <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
                           <button
@@ -315,7 +315,7 @@ export default function FamilyHome({
                   ) : null}
                   {taskBuckets.later.length ? (
                     <div className="space-y-2">
-                      <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Mai târziu</div>
+                      <div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-tertiary">Mai târziu</div>
                       {taskBuckets.later.map((item: any) => (
                         <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
                           <button
@@ -342,7 +342,7 @@ export default function FamilyHome({
                   ) : null}
                   {taskBuckets.undated.length ? (
                     <div className="space-y-2">
-                      <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Fără dată</div>
+                      <div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-tertiary">Fără dată</div>
                       {taskBuckets.undated.map((item: any) => (
                         <div key={item.id} className="premium-card flex items-start gap-3 px-4 py-3">
                           <button
@@ -395,7 +395,7 @@ export default function FamilyHome({
                         </div>
                       </div>
                       {list.household_id ? (
-                        <div className="text-[11px] font-semibold text-[color:rgb(var(--accent-2))]">
+                        <div className="text-[0.6875rem] font-semibold text-[color:rgb(var(--accent-2))]">
                           Shared · {householdMembers.length}
                         </div>
                       ) : null}
@@ -422,7 +422,7 @@ export default function FamilyHome({
               <>
                 {inboxOverdue.length ? (
                   <div className="space-y-2">
-                    <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Restante</div>
+                    <div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-tertiary">Restante</div>
                     {inboxOverdue.map((occurrence: any) => (
                       <ReminderRowMobile
                         key={occurrence.id}
@@ -436,7 +436,7 @@ export default function FamilyHome({
                 ) : null}
                 {inboxToday.length ? (
                   <div className="space-y-2">
-                    <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Azi</div>
+                    <div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-tertiary">Azi</div>
                     {inboxToday.map((occurrence: any) => (
                       <ReminderRowMobile
                         key={occurrence.id}
@@ -450,7 +450,7 @@ export default function FamilyHome({
                 ) : null}
                 {inboxSoon.length ? (
                   <div className="space-y-2">
-                    <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Următoarele 7 zile</div>
+                    <div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-tertiary">Următoarele 7 zile</div>
                     {inboxSoon.map((occurrence: any) => (
                       <ReminderRowMobile
                         key={occurrence.id}
@@ -464,7 +464,7 @@ export default function FamilyHome({
                 ) : null}
                 {inboxLater.length ? (
                   <div className="space-y-2">
-                    <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Mai târziu</div>
+                    <div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-tertiary">Mai târziu</div>
                     {inboxLater.map((occurrence: any) => (
                       <ReminderRowMobile
                         key={occurrence.id}
@@ -478,7 +478,7 @@ export default function FamilyHome({
                 ) : null}
                 {reminderUndatedLimited.length ? (
                   <div className="space-y-2">
-                    <div className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Fără dată</div>
+                    <div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-tertiary">Fără dată</div>
                     {reminderUndatedLimited.map((occurrence: any) => (
                       <ReminderRowMobile
                         key={occurrence.id}
@@ -517,7 +517,7 @@ export default function FamilyHome({
             {/* ── Greeting ────────────────────────────────────── */}
             <div className="animate-in px-1">
               <h2
-                className="text-[24px] font-bold leading-tight"
+                className="text-[1.5rem] font-bold leading-tight"
                 style={{
                   background: 'linear-gradient(135deg, var(--text-primary, #eeedf5) 0%, var(--accent-text, #a5a8ff) 100%)',
                   WebkitBackgroundClip: 'text',
@@ -595,7 +595,7 @@ export default function FamilyHome({
                         {metric.count}
                       </div>
                       <div
-                        className="mt-1 text-[9px] font-semibold uppercase tracking-widest"
+                        className="mt-1 text-[0.5625rem] font-semibold uppercase tracking-widest"
                         style={{ color: 'var(--text-muted, #4a4860)' }}
                       >
                         {metric.label}
@@ -623,7 +623,7 @@ export default function FamilyHome({
                 background: 'linear-gradient(135deg, var(--bg-elevated, #1a1b2e), rgba(26,24,46,0.9))',
                 border: '1px solid rgba(108,111,245,0.18)',
                 borderRadius: 'var(--radius-xl, 22px)',
-                padding: '16px',
+                padding: '1rem',
               }}
             >
               {/* Left accent bar */}
@@ -646,7 +646,7 @@ export default function FamilyHome({
                 ) : (
                   <>
                     <div
-                      className="text-[16px] font-semibold leading-snug"
+                      className="text-[1rem] font-semibold leading-snug"
                       style={{ color: 'var(--text-primary, #eeedf5)' }}
                     >
                       {nextTitle}
@@ -781,14 +781,14 @@ export default function FamilyHome({
                             background: 'var(--bg-subtle, #1f2035)',
                             border: '1px solid var(--border-default, #1e1f35)',
                             color: 'var(--accent-text, #a5a8ff)',
-                            fontSize: '14px',
+                            fontSize: '0.875rem',
                             fontWeight: 600,
                           }}
                         >
                           {initials}
                         </div>
                         <span
-                          className="max-w-[48px] truncate text-center text-[10px]"
+                          className="max-w-[48px] truncate text-center text-[0.625rem]"
                           style={{ color: 'var(--text-secondary, #8b8aa0)' }}
                         >
                           {memberName.split(' ')[0] ?? memberName}
@@ -840,7 +840,7 @@ export default function FamilyHome({
                       >
                         <div className="min-w-0 space-y-1">
                           <div
-                            className="line-clamp-2 text-[14px] font-semibold leading-snug"
+                            className="line-clamp-2 text-[0.875rem] font-semibold leading-snug"
                             style={{
                               color: index === 0
                                 ? 'var(--text-primary, #eeedf5)'
