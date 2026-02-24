@@ -760,9 +760,9 @@ export default function FamilyHome({
 
             {/* ── Membrii familiei ────────────────────────────── */}
             {Array.isArray(householdMembers) && householdMembers.length > 1 ? (
-              <section className="animate-in space-y-3">
+              <section className="animate-in space-y-3 px-[1rem]">
                 <div className="section-label">MEMBRII FAMILIEI</div>
-                <div className="no-scrollbar flex gap-4 overflow-x-auto pb-1">
+                <div className="no-scrollbar flex gap-[0.625rem] overflow-x-auto pb-1">
                   {householdMembers.map((member: any) => {
                     // householdMembers shape is { id, label } — label holds the display name
                     const memberName: string = member.display_name ?? member.name ?? member.label ?? '';
@@ -781,14 +781,14 @@ export default function FamilyHome({
                             background: 'var(--bg-subtle, #1f2035)',
                             border: '1px solid var(--border-default, #1e1f35)',
                             color: 'var(--accent-text, #a5a8ff)',
-                            fontSize: '0.875rem',
+                            fontSize: '0.8125rem',
                             fontWeight: 600,
                           }}
                         >
                           {initials}
                         </div>
                         <span
-                          className="max-w-[48px] truncate text-center text-[0.625rem]"
+                          className="max-w-[52px] truncate text-center text-[0.6875rem]"
                           style={{ color: 'var(--text-secondary, #8b8aa0)' }}
                         >
                           {memberName.split(' ')[0] ?? memberName}
@@ -802,14 +802,14 @@ export default function FamilyHome({
 
             {/* ── Prioritare azi ──────────────────────────────── */}
             {!overdueTopItems.length ? null : (
-              <section className="animate-in space-y-2">
+              <section className="animate-in space-y-2 px-[1rem]">
                 <div className="section-label">PRIORITARE AZI</div>
                 {activeFilterLabel ? (
                   <div className="text-xs" style={{ color: 'var(--text-secondary, #8b8aa0)' }}>
                     {activeFilterLabel}
                   </div>
                 ) : null}
-                <div className="stagger space-y-2">
+                <div className="stagger space-y-[0.375rem]">
                   {overdueTopItems.slice(0, 5).map((occurrence: any, index: number) => {
                     const reminder = occurrence.reminder ?? null;
                     const categoryId = inferReminderCategoryId({
@@ -832,7 +832,7 @@ export default function FamilyHome({
                     return (
                       <div
                         key={occurrence.id}
-                        className={`animate-in priority-bar ${priorityBarClass} rounded-xl p-3 ${index !== 0 ? 'opacity-60' : ''}`}
+                        className={`animate-in priority-bar ${priorityBarClass} rounded-xl py-[0.625rem] px-[0.875rem] ${index !== 0 ? 'opacity-60' : ''}`}
                         style={{
                           background: bgTint,
                           border: '1px solid var(--border-default, #1e1f35)',
@@ -840,7 +840,7 @@ export default function FamilyHome({
                       >
                         <div className="min-w-0 space-y-1">
                           <div
-                            className="line-clamp-2 text-[0.875rem] font-semibold leading-snug"
+                            className="line-clamp-2 text-[0.875rem] font-medium leading-snug"
                             style={{
                               color: index === 0
                                 ? 'var(--text-primary, #eeedf5)'
