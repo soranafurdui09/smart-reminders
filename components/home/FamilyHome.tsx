@@ -589,7 +589,7 @@ export default function FamilyHome({
                       }}
                     >
                       <div
-                        className="text-[22px] font-bold leading-none tracking-tight"
+                        className="text-[1.375rem] font-bold leading-none tracking-tight"
                         style={{ color: numberColor }}
                       >
                         {metric.count}
