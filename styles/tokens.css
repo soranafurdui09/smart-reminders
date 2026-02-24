@@ -1,44 +1,48 @@
 :root {
-  --glass: rgba(255, 255, 255, 0.06);
-  --glass-strong: rgba(255, 255, 255, 0.09);
-  --stroke: rgba(255, 255, 255, 0.1);
-  --stroke-soft: rgba(255, 255, 255, 0.07);
+  /* Glass surfaces — now use dark nav backgrounds, not white-alpha */
+  --glass:        rgba(19, 20, 31, 0.82);
+  --glass-strong: rgba(26, 27, 46, 0.88);
+  --stroke:       rgba(42, 43, 69, 0.8);
+  --stroke-soft:  rgba(30, 31, 53, 0.6);
 
-  --text-0: rgba(255, 255, 255, 0.92);
+  --text-0: #eeedf5;
 
-  --shadow-1: 0 14px 40px rgba(0, 0, 0, 0.55);
-  --shadow-2: 0 10px 26px rgba(0, 0, 0, 0.45);
+  --shadow-1: 0 14px 40px rgba(0, 0, 0, 0.65);
+  --shadow-2: 0 10px 26px rgba(0, 0, 0, 0.55);
 
-  --radius-lg: 22px;
-  --radius-md: 18px;
+  --radius-lg: 16px;
+  --radius-md: 10px;
   --blur: 18px;
 
-  --brand-blue: #4c7dff;
-  --brand-blue-2: #2f5bff;
+  /* Brand blue → Electric Indigo */
+  --brand-blue:   #6c6ff5;
+  --brand-blue-2: #5558e0;
 
-  --warm-gold: #d6a14a;
-  --warm-gold-soft: rgba(214, 161, 74, 0.28);
-  --warm-gold-line: rgba(214, 161, 74, 0.55);
+  /* Warm gold → Amber (overdue tone) */
+  --warm-gold:      #f59e0b;
+  --warm-gold-soft: rgba(245, 158, 11, 0.2);
+  --warm-gold-line: rgba(245, 158, 11, 0.4);
 
-  --today-blue-bg: rgba(76, 125, 255, 0.22);
-  --today-blue-stroke: rgba(76, 125, 255, 0.35);
+  /* Tile accent backgrounds — aligned with new palette */
+  --today-blue-bg:    rgba(108, 111, 245, 0.15);
+  --today-blue-stroke: rgba(108, 111, 245, 0.25);
 
-  --soon-teal-bg: rgba(46, 204, 198, 0.18);
-  --soon-teal-stroke: rgba(46, 204, 198, 0.32);
+  --soon-teal-bg:    rgba(34, 211, 238, 0.12);
+  --soon-teal-stroke: rgba(34, 211, 238, 0.22);
 
-  --meds-indigo-bg: rgba(130, 110, 255, 0.18);
-  --meds-indigo-stroke: rgba(130, 110, 255, 0.32);
+  --meds-indigo-bg:    rgba(34, 211, 238, 0.12);
+  --meds-indigo-stroke: rgba(34, 211, 238, 0.22);
 
-  --overdue-amber-bg: rgba(255, 176, 64, 0.18);
-  --overdue-amber-stroke: rgba(255, 176, 64, 0.35);
+  --overdue-amber-bg:    rgba(245, 158, 11, 0.15);
+  --overdue-amber-stroke: rgba(245, 158, 11, 0.28);
 
-  --critical-red-bg: rgba(255, 85, 85, 0.18);
-  --critical-red-stroke: rgba(255, 85, 85, 0.35);
+  --critical-red-bg:    rgba(248, 113, 113, 0.15);
+  --critical-red-stroke: rgba(248, 113, 113, 0.28);
 }
 
 .home-slate {
-  --bg-0: 7 10 18;
-  --bg-1: 10 16 32;
-  --text-1: rgba(255, 255, 255, 0.72);
-  --text-2: rgba(255, 255, 255, 0.52);
+  --bg-0: 11 12 20;
+  --bg-1: 19 20 31;
+  --text-1: var(--text-primary, #eeedf5);
+  --text-2: var(--text-secondary, #8b8aa0);
 }

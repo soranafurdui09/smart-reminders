@@ -508,230 +508,391 @@ export default function FamilyHome({
             ) : null}
           </div>
         ) : (
-          <div className="home-slate space-y-3 today-shell home-compact">
+          <div className="home-slate space-y-4 today-shell home-compact">
             <div className="home-slate-bg" aria-hidden="true" />
+
+            {/* ── TopBar ──────────────────────────────────────── */}
             {header as ReactNode}
+
+            {/* ── Greeting ────────────────────────────────────── */}
+            <div className="animate-in px-1">
+              <h2
+                className="text-[24px] font-bold leading-tight"
+                style={{
+                  background: 'linear-gradient(135deg, var(--text-primary, #eeedf5) 0%, var(--accent-text, #a5a8ff) 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                Bună ziua! 👋
+              </h2>
+              <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary, #8b8aa0)' }}>
+                {todayOpenItems.length > 0
+                  ? `${todayOpenItems.length} lucruri pentru azi`
+                  : 'Totul e în ordine azi'}
+              </p>
+            </div>
+
+            {/* ── Overdue context chip (amber, NOT red) ────────── */}
+            {filteredOverdueCount > 0 ? (
+              <button
+                type="button"
+                className="pressable animate-in flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left"
+                style={{
+                  background: 'var(--amber-dim, #1c1500)',
+                  border: '1px solid rgba(245,158,11,0.2)',
+                }}
+                onClick={() => router.push('/app?tab=today&segment=overdue')}
+              >
+                <span
+                  className="h-2 w-2 flex-shrink-0 rounded-full"
+                  style={{
+                    background: 'var(--amber, #f59e0b)',
+                    boxShadow: '0 0 6px rgba(245,158,11,0.5)',
+                  }}
+                  aria-hidden="true"
+                />
+                <span className="flex-1 text-sm font-medium" style={{ color: 'var(--amber-text, #fcd34d)' }}>
+                  {filteredOverdueCount} lucruri te așteaptă · începe cu primul
+                </span>
+                <span aria-hidden="true" style={{ color: 'var(--text-muted, #4a4860)' }}>›</span>
+              </button>
+            ) : null}
+
+            {/* ── Stats row — horizontal scroll ──────────────── */}
             {tilesReady ? (
-              <div className="family-status-grid grid grid-cols-2 gap-2">
+              <div className="animate-in no-scrollbar flex gap-2 overflow-x-auto pb-1">
                 {metrics.map((metric) => {
-                  const displayCount = metric.id === 'overdue' ? 'Top 5' : metric.count;
+                  const colorMap: Record<string, string> = {
+                    'stat-tile-today':            'var(--accent-text, #a5a8ff)',
+                    'stat-tile-soon':             'var(--cyan-text, #67e8f9)',
+                    'stat-tile-meds':             'var(--cyan-text, #67e8f9)',
+                    'stat-tile-overdue':          'var(--amber-text, #fcd34d)',
+                    'stat-tile-overdue-critical': 'var(--critical-text, #fca5a5)',
+                  };
+                  const numberColor = colorMap[metric.tileClass] ?? 'var(--text-primary, #eeedf5)';
                   return (
                     <button
                       key={metric.id}
                       type="button"
-                      className={`family-status-tile rounded-2xl px-3 py-2 text-left ${metric.tileClass ?? ''}`}
+                      className="pressable flex-shrink-0 rounded-2xl px-4 py-3 text-center"
+                      style={{
+                        background: 'var(--bg-raised, #13141f)',
+                        border: '1px solid var(--border-default, #1e1f35)',
+                        minWidth: '80px',
+                      }}
                       onClick={() => {
                         if (metric.id === 'today' || metric.id === 'soon' || metric.id === 'overdue') {
                           handleSegmentSelect(metric.id);
                         }
                       }}
                     >
-                      <div className="family-status-label text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-2)]">
-                        {metric.label}
+                      <div
+                        className="text-[22px] font-bold leading-none tracking-tight"
+                        style={{ color: numberColor }}
+                      >
+                        {metric.count}
                       </div>
-                      <div className="family-status-value mt-0.5 text-base font-semibold text-[color:var(--tile-ink,var(--text-0))]">
-                        {displayCount}
+                      <div
+                        className="mt-1 text-[9px] font-semibold uppercase tracking-widest"
+                        style={{ color: 'var(--text-muted, #4a4860)' }}
+                      >
+                        {metric.label}
                       </div>
                     </button>
                   );
                 })}
               </div>
             ) : (
-              <div className="family-status-grid grid grid-cols-2 gap-2">
+              <div className="flex gap-2">
                 {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={`tile-skeleton-${index}`} className="family-status-skeleton h-12 rounded-2xl bg-surfaceMuted/70" />
+                  <div
+                    key={`tile-skeleton-${index}`}
+                    className="skeleton h-16 flex-shrink-0 rounded-2xl"
+                    style={{ minWidth: '80px' }}
+                  />
                 ))}
               </div>
             )}
-            <>
-                <div className={`next-reminder-card ${nextToneClassName}`}>
-                  <span className="next-reminder-topline" aria-hidden="true" />
-                  <span className="next-reminder-corner" aria-hidden="true" />
-                  <div className="next-reminder-label">{copy.dashboard.nextTitle}</div>
-                  {isNextEmpty ? (
-                    <div className="next-reminder-time mt-2">{copy.dashboard.nextUpEmpty}</div>
-                  ) : (
-                    <>
-                      <div className="next-reminder-title mt-2">{nextTitle}</div>
-                      <div className="next-reminder-time mt-1">{nextOccurrenceLabel}</div>
-                      {nextNotifyTimeLabel ? (
-                        <div className="next-reminder-time mt-1 text-[color:var(--text-2)]">
-                          🔔 Te anunț la {nextNotifyTimeLabel}
-                        </div>
-                      ) : null}
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        {nextCategory ? (
-                          <span className="next-reminder-pill" style={nextCategoryStyle}>
-                            {nextCategory.label}
-                          </span>
-                        ) : null}
-                        {nextTone === 'overdue' ? (
-                          <span className="next-reminder-overdue">{copy.dashboard.todayOverdue}</span>
-                        ) : null}
+
+            {/* ── Next Reminder Card ──────────────────────────── */}
+            <div
+              className={`next-reminder-card animate-in ${nextToneClassName} relative overflow-hidden`}
+              style={{
+                background: 'linear-gradient(135deg, var(--bg-elevated, #1a1b2e), rgba(26,24,46,0.9))',
+                border: '1px solid rgba(108,111,245,0.18)',
+                borderRadius: 'var(--radius-xl, 22px)',
+                padding: '16px',
+              }}
+            >
+              {/* Left accent bar */}
+              <div
+                className="absolute bottom-3 left-0 top-3 w-[3px] rounded-r"
+                style={{ background: 'linear-gradient(to bottom, var(--accent-color, #6c6ff5), transparent)' }}
+                aria-hidden="true"
+              />
+              {/* Top-right glow */}
+              <div
+                className="pointer-events-none absolute right-0 top-0 h-32 w-32"
+                style={{ background: 'radial-gradient(circle at top right, rgba(108,111,245,0.1), transparent 70%)' }}
+                aria-hidden="true"
+              />
+              <div className="pl-3">
+                <div className="section-label">{copy.dashboard.nextTitle}</div>
+                {isNextEmpty ? (
+                  <div className="mt-2 text-sm" style={{ color: 'var(--text-secondary, #8b8aa0)' }}>
+                    {copy.dashboard.nextUpEmpty}
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      className="mt-2 text-[16px] font-semibold leading-snug"
+                      style={{ color: 'var(--text-primary, #eeedf5)' }}
+                    >
+                      {nextTitle}
+                    </div>
+                    <div className={`time-text mt-1 ${nextTone === 'overdue' ? 'time-amber' : 'time-accent'}`}>
+                      🔔 {nextOccurrenceLabel}
+                    </div>
+                    {nextNotifyTimeLabel ? (
+                      <div className="time-text time-muted mt-0.5">
+                        Te anunț la {nextNotifyTimeLabel}
                       </div>
-                      {hasNextAction ? (
-                        <div className="mt-3 flex flex-wrap items-center gap-2">
-                          <form action={markDone}>
-                            <input type="hidden" name="occurrenceId" value={nextOccurrence?.id ?? ''} />
-                            <input type="hidden" name="reminderId" value={nextOccurrence?.reminder?.id ?? ''} />
-                            <input type="hidden" name="occurAt" value={nextOccurrence?.occur_at ?? ''} />
-                            <input type="hidden" name="done_comment" value="" />
-                            <ActionSubmitButton
-                              className="next-reminder-primary"
-                              type="submit"
-                              data-action-feedback={copy.common.actionDone}
-                            >
-                              {copy.dashboard.nextUpAction}
-                            </ActionSubmitButton>
-                          </form>
-                          <form action={snoozeOccurrence}>
-                            <input type="hidden" name="occurrenceId" value={nextOccurrence?.id ?? ''} />
-                            <input type="hidden" name="mode" value="30" />
-                            <ActionSubmitButton
-                              className="next-reminder-secondary"
-                              type="submit"
-                              data-action-feedback={copy.common.actionSnoozed}
-                            >
-                              Amână
-                            </ActionSubmitButton>
-                          </form>
-                        </div>
+                    ) : null}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {nextCategory ? (
+                        <span className="badge badge-accent" style={nextCategoryStyle}>
+                          {nextCategory.label}
+                        </span>
                       ) : null}
-                    </>
-                  )}
+                      {nextTone === 'overdue' ? (
+                        <span className="badge badge-amber">Restant</span>
+                      ) : null}
+                    </div>
+                    {hasNextAction ? (
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <form action={markDone}>
+                          <input type="hidden" name="occurrenceId" value={nextOccurrence?.id ?? ''} />
+                          <input type="hidden" name="reminderId" value={nextOccurrence?.reminder?.id ?? ''} />
+                          <input type="hidden" name="occurAt" value={nextOccurrence?.occur_at ?? ''} />
+                          <input type="hidden" name="done_comment" value="" />
+                          <ActionSubmitButton
+                            className="btn btn-primary"
+                            type="submit"
+                            data-action-feedback={copy.common.actionDone}
+                          >
+                            ✓ {copy.dashboard.nextUpAction}
+                          </ActionSubmitButton>
+                        </form>
+                        <form action={snoozeOccurrence}>
+                          <input type="hidden" name="occurrenceId" value={nextOccurrence?.id ?? ''} />
+                          <input type="hidden" name="mode" value="30" />
+                          <ActionSubmitButton
+                            className="btn btn-secondary"
+                            type="submit"
+                            data-action-feedback={copy.common.actionSnoozed}
+                          >
+                            ⏰ Amână
+                          </ActionSubmitButton>
+                        </form>
+                      </div>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {nextUpActionsSheet}
+
+            <QuickAddBar />
+
+            {/* ── Rezolvă următorul ───────────────────────────── */}
+            {!overdueTopItems.length ? null : (
+              <div className="animate-in space-y-3">
+                {!isControlSessionDone ? (
+                  <form action={markDone}>
+                    <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
+                    <input type="hidden" name="reminderId" value={overdueTopItems[0]?.reminder?.id ?? ''} />
+                    <input type="hidden" name="occurAt" value={overdueTopItems[0]?.occur_at ?? ''} />
+                    <input type="hidden" name="done_comment" value="" />
+                    <ActionSubmitButton
+                      className="btn btn-primary btn-lg w-full"
+                      type="submit"
+                      data-action-feedback={copy.common.actionDone}
+                      disabled={!overdueTopItems[0]}
+                      onClick={() => {
+                        setControlSessionCount((prev: number) => Math.min(prev + 1, controlSessionMax));
+                      }}
+                    >
+                      Rezolvă următorul ({Math.min(controlSessionCount + 1, controlSessionMax)}/{controlSessionMax})
+                    </ActionSubmitButton>
+                  </form>
+                ) : null}
+                <div className="flex flex-wrap items-center gap-4 px-1">
+                  <form action={snoozeOccurrence}>
+                    <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
+                    <input type="hidden" name="option_id" value="tomorrow" />
+                    <ActionSubmitButton
+                      className="btn btn-ghost text-sm"
+                      type="submit"
+                      data-action-feedback={copy.common.actionSnoozed}
+                      disabled={!overdueTopItems[0]}
+                    >
+                      Mută pe mâine
+                    </ActionSubmitButton>
+                  </form>
+                  <button
+                    type="button"
+                    className="btn btn-ghost text-sm"
+                    onClick={() => router.push('/app?tab=today&segment=overdue')}
+                  >
+                    Vezi toate
+                  </button>
                 </div>
+              </div>
+            )}
 
-                {nextUpActionsSheet}
+            {isControlSessionDone ? (
+              <div className="text-xs" style={{ color: 'var(--text-secondary, #8b8aa0)' }}>
+                Sesiune încheiată. Restul pot aștepta.
+              </div>
+            ) : null}
 
-                <QuickAddBar />
-
-                {!overdueTopItems.length ? null : (
-                  <div className="space-y-2">
-                    {!isControlSessionDone ? (
-                      <form action={markDone}>
-                        <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
-                        <input type="hidden" name="reminderId" value={overdueTopItems[0]?.reminder?.id ?? ''} />
-                        <input type="hidden" name="occurAt" value={overdueTopItems[0]?.occur_at ?? ''} />
-                        <input type="hidden" name="done_comment" value="" />
-                        <ActionSubmitButton
-                          className="home-priority-primary"
-                          type="submit"
-                          data-action-feedback={copy.common.actionDone}
-                          disabled={!overdueTopItems[0]}
-                          onClick={() => {
-                            setControlSessionCount((prev: number) => Math.min(prev + 1, controlSessionMax));
+            {/* ── Membrii familiei ────────────────────────────── */}
+            {Array.isArray(householdMembers) && householdMembers.length > 1 ? (
+              <section className="animate-in space-y-3">
+                <div className="section-label">MEMBRII FAMILIEI</div>
+                <div className="no-scrollbar flex gap-4 overflow-x-auto pb-1">
+                  {householdMembers.map((member: any) => {
+                    const memberName: string = member.display_name ?? member.name ?? '';
+                    const initials = memberName
+                      .split(' ')
+                      .map((w: string) => w[0] ?? '')
+                      .slice(0, 2)
+                      .join('')
+                      .toUpperCase() || '?';
+                    return (
+                      <div key={member.id ?? member.user_id} className="flex flex-shrink-0 flex-col items-center gap-1.5">
+                        <div
+                          className="flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold"
+                          style={{
+                            background: 'var(--bg-elevated, #1a1b2e)',
+                            border: '2px solid var(--border-default, #1e1f35)',
+                            color: 'var(--accent-text, #a5a8ff)',
                           }}
                         >
-                          Rezolvă următorul ({Math.min(controlSessionCount + 1, controlSessionMax)}/{controlSessionMax})
-                        </ActionSubmitButton>
-                      </form>
-                    ) : null}
-                    <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold text-[color:var(--text-2)]">
-                      <form action={snoozeOccurrence}>
-                        <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
-                        <input type="hidden" name="option_id" value="tomorrow" />
-                        <ActionSubmitButton
-                          className="underline underline-offset-4 decoration-white/20 text-[color:var(--text-2)] hover:text-[color:var(--text-0)]"
-                          type="submit"
-                          data-action-feedback={copy.common.actionSnoozed}
-                          disabled={!overdueTopItems[0]}
+                          {initials}
+                        </div>
+                        <span
+                          className="max-w-[48px] truncate text-center text-[10px]"
+                          style={{ color: 'var(--text-secondary, #8b8aa0)' }}
                         >
-                          Mută pe mâine
-                        </ActionSubmitButton>
-                      </form>
-                      <button
-                        type="button"
-                        className="underline underline-offset-4 decoration-white/20 text-[color:var(--text-2)] hover:text-[color:var(--text-0)]"
-                        onClick={() => {
-                          router.push('/app?tab=today&segment=overdue');
+                          {memberName.split(' ')[0] ?? memberName}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : null}
+
+            {/* ── Prioritare azi ──────────────────────────────── */}
+            {!overdueTopItems.length ? null : (
+              <section className="animate-in space-y-2">
+                <div className="section-label">PRIORITARE AZI</div>
+                {activeFilterLabel ? (
+                  <div className="text-xs" style={{ color: 'var(--text-secondary, #8b8aa0)' }}>
+                    {activeFilterLabel}
+                  </div>
+                ) : null}
+                <div className="stagger space-y-2">
+                  {overdueTopItems.slice(0, 5).map((occurrence: any, index: number) => {
+                    const reminder = occurrence.reminder ?? null;
+                    const categoryId = inferReminderCategoryId({
+                      title: reminder?.title,
+                      notes: reminder?.notes,
+                      kind: reminder?.kind,
+                      category: reminder?.category,
+                      medicationDetails: reminder?.medication_details,
+                    });
+                    const category = getReminderCategory(categoryId);
+                    const categoryStyle = getCategoryChipStyle(category.color, true);
+                    const isMissedMed = reminder?.kind === 'medication';
+                    const priorityBarClass = isMissedMed ? 'priority-bar-critical' : 'priority-bar-amber';
+                    const bgTint = isMissedMed
+                      ? 'rgba(248,113,113,0.04)'
+                      : index === 0
+                      ? 'rgba(245,158,11,0.04)'
+                      : 'transparent';
+
+                    return (
+                      <div
+                        key={occurrence.id}
+                        className={`animate-in priority-bar ${priorityBarClass} rounded-xl p-3 ${index !== 0 ? 'opacity-60' : ''}`}
+                        style={{
+                          background: bgTint,
+                          border: '1px solid var(--border-default, #1e1f35)',
                         }}
                       >
-                        Vezi toate
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {isControlSessionDone ? (
-                  <div className="text-xs text-[color:var(--text-2)]">Sesiune încheiată. Restul pot aștepta.</div>
-                ) : null}
-
-                {!overdueTopItems.length ? null : (
-                  <section className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm font-semibold text-[color:var(--text-0)]">Priorități de recuperat</div>
-                    </div>
-                    <div className="text-xs text-[color:var(--text-2)]">Rezolvă unul. Restul pot aștepta.</div>
-                    {activeFilterLabel ? (
-                      <div className="text-xs text-[color:var(--text-2)]">{activeFilterLabel}</div>
-                    ) : null}
-                    <div className="space-y-2">
-                      {overdueTopItems.slice(0, 5).map((occurrence: any, index: number) => {
-                        const reminder = occurrence.reminder ?? null;
-                        const categoryId = inferReminderCategoryId({
-                          title: reminder?.title,
-                          notes: reminder?.notes,
-                          kind: reminder?.kind,
-                          category: reminder?.category,
-                          medicationDetails: reminder?.medication_details
-                        });
-                        const category = getReminderCategory(categoryId);
-                        const categoryStyle = getCategoryChipStyle(category.color, true);
-
-                        return (
+                        <div className="min-w-0 space-y-1">
                           <div
-                            key={occurrence.id}
-                            className={`home-priority-row py-2 ${index === 0 ? '' : 'opacity-60'}`}
+                            className="line-clamp-2 text-[14px] font-semibold leading-snug"
+                            style={{
+                              color: index === 0
+                                ? 'var(--text-primary, #eeedf5)'
+                                : 'var(--text-secondary, #8b8aa0)',
+                            }}
                           >
-                            <div className="min-w-0 flex-1 space-y-1">
-                              <div
-                                className={`home-priority-title line-clamp-2 ${index === 0 ? 'text-[color:var(--text-0)]' : 'text-[color:var(--text-1)]'}`}
-                              >
-                                {reminder?.title}
-                              </div>
-                              <div className="home-priority-meta text-[color:var(--text-2)]">{getOverdueMeta(occurrence)}</div>
-                              {category?.label ? (
-                                <span className="home-category-pill" style={categoryStyle}>
-                                  {category.label}
-                                </span>
-                              ) : null}
-                            </div>
+                            {reminder?.title}
                           </div>
-                        );
-                      })}
-                    </div>
-                  </section>
-                )}
+                          <div className={`time-text ${isMissedMed ? 'time-critical' : 'time-amber'}`}>
+                            {getOverdueMeta(occurrence)}
+                          </div>
+                          {category?.label ? (
+                            <span
+                              className={`badge ${isMissedMed ? 'badge-critical' : 'badge-amber'}`}
+                              style={categoryStyle}
+                            >
+                              {category.label}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
-                {filteredSoonItems.length ? (
-                  <section className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm font-semibold text-[color:var(--text-0)]">Urmează în curând</div>
-                      {hasMoreSoon ? (
-                        <button
-                          type="button"
-                          className="text-xs font-semibold text-secondary"
-                          onClick={() => {
-                            router.push('/app?tab=today&segment=soon');
-                          }}
-                        >
-                          Vezi toate
-                        </button>
-                      ) : null}
-                    </div>
-                    <div className="space-y-2">
-                      {soonPreview.map((occurrence: any) => (
-                        <ReminderRowMobile
-                          key={occurrence.id}
-                          occurrence={occurrence}
-                          locale={locale}
-                          googleConnected={googleConnected}
-                          userTimeZone={effectiveTimeZone}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                ) : null}
-              </>
+            {/* ── Urmează în curând ───────────────────────────── */}
+            {filteredSoonItems.length ? (
+              <section className="animate-in space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="section-label" style={{ marginBottom: 0 }}>URMEAZĂ ÎN CURÂND</div>
+                  {hasMoreSoon ? (
+                    <button
+                      type="button"
+                      className="btn btn-ghost text-xs"
+                      onClick={() => router.push('/app?tab=today&segment=soon')}
+                    >
+                      Vezi toate
+                    </button>
+                  ) : null}
+                </div>
+                <div className="stagger space-y-2">
+                  {soonPreview.map((occurrence: any) => (
+                    <ReminderRowMobile
+                      key={occurrence.id}
+                      occurrence={occurrence}
+                      locale={locale}
+                      googleConnected={googleConnected}
+                      userTimeZone={effectiveTimeZone}
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </div>
         )}
       </section>

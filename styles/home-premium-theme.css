@@ -1,39 +1,40 @@
 .homeRoot {
-  --bg-0: #0b1020;
-  --bg-1: #111827;
-  --surface-0: rgba(255, 255, 255, 0.06);
-  --surface-1: rgba(255, 255, 255, 0.08);
-  --border-0: rgba(255, 255, 255, 0.12);
-  --shadow-0: 0 16px 44px rgba(0, 0, 0, 0.42);
-  --text-0: rgba(255, 255, 255, 0.92);
-  --text-1: rgba(255, 255, 255, 0.72);
-  --text-2: rgba(255, 255, 255, 0.52);
-  --accent-family: #f5d48c;
-  --accent-family-rgb: 245 212 140;
-  --accent-focus: #6aa9ff;
-  --accent-focus-rgb: 106 169 255;
-  --accent: var(--accent-family);
-  --accent-rgb: var(--accent-family-rgb);
-  --cta: linear-gradient(180deg, rgba(255, 238, 200, 0.98) 0%, #f5d48c 100%);
-  --cta-shadow: 0 12px 28px rgba(245, 212, 140, 0.35);
-  --radius-lg: 1.125rem;
-  --radius-md: 0.875rem;
+  --bg-0: #0b0c14;
+  --bg-1: #13141f;
+  --surface-0: rgba(19, 20, 31, 0.82);
+  --surface-1: rgba(26, 27, 46, 0.88);
+  --border-0: rgba(42, 43, 69, 0.8);
+  --shadow-0: 0 16px 44px rgba(0, 0, 0, 0.6);
+  --text-0: #eeedf5;
+  --text-1: #8b8aa0;
+  --text-2: #4a4860;
+  /* Electric Indigo — single accent for all CTAs */
+  --accent-family:     #6c6ff5;
+  --accent-family-rgb: 108 111 245;
+  --accent-focus:      #6c6ff5;
+  --accent-focus-rgb:  108 111 245;
+  --accent:            var(--accent-family);
+  --accent-rgb:        var(--accent-family-rgb);
+  --cta:        #6c6ff5;
+  --cta-shadow: 0 12px 28px rgba(108, 111, 245, 0.4);
+  --radius-lg: 1rem;
+  --radius-md: 0.625rem;
   --blur-lg: 18px;
   --blur-md: 12px;
   position: relative;
   min-height: 100vh;
   color: var(--text-0);
   background:
-    radial-gradient(900px 520px at 12% -6%, rgba(104, 146, 255, 0.14), transparent 60%),
-    radial-gradient(700px 460px at 88% 6%, rgba(var(--accent-rgb), 0.12), transparent 60%),
+    radial-gradient(900px 520px at 12% -6%, rgba(108, 111, 245, 0.12), transparent 60%),
+    radial-gradient(700px 460px at 88% 6%, rgba(108, 111, 245, 0.08), transparent 60%),
     linear-gradient(180deg, var(--bg-1) 0%, var(--bg-0) 100%);
 }
 
 .homeRoot.modeFocus {
   --accent: var(--accent-focus);
   --accent-rgb: var(--accent-focus-rgb);
-  --cta: linear-gradient(180deg, rgba(168, 206, 255, 0.98) 0%, #6aa9ff 100%);
-  --cta-shadow: 0 12px 28px rgba(106, 169, 255, 0.35);
+  --cta: #6c6ff5;
+  --cta-shadow: 0 12px 28px rgba(108, 111, 245, 0.4);
 }
 
 .homeRoot::before {
@@ -97,7 +98,7 @@
   background: var(--cta);
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: var(--cta-shadow);
-  color: #0f1422;
+  color: #fff;
 }
 
 .homeRoot .nextUpCard,
@@ -151,7 +152,7 @@
   background: var(--cta);
   border: 1px solid rgba(255, 255, 255, 0.22);
   box-shadow: var(--cta-shadow);
-  color: #0f1422;
+  color: #fff;
 }
 
 .homeRoot .next-reminder-secondary {

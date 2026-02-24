@@ -5,15 +5,29 @@ stack, architecture, key features, and where to find the relevant code paths.
 
 ---
 
+## 0) Latest Features (current)
+
+- Native Android Google auth now uses **server-authoritative `signInWithIdToken`** (`/api/auth/native-idtoken`).
+- Capacitor Android shell includes **native chrome + safe-area layout + bottom tabs**.
+- Native Android uses **local notification sync** (`/api/mobile/upcoming-notifications`) plus **device heartbeat** (`/api/mobile/heartbeat`) to track active installs.
+- Push delivery supports both **Web Push (VAPID)** and **FCM tokens** (`fcm_tokens`) with invalid-token cleanup.
+- Added **Tasks & Lists** module with household sharing (`task_lists`, `task_items` + RLS policies).
+- Added **billing endpoints/pages** (Stripe checkout, portal, webhook).
+- Added **semantic search API** for reminders (`/api/ai/semantic-search`) and embedding backfill function.
+- Mobile dashboard/perf updates: client-side tab switching, reduced heavy blur/shadow on mobile, stronger design tokens for readability.
+
+---
+
 ## 1) Tech Stack
 
 - **Frontend:** Next.js 14 (App Router), React 18, TypeScript
 - **Styling:** Tailwind CSS + custom utility classes in `app/globals.css`
 - **Backend:** Supabase (Postgres + RLS)
-- **Notifications:** Web Push (VAPID), Email (Resend), optional Android (Capacitor) local notifications
+- **Notifications:** Web Push (VAPID), Email (Resend), FCM (Firebase Admin), Android local notifications (Capacitor)
 - **Voice:** Web Speech API via hooks (`useSpeechToText.ts`, `useSpeechToReminder.ts`)
-- **AI:** OpenAI (via server route) for natural language reminder parsing
-- **Mobile:** Capacitor Android wrapper (WebView); native shell config in `components/NativeAppChrome.tsx`
+- **AI:** OpenAI for reminder parsing + embeddings/semantic search
+- **Mobile:** Capacitor Android wrapper (Live WebView) + native shell glue (`components/NativeAppChrome.tsx`, `components/NativeNotificationSync.tsx`)
+- **Integrations:** Google Calendar (OAuth + free/busy deferral + event sync), Stripe billing
 
 ---
 
@@ -28,6 +42,7 @@ Primary routes (keep functional, do not rename):
 - `/app/history`
 - `/app/household`
 - `/app/settings`
+- `/app/billing`
 - `/app/reminders/new`
 - `/app/reminders/[id]`
 - `/app/reminders/[id]/edit`
@@ -35,7 +50,18 @@ Primary routes (keep functional, do not rename):
 - `/app/medications/new`
 - `/app/medications/[id]`
 - `/app/medications/caregiver`
+- `/app/tasks`
+- `/app/lists`
+- `/app/lists/[id]`
 - `/app/you` — user hub (if present)
+- `/native` — native shell debug/status page
+
+Supporting auth/integration routes:
+- `/auth/native-start`, `/auth/native-callback`, `/auth/native-session`
+- `/api/auth/native-idtoken`
+- `/api/integrations/google/calendar/*`
+- `/api/billing/checkout`, `/api/billing/portal`, `/api/stripe/webhook`
+- `/api/ai/parse-reminder`, `/api/ai/semantic-search`
 
 ---
 
@@ -48,8 +74,12 @@ Primary routes (keep functional, do not rename):
 - `notification_jobs` — notification queue (notify_at, occurrence_at_utc, entity_type/entity_id, channel, status, retry_count, claim_token, etc.)
 - `notification_log` — idempotency log for reminder notifications
 - `push_subscriptions` — web push subscriptions (endpoint, keys, is_disabled)
+- `fcm_tokens` — Android/device FCM tokens (token, platform, is_disabled, last_seen_at)
+- `device_installations` — native device heartbeat records (platform, device_id, last_seen_at)
 - `households`, `household_members` — collaboration
 - `reminder_assignments` — assigned recipients per reminder (user_id)
+- `google_calendar_connections`, `google_freebusy_cache` — calendar integration/cache
+- `task_lists`, `task_items` — household-shareable tasks/lists
 
 ### Medications (extended module)
 - `medications`, `medication_schedules`, `medication_stock`
@@ -74,9 +104,9 @@ Unique key:
 
 ### Dispatchers
 - **Cron (Vercel):** `app/api/cron/dispatch-notifications/route.ts`  
-  Seeds jobs + sends **email + push**
+  Seeds jobs + sends **email + push (web + FCM)**
 - **Worker (always‑on):** `worker/index.js`  
-  Claims **push** jobs only, sends Web Push (and FCM when enabled)
+  Claims **push** jobs only, sends Web Push + FCM
 
 ### Idempotency
 - Before sending: insert into `notification_log` / `medication_notification_log`
@@ -85,6 +115,12 @@ Unique key:
 ### Claiming
 - `public.claim_notification_jobs(...)`  
   Uses `FOR UPDATE SKIP LOCKED`, sets `status=processing` with `claim_token`
+
+### Native Android local notification sync
+- Client sync source: `/api/mobile/upcoming-notifications`
+- Heartbeat endpoint: `/api/mobile/heartbeat` (updates `device_installations`)
+- Capability check endpoint: `/api/me/notification-capabilities`
+- Native scheduler: `lib/native/localNotifications.ts`
 
 ---
 
@@ -104,11 +140,11 @@ Helper: `lib/reminderAssignments.ts`
 ## 6) Authentication & OAuth (Capacitor)
 
 - Google OAuth uses Supabase `signInWithOAuth`.
-- Native Android uses custom scheme:
-  - `com.smartreminder.app://auth/callback`
-  - handled via `App.addListener('appUrlOpen')` in `components/NativeAppChrome.tsx`
-  - browser closed via `Browser.close()` after code exchange
-  - IMPORTANT: add `com.smartreminder.app://auth/callback` to Supabase Auth → Redirect URLs allowlist
+- Native Android Google login now uses:
+  - native Google plugin flow in `lib/auth/nativeGoogleSupabase.ts`
+  - server route `app/api/auth/native-idtoken/route.ts`
+  - Supabase `signInWithIdToken` (provider `google`) on server
+- Native callback listener remains in `components/NativeOAuthListener.tsx`, but Google native auth is ID-token based.
 
 Android intent filter in:
 `android/app/src/main/AndroidManifest.xml`
@@ -127,6 +163,10 @@ Android intent filter in:
 - API: `app/api/ai/parse-reminder/route.ts`
 - Client: `ReminderForm` + Quick Add flows
 
+### Semantic Search
+- API: `app/api/ai/semantic-search/route.ts`
+- Embedding/backfill support: `supabase/functions/backfill-reminder-embeddings/index.ts`
+
 ---
 
 ## 8) UI Structure
@@ -137,6 +177,9 @@ Mobile shell:
 - `components/shell/BottomNav.tsx`
 - `components/shell/Fab.tsx`
 - `components/ui/BottomSheet.tsx`
+- `components/AppNavigation.tsx` (web vs native nav split)
+- `components/NativeAppChrome.tsx` (status bar/splash/keyboard)
+- `components/NativeNotificationSync.tsx` (native local notification lifecycle)
 
 Dashboard:
 - `app/reminders/ReminderDashboardSection.tsx`
@@ -153,6 +196,7 @@ Reminder cards:
 - Global tokens in `app/globals.css`
 - Utility classes: `.card`, `.card-soft`, `.surface-a1`, `.surface-a2`, `.sheet`, `.navbar`, `.icon-btn`, etc.
 - Page container: `.page-wrap`
+- Mobile perf/theme notes: `docs/PERF_NOTES.md`, `docs/DESIGN_TOKENS.md`
 
 ---
 
@@ -161,8 +205,14 @@ Reminder cards:
 - **Notifications logic:** `app/api/cron/dispatch-notifications/route.ts`, `worker/index.js`
 - **Push (web):** `lib/push.ts`, `app/api/push/*`
 - **FCM (Android):** `lib/push/fcm.ts`, `app/api/push/fcm/*`
+- **Native local notifications:** `lib/native/localNotifications.ts`, `components/NativeNotificationSync.tsx`
+- **Native heartbeat/capabilities:** `app/api/mobile/heartbeat/route.ts`, `app/api/me/notification-capabilities/route.ts`
 - **Reminder creation:** `app/app/reminders/new/ReminderForm.tsx` + `app/app/reminders/new/actions.ts`
 - **Assignment:** `lib/reminderAssignments.ts`
+- **Tasks/Lists:** `app/app/tasks/*`, `app/app/lists/*`
+- **Billing:** `app/api/billing/*`, `app/api/stripe/webhook/route.ts`, `app/app/billing/page.tsx`
+- **Google Calendar:** `lib/google/calendar.ts`, `app/api/integrations/google/calendar/*`
+- **Native Google auth:** `components/GoogleOAuthButton.tsx`, `lib/auth/nativeGoogleSupabase.ts`, `app/api/auth/native-idtoken/route.ts`
 
 ---
 
@@ -170,6 +220,7 @@ Reminder cards:
 
 Supabase:
 - `SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
 VAPID (Web Push):
@@ -185,6 +236,16 @@ FCM (Android push):
 - `FIREBASE_CLIENT_EMAIL`
 - `FIREBASE_PRIVATE_KEY`
 
+Google Calendar:
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_CALENDAR_REDIRECT_URL`
+
+Billing:
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `NEXT_PUBLIC_STRIPE_PRICE_ID` (if used in checkout flow)
+
 ---
 
 ## 12) Reliability Notes
@@ -193,6 +254,8 @@ FCM (Android push):
 - Idempotency enforced in log tables.
 - Retry/backoff per job status.
 - Caregiver escalation jobs are seeded separately.
+- Android local notifications are periodically re-synced from server jobs (with schedule caps).
+- FCM/Web Push invalid tokens are pruned during send attempts.
 
 ---
 
@@ -200,5 +263,6 @@ FCM (Android push):
 
 - `[cron] dispatch notifications` logs in `route.ts`
 - `[worker]` logs in `worker/index.js`
-- OAuth callback in `NativeAppChrome.tsx`
+- Native auth logs: `[native-idtoken]` in `app/api/auth/native-idtoken/route.ts`
+- Native sync logs: `[native]` in `components/NativeNotificationSync.tsx` + `lib/native/localNotifications.ts`
 - AI parse in `app/api/ai/parse-reminder/route.ts`

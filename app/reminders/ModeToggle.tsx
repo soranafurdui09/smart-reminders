@@ -7,17 +7,70 @@ type Props = {
 
 export default function ModeToggle({ value, onChange }: Props) {
   return (
-    <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
+    <div
+      className="flex items-center gap-1 p-1"
+      style={{
+        background: 'var(--bg-subtle, #1f2035)',
+        border: '1px solid var(--border-default, #1e1f35)',
+        borderRadius: 'var(--radius-full, 9999px)',
+      }}
+    >
       <button
         type="button"
-        className={`rounded-full px-3 py-1 transition ${value === 'family' ? 'bg-white/10 text-white' : 'text-white/60'}`}
+        style={value === 'family' ? {
+          background: 'var(--bg-overlay, #252640)',
+          color: 'var(--accent-text, #a5a8ff)',
+          borderRadius: 'var(--radius-full, 9999px)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+          padding: '4px 12px',
+          fontSize: '11px',
+          fontWeight: 600,
+          border: 'none',
+          cursor: 'pointer',
+          transition: 'all 120ms ease-out',
+          whiteSpace: 'nowrap' as const,
+        } : {
+          background: 'transparent',
+          color: 'var(--text-muted, #4a4860)',
+          borderRadius: 'var(--radius-full, 9999px)',
+          padding: '4px 12px',
+          fontSize: '11px',
+          fontWeight: 600,
+          border: 'none',
+          cursor: 'pointer',
+          transition: 'all 120ms ease-out',
+          whiteSpace: 'nowrap' as const,
+        }}
         onClick={() => onChange('family')}
       >
-        Family
+        Familie
       </button>
       <button
         type="button"
-        className={`rounded-full px-3 py-1 transition ${value === 'focus' ? 'bg-white/10 text-white' : 'text-white/60'}`}
+        style={value === 'focus' ? {
+          background: 'var(--bg-overlay, #252640)',
+          color: 'var(--accent-text, #a5a8ff)',
+          borderRadius: 'var(--radius-full, 9999px)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+          padding: '4px 12px',
+          fontSize: '11px',
+          fontWeight: 600,
+          border: 'none',
+          cursor: 'pointer',
+          transition: 'all 120ms ease-out',
+          whiteSpace: 'nowrap' as const,
+        } : {
+          background: 'transparent',
+          color: 'var(--text-muted, #4a4860)',
+          borderRadius: 'var(--radius-full, 9999px)',
+          padding: '4px 12px',
+          fontSize: '11px',
+          fontWeight: 600,
+          border: 'none',
+          cursor: 'pointer',
+          transition: 'all 120ms ease-out',
+          whiteSpace: 'nowrap' as const,
+        }}
         onClick={() => onChange('focus')}
       >
         Focus

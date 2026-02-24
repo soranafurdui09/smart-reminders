@@ -9,8 +9,8 @@
   --sun-2: rgba(255,168,80,0.14);
   --sun-line: rgba(255,210,150,0.55);
   --rim: rgba(255,255,255,0.12);
-  --cta: #7B61FF;
-  --cta-glow: rgba(123, 97, 255, 0.35);
+  --cta: #6c6ff5;
+  --cta-glow: rgba(108, 111, 245, 0.35);
 }
 
 /* Ensure the bg element actually renders the vignette */
@@ -332,7 +332,7 @@
 }
 
 .home-slate.today-shell .section-focus {
-  box-shadow: 0 0 0 0.0625rem rgba(123, 97, 255, 0.25);
-  background: linear-gradient(90deg, rgba(123, 97, 255, 0.12), rgba(0,0,0,0));
+  box-shadow: 0 0 0 0.0625rem rgba(108, 111, 245, 0.25);
+  background: linear-gradient(90deg, rgba(108, 111, 245, 0.12), rgba(0,0,0,0));
   border-radius: 0.75rem;
 }
