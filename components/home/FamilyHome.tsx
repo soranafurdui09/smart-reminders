@@ -80,11 +80,11 @@ export default function FamilyHome({
   const activeFilterLabel = activeCategory?.label ? `Afișezi: ${activeCategory.label} (${filteredOverdueCount})` : null;
   const soonPreview = filteredSoonItems.slice(0, 3);
   const hasMoreSoon = filteredSoonItems.length > soonPreview.length;
+  // tilesReady: only depends on the core reminder arrays — meds data is optional
   const tilesReady =
     Array.isArray(todayOpenItems)
     && Array.isArray(soonItems)
-    && Array.isArray(overdueItems)
-    && (Array.isArray(visibleDoses) || Number.isFinite(medsTodayStats?.total));
+    && Array.isArray(overdueItems);
   const medsCount = Number.isFinite(medsTodayStats?.total)
     ? medsTodayStats.total
     : Array.isArray(visibleDoses)
@@ -764,9 +764,11 @@ export default function FamilyHome({
                 <div className="section-label">MEMBRII FAMILIEI</div>
                 <div className="no-scrollbar flex gap-4 overflow-x-auto pb-1">
                   {householdMembers.map((member: any) => {
-                    const memberName: string = member.display_name ?? member.name ?? '';
+                    // householdMembers shape is { id, label } — label holds the display name
+                    const memberName: string = member.display_name ?? member.name ?? member.label ?? '';
                     const initials = memberName
-                      .split(' ')
+                      .trim()
+                      .split(/\s+/)
                       .map((w: string) => w[0] ?? '')
                       .slice(0, 2)
                       .join('')
