@@ -10,7 +10,6 @@ export default function TopBar({
 }: {
   labels: { today: string; inbox: string; calendar: string; you: string };
 }) {
-  const [subtitle, setSubtitle] = useState<string | null>(null);
   const [compact, setCompact] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -28,21 +27,6 @@ export default function TopBar({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const handleSubtitle = (event: Event) => {
-      const detail = (event as CustomEvent<{ subtitle?: string }>).detail;
-      setSubtitle(detail?.subtitle ?? null);
-    };
-    const handleClear = () => setSubtitle(null);
-    window.addEventListener('topbar:subtitle', handleSubtitle as EventListener);
-    window.addEventListener('topbar:clear', handleClear as EventListener);
-    return () => {
-      window.removeEventListener('topbar:subtitle', handleSubtitle as EventListener);
-      window.removeEventListener('topbar:clear', handleClear as EventListener);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
     const onScroll = () => setCompact(window.scrollY > 8);
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
@@ -54,7 +38,7 @@ export default function TopBar({
       <div className={`mx-auto flex min-h-[56px] w-full max-w-none md:max-w-6xl items-center justify-between gap-[var(--space-2)] px-[var(--container-pad)] ${compact ? 'py-1.5' : 'py-2'}`}>
         <div className="min-w-0">
           {showTitle ? <div className="text-base font-semibold text-text">{title}</div> : null}
-          {subtitle ? <div className="text-[11px] text-muted">{subtitle}</div> : null}
+          {/* subtitle hidden — count info shown in stats row and overdue chip */}
         </div>
         <div className="flex items-center gap-2">
           <Link href="/app?tab=inbox" className="icon-btn h-9 w-9" aria-label="Căutare">

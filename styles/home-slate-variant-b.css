@@ -276,7 +276,7 @@
 
 /* Hero card: reduce padding + title size slightly */
 .home-slate.today-shell.home-compact .next-reminder-card {
-  padding: 0.5rem !important;
+  padding: 16px;
 }
 
 .home-slate.today-shell.home-compact .next-reminder-card .next-reminder-title {

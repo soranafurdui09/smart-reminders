@@ -569,7 +569,7 @@ export default function FamilyHome({
                     'stat-tile-soon':             'var(--cyan-text, #67e8f9)',
                     'stat-tile-meds':             'var(--cyan-text, #67e8f9)',
                     'stat-tile-overdue':          'var(--amber-text, #fcd34d)',
-                    'stat-tile-overdue-critical': 'var(--critical-text, #fca5a5)',
+                    'stat-tile-overdue-critical': 'var(--amber-text, #fcd34d)',
                   };
                   const numberColor = colorMap[metric.tileClass] ?? 'var(--text-primary, #eeedf5)';
                   return (
@@ -639,15 +639,14 @@ export default function FamilyHome({
                 aria-hidden="true"
               />
               <div className="pl-3">
-                <div className="section-label">{copy.dashboard.nextTitle}</div>
                 {isNextEmpty ? (
-                  <div className="mt-2 text-sm" style={{ color: 'var(--text-secondary, #8b8aa0)' }}>
+                  <div className="text-sm" style={{ color: 'var(--text-secondary, #8b8aa0)' }}>
                     {copy.dashboard.nextUpEmpty}
                   </div>
                 ) : (
                   <>
                     <div
-                      className="mt-2 text-[16px] font-semibold leading-snug"
+                      className="text-[16px] font-semibold leading-snug"
                       style={{ color: 'var(--text-primary, #eeedf5)' }}
                     >
                       {nextTitle}
@@ -775,11 +774,13 @@ export default function FamilyHome({
                     return (
                       <div key={member.id ?? member.user_id} className="flex flex-shrink-0 flex-col items-center gap-1.5">
                         <div
-                          className="flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold"
+                          className="flex h-11 w-11 items-center justify-center rounded-full"
                           style={{
-                            background: 'var(--bg-elevated, #1a1b2e)',
-                            border: '2px solid var(--border-default, #1e1f35)',
+                            background: 'var(--bg-subtle, #1f2035)',
+                            border: '1px solid var(--border-default, #1e1f35)',
                             color: 'var(--accent-text, #a5a8ff)',
+                            fontSize: '14px',
+                            fontWeight: 600,
                           }}
                         >
                           {initials}
