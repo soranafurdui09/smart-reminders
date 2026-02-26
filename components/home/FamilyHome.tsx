@@ -10,7 +10,6 @@ import ReminderRowMobile from '@/components/mobile/ReminderRowMobile';
 import ReminderFiltersPanel from '@/components/dashboard/ReminderFiltersPanel';
 import ListReminderButton from '@/components/lists/ListReminderButton';
 import ListShareSheet from '@/components/lists/ListShareSheet';
-import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId } from '@/lib/categories';
 import { diffDaysInTimeZone, formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
 
 type Props = Record<string, any>;
@@ -49,76 +48,20 @@ export default function FamilyHome({
   AssignmentOptions,
   nextOccurrence,
   nextOccurrenceLabel,
-  nextCategory,
-  nextTone,
-  filteredOverdueCount,
   filteredSoonItems,
-  controlSessionCount,
-  setControlSessionCount,
   nextUpActionsSheet,
   googleConnected,
   effectiveTimeZone,
-  overdueTopItems,
   localeTag,
   router,
   householdMembers,
   householdItems,
   todayOpenItems,
-  soonItems,
-  visibleDoses,
-  overdueItems,
-  overdueTileClass,
-  homeSegment,
-  handleSegmentSelect,
-  medsTodayStats
+  overdueItems
 }: Props) {
-  const nextToneClassName = nextTone === 'overdue' ? 'next-reminder-card--overdue' : nextTone === 'urgent' ? 'next-reminder-card--urgent' : '';
   const nextTitle = nextOccurrence?.reminder?.title ?? '';
   const hasNextAction = Boolean(nextOccurrence?.id && nextOccurrence?.reminder?.id && nextOccurrence?.occur_at);
   const isNextEmpty = !nextTitle || !nextOccurrenceLabel;
-  const nextCategoryStyle = nextCategory ? getCategoryChipStyle(nextCategory.color, true) : undefined;
-  const activeCategory = categoryFilter !== 'all' ? getReminderCategory(categoryFilter) : null;
-  const activeFilterLabel = activeCategory?.label ? `Afișezi: ${activeCategory.label} (${filteredOverdueCount})` : null;
-  const soonPreview = filteredSoonItems.slice(0, 3);
-  const hasMoreSoon = filteredSoonItems.length > soonPreview.length;
-  // tilesReady: only depends on the core reminder arrays — meds data is optional
-  const tilesReady =
-    Array.isArray(todayOpenItems)
-    && Array.isArray(soonItems)
-    && Array.isArray(overdueItems);
-  const medsCount = Number.isFinite(medsTodayStats?.total)
-    ? medsTodayStats.total
-    : Array.isArray(visibleDoses)
-      ? visibleDoses.length
-      : 0;
-  const metrics = tilesReady
-    ? ([
-        { id: 'today', label: copy.dashboard.todayTitle, count: todayOpenItems.length, tileClass: 'stat-tile-today' },
-        { id: 'soon', label: copy.dashboard.upcomingTitle, count: soonItems.length, tileClass: 'stat-tile-soon' },
-        { id: 'meds', label: copy.dashboard.medicationsTitle, count: medsCount, tileClass: 'stat-tile-meds' },
-        { id: 'overdue', label: copy.dashboard.todayOverdue, count: overdueItems.length, tileClass: overdueTileClass }
-      ])
-    : [];
-  const nextNotifyTimeLabel = (() => {
-    const userNotifyAt = nextOccurrence?.reminder?.user_notify_at ?? null;
-    const dueAt = nextOccurrence?.reminder?.due_at ?? null;
-    if (!userNotifyAt && !dueAt) return null;
-    const leadMinutes = Number.isFinite(nextOccurrence?.reminder?.pre_reminder_minutes)
-      ? Number(nextOccurrence?.reminder?.pre_reminder_minutes)
-      : 30;
-    const notifyAt = dueAt
-      ? new Date(new Date(dueAt as string).getTime() - Math.max(0, leadMinutes) * 60000)
-      : new Date(userNotifyAt as string);
-    if (Number.isNaN(notifyAt.getTime())) return null;
-    const resolvedTimeZone = resolveReminderTimeZone(nextOccurrence?.reminder?.tz ?? null, effectiveTimeZone ?? null);
-    return notifyAt.toLocaleTimeString(localeTag, {
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: resolvedTimeZone ?? undefined
-    });
-  })();
-  const controlSessionMax = 3;
-  const isControlSessionDone = controlSessionCount >= controlSessionMax;
 
   // ── New home redesign state ───────────────────────────────────────
   const [mounted, setMounted] = useState(false);
@@ -126,7 +69,6 @@ export default function FamilyHome({
   const [heroResolved, setHeroResolved] = useState(false);
   const [heroSlideOut, setHeroSlideOut] = useState(false);
   const [showResolveNext, setShowResolveNext] = useState(false);
-  const [familyExpanded, setFamilyExpanded] = useState(false);
   const [, startResolveTransition] = useTransition();
 
   useEffect(() => {
@@ -153,7 +95,7 @@ export default function FamilyHome({
 
   const heroLabel = nextOccurrence?.reminder?.assigned_member_id
     ? 'FAMILIE · PRIORITATE COMUNĂ'
-    : 'PERSONAL · PRIORITATE';
+    : 'PRIORITATE ACUM';
 
   const heroContextLabel = nextOccurrence?.reminder?.assigned_member_id
     ? 'Familie'
@@ -190,6 +132,12 @@ export default function FamilyHome({
     if (!Array.isArray(householdItems)) return [];
     return householdItems.slice(0, 4);
   }, [householdItems]);
+  const familyPeekItem = householdItemsSlice[0] ?? null;
+  const familySummaryLabel = familyUrgentCount > 0
+    ? `${familyUrgentCount} necesită confirmare`
+    : familyUpcomingCount > 0
+      ? `${familyUpcomingCount} azi`
+      : 'Totul este aliniat';
 
   const handleResolve = () => {
     if (heroResolved) return;
@@ -210,27 +158,14 @@ export default function FamilyHome({
       });
     }, 1500);
   };
-  const getOverdueMeta = (occurrence: any) => {
+  const getFamilyPeekMeta = (occurrence: any) => {
     const reminder = occurrence.reminder ?? null;
     const displayAt = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
     const resolvedTimeZone = resolveReminderTimeZone(reminder?.tz ?? null, effectiveTimeZone ?? null);
-    const displayLabel = occurrence.snoozed_until
+    if (!displayAt) return '';
+    return occurrence.snoozed_until
       ? formatDateTimeWithTimeZone(displayAt, resolvedTimeZone)
       : formatReminderDateTime(displayAt, reminder?.tz ?? null, effectiveTimeZone ?? null);
-    const parsed = new Date(displayAt);
-    if (Number.isNaN(parsed.getTime())) return displayLabel;
-    const now = new Date();
-    const dayDiff = diffDaysInTimeZone(parsed, now, resolvedTimeZone || effectiveTimeZone || 'UTC');
-    const rtf = new Intl.RelativeTimeFormat(locale === 'ro' ? 'ro-RO' : locale, { numeric: 'auto' });
-    if (dayDiff !== 0) {
-      return `${displayLabel} · ${rtf.format(dayDiff, 'day')}`;
-    }
-    const diffMinutes = Math.round((parsed.getTime() - now.getTime()) / 60000);
-    const diffHours = Math.round(diffMinutes / 60);
-    if (Math.abs(diffHours) >= 1) {
-      return `${displayLabel} · ${rtf.format(diffHours, 'hour')}`;
-    }
-    return `${displayLabel} · ${rtf.format(diffMinutes, 'minute')}`;
   };
 
   return (
@@ -657,11 +592,7 @@ export default function FamilyHome({
                     bottom: '20%',
                     width: 3,
                     borderRadius: '0 3px 3px 0',
-                    background: nextTone === 'overdue'
-                      ? 'var(--amber, #f59e0b)'
-                      : nextTone === 'urgent'
-                        ? 'var(--amber, #f59e0b)'
-                        : 'var(--accent-color, #6c6ff5)',
+                    background: 'var(--accent-color, #6c6ff5)',
                   }}
                 />
 
@@ -689,9 +620,7 @@ export default function FamilyHome({
                         fontWeight: 700,
                         textTransform: 'uppercase' as const,
                         letterSpacing: '0.06em',
-                        color: (nextTone === 'overdue' || nextTone === 'urgent')
-                          ? 'var(--amber-text, #fcd34d)'
-                          : 'var(--accent-text, #a5a8ff)',
+                        color: 'var(--accent-text, #a5a8ff)',
                       }}
                     >
                       {heroLabel}
@@ -699,45 +628,17 @@ export default function FamilyHome({
                     {minutesUntilNext !== null && minutesUntilNext > 0 && minutesUntilNext < 120 ? (
                       <span
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          background: 'rgba(245,158,11,0.10)',
-                          border: '1px solid rgba(245,158,11,0.22)',
+                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid var(--border-default, #1e1f35)',
                           borderRadius: '5px',
                           padding: '3px 8px',
                           fontFamily: 'var(--font-mono, monospace)',
                           fontSize: '10px',
-                          color: 'var(--amber-text, #fcd34d)',
+                          color: 'var(--text-secondary, #8b8aa0)',
                           flexShrink: 0,
                         }}
                       >
-                        <span
-                          style={{
-                            width: 5,
-                            height: 5,
-                            borderRadius: '50%',
-                            background: 'var(--amber, #f59e0b)',
-                            display: 'inline-block',
-                            animation: 'ai-pulse 1.5s ease-in-out infinite',
-                          }}
-                        />
-                        Scadent în {minutesUntilNext} min
-                      </span>
-                    ) : nextTone === 'overdue' ? (
-                      <span
-                        style={{
-                          background: 'rgba(245,158,11,0.10)',
-                          border: '1px solid rgba(245,158,11,0.22)',
-                          borderRadius: '5px',
-                          padding: '3px 8px',
-                          fontFamily: 'var(--font-mono, monospace)',
-                          fontSize: '10px',
-                          color: 'var(--amber-text, #fcd34d)',
-                          flexShrink: 0,
-                        }}
-                      >
-                        ● Restant
+                        În {minutesUntilNext} min
                       </span>
                     ) : null}
                   </div>
@@ -805,7 +706,7 @@ export default function FamilyHome({
                               height: '40px',
                               background: heroResolved
                                 ? 'var(--success-color, #34d399)'
-                                : 'var(--accent-color, #6c6ff5)',
+                                : 'rgba(108,111,245,0.92)',
                               color: '#fff',
                               fontWeight: 700,
                               fontSize: '14px',
@@ -814,8 +715,8 @@ export default function FamilyHome({
                               cursor: heroResolved ? 'default' : 'pointer',
                               transition: 'background 200ms ease, box-shadow 200ms ease',
                               boxShadow: heroResolved
-                                ? '0 3px 12px rgba(52,211,153,0.32)'
-                                : '0 3px 12px rgba(108,111,245,0.28)',
+                                ? '0 2px 8px rgba(52,211,153,0.20)'
+                                : '0 1px 4px rgba(108,111,245,0.18)',
                             }}
                             onClick={handleResolve}
                             disabled={heroResolved}
@@ -851,7 +752,7 @@ export default function FamilyHome({
               </div>
             </div>
 
-            {/* ── 4. Family Module ────────────────────────────── */}
+            {/* ── 4. Family Coordination Module ───────────────── */}
             {Array.isArray(householdMembers) && householdMembers.length > 1 ? (
               <div
                 className="animate-in"
@@ -862,246 +763,90 @@ export default function FamilyHome({
                     borderRadius: '12px',
                     background: 'var(--bg-raised, #13141f)',
                     border: '1px solid var(--border-default, #1e1f35)',
+                    padding: '10px 12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
                   }}
                 >
-                  {/* Collapsed trigger row */}
-                  <button
-                    type="button"
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '10px 12px',
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      textAlign: 'left' as const,
-                    }}
-                    onClick={() => setFamilyExpanded(!familyExpanded)}
-                    aria-expanded={familyExpanded}
-                  >
-                    {/* Stacked avatars */}
-                    <div style={{ display: 'flex', flexShrink: 0, position: 'relative' }}>
-                      {householdMembers.slice(0, 2).map((member: any, idx: number) => {
-                        const memberName = member.label ?? member.display_name ?? member.name ?? '';
-                        const initials = memberName.trim().split(/\s+/).map((w: string) => w[0] ?? '').slice(0, 2).join('').toUpperCase() || '?';
-                        return (
-                          <div
-                            key={member.id ?? idx}
-                            style={{
-                              width: 22,
-                              height: 22,
-                              borderRadius: '50%',
-                              background: 'var(--bg-overlay, #252640)',
-                              border: '1.5px solid var(--bg-raised, #13141f)',
-                              color: 'var(--accent-text, #a5a8ff)',
-                              fontSize: '9px',
-                              fontWeight: 700,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              marginLeft: idx === 0 ? 0 : -6,
-                              position: 'relative',
-                              zIndex: 2 - idx,
-                            }}
-                          >
-                            {idx === 0 && familyUrgentCount > 0 ? (
-                              <span
-                                style={{
-                                  position: 'absolute',
-                                  top: -2,
-                                  right: -2,
-                                  width: 6,
-                                  height: 6,
-                                  borderRadius: '50%',
-                                  background: 'var(--amber, #f59e0b)',
-                                  border: '1px solid var(--bg-raised, #13141f)',
-                                }}
-                              />
-                            ) : null}
-                            {initials}
-                          </div>
-                        );
-                      })}
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '10px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #eeedf5)' }}>
+                      Coordonare familie
                     </div>
-
-                    {/* Text info */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #eeedf5)' }}>
-                        Familie
-                      </div>
-                      <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono, monospace)', marginTop: '1px' }}>
-                        {familyUrgentCount > 0 ? (
-                          <span style={{ color: 'var(--amber-text, #fcd34d)' }}>{familyUrgentCount} urgent</span>
-                        ) : null}
-                        {familyUrgentCount > 0 && familyUpcomingCount > 0 ? (
-                          <span style={{ color: 'var(--text-muted, #4a4860)' }}> · </span>
-                        ) : null}
-                        {familyUpcomingCount > 0 ? (
-                          <span style={{ color: 'var(--text-secondary, #8b8aa0)' }}>{familyUpcomingCount} azi</span>
-                        ) : null}
-                        {familyUrgentCount === 0 && familyUpcomingCount === 0 ? (
-                          <span style={{ color: 'var(--text-muted, #4a4860)' }}>nimic urgent</span>
-                        ) : null}
-                      </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary, #8b8aa0)' }}>
+                      {familySummaryLabel}
                     </div>
+                  </div>
 
-                    {/* Expand affordance */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted, #4a4860)' }}>Detalii</span>
-                      <span
-                        style={{
-                          fontSize: '9px',
-                          color: 'var(--text-muted, #4a4860)',
-                          transition: 'transform 300ms ease-out',
-                          transform: familyExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                          display: 'inline-block',
-                        }}
-                      >
-                        ▾
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Accordion expanded content */}
                   <div
                     style={{
-                      maxHeight: familyExpanded ? '500px' : 0,
-                      overflow: 'hidden',
-                      transition: 'max-height 300ms ease-out',
+                      borderRadius: '9px',
+                      border: '1px solid var(--border-default, #1e1f35)',
+                      background: 'rgba(255,255,255,0.02)',
+                      padding: '8px 10px',
                     }}
                   >
-                    <div style={{ borderTop: '1px solid var(--border-default, #1e1f35)', padding: '8px 12px 12px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px' }}>
-                        {householdItemsSlice.map((occurrence: any) => {
-                          const reminder = occurrence.reminder ?? null;
-                          const isUrgent = overdueItems.some((o: any) => o.id === occurrence.id);
-                          return (
-                            <div
-                              key={occurrence.id}
-                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}
-                            >
-                              <span
-                                style={{
-                                  fontSize: '12px',
-                                  color: 'var(--text-secondary, #8b8aa0)',
-                                  flex: 1,
-                                  minWidth: 0,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap' as const,
-                                }}
-                              >
-                                {reminder?.title ?? '—'}
-                              </span>
-                              <span
-                                style={{
-                                  flexShrink: 0,
-                                  background: isUrgent ? 'rgba(245,158,11,0.10)' : 'var(--bg-subtle, #1f2035)',
-                                  border: `1px solid ${isUrgent ? 'rgba(245,158,11,0.22)' : 'var(--border-default, #1e1f35)'}`,
-                                  borderRadius: '5px',
-                                  padding: '2px 7px',
-                                  fontFamily: 'var(--font-mono, monospace)',
-                                  fontSize: '10px',
-                                  color: isUrgent ? 'var(--amber-text, #fcd34d)' : 'var(--text-secondary, #8b8aa0)',
-                                }}
-                              >
-                                {isUrgent ? 'Urgent' : 'Confirmă'}
-                              </span>
-                            </div>
-                          );
-                        })}
-                        {householdItemsSlice.length === 0 ? (
-                          <div style={{ fontSize: '12px', color: 'var(--text-muted, #4a4860)' }}>
-                            Nicio activitate recentă.
-                          </div>
-                        ) : null}
-                      </div>
-                      {/* Footer */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px' }}>
-                        <button
-                          type="button"
-                          style={{
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            color: 'var(--accent-text, #a5a8ff)',
-                            background: 'transparent',
-                            border: '1px solid rgba(108,111,245,0.28)',
-                            borderRadius: '7px',
-                            padding: '5px 10px',
-                            cursor: 'pointer',
-                          }}
-                          onClick={() => router.push('/app/household')}
-                        >
-                          Coordonează
-                        </button>
-                        <button
-                          type="button"
-                          style={{
-                            fontSize: '11px',
-                            color: 'var(--text-muted, #4a4860)',
-                            background: 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '5px 0',
-                          }}
-                          onClick={() => router.push('/app?tab=today')}
-                        >
-                          Vezi toate →
-                        </button>
-                      </div>
+                    <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-muted, #4a4860)' }}>
+                      Acum
                     </div>
+                    <div
+                      style={{
+                        marginTop: '2px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: 'var(--text-primary, #eeedf5)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {familyPeekItem?.reminder?.title ?? 'Nicio acțiune comună acum'}
+                    </div>
+                    {familyPeekItem ? (
+                      <div style={{ marginTop: '2px', fontSize: '11px', color: 'var(--text-muted, #4a4860)' }}>
+                        {getFamilyPeekMeta(familyPeekItem)}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                    <button
+                      type="button"
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        color: 'var(--accent-text, #a5a8ff)',
+                        background: 'transparent',
+                        border: '1px solid rgba(108,111,245,0.28)',
+                        borderRadius: '8px',
+                        padding: '6px 12px',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => router.push('/app/household')}
+                    >
+                      Coordonează
+                    </button>
+                    <button
+                      type="button"
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: 'var(--text-secondary, #8b8aa0)',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                      }}
+                      onClick={() => router.push('/app/household')}
+                    >
+                      Vezi tot
+                    </button>
                   </div>
                 </div>
               </div>
             ) : null}
 
-            {/* ── 5. Status Row ───────────────────────────────── */}
-            <div
-              className="animate-in"
-              style={{ margin: '0 0.75rem', animationDelay: '240ms' }}
-            >
-              <div
-                style={{
-                  borderRadius: '9px',
-                  background: 'var(--bg-raised, #13141f)',
-                  border: '1px solid var(--border-default, #1e1f35)',
-                  padding: '8px 12px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary, #8b8aa0)' }}>
-                  Azi:{' '}
-                  <span style={{ color: 'var(--amber-text, #fcd34d)', fontWeight: 600 }}>
-                    {filteredOverdueCount} urgent
-                  </span>
-                  {' · '}
-                  backlog {todayOpenItems.length + overdueItems.length}
-                </div>
-                <button
-                  type="button"
-                  style={{
-                    fontFamily: 'var(--font-mono, monospace)',
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    textTransform: 'uppercase' as const,
-                    letterSpacing: '0.06em',
-                    color: 'var(--accent-text, #a5a8ff)',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => router.push('/app?tab=inbox')}
-                >
-                  INBOX →
-                </button>
-              </div>
-            </div>
-
-            {/* ── 6. Restul Zilei ─────────────────────────────── */}
+            {/* ── 5. Restul Zilei ─────────────────────────────── */}
             {todayTasks.length > 0 ? (
               <div
                 className="animate-in"
@@ -1248,15 +993,7 @@ export default function FamilyHome({
               </div>
             ) : null}
 
-            {/* ── 7. Quick Add Bar ────────────────────────────── */}
-            <div
-              className="animate-in"
-              style={{ margin: '0 0.75rem', animationDelay: '340ms' }}
-            >
-              <QuickAddBar />
-            </div>
-
-            {/* ── 8. Resolve Next (appears after hero completion) */}
+            {/* ── 6. Resolve Next (appears after hero completion) */}
             {showResolveNext && nextAfterHero ? (
               <div
                 className="animate-in"
@@ -1277,6 +1014,16 @@ export default function FamilyHome({
                     {(nextAfterHero as any).reminder?.title ?? '—'}
                   </span>
                 </span>
+              </div>
+            ) : null}
+
+            {/* ── 7. Quick Add (below first task items) ───────── */}
+            {todayTasks.length > 0 ? (
+              <div
+                className="animate-in"
+                style={{ margin: '0 0.75rem', animationDelay: '340ms' }}
+              >
+                <QuickAddBar />
               </div>
             ) : null}
 

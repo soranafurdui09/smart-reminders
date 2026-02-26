@@ -438,7 +438,7 @@ export default function ReminderDashboardSection({
     const upcoming = items
       .filter((item) => item.compareDate.getTime() >= now.getTime() && item.compareDate.getTime() <= nextDay.getTime())
       .sort((a, b) => a.compareDate.getTime() - b.compareDate.getTime());
-    const next = overdue[0] ?? today[0] ?? upcoming[0] ?? null;
+    const next = today[0] ?? upcoming[0] ?? overdue[0] ?? null;
     return { next, overdue, today, upcoming };
   }, [effectiveTimeZone, openOccurrences]);
 
@@ -781,20 +781,14 @@ export default function ReminderDashboardSection({
   const nextOccurrenceDate = nextUpContext.next?.compareDate ?? null;
 
   const nextOccurrenceLabel = useMemo(() => {
-    if (!nextOccurrenceDate) return null;
-    const diffMinutes = Math.round((nextOccurrenceDate.getTime() - Date.now()) / 60000);
-    const absMinutes = Math.abs(diffMinutes);
-    const rtf = new Intl.RelativeTimeFormat(locale === 'ro' ? 'ro-RO' : locale, { numeric: 'auto' });
-    if (absMinutes < 60) {
-      return rtf.format(diffMinutes, 'minute');
-    }
-    const diffHours = Math.round(diffMinutes / 60);
-    if (Math.abs(diffHours) < 24) {
-      return rtf.format(diffHours, 'hour');
-    }
-    const diffDays = Math.round(diffHours / 24);
-    return rtf.format(diffDays, 'day');
-  }, [locale, nextOccurrenceDate]);
+    if (!nextOccurrence) return null;
+    const displayAt = nextOccurrence.snoozed_until ?? nextOccurrence.effective_at ?? nextOccurrence.occur_at;
+    if (!displayAt) return null;
+    const resolvedTimeZone = resolveReminderTimeZone(nextOccurrence.reminder?.tz ?? null, effectiveTimeZone ?? null);
+    return nextOccurrence.snoozed_until
+      ? formatDateTimeWithTimeZone(displayAt, resolvedTimeZone)
+      : formatReminderDateTime(displayAt, nextOccurrence.reminder?.tz ?? null, effectiveTimeZone ?? null);
+  }, [effectiveTimeZone, nextOccurrence]);
 
   const nextCategory = useMemo(() => {
     if (!nextOccurrence) return null;
