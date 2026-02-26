@@ -201,21 +201,41 @@ export default function FamilyHome({
   const familyConfirmationCount = Math.max(0, familyPanelItems.length - familyUrgentCount);
   const familySummaryStripLabel = `${familyUrgentCount} urgent · ${familyConfirmationCount} confirmare`;
   const restPreviewItems = useMemo(() => {
-    const source = [...todayTasks];
-    const fallbackPools = [filteredSoonItems, overdueTopItems, inboxSoon];
-    if (source.length < 2) {
-      for (const pool of fallbackPools) {
-        if (!Array.isArray(pool)) continue;
-        for (const item of pool) {
-          if (source.find((row: any) => row.id === item.id)) continue;
-          source.push(item);
-          if (source.length >= 3) break;
-        }
-        if (source.length >= 3) break;
+    const source: any[] = [];
+    const pools = [
+      todayTasks,
+      soonItems,
+      filteredSoonItems,
+      overdueTopItems,
+      inboxToday,
+      inboxSoon,
+      inboxLater,
+      reminderUndatedLimited,
+      overdueItems
+    ];
+    for (const pool of pools) {
+      if (!Array.isArray(pool)) continue;
+      for (const item of pool) {
+        if (!item) continue;
+        if (heroOccurrence?.id && item.id === heroOccurrence.id) continue;
+        if (source.find((row: any) => row.id === item.id)) continue;
+        source.push(item);
+        if (source.length >= 3) return source;
       }
     }
-    return source.slice(0, 3);
-  }, [filteredSoonItems, inboxSoon, overdueTopItems, todayTasks]);
+    return source;
+  }, [
+    filteredSoonItems,
+    heroOccurrence?.id,
+    inboxLater,
+    inboxSoon,
+    inboxToday,
+    overdueItems,
+    overdueTopItems,
+    reminderUndatedLimited,
+    soonItems,
+    todayTasks
+  ]);
 
   const handleResolve = () => {
     if (heroResolved) return;
