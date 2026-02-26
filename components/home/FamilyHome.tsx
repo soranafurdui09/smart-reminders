@@ -139,7 +139,6 @@ export default function FamilyHome({
   const [heroResolved, setHeroResolved] = useState(false);
   const [heroSlideOut, setHeroSlideOut] = useState(false);
   const [showResolveNext, setShowResolveNext] = useState(false);
-  const [familyExpanded, setFamilyExpanded] = useState(false);
   const [, startResolveTransition] = useTransition();
 
   useEffect(() => {
@@ -203,6 +202,12 @@ export default function FamilyHome({
     if (!Array.isArray(householdItems)) return [];
     return householdItems.slice(0, 4);
   }, [householdItems]);
+  const familyPeekItem = householdItemsSlice[0] ?? null;
+  const familySummaryLabel = familyUrgentCount > 0
+    ? `${familyUrgentCount} necesită confirmare`
+    : familyUpcomingCount > 0
+      ? `${familyUpcomingCount} azi`
+      : 'Totul este aliniat';
 
   const handleResolve = () => {
     if (heroResolved) return;
@@ -223,27 +228,14 @@ export default function FamilyHome({
       });
     }, 1500);
   };
-  const getOverdueMeta = (occurrence: any) => {
+  const familyPeekMeta = (occurrence: any) => {
     const reminder = occurrence.reminder ?? null;
     const displayAt = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
+    if (!displayAt) return '';
     const resolvedTimeZone = resolveReminderTimeZone(reminder?.tz ?? null, effectiveTimeZone ?? null);
-    const displayLabel = occurrence.snoozed_until
+    return occurrence.snoozed_until
       ? formatDateTimeWithTimeZone(displayAt, resolvedTimeZone)
       : formatReminderDateTime(displayAt, reminder?.tz ?? null, effectiveTimeZone ?? null);
-    const parsed = new Date(displayAt);
-    if (Number.isNaN(parsed.getTime())) return displayLabel;
-    const now = new Date();
-    const dayDiff = diffDaysInTimeZone(parsed, now, resolvedTimeZone || effectiveTimeZone || 'UTC');
-    const rtf = new Intl.RelativeTimeFormat(locale === 'ro' ? 'ro-RO' : locale, { numeric: 'auto' });
-    if (dayDiff !== 0) {
-      return `${displayLabel} · ${rtf.format(dayDiff, 'day')}`;
-    }
-    const diffMinutes = Math.round((parsed.getTime() - now.getTime()) / 60000);
-    const diffHours = Math.round(diffMinutes / 60);
-    if (Math.abs(diffHours) >= 1) {
-      return `${displayLabel} · ${rtf.format(diffHours, 'hour')}`;
-    }
-    return `${displayLabel} · ${rtf.format(diffMinutes, 'minute')}`;
   };
 
   return (
@@ -620,7 +612,7 @@ export default function FamilyHome({
             {header as ReactNode}
 
             {/* ── 2. Morning Banner (06:00–10:00) ────────────── */}
-            {mounted && isMorning ? (
+            {mounted ? (
               <div
                 className="animate-in"
                 style={{
@@ -633,7 +625,7 @@ export default function FamilyHome({
                 }}
               >
                 <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary, #8b8aa0)' }}>
-                  ✦ Dimineață · Începe cu un singur lucru
+                  {isMorning ? '✦ Dimineață · Începe cu un singur lucru' : '✦ Acum · Începe cu un singur lucru'}
                 </span>
               </div>
             ) : null}
@@ -841,196 +833,84 @@ export default function FamilyHome({
                     borderRadius: '12px',
                     background: 'var(--bg-raised, #13141f)',
                     border: '1px solid var(--border-default, #1e1f35)',
+                    padding: '10px 12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
                   }}
                 >
-                  {/* Collapsed trigger row */}
-                  <button
-                    type="button"
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '10px 12px',
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      textAlign: 'left' as const,
-                    }}
-                    onClick={() => setFamilyExpanded(!familyExpanded)}
-                    aria-expanded={familyExpanded}
-                  >
-                    {/* Stacked avatars */}
-                    <div style={{ display: 'flex', flexShrink: 0, position: 'relative' }}>
-                      {householdMembers.slice(0, 2).map((member: any, idx: number) => {
-                        const memberName = member.label ?? member.display_name ?? member.name ?? '';
-                        const initials = memberName.trim().split(/\s+/).map((w: string) => w[0] ?? '').slice(0, 2).join('').toUpperCase() || '?';
-                        return (
-                          <div
-                            key={member.id ?? idx}
-                            style={{
-                              width: 22,
-                              height: 22,
-                              borderRadius: '50%',
-                              background: 'var(--bg-overlay, #252640)',
-                              border: '1.5px solid var(--bg-raised, #13141f)',
-                              color: 'var(--accent-text, #a5a8ff)',
-                              fontSize: '9px',
-                              fontWeight: 700,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              marginLeft: idx === 0 ? 0 : -6,
-                              position: 'relative',
-                              zIndex: 2 - idx,
-                            }}
-                          >
-                            {idx === 0 && familyUrgentCount > 0 ? (
-                              <span
-                                style={{
-                                  position: 'absolute',
-                                  top: -2,
-                                  right: -2,
-                                  width: 6,
-                                  height: 6,
-                                  borderRadius: '50%',
-                                  background: 'var(--amber, #f59e0b)',
-                                  border: '1px solid var(--bg-raised, #13141f)',
-                                }}
-                              />
-                            ) : null}
-                            {initials}
-                          </div>
-                        );
-                      })}
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '10px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #eeedf5)' }}>
+                      Coordonare familie
                     </div>
-
-                    {/* Text info */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #eeedf5)' }}>
-                        Familie
-                      </div>
-                      <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono, monospace)', marginTop: '1px' }}>
-                        {familyUrgentCount > 0 ? (
-                          <span style={{ color: 'var(--amber-text, #fcd34d)' }}>{familyUrgentCount} urgent</span>
-                        ) : null}
-                        {familyUrgentCount > 0 && familyUpcomingCount > 0 ? (
-                          <span style={{ color: 'var(--text-muted, #4a4860)' }}> · </span>
-                        ) : null}
-                        {familyUpcomingCount > 0 ? (
-                          <span style={{ color: 'var(--text-secondary, #8b8aa0)' }}>{familyUpcomingCount} azi</span>
-                        ) : null}
-                        {familyUrgentCount === 0 && familyUpcomingCount === 0 ? (
-                          <span style={{ color: 'var(--text-muted, #4a4860)' }}>nimic urgent</span>
-                        ) : null}
-                      </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary, #8b8aa0)' }}>
+                      {familySummaryLabel}
                     </div>
+                  </div>
 
-                    {/* Expand affordance */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted, #4a4860)' }}>Detalii</span>
-                      <span
-                        style={{
-                          fontSize: '9px',
-                          color: 'var(--text-muted, #4a4860)',
-                          transition: 'transform 300ms ease-out',
-                          transform: familyExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                          display: 'inline-block',
-                        }}
-                      >
-                        ▾
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Accordion expanded content */}
                   <div
                     style={{
-                      maxHeight: familyExpanded ? '500px' : 0,
-                      overflow: 'hidden',
-                      transition: 'max-height 300ms ease-out',
+                      borderRadius: '9px',
+                      border: '1px solid var(--border-default, #1e1f35)',
+                      background: 'rgba(255,255,255,0.02)',
+                      padding: '8px 10px',
                     }}
                   >
-                    <div style={{ borderTop: '1px solid var(--border-default, #1e1f35)', padding: '8px 12px 12px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px' }}>
-                        {householdItemsSlice.map((occurrence: any) => {
-                          const reminder = occurrence.reminder ?? null;
-                          const isUrgent = overdueItems.some((o: any) => o.id === occurrence.id);
-                          return (
-                            <div
-                              key={occurrence.id}
-                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}
-                            >
-                              <span
-                                style={{
-                                  fontSize: '12px',
-                                  color: 'var(--text-secondary, #8b8aa0)',
-                                  flex: 1,
-                                  minWidth: 0,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap' as const,
-                                }}
-                              >
-                                {reminder?.title ?? '—'}
-                              </span>
-                              <span
-                                style={{
-                                  flexShrink: 0,
-                                  background: isUrgent ? 'rgba(245,158,11,0.10)' : 'var(--bg-subtle, #1f2035)',
-                                  border: `1px solid ${isUrgent ? 'rgba(245,158,11,0.22)' : 'var(--border-default, #1e1f35)'}`,
-                                  borderRadius: '5px',
-                                  padding: '2px 7px',
-                                  fontFamily: 'var(--font-mono, monospace)',
-                                  fontSize: '10px',
-                                  color: isUrgent ? 'var(--amber-text, #fcd34d)' : 'var(--text-secondary, #8b8aa0)',
-                                }}
-                              >
-                                {isUrgent ? 'Urgent' : 'Confirmă'}
-                              </span>
-                            </div>
-                          );
-                        })}
-                        {householdItemsSlice.length === 0 ? (
-                          <div style={{ fontSize: '12px', color: 'var(--text-muted, #4a4860)' }}>
-                            Nicio activitate recentă.
-                          </div>
-                        ) : null}
-                      </div>
-                      {/* Footer */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px' }}>
-                        <button
-                          type="button"
-                          style={{
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            color: 'var(--accent-text, #a5a8ff)',
-                            background: 'transparent',
-                            border: '1px solid rgba(108,111,245,0.28)',
-                            borderRadius: '7px',
-                            padding: '5px 10px',
-                            cursor: 'pointer',
-                          }}
-                          onClick={() => router.push('/app/household')}
-                        >
-                          Coordonează
-                        </button>
-                        <button
-                          type="button"
-                          style={{
-                            fontSize: '11px',
-                            color: 'var(--text-muted, #4a4860)',
-                            background: 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '5px 0',
-                          }}
-                          onClick={() => router.push('/app?tab=today')}
-                        >
-                          Vezi toate →
-                        </button>
-                      </div>
+                    <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-muted, #4a4860)' }}>
+                      Acum
                     </div>
+                    <div
+                      style={{
+                        marginTop: '2px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: 'var(--text-primary, #eeedf5)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {familyPeekItem?.reminder?.title ?? 'Nicio acțiune comună acum'}
+                    </div>
+                    {familyPeekItem ? (
+                      <div style={{ marginTop: '2px', fontSize: '11px', color: 'var(--text-muted, #4a4860)' }}>
+                        {familyPeekMeta(familyPeekItem)}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                    <button
+                      type="button"
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        color: 'var(--accent-text, #a5a8ff)',
+                        background: 'transparent',
+                        border: '1px solid rgba(108,111,245,0.28)',
+                        borderRadius: '8px',
+                        padding: '6px 12px',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => router.push('/app/household')}
+                    >
+                      Coordonează
+                    </button>
+                    <button
+                      type="button"
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: 'var(--text-secondary, #8b8aa0)',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                      }}
+                      onClick={() => router.push('/app/household')}
+                    >
+                      Vezi tot
+                    </button>
                   </div>
                 </div>
               </div>
