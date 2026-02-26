@@ -72,10 +72,23 @@ export default function FamilyHome({
   handleSegmentSelect,
   medsTodayStats
 }: Props) {
-  const nextToneClassName = nextTone === 'overdue' ? 'next-reminder-card--overdue' : nextTone === 'urgent' ? 'next-reminder-card--urgent' : '';
-  const nextTitle = nextOccurrence?.reminder?.title ?? '';
-  const hasNextAction = Boolean(nextOccurrence?.id && nextOccurrence?.reminder?.id && nextOccurrence?.occur_at);
-  const isNextEmpty = !nextTitle || !nextOccurrenceLabel;
+  const heroOccurrence = useMemo(() => {
+    if (Array.isArray(todayOpenItems) && todayOpenItems.length > 0) return todayOpenItems[0];
+    if (Array.isArray(filteredSoonItems) && filteredSoonItems.length > 0) return filteredSoonItems[0];
+    return nextOccurrence ?? null;
+  }, [filteredSoonItems, nextOccurrence, todayOpenItems]);
+  const nextTitle = heroOccurrence?.reminder?.title ?? '';
+  const hasNextAction = Boolean(heroOccurrence?.id && heroOccurrence?.reminder?.id && heroOccurrence?.occur_at);
+  const heroTimeLabel = useMemo(() => {
+    if (!heroOccurrence) return null;
+    const displayAt = heroOccurrence.snoozed_until ?? heroOccurrence.effective_at ?? heroOccurrence.occur_at;
+    if (!displayAt) return null;
+    const resolvedTimeZone = resolveReminderTimeZone(heroOccurrence.reminder?.tz ?? null, effectiveTimeZone ?? null);
+    return heroOccurrence.snoozed_until
+      ? formatDateTimeWithTimeZone(displayAt, resolvedTimeZone)
+      : formatReminderDateTime(displayAt, heroOccurrence.reminder?.tz ?? null, effectiveTimeZone ?? null);
+  }, [effectiveTimeZone, heroOccurrence]);
+  const isNextEmpty = !nextTitle || !heroTimeLabel;
   const nextCategoryStyle = nextCategory ? getCategoryChipStyle(nextCategory.color, true) : undefined;
   const activeCategory = categoryFilter !== 'all' ? getReminderCategory(categoryFilter) : null;
   const activeFilterLabel = activeCategory?.label ? `Afișezi: ${activeCategory.label} (${filteredOverdueCount})` : null;
@@ -143,19 +156,19 @@ export default function FamilyHome({
   }, [heroResolved]);
 
   const minutesUntilNext = useMemo(() => {
-    if (!nextOccurrence) return null;
-    const rawDate = nextOccurrence.snoozed_until ?? nextOccurrence.effective_at ?? nextOccurrence.occur_at;
+    if (!heroOccurrence) return null;
+    const rawDate = heroOccurrence.snoozed_until ?? heroOccurrence.effective_at ?? heroOccurrence.occur_at;
     if (!rawDate) return null;
     const at = new Date(rawDate);
     if (Number.isNaN(at.getTime())) return null;
     return Math.round((at.getTime() - Date.now()) / 60000);
-  }, [nextOccurrence]);
+  }, [heroOccurrence]);
 
-  const heroLabel = nextOccurrence?.reminder?.assigned_member_id
+  const heroLabel = heroOccurrence?.reminder?.assigned_member_id
     ? 'FAMILIE · PRIORITATE COMUNĂ'
-    : 'PERSONAL · PRIORITATE';
+    : 'PRIORITATE ACUM';
 
-  const heroContextLabel = nextOccurrence?.reminder?.assigned_member_id
+  const heroContextLabel = heroOccurrence?.reminder?.assigned_member_id
     ? 'Familie'
     : 'Personal';
 
@@ -163,9 +176,9 @@ export default function FamilyHome({
   const todayTasks = useMemo(() => {
     if (!Array.isArray(todayOpenItems)) return [];
     return todayOpenItems
-      .filter((item: any) => !nextOccurrence || item.id !== nextOccurrence.id)
+      .filter((item: any) => !heroOccurrence || item.id !== heroOccurrence.id)
       .slice(0, 6);
-  }, [todayOpenItems, nextOccurrence]);
+  }, [heroOccurrence, todayOpenItems]);
 
   // Next task to suggest after hero completion
   const nextAfterHero = useMemo(() => {
@@ -193,11 +206,11 @@ export default function FamilyHome({
 
   const handleResolve = () => {
     if (heroResolved) return;
-    if (!nextOccurrence?.id || !nextOccurrence?.reminder?.id || !nextOccurrence?.occur_at) return;
+    if (!heroOccurrence?.id || !heroOccurrence?.reminder?.id || !heroOccurrence?.occur_at) return;
     setHeroResolved(true);
-    const occurrenceId = nextOccurrence.id;
-    const reminderId = nextOccurrence.reminder.id as string;
-    const occurAt = nextOccurrence.occur_at;
+    const occurrenceId = heroOccurrence.id;
+    const reminderId = heroOccurrence.reminder.id as string;
+    const occurAt = heroOccurrence.occur_at;
     // Submit server action after animation completes
     setTimeout(() => {
       startResolveTransition(async () => {
@@ -657,11 +670,7 @@ export default function FamilyHome({
                     bottom: '20%',
                     width: 3,
                     borderRadius: '0 3px 3px 0',
-                    background: nextTone === 'overdue'
-                      ? 'var(--amber, #f59e0b)'
-                      : nextTone === 'urgent'
-                        ? 'var(--amber, #f59e0b)'
-                        : 'var(--accent-color, #6c6ff5)',
+                    background: 'var(--accent-color, #6c6ff5)',
                   }}
                 />
 
@@ -689,9 +698,7 @@ export default function FamilyHome({
                         fontWeight: 700,
                         textTransform: 'uppercase' as const,
                         letterSpacing: '0.06em',
-                        color: (nextTone === 'overdue' || nextTone === 'urgent')
-                          ? 'var(--amber-text, #fcd34d)'
-                          : 'var(--accent-text, #a5a8ff)',
+                        color: 'var(--accent-text, #a5a8ff)',
                       }}
                     >
                       {heroLabel}
@@ -699,45 +706,17 @@ export default function FamilyHome({
                     {minutesUntilNext !== null && minutesUntilNext > 0 && minutesUntilNext < 120 ? (
                       <span
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          background: 'rgba(245,158,11,0.10)',
-                          border: '1px solid rgba(245,158,11,0.22)',
+                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid var(--border-default, #1e1f35)',
                           borderRadius: '5px',
                           padding: '3px 8px',
                           fontFamily: 'var(--font-mono, monospace)',
                           fontSize: '10px',
-                          color: 'var(--amber-text, #fcd34d)',
+                          color: 'var(--text-secondary, #8b8aa0)',
                           flexShrink: 0,
                         }}
                       >
-                        <span
-                          style={{
-                            width: 5,
-                            height: 5,
-                            borderRadius: '50%',
-                            background: 'var(--amber, #f59e0b)',
-                            display: 'inline-block',
-                            animation: 'ai-pulse 1.5s ease-in-out infinite',
-                          }}
-                        />
-                        Scadent în {minutesUntilNext} min
-                      </span>
-                    ) : nextTone === 'overdue' ? (
-                      <span
-                        style={{
-                          background: 'rgba(245,158,11,0.10)',
-                          border: '1px solid rgba(245,158,11,0.22)',
-                          borderRadius: '5px',
-                          padding: '3px 8px',
-                          fontFamily: 'var(--font-mono, monospace)',
-                          fontSize: '10px',
-                          color: 'var(--amber-text, #fcd34d)',
-                          flexShrink: 0,
-                        }}
-                      >
-                        ● Restant
+                        În {minutesUntilNext} min
                       </span>
                     ) : null}
                   </div>
@@ -764,8 +743,8 @@ export default function FamilyHome({
                       </div>
 
                       {/* Row 3: meta chips */}
-                      <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '6px', marginBottom: '12px' }}>
-                        {nextOccurrenceLabel ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '6px', marginBottom: '14px' }}>
+                        {heroTimeLabel ? (
                           <span
                             style={{
                               background: 'transparent',
@@ -777,7 +756,7 @@ export default function FamilyHome({
                               color: 'var(--text-secondary, #8b8aa0)',
                             }}
                           >
-                            {nextOccurrenceLabel}
+                            {heroTimeLabel}
                           </span>
                         ) : null}
                         <span
@@ -797,7 +776,7 @@ export default function FamilyHome({
 
                       {/* Row 4: action buttons */}
                       {hasNextAction ? (
-                        <div style={{ display: 'flex', gap: '6px' }}>
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
                           <button
                             type="button"
                             style={{
@@ -805,7 +784,7 @@ export default function FamilyHome({
                               height: '40px',
                               background: heroResolved
                                 ? 'var(--success-color, #34d399)'
-                                : 'var(--accent-color, #6c6ff5)',
+                                : 'rgba(108,111,245,0.92)',
                               color: '#fff',
                               fontWeight: 700,
                               fontSize: '14px',
@@ -814,8 +793,8 @@ export default function FamilyHome({
                               cursor: heroResolved ? 'default' : 'pointer',
                               transition: 'background 200ms ease, box-shadow 200ms ease',
                               boxShadow: heroResolved
-                                ? '0 3px 12px rgba(52,211,153,0.32)'
-                                : '0 3px 12px rgba(108,111,245,0.28)',
+                                ? '0 2px 8px rgba(52,211,153,0.20)'
+                                : '0 1px 4px rgba(108,111,245,0.18)',
                             }}
                             onClick={handleResolve}
                             disabled={heroResolved}
@@ -823,7 +802,7 @@ export default function FamilyHome({
                             {heroResolved ? '✓ Rezolvat!' : '✓ Rezolvă'}
                           </button>
                           <form action={snoozeOccurrence}>
-                            <input type="hidden" name="occurrenceId" value={nextOccurrence?.id ?? ''} />
+                            <input type="hidden" name="occurrenceId" value={heroOccurrence?.id ?? ''} />
                             <input type="hidden" name="mode" value="30" />
                             <ActionSubmitButton
                               type="submit"
@@ -1074,12 +1053,7 @@ export default function FamilyHome({
                 }}
               >
                 <div style={{ fontSize: '12px', color: 'var(--text-secondary, #8b8aa0)' }}>
-                  Azi:{' '}
-                  <span style={{ color: 'var(--amber-text, #fcd34d)', fontWeight: 600 }}>
-                    {filteredOverdueCount} urgent
-                  </span>
-                  {' · '}
-                  backlog {todayOpenItems.length + overdueItems.length}
+                  Începe cu următorul · backlog {todayOpenItems.length + overdueItems.length}
                 </div>
                 <button
                   type="button"
