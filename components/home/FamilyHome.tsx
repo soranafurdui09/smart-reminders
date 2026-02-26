@@ -235,7 +235,9 @@ export default function FamilyHome({
   }, [householdItems]);
   const familyPanelItems = useMemo(() => householdItemsSlice.slice(0, 2), [householdItemsSlice]);
   const familyConfirmationCount = Math.max(0, familyPanelItems.length - familyUrgentCount);
-  const familySummaryStripLabel = `${familyUrgentCount} urgent · ${familyConfirmationCount} confirmare`;
+  const urgentSummaryTone = familyUrgentCount > 0
+    ? 'rgba(238,188,114,0.82)'
+    : 'var(--text-secondary, #8b8aa0)';
 
   const handleResolve = () => {
     if (heroResolved) return;
@@ -719,7 +721,7 @@ export default function FamilyHome({
                     width: 3,
                     borderRadius: '0 3px 3px 0',
                     background: (nextTone === 'overdue' || nextTone === 'urgent')
-                      ? 'var(--amber, #f59e0b)'
+                      ? 'rgba(245,158,11,0.72)'
                       : 'var(--accent-color, #6c6ff5)',
                   }}
                 />
@@ -749,7 +751,7 @@ export default function FamilyHome({
                         textTransform: 'uppercase' as const,
                         letterSpacing: '0.06em',
                         color: (nextTone === 'overdue' || nextTone === 'urgent')
-                          ? 'var(--amber-text, #fcd34d)'
+                          ? 'rgba(239,191,121,0.86)'
                           : 'var(--accent-text, #a5a8ff)',
                       }}
                     >
@@ -762,19 +764,19 @@ export default function FamilyHome({
                           alignItems: 'center',
                           gap: '4px',
                           background: minutesUntilNext <= 0
-                            ? 'rgba(245,158,11,0.14)'
+                            ? 'rgba(245,158,11,0.11)'
                             : minutesUntilNext <= 30
-                              ? 'rgba(245,158,11,0.10)'
+                              ? 'rgba(245,158,11,0.07)'
                               : 'rgba(255,255,255,0.04)',
                           border: minutesUntilNext <= 30
-                            ? '1px solid rgba(245,158,11,0.30)'
+                            ? '1px solid rgba(245,158,11,0.21)'
                             : '1px solid var(--border-default, #1e1f35)',
                           borderRadius: '5px',
                           padding: '2px 7px',
                           fontFamily: 'var(--font-mono, monospace)',
                           fontSize: '10px',
                           color: minutesUntilNext <= 30
-                            ? 'var(--amber-text, #fcd34d)'
+                            ? 'rgba(239,194,128,0.84)'
                             : 'var(--text-secondary, #8b8aa0)',
                           flexShrink: 0,
                         }}
@@ -785,10 +787,10 @@ export default function FamilyHome({
                             height: 5,
                             borderRadius: '50%',
                             background: minutesUntilNext <= 30
-                              ? 'var(--amber, #f59e0b)'
+                              ? 'rgba(245,158,11,0.76)'
                               : 'var(--text-muted, #4a4860)',
                             flexShrink: 0,
-                            animation: minutesUntilNext <= 30 ? 'ai-pulse 1.6s ease-in-out infinite' : undefined,
+                            animation: minutesUntilNext <= 0 ? 'ai-pulse 1.8s ease-in-out infinite' : undefined,
                           }}
                         />
                         {minutesUntilNext <= 0
@@ -958,8 +960,13 @@ export default function FamilyHome({
                         <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #eeedf5)', lineHeight: 1.1 }}>
                           Familie
                         </div>
-                        <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-secondary, #8b8aa0)', marginTop: '1px' }}>
-                          {familySummaryStripLabel}
+                        <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono, monospace)', marginTop: '1px' }}>
+                          <span style={{ color: urgentSummaryTone }}>
+                            {familyUrgentCount} urgent
+                          </span>
+                          <span style={{ color: 'var(--text-muted, #4a4860)' }}>
+                            {' · '}{familyConfirmationCount} confirmare
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -984,24 +991,29 @@ export default function FamilyHome({
                   <div
                     style={{
                       borderRadius: '12px',
-                      background: 'var(--bg-raised, #13141f)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      padding: '9px 11px',
+                      background: 'linear-gradient(180deg, rgba(255,255,255,0.02) 0%, var(--bg-raised, #13141f) 100%)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      padding: '8px 10px',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '7px',
+                      gap: '6px',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', minHeight: 18 }}>
                       <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #eeedf5)' }}>
                         Coordonare familie
                       </div>
-                      <div style={{ fontSize: '10.5px', color: 'var(--text-secondary, #8b8aa0)' }}>
-                        {familySummaryStripLabel}
+                      <div style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono, monospace)' }}>
+                        <span style={{ color: urgentSummaryTone }}>
+                          {familyUrgentCount} urgent
+                        </span>
+                        <span style={{ color: 'var(--text-muted, #4a4860)' }}>
+                          {' · '}{familyConfirmationCount} confirmare
+                        </span>
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       {familyCoordRows.map((row) => {
                         return (
                           <div
@@ -1012,9 +1024,9 @@ export default function FamilyHome({
                               justifyContent: 'space-between',
                               gap: '8px',
                               borderRadius: '8px',
-                              border: '1px solid rgba(255,255,255,0.07)',
-                              background: 'rgba(255,255,255,0.02)',
-                              padding: '6px 8px',
+                              border: '1px solid rgba(255,255,255,0.06)',
+                              background: 'rgba(255,255,255,0.025)',
+                              padding: '5px 8px',
                             }}
                           >
                             <div
@@ -1037,9 +1049,9 @@ export default function FamilyHome({
                                 fontFamily: 'var(--font-mono, monospace)',
                                 padding: '2px 6px',
                                 borderRadius: '5px',
-                                background: row.isUrgent ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.04)',
-                                border: row.isUrgent ? '1px solid rgba(245,158,11,0.25)' : '1px solid rgba(255,255,255,0.08)',
-                                color: row.isUrgent ? 'var(--amber-text, #fcd34d)' : 'var(--text-secondary, #8b8aa0)',
+                                background: row.isUrgent ? 'rgba(245,158,11,0.07)' : 'rgba(255,255,255,0.04)',
+                                border: row.isUrgent ? '1px solid rgba(245,158,11,0.18)' : '1px solid rgba(255,255,255,0.08)',
+                                color: row.isUrgent ? 'rgba(239,194,128,0.82)' : 'var(--text-secondary, #8b8aa0)',
                               }}
                             >
                               {row.statusLabel}
@@ -1054,7 +1066,9 @@ export default function FamilyHome({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        marginTop: '2px',
+                        marginTop: '3px',
+                        paddingTop: '5px',
+                        borderTop: '1px solid rgba(255,255,255,0.05)',
                       }}
                     >
                       <button
@@ -1063,10 +1077,10 @@ export default function FamilyHome({
                           fontSize: '11.5px',
                           fontWeight: 600,
                           color: 'var(--accent-text, #a5a8ff)',
-                          background: 'rgba(108,111,245,0.08)',
-                          border: '1px solid rgba(108,111,245,0.22)',
+                          background: 'rgba(108,111,245,0.06)',
+                          border: '1px solid rgba(108,111,245,0.20)',
                           borderRadius: '7px',
-                          padding: '4px 10px',
+                          padding: '4px 9px',
                           cursor: 'pointer',
                         }}
                         onClick={() => router.push('/app/household')}
@@ -1101,15 +1115,15 @@ export default function FamilyHome({
               <div
                 style={{
                   borderRadius: '8px',
-                  background: 'var(--bg-raised, #13141f)',
-                  border: '1px solid var(--border-default, #1e1f35)',
-                  padding: '7px 10px',
+                  background: 'rgba(19,20,31,0.68)',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  padding: '6px 9px',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                 }}
               >
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary, #8b8aa0)' }}>
+                <div style={{ fontSize: '11.5px', color: 'var(--text-muted, #4a4860)' }}>
                   Începe cu următorul · backlog {todayOpenItems.length + overdueItems.length}
                 </div>
                 <button
@@ -1120,7 +1134,7 @@ export default function FamilyHome({
                     fontWeight: 600,
                     textTransform: 'uppercase' as const,
                     letterSpacing: '0.06em',
-                    color: 'var(--accent-text, #a5a8ff)',
+                    color: 'var(--text-secondary, #8b8aa0)',
                     background: 'transparent',
                     border: 'none',
                     cursor: 'pointer',
@@ -1284,7 +1298,7 @@ export default function FamilyHome({
                         color: 'var(--text-secondary, #8b8aa0)',
                       }}
                     >
-                      Poți să te relaxezi - nu ai nimic prioritar astăzi ☀️
+                      Nu ai nimic prioritar pentru restul zilei ☀️
                     </div>
                   )}
                 </div>
@@ -1295,7 +1309,9 @@ export default function FamilyHome({
               className="animate-in"
               style={{ margin: '0 0.75rem', animationDelay: '340ms' }}
             >
-              <QuickAddBar />
+              <div style={{ opacity: 0.9, filter: 'saturate(0.86)' }}>
+                <QuickAddBar />
+              </div>
             </div>
 
             {/* ── 8. Resolve Next (appears after hero completion) */}
