@@ -1097,7 +1097,7 @@ export default function FamilyHome({
                             </span>
                           </div>
                         );
-                      )}
+                      })}
                     </div>
 
                     <div
