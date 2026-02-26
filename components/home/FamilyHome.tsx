@@ -600,7 +600,7 @@ export default function FamilyHome({
             ) : null}
           </div>
         ) : (
-          <div className="home-slate today-shell home-compact" style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', paddingBottom: '2rem' }}>
+          <div className="home-slate today-shell home-compact" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingBottom: '1.25rem' }}>
             <div className="home-slate-bg" aria-hidden="true" />
 
             {/* ── 1. App Header ──────────────────────────────── */}
@@ -611,7 +611,7 @@ export default function FamilyHome({
               <div
                 className="animate-in"
                 style={{
-                  margin: '0 1rem',
+                  margin: '0 0.75rem',
                   padding: '8px 12px',
                   borderRadius: '8px',
                   background: 'rgba(108, 111, 245, 0.07)',
@@ -629,7 +629,7 @@ export default function FamilyHome({
             <div
               className="animate-in"
               style={{
-                margin: '0 1rem',
+                margin: '0 0.75rem',
                 animationDelay: '150ms',
                 transition: 'opacity 380ms cubic-bezier(0.16,1,0.3,1), transform 380ms cubic-bezier(0.16,1,0.3,1)',
                 opacity: heroSlideOut ? 0 : 1,
@@ -855,7 +855,7 @@ export default function FamilyHome({
             {Array.isArray(householdMembers) && householdMembers.length > 1 ? (
               <div
                 className="animate-in"
-                style={{ margin: '0 1rem', animationDelay: '200ms' }}
+                style={{ margin: '0 0.75rem', animationDelay: '200ms' }}
               >
                 <div
                   style={{
@@ -1060,7 +1060,7 @@ export default function FamilyHome({
             {/* ── 5. Status Row ───────────────────────────────── */}
             <div
               className="animate-in"
-              style={{ margin: '0 1rem', animationDelay: '240ms' }}
+              style={{ margin: '0 0.75rem', animationDelay: '240ms' }}
             >
               <div
                 style={{
@@ -1105,7 +1105,7 @@ export default function FamilyHome({
             {todayTasks.length > 0 ? (
               <div
                 className="animate-in"
-                style={{ margin: '0 1rem', animationDelay: '280ms' }}
+                style={{ margin: '0 0.75rem', animationDelay: '280ms' }}
               >
                 {/* Section header */}
                 <div
@@ -1113,7 +1113,7 @@ export default function FamilyHome({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    marginBottom: '8px',
+                    marginBottom: '6px',
                   }}
                 >
                   <span
@@ -1148,7 +1148,7 @@ export default function FamilyHome({
                 </div>
 
                 {/* Task cards */}
-                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '6px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '5px' }}>
                   {todayTasks.map((occurrence: any, idx: number) => {
                     const reminder = occurrence.reminder ?? null;
                     const title = reminder?.title ?? '—';
@@ -1164,8 +1164,8 @@ export default function FamilyHome({
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '10px',
-                          padding: '8px 12px',
+                          gap: '8px',
+                          padding: '7px 10px',
                           borderRadius: '9px',
                           background: 'var(--bg-raised, #13141f)',
                           border: '1px solid var(--border-default, #1e1f35)',
@@ -1251,7 +1251,7 @@ export default function FamilyHome({
             {/* ── 7. Quick Add Bar ────────────────────────────── */}
             <div
               className="animate-in"
-              style={{ margin: '0 1rem', animationDelay: '340ms' }}
+              style={{ margin: '0 0.75rem', animationDelay: '340ms' }}
             >
               <QuickAddBar />
             </div>
@@ -1261,7 +1261,7 @@ export default function FamilyHome({
               <div
                 className="animate-in"
                 style={{
-                  margin: '0 1rem',
+                  margin: '0 0.75rem',
                   borderRadius: '10px',
                   background: 'rgba(108,111,245,0.08)',
                   border: '1px solid rgba(108,111,245,0.20)',

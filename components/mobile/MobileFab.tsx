@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Plus } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import QuickAddSheet from '@/components/mobile/QuickAddSheet';
 import QuickActionsSheet from '@/components/mobile/QuickActionsSheet';
 
 export default function MobileFab() {
   const router = useRouter();
+  const pathname = usePathname();
   const [isNative, setIsNative] = useState(false);
   const [open, setOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -34,11 +35,17 @@ export default function MobileFab() {
     return () => window.removeEventListener('quickadd:open', handleOpen as EventListener);
   }, []);
 
+  const isDashboard = pathname === '/app';
+
   return (
     <>
       <button
         type="button"
-        className="mobile-fab fixed bottom-[calc(var(--bottom-nav-h)_+_env(safe-area-inset-bottom)_+_10px)] left-1/2 z-50 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-accent text-white shadow-float transition active:scale-95"
+        className={`mobile-fab fixed left-1/2 z-50 flex -translate-x-1/2 items-center justify-center rounded-full bg-accent text-white shadow-float transition active:scale-95 ${
+          isDashboard
+            ? 'bottom-[calc(var(--bottom-nav-h)_+_env(safe-area-inset-bottom)_+_8px)] h-12 w-12'
+            : 'bottom-[calc(var(--bottom-nav-h)_+_env(safe-area-inset-bottom)_+_10px)] h-14 w-14'
+        }`}
         aria-label="Adaugă reminder"
         onClick={(event) => {
           event.preventDefault();
@@ -48,7 +55,7 @@ export default function MobileFab() {
           setActionsOpen(true);
         }}
       >
-        <Plus className="h-6 w-6" aria-hidden="true" />
+        <Plus className={isDashboard ? 'h-5 w-5' : 'h-6 w-6'} aria-hidden="true" />
       </button>
       <QuickActionsSheet
         open={actionsOpen}

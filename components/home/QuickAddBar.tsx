@@ -13,9 +13,9 @@ export default function QuickAddBar() {
   };
 
   return (
-    <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-3)] py-[var(--space-3)]">
-      <div className="flex items-center gap-2">
-        <div className="home-input-pill flex h-11 flex-1 items-center px-3">
+    <div className="home-glass-panel rounded-[var(--radius-lg)] px-1.5 py-1.5">
+      <div className="flex items-center gap-1.5">
+        <div className="home-input-pill flex h-9 flex-1 items-center px-2.5">
           <input
             className="h-full w-full bg-transparent text-sm text-[color:var(--text-0)] placeholder:text-[color:var(--text-2)] focus:outline-none"
             placeholder="Adaugă rapid…"
@@ -31,7 +31,7 @@ export default function QuickAddBar() {
         </div>
         <button
           type="button"
-          className="home-icon-btn h-11 w-11 text-[color:var(--brand-blue)]"
+          className="home-icon-btn h-9 w-9 text-[color:var(--brand-blue)]"
           aria-label="Dictează"
           onClick={() => openQuickAdd({ voice: true })}
         >
@@ -39,7 +39,7 @@ export default function QuickAddBar() {
         </button>
         <button
           type="button"
-          className="home-icon-btn h-11 w-11 text-[color:var(--brand-blue)]"
+          className="home-icon-btn h-9 w-9 text-[color:var(--brand-blue)]"
           aria-label="AI"
           onClick={() => openQuickAdd({ text: trimmed || undefined })}
         >

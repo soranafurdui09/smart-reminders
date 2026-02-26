@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { usePathname } from 'next/navigation';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import BottomNav from '@/components/shell/BottomNav';
 import Fab from '@/components/shell/Fab';
@@ -20,6 +21,8 @@ export default function MobileShell({
   const isMobile = useMediaQuery('(max-width: 768px)');
   const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
   const showMobile = isMobile || isNativeAndroid;
+  const pathname = usePathname();
+  const showTopBar = showMobile && pathname !== '/app';
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -37,7 +40,7 @@ export default function MobileShell({
     <div className="native-shell-root relative flex min-h-dvh flex-col">
       {isNativeAndroid ? <NativeShellGate /> : null}
       {isNativeAndroid ? <NativeAuthPersistenceDebug /> : null}
-      {showMobile ? <TopBar labels={labels} /> : null}
+      {showTopBar ? <TopBar labels={labels} /> : null}
       <main className="page-wrap app-content relative z-0 flex-1 overflow-y-auto">{children}</main>
       {showMobile ? <BottomNav labels={labels} /> : null}
       {showMobile ? <Fab /> : null}
