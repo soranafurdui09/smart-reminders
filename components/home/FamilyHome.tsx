@@ -239,6 +239,17 @@ export default function FamilyHome({
   const urgentSummaryTone = familyUrgentCount > 0
     ? 'rgba(238,188,114,0.82)'
     : 'var(--text-secondary, #8b8aa0)';
+  const familySummaryLine = familyUrgentCount > 0
+    ? `${familyUrgentCount} necesită atenție`
+    : familyConfirmationCount > 0
+      ? `${familyConfirmationCount} de confirmat`
+      : 'Coordonare liniștită';
+  const familyDetailLine = `${familyUrgentCount} urgent · ${familyConfirmationCount} confirmare`;
+  const hasFamilyCoordSignals = familyUrgentCount > 0 || familyConfirmationCount > 0;
+  const heroEmptyMessage = hasFamilyCoordSignals
+    ? 'Nu ai nimic planificat pentru tine astăzi. Respiră liniștit(ă).'
+    : 'Nu ai nimic planificat pentru astăzi. Respiră liniștit(ă).';
+  const backlogCount = todayOpenItems.length + overdueItems.length;
 
   const handleResolve = () => {
     if (heroResolved) return;
@@ -804,7 +815,7 @@ export default function FamilyHome({
                   {/* Row 2: title */}
                   {isNextEmpty ? (
                     <div style={{ marginTop: '12px', color: 'var(--text-secondary, #8b8aa0)', fontSize: '14px' }}>
-                      Nu ai nimic planificat pentru astăzi. Respiră liniștit(ă).
+                      {heroEmptyMessage}
                     </div>
                   ) : (
                     <>
@@ -974,12 +985,7 @@ export default function FamilyHome({
                           Familie
                         </div>
                         <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono, monospace)', marginTop: '1px' }}>
-                          <span style={{ color: urgentSummaryTone }}>
-                            {familyUrgentCount} urgent
-                          </span>
-                          <span style={{ color: 'var(--text-muted, #4a4860)' }}>
-                            {' · '}{familyConfirmationCount} confirmare
-                          </span>
+                          <span style={{ color: urgentSummaryTone }}>{familySummaryLine}</span>
                         </div>
                       </div>
                     </div>
@@ -1010,12 +1016,7 @@ export default function FamilyHome({
                           Coordonare familie
                         </div>
                         <div style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono, monospace)' }}>
-                          <span style={{ color: urgentSummaryTone }}>
-                            {familyUrgentCount} urgent
-                          </span>
-                          <span style={{ color: 'var(--text-muted, #4a4860)' }}>
-                            {' · '}{familyConfirmationCount} confirmare
-                          </span>
+                          <span style={{ color: urgentSummaryTone }}>{familyDetailLine}</span>
                         </div>
                       </div>
 
@@ -1115,43 +1116,45 @@ export default function FamilyHome({
             ) : null}
 
             {/* ── 5. Status Row ───────────────────────────────── */}
-            <div
-              className="animate-in"
-              style={{ margin: '0 0.75rem', animationDelay: '240ms' }}
-            >
+            {backlogCount > 0 ? (
               <div
-                style={{
-                  borderRadius: '8px',
-                  background: 'rgba(19,20,31,0.68)',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                  padding: '6px 9px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
+                className="animate-in"
+                style={{ margin: '0 0.75rem', animationDelay: '240ms' }}
               >
-                <div style={{ fontSize: '11.5px', color: 'var(--text-muted, #4a4860)' }}>
-                  Începe cu următorul · backlog {todayOpenItems.length + overdueItems.length}
-                </div>
-                <button
-                  type="button"
+                <div
                   style={{
-                    fontFamily: 'var(--font-mono, monospace)',
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    textTransform: 'uppercase' as const,
-                    letterSpacing: '0.06em',
-                    color: 'var(--text-secondary, #8b8aa0)',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
+                    borderRadius: '8px',
+                    background: 'rgba(19,20,31,0.55)',
+                    border: '1px solid rgba(255,255,255,0.04)',
+                    padding: '6px 9px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
                   }}
-                  onClick={() => router.push('/app?tab=inbox')}
                 >
-                  INBOX →
-                </button>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted, #4a4860)' }}>
+                    Backlog {backlogCount}
+                  </div>
+                  <button
+                    type="button"
+                    style={{
+                      fontFamily: 'var(--font-mono, monospace)',
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      textTransform: 'uppercase' as const,
+                      letterSpacing: '0.06em',
+                      color: 'rgba(139,138,160,0.9)',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => router.push('/app?tab=inbox')}
+                  >
+                    INBOX →
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : null}
 
             {/* ── 6. Restul Zilei ─────────────────────────────── */}
             <div
