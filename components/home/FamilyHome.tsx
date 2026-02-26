@@ -15,6 +15,12 @@ import { diffDaysInTimeZone, formatDateTimeWithTimeZone, formatReminderDateTime,
 
 type Props = Record<string, any>;
 const occurrenceKey = (item: any, fallback: string) => item?.id ?? item?.reminder?.id ?? item?.occur_at ?? fallback;
+const occurrenceDate = (item: any) => {
+  const rawDate = item?.snoozed_until ?? item?.effective_at ?? item?.occur_at;
+  if (!rawDate) return null;
+  const parsed = new Date(rawDate);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
 
 export default function FamilyHome({
   header,
@@ -73,11 +79,38 @@ export default function FamilyHome({
   handleSegmentSelect,
   medsTodayStats
 }: Props) {
-  const heroOccurrence = useMemo(() => {
-    if (Array.isArray(todayOpenItems) && todayOpenItems.length > 0) return todayOpenItems[0];
-    if (Array.isArray(filteredSoonItems) && filteredSoonItems.length > 0) return filteredSoonItems[0];
-    return nextOccurrence ?? null;
-  }, [filteredSoonItems, nextOccurrence, todayOpenItems]);
+  const overdueKeySet = useMemo(() => {
+    const set = new Set<string>();
+    if (!Array.isArray(overdueItems)) return set;
+    overdueItems.forEach((item: any, idx: number) => {
+      set.add(String(occurrenceKey(item, `overdue-${idx}`)));
+    });
+    return set;
+  }, [overdueItems]);
+  const todayUpcomingItems = useMemo(() => {
+    if (!Array.isArray(todayOpenItems)) return [];
+    const now = Date.now();
+    const userTz = effectiveTimeZone || 'UTC';
+    return todayOpenItems
+      .filter((item: any, idx: number) => {
+        const at = occurrenceDate(item);
+        if (!at) return false;
+        if (diffDaysInTimeZone(at, new Date(), userTz) !== 0) return false;
+        if (at.getTime() < now) return false;
+        const key = String(occurrenceKey(item, `today-${idx}`));
+        if (overdueKeySet.has(key)) return false;
+        return true;
+      })
+      .sort((a: any, b: any) => {
+        const aDate = occurrenceDate(a);
+        const bDate = occurrenceDate(b);
+        if (!aDate && !bDate) return 0;
+        if (!aDate) return 1;
+        if (!bDate) return -1;
+        return aDate.getTime() - bDate.getTime();
+      });
+  }, [effectiveTimeZone, overdueKeySet, todayOpenItems]);
+  const heroOccurrence = useMemo(() => todayUpcomingItems[0] ?? null, [todayUpcomingItems]);
   const nextTitle = heroOccurrence?.reminder?.title ?? '';
   const hasNextAction = Boolean(heroOccurrence?.id && heroOccurrence?.reminder?.id && heroOccurrence?.occur_at);
   const heroTimeLabel = useMemo(() => {
@@ -174,19 +207,21 @@ export default function FamilyHome({
 
   // Today tasks shown in "Restul Zilei" (excluding the hero task)
   const todayTasks = useMemo(() => {
-    if (!Array.isArray(todayOpenItems)) return [];
-    return todayOpenItems
-      .filter((item: any) => !heroOccurrence || item.id !== heroOccurrence.id)
+    const heroKey = heroOccurrence ? String(occurrenceKey(heroOccurrence, 'hero')) : null;
+    return todayUpcomingItems
+      .filter((item: any, idx: number) => {
+        if (!heroKey) return true;
+        return String(occurrenceKey(item, `today-task-${idx}`)) !== heroKey;
+      })
       .slice(0, 6);
-  }, [heroOccurrence, todayOpenItems]);
+  }, [heroOccurrence, todayUpcomingItems]);
+  const restOfDayItems = useMemo(() => todayTasks.slice(0, 3), [todayTasks]);
 
   // Next task to suggest after hero completion
   const nextAfterHero = useMemo(() => {
     if (todayTasks.length > 0) return todayTasks[0];
-    return Array.isArray(filteredSoonItems) && filteredSoonItems.length > 0
-      ? filteredSoonItems[0]
-      : null;
-  }, [todayTasks, filteredSoonItems]);
+    return null;
+  }, [todayTasks]);
 
   // Family module counts
   const familyUrgentCount = useMemo(() => {
@@ -201,70 +236,6 @@ export default function FamilyHome({
   const familyPanelItems = useMemo(() => householdItemsSlice.slice(0, 2), [householdItemsSlice]);
   const familyConfirmationCount = Math.max(0, familyPanelItems.length - familyUrgentCount);
   const familySummaryStripLabel = `${familyUrgentCount} urgent · ${familyConfirmationCount} confirmare`;
-  const restPreviewItems = useMemo(() => {
-    const source: any[] = [];
-    const primaryPools = [
-      todayTasks,
-      soonItems,
-      filteredSoonItems,
-      overdueTopItems,
-      inboxToday,
-      inboxSoon,
-      inboxLater,
-      reminderUndatedLimited,
-      overdueItems
-    ];
-    for (const [poolIndex, pool] of primaryPools.entries()) {
-      if (!Array.isArray(pool)) continue;
-      for (const [itemIndex, item] of pool.entries()) {
-        if (!item) continue;
-        if (heroOccurrence?.id && item.id === heroOccurrence.id) continue;
-        const key = occurrenceKey(item, `primary-${poolIndex}-${itemIndex}`);
-        if (source.find((row: any, existingIndex: number) => occurrenceKey(row, `source-${existingIndex}`) === key)) continue;
-        source.push(item);
-        if (source.length >= 3) return source;
-      }
-    }
-
-    // Fallback pass: keep section visible even when hero is the only shared item across pools.
-    if (source.length < 2) {
-      const fallbackPools = [
-        todayOpenItems,
-        householdItemsSlice,
-        nextOccurrence ? [nextOccurrence] : [],
-        heroOccurrence ? [heroOccurrence] : [],
-        overdueItems,
-        soonItems
-      ];
-      for (const [poolIndex, pool] of fallbackPools.entries()) {
-        if (!Array.isArray(pool)) continue;
-        for (const [itemIndex, item] of pool.entries()) {
-          if (!item) continue;
-          const key = occurrenceKey(item, `fallback-${poolIndex}-${itemIndex}`);
-          if (source.find((row: any, existingIndex: number) => occurrenceKey(row, `source-${existingIndex}`) === key)) continue;
-          source.push(item);
-          if (source.length >= 3) return source;
-        }
-      }
-    }
-
-    return source.slice(0, 3);
-  }, [
-    filteredSoonItems,
-    heroOccurrence,
-    householdItemsSlice,
-    heroOccurrence?.id,
-    inboxLater,
-    inboxSoon,
-    inboxToday,
-    nextOccurrence,
-    overdueItems,
-    overdueTopItems,
-    reminderUndatedLimited,
-    soonItems,
-    todayOpenItems,
-    todayTasks
-  ]);
 
   const handleResolve = () => {
     if (heroResolved) return;
@@ -321,28 +292,6 @@ export default function FamilyHome({
     }
     return rows.slice(0, 2);
   }, [familyPanelItems, overdueItems]);
-  const restDisplayItems = useMemo(() => {
-    if (restPreviewItems.length > 0) return restPreviewItems;
-    const fallback: any[] = [];
-    const pools = [
-      heroOccurrence ? [heroOccurrence] : [],
-      nextOccurrence ? [nextOccurrence] : [],
-      todayOpenItems,
-      householdItemsSlice,
-      soonItems
-    ];
-    for (const [poolIndex, pool] of pools.entries()) {
-      if (!Array.isArray(pool)) continue;
-      for (const [itemIndex, item] of pool.entries()) {
-        if (!item) continue;
-        const key = occurrenceKey(item, `display-${poolIndex}-${itemIndex}`);
-        if (fallback.find((row: any, existingIndex: number) => occurrenceKey(row, `display-source-${existingIndex}`) === key)) continue;
-        fallback.push(item);
-        if (fallback.length >= 3) return fallback;
-      }
-    }
-    return fallback;
-  }, [heroOccurrence, householdItemsSlice, nextOccurrence, restPreviewItems, soonItems, todayOpenItems]);
 
   return (
       <section className={`homeRoot premium ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-[var(--space-3)]`}>
@@ -852,7 +801,7 @@ export default function FamilyHome({
                   {/* Row 2: title */}
                   {isNextEmpty ? (
                     <div style={{ marginTop: '12px', color: 'var(--text-secondary, #8b8aa0)', fontSize: '14px' }}>
-                      Totul e în regulă azi ✓
+                      Nu ai nimic planificat pentru astăzi. Respiră liniștit(ă).
                     </div>
                   ) : (
                     <>
@@ -1230,7 +1179,7 @@ export default function FamilyHome({
 
                 {/* Task cards */}
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '5px' }}>
-                  {restDisplayItems.map((occurrence: any, idx: number) => {
+                  {restOfDayItems.length > 0 ? restOfDayItems.map((occurrence: any, idx: number) => {
                     const reminder = occurrence.reminder ?? null;
                     const title = reminder?.title ?? '—';
                     const rawDate = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
@@ -1324,7 +1273,20 @@ export default function FamilyHome({
                         ) : null}
                       </div>
                     );
-                  })}
+                  }) : (
+                    <div
+                      style={{
+                        borderRadius: '9px',
+                        background: 'var(--bg-raised, #13141f)',
+                        border: '1px solid var(--border-default, #1e1f35)',
+                        padding: '10px 12px',
+                        fontSize: '12px',
+                        color: 'var(--text-secondary, #8b8aa0)',
+                      }}
+                    >
+                      Poți să te relaxezi - nu ai nimic prioritar astăzi ☀️
+                    </div>
+                  )}
                 </div>
             </div>
 
