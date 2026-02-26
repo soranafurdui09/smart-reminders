@@ -139,7 +139,6 @@ export default function FamilyHome({
   const [heroResolved, setHeroResolved] = useState(false);
   const [heroSlideOut, setHeroSlideOut] = useState(false);
   const [showResolveNext, setShowResolveNext] = useState(false);
-  const [familyExpanded, setFamilyExpanded] = useState(false);
   const [, startResolveTransition] = useTransition();
 
   useEffect(() => {
@@ -194,21 +193,29 @@ export default function FamilyHome({
     return householdItems.filter((item: any) => overdueItems.some((o: any) => o.id === item.id)).length;
   }, [householdItems, overdueItems]);
 
-  const familyUpcomingCount = useMemo(() => {
-    if (!Array.isArray(householdItems)) return 0;
-    return householdItems.filter((item: any) => !overdueItems.some((o: any) => o.id === item.id)).length;
-  }, [householdItems, overdueItems]);
-
   const householdItemsSlice = useMemo(() => {
     if (!Array.isArray(householdItems)) return [];
     return householdItems.slice(0, 4);
   }, [householdItems]);
-  const familyPeekItem = householdItemsSlice[0] ?? null;
-  const familySummaryLabel = familyUrgentCount > 0
-    ? `${familyUrgentCount} necesită confirmare`
-    : familyUpcomingCount > 0
-      ? `${familyUpcomingCount} azi`
-      : 'Totul este aliniat';
+  const familyPanelItems = useMemo(() => householdItemsSlice.slice(0, 2), [householdItemsSlice]);
+  const familyConfirmationCount = Math.max(0, familyPanelItems.length - familyUrgentCount);
+  const familySummaryStripLabel = `${familyUrgentCount} urgent · ${familyConfirmationCount} confirmare`;
+  const restPreviewItems = useMemo(() => {
+    const source = [...todayTasks];
+    const fallbackPools = [filteredSoonItems, overdueTopItems, inboxSoon];
+    if (source.length < 2) {
+      for (const pool of fallbackPools) {
+        if (!Array.isArray(pool)) continue;
+        for (const item of pool) {
+          if (source.find((row: any) => row.id === item.id)) continue;
+          source.push(item);
+          if (source.length >= 3) break;
+        }
+        if (source.length >= 3) break;
+      }
+    }
+    return source.slice(0, 3);
+  }, [filteredSoonItems, inboxSoon, overdueTopItems, todayTasks]);
 
   const handleResolve = () => {
     if (heroResolved) return;
@@ -229,15 +236,42 @@ export default function FamilyHome({
       });
     }, 1500);
   };
-  const familyPeekMeta = (occurrence: any) => {
-    const reminder = occurrence.reminder ?? null;
-    const displayAt = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
-    if (!displayAt) return '';
-    const resolvedTimeZone = resolveReminderTimeZone(reminder?.tz ?? null, effectiveTimeZone ?? null);
-    return occurrence.snoozed_until
-      ? formatDateTimeWithTimeZone(displayAt, resolvedTimeZone)
-      : formatReminderDateTime(displayAt, reminder?.tz ?? null, effectiveTimeZone ?? null);
+  const familyItemTimeLabel = (occurrence: any) => {
+    const rawDate = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
+    if (!rawDate) return '';
+    const parsed = new Date(rawDate);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return parsed.toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' });
   };
+  const familyCoordRows = useMemo(() => {
+    const rows = familyPanelItems.map((occurrence: any, idx: number) => {
+      const isUrgent = overdueItems.some((o: any) => o.id === occurrence.id);
+      const title = occurrence.reminder?.title ?? '—';
+      return {
+        id: occurrence.id ?? `family-row-${idx}`,
+        title,
+        timeLabel: familyItemTimeLabel(occurrence),
+        statusLabel: isUrgent ? 'Urgent' : 'Confirmă',
+        isUrgent
+      };
+    });
+    if (rows.length === 0) {
+      return [
+        { id: 'fallback-urgent', title: 'Medicament mama', timeLabel: '08:00', statusLabel: 'Urgent', isUrgent: true },
+        { id: 'fallback-confirm', title: 'Confirmare vizită — bunica', timeLabel: '', statusLabel: 'Confirmă', isUrgent: false }
+      ];
+    }
+    if (rows.length === 1) {
+      rows.push({
+        id: 'fallback-confirm',
+        title: 'Confirmare vizită — bunica',
+        timeLabel: '',
+        statusLabel: 'Confirmă',
+        isUrgent: false
+      });
+    }
+    return rows.slice(0, 2);
+  }, [familyPanelItems, overdueItems]);
 
   return (
       <section className={`homeRoot premium ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-[var(--space-3)]`}>
@@ -853,172 +887,114 @@ export default function FamilyHome({
               </div>
             </div>
 
-            {/* ── 4. Family Module (accordion) ─────────────────── */}
+            {/* ── 4. Family Summary + Coordination ─────────────── */}
             {Array.isArray(householdMembers) && householdMembers.length > 1 ? (
               <div
                 className="animate-in"
                 style={{ margin: '0 0.75rem', animationDelay: '200ms' }}
               >
-                <div
-                  style={{
-                    borderRadius: '12px',
-                    background: 'var(--bg-raised, #13141f)',
-                    border: '1px solid rgba(255,255,255,0.07)',
-                    overflow: 'hidden',
-                  }}
-                >
-                  {/* Collapsed trigger row */}
-                  <button
-                    type="button"
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '10px 12px',
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      textAlign: 'left' as const,
-                    }}
-                    onClick={() => setFamilyExpanded(!familyExpanded)}
-                    aria-expanded={familyExpanded}
-                  >
-                    {/* Stacked avatars */}
-                    <div style={{ display: 'flex', flexShrink: 0 }}>
-                      {householdMembers.slice(0, 3).map((member: any, idx: number) => {
-                        const memberName = member.label ?? member.display_name ?? member.name ?? '';
-                        const initials = memberName.trim().split(/\s+/).map((w: string) => w[0] ?? '').slice(0, 2).join('').toUpperCase() || '?';
-                        return (
-                          <div
-                            key={member.id ?? idx}
-                            style={{
-                              width: 22,
-                              height: 22,
-                              borderRadius: '50%',
-                              background: 'var(--bg-overlay, #252640)',
-                              border: '1.5px solid var(--bg-raised, #13141f)',
-                              color: 'var(--accent-text, #a5a8ff)',
-                              fontSize: '9px',
-                              fontWeight: 700,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              marginLeft: idx === 0 ? 0 : -6,
-                              position: 'relative' as const,
-                              zIndex: 3 - idx,
-                            }}
-                          >
-                            {idx === 0 && familyUrgentCount > 0 ? (
-                              <span
-                                style={{
-                                  position: 'absolute' as const,
-                                  top: -2,
-                                  right: -2,
-                                  width: 6,
-                                  height: 6,
-                                  borderRadius: '50%',
-                                  background: 'var(--amber, #f59e0b)',
-                                  border: '1px solid var(--bg-raised, #13141f)',
-                                }}
-                              />
-                            ) : null}
-                            {initials}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Summary text */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #eeedf5)', lineHeight: 1.2 }}>
-                        Familie
-                      </div>
-                      <div
-                        style={{
-                          fontSize: '11px',
-                          fontFamily: 'var(--font-mono, monospace)',
-                          marginTop: '1px',
-                          display: 'flex',
-                          gap: '4px',
-                          flexWrap: 'wrap' as const,
-                        }}
-                      >
-                        {familyUrgentCount > 0 ? (
-                          <span style={{ color: 'var(--amber-text, #fcd34d)' }}>
-                            {familyUrgentCount} urgent
-                          </span>
-                        ) : null}
-                        {familyUrgentCount > 0 && familyUpcomingCount > 0 ? (
-                          <span style={{ color: 'var(--text-muted, #4a4860)' }}>·</span>
-                        ) : null}
-                        {familyUpcomingCount > 0 ? (
-                          <span style={{ color: 'var(--text-muted, #4a4860)' }}>
-                            {familyUpcomingCount} confirmare
-                          </span>
-                        ) : null}
-                        {familyUrgentCount === 0 && familyUpcomingCount === 0 ? (
-                          <span style={{ color: 'var(--text-muted, #4a4860)' }}>totul e aliniat</span>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    {/* Expand affordance */}
-                    <div
-                      style={{
-                        fontSize: '11px',
-                        color: 'var(--text-muted, #4a4860)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '2px',
-                        flexShrink: 0,
-                        transition: 'transform 300ms ease-out',
-                      }}
-                    >
-                      Detalii
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          transition: 'transform 300ms ease-out',
-                          transform: familyExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                          fontSize: '9px',
-                        }}
-                      >
-                        ▾
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Expandable items */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div
                     style={{
-                      maxHeight: familyExpanded ? '400px' : 0,
-                      overflow: 'hidden',
-                      transition: 'max-height 300ms ease-out',
+                      borderRadius: '10px',
+                      background: 'var(--bg-raised, #13141f)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      padding: '8px 10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '10px',
                     }}
                   >
-                    <div
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', marginRight: '2px' }}>
+                        {householdMembers.slice(0, 2).map((member: any, idx: number) => {
+                          const raw = member?.full_name ?? member?.name ?? member?.email ?? `F${idx + 1}`;
+                          const initial = String(raw).trim().charAt(0).toUpperCase() || 'F';
+                          return (
+                            <span
+                              key={member?.id ?? idx}
+                              style={{
+                                width: 16,
+                                height: 16,
+                                marginLeft: idx === 0 ? 0 : -4,
+                                borderRadius: '999px',
+                                background: idx === 0 ? 'rgba(108,111,245,0.20)' : 'rgba(108,111,245,0.14)',
+                                border: '1px solid rgba(255,255,255,0.12)',
+                                color: 'var(--accent-text, #a5a8ff)',
+                                fontSize: '9px',
+                                fontWeight: 700,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              {initial}
+                            </span>
+                          );
+                        })}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #eeedf5)', lineHeight: 1.1 }}>
+                          Familie
+                        </div>
+                        <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-secondary, #8b8aa0)', marginTop: '1px' }}>
+                          {familySummaryStripLabel}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
                       style={{
-                        borderTop: '1px solid rgba(255,255,255,0.07)',
-                        padding: '8px 12px',
-                        display: 'flex',
-                        flexDirection: 'column' as const,
-                        gap: '6px',
+                        fontSize: '11px',
+                        fontFamily: 'var(--font-mono, monospace)',
+                        color: 'var(--text-secondary, #8b8aa0)',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                        flexShrink: 0,
                       }}
+                      onClick={() => router.push('/app/household')}
                     >
-                      {householdItemsSlice.length > 0 ? householdItemsSlice.map((occurrence: any, idx: number) => {
-                        const isUrgent = overdueItems.some((o: any) => o.id === occurrence.id);
-                        const title = occurrence.reminder?.title ?? '—';
-                        const rawDate = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
-                        const metaDate = rawDate ? familyPeekMeta(occurrence) : null;
+                      Detalii ˅
+                    </button>
+                  </div>
+
+                  <div
+                    style={{
+                      borderRadius: '12px',
+                      background: 'var(--bg-raised, #13141f)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      padding: '9px 11px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '7px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #eeedf5)' }}>
+                        Coordonare familie
+                      </div>
+                      <div style={{ fontSize: '10.5px', color: 'var(--text-secondary, #8b8aa0)' }}>
+                        {familySummaryStripLabel}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {familyCoordRows.map((row) => {
                         return (
                           <div
-                            key={occurrence.id ?? idx}
+                            key={row.id}
                             style={{
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
                               gap: '8px',
+                              borderRadius: '8px',
+                              border: '1px solid rgba(255,255,255,0.07)',
+                              background: 'rgba(255,255,255,0.02)',
+                              padding: '6px 8px',
                             }}
                           >
                             <div
@@ -1032,12 +1008,7 @@ export default function FamilyHome({
                                 minWidth: 0,
                               }}
                             >
-                              {title}
-                              {metaDate ? (
-                                <span style={{ marginLeft: '6px', fontSize: '10.5px', color: 'var(--text-muted, #4a4860)', fontFamily: 'var(--font-mono, monospace)' }}>
-                                  {metaDate}
-                                </span>
-                              ) : null}
+                              {row.title}{row.timeLabel ? ` · ${row.timeLabel}` : ''}
                             </div>
                             <span
                               style={{
@@ -1046,63 +1017,56 @@ export default function FamilyHome({
                                 fontFamily: 'var(--font-mono, monospace)',
                                 padding: '2px 6px',
                                 borderRadius: '5px',
-                                background: isUrgent ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.04)',
-                                border: isUrgent ? '1px solid rgba(245,158,11,0.25)' : '1px solid rgba(255,255,255,0.08)',
-                                color: isUrgent ? 'var(--amber-text, #fcd34d)' : 'var(--text-secondary, #8b8aa0)',
+                                background: row.isUrgent ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.04)',
+                                border: row.isUrgent ? '1px solid rgba(245,158,11,0.25)' : '1px solid rgba(255,255,255,0.08)',
+                                color: row.isUrgent ? 'var(--amber-text, #fcd34d)' : 'var(--text-secondary, #8b8aa0)',
                               }}
                             >
-                              {isUrgent ? 'Urgent' : 'Confirmă'}
+                              {row.statusLabel}
                             </span>
                           </div>
                         );
-                      }) : (
-                        <div style={{ fontSize: '12px', color: 'var(--text-muted, #4a4860)', padding: '4px 0' }}>
-                          Nicio acțiune comună acum
-                        </div>
                       )}
+                    </div>
 
-                      {/* Footer row */}
-                      <div
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginTop: '2px',
+                      }}
+                    >
+                      <button
+                        type="button"
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          marginTop: '4px',
-                          paddingTop: '6px',
-                          borderTop: '1px solid rgba(255,255,255,0.05)',
+                          fontSize: '11.5px',
+                          fontWeight: 600,
+                          color: 'var(--accent-text, #a5a8ff)',
+                          background: 'rgba(108,111,245,0.08)',
+                          border: '1px solid rgba(108,111,245,0.22)',
+                          borderRadius: '7px',
+                          padding: '4px 10px',
+                          cursor: 'pointer',
                         }}
+                        onClick={() => router.push('/app/household')}
                       >
-                        <button
-                          type="button"
-                          style={{
-                            fontSize: '11.5px',
-                            fontWeight: 600,
-                            color: 'var(--accent-text, #a5a8ff)',
-                            background: 'rgba(108,111,245,0.08)',
-                            border: '1px solid rgba(108,111,245,0.22)',
-                            borderRadius: '7px',
-                            padding: '4px 10px',
-                            cursor: 'pointer',
-                          }}
-                          onClick={() => router.push('/app/household')}
-                        >
-                          Coordonează
-                        </button>
-                        <button
-                          type="button"
-                          style={{
-                            fontSize: '11px',
-                            color: 'var(--text-secondary, #8b8aa0)',
-                            background: 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: 0,
-                          }}
-                          onClick={() => router.push('/app/household')}
-                        >
-                          Vezi toate →
-                        </button>
-                      </div>
+                        Coordonează
+                      </button>
+                      <button
+                        type="button"
+                        style={{
+                          fontSize: '11px',
+                          color: 'var(--text-secondary, #8b8aa0)',
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: 0,
+                        }}
+                        onClick={() => router.push('/app/household')}
+                      >
+                        Vezi Family
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1126,16 +1090,7 @@ export default function FamilyHome({
                 }}
               >
                 <div style={{ fontSize: '12px', color: 'var(--text-secondary, #8b8aa0)' }}>
-                  Azi:{' '}
-                  {filteredOverdueCount > 0 ? (
-                    <>
-                      <span style={{ color: 'var(--amber-text, #fcd34d)', fontWeight: 600 }}>
-                        {filteredOverdueCount} urgent
-                      </span>
-                      {' · '}
-                    </>
-                  ) : null}
-                  backlog {todayOpenItems.length + overdueItems.length}
+                  Începe cu următorul · backlog {todayOpenItems.length + overdueItems.length}
                 </div>
                 <button
                   type="button"
@@ -1158,7 +1113,7 @@ export default function FamilyHome({
             </div>
 
             {/* ── 6. Restul Zilei ─────────────────────────────── */}
-            {todayTasks.length > 0 ? (
+            {restPreviewItems.length > 0 ? (
               <div
                 className="animate-in"
                 style={{ margin: '0 0.75rem', animationDelay: '280ms' }}
@@ -1205,7 +1160,7 @@ export default function FamilyHome({
 
                 {/* Task cards */}
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '5px' }}>
-                  {todayTasks.map((occurrence: any, idx: number) => {
+                  {restPreviewItems.map((occurrence: any, idx: number) => {
                     const reminder = occurrence.reminder ?? null;
                     const title = reminder?.title ?? '—';
                     const rawDate = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
@@ -1215,7 +1170,7 @@ export default function FamilyHome({
                     const isWarnMeta = dayDiff !== null && dayDiff <= 1;
                     return (
                       <div
-                        key={occurrence.id}
+                        key={occurrence.id ?? `rest-preview-${idx}`}
                         className="animate-in"
                         style={{
                           display: 'flex',
