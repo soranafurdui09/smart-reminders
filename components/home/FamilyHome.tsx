@@ -14,6 +14,7 @@ import { getCategoryChipStyle, getReminderCategory, inferReminderCategoryId } fr
 import { diffDaysInTimeZone, formatDateTimeWithTimeZone, formatReminderDateTime, resolveReminderTimeZone } from '@/lib/dates';
 
 type Props = Record<string, any>;
+const occurrenceKey = (item: any, fallback: string) => item?.id ?? item?.reminder?.id ?? item?.occur_at ?? fallback;
 
 export default function FamilyHome({
   header,
@@ -202,7 +203,7 @@ export default function FamilyHome({
   const familySummaryStripLabel = `${familyUrgentCount} urgent · ${familyConfirmationCount} confirmare`;
   const restPreviewItems = useMemo(() => {
     const source: any[] = [];
-    const pools = [
+    const primaryPools = [
       todayTasks,
       soonItems,
       filteredSoonItems,
@@ -213,27 +214,55 @@ export default function FamilyHome({
       reminderUndatedLimited,
       overdueItems
     ];
-    for (const pool of pools) {
+    for (const [poolIndex, pool] of primaryPools.entries()) {
       if (!Array.isArray(pool)) continue;
-      for (const item of pool) {
+      for (const [itemIndex, item] of pool.entries()) {
         if (!item) continue;
         if (heroOccurrence?.id && item.id === heroOccurrence.id) continue;
-        if (source.find((row: any) => row.id === item.id)) continue;
+        const key = occurrenceKey(item, `primary-${poolIndex}-${itemIndex}`);
+        if (source.find((row: any, existingIndex: number) => occurrenceKey(row, `source-${existingIndex}`) === key)) continue;
         source.push(item);
         if (source.length >= 3) return source;
       }
     }
-    return source;
+
+    // Fallback pass: keep section visible even when hero is the only shared item across pools.
+    if (source.length < 2) {
+      const fallbackPools = [
+        todayOpenItems,
+        householdItemsSlice,
+        nextOccurrence ? [nextOccurrence] : [],
+        heroOccurrence ? [heroOccurrence] : [],
+        overdueItems,
+        soonItems
+      ];
+      for (const [poolIndex, pool] of fallbackPools.entries()) {
+        if (!Array.isArray(pool)) continue;
+        for (const [itemIndex, item] of pool.entries()) {
+          if (!item) continue;
+          const key = occurrenceKey(item, `fallback-${poolIndex}-${itemIndex}`);
+          if (source.find((row: any, existingIndex: number) => occurrenceKey(row, `source-${existingIndex}`) === key)) continue;
+          source.push(item);
+          if (source.length >= 3) return source;
+        }
+      }
+    }
+
+    return source.slice(0, 3);
   }, [
     filteredSoonItems,
+    heroOccurrence,
+    householdItemsSlice,
     heroOccurrence?.id,
     inboxLater,
     inboxSoon,
     inboxToday,
+    nextOccurrence,
     overdueItems,
     overdueTopItems,
     reminderUndatedLimited,
     soonItems,
+    todayOpenItems,
     todayTasks
   ]);
 
@@ -292,6 +321,28 @@ export default function FamilyHome({
     }
     return rows.slice(0, 2);
   }, [familyPanelItems, overdueItems]);
+  const restDisplayItems = useMemo(() => {
+    if (restPreviewItems.length > 0) return restPreviewItems;
+    const fallback: any[] = [];
+    const pools = [
+      heroOccurrence ? [heroOccurrence] : [],
+      nextOccurrence ? [nextOccurrence] : [],
+      todayOpenItems,
+      householdItemsSlice,
+      soonItems
+    ];
+    for (const [poolIndex, pool] of pools.entries()) {
+      if (!Array.isArray(pool)) continue;
+      for (const [itemIndex, item] of pool.entries()) {
+        if (!item) continue;
+        const key = occurrenceKey(item, `display-${poolIndex}-${itemIndex}`);
+        if (fallback.find((row: any, existingIndex: number) => occurrenceKey(row, `display-source-${existingIndex}`) === key)) continue;
+        fallback.push(item);
+        if (fallback.length >= 3) return fallback;
+      }
+    }
+    return fallback;
+  }, [heroOccurrence, householdItemsSlice, nextOccurrence, restPreviewItems, soonItems, todayOpenItems]);
 
   return (
       <section className={`homeRoot premium ${uiMode === 'focus' ? 'modeFocus' : 'modeFamily'} space-y-[var(--space-3)]`}>
@@ -1133,11 +1184,10 @@ export default function FamilyHome({
             </div>
 
             {/* ── 6. Restul Zilei ─────────────────────────────── */}
-            {restPreviewItems.length > 0 ? (
-              <div
-                className="animate-in"
-                style={{ margin: '0 0.75rem', animationDelay: '280ms' }}
-              >
+            <div
+              className="animate-in"
+              style={{ margin: '0 0.75rem', animationDelay: '280ms' }}
+            >
                 {/* Section header */}
                 <div
                   style={{
@@ -1180,7 +1230,7 @@ export default function FamilyHome({
 
                 {/* Task cards */}
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '5px' }}>
-                  {restPreviewItems.map((occurrence: any, idx: number) => {
+                  {restDisplayItems.map((occurrence: any, idx: number) => {
                     const reminder = occurrence.reminder ?? null;
                     const title = reminder?.title ?? '—';
                     const rawDate = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
@@ -1276,8 +1326,7 @@ export default function FamilyHome({
                     );
                   })}
                 </div>
-              </div>
-            ) : null}
+            </div>
 
             {/* ── 7. Quick Add Bar ────────────────────────────── */}
             <div
