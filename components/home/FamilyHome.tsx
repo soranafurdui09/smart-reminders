@@ -605,7 +605,7 @@ export default function FamilyHome({
             ) : null}
           </div>
         ) : (
-          <div className="home-slate today-shell home-compact" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingBottom: '1.25rem' }}>
+          <div className="home-slate today-shell home-compact" style={{ display: 'flex', flexDirection: 'column', gap: '0.42rem', paddingBottom: '1.05rem' }}>
             <div className="home-slate-bg" aria-hidden="true" />
 
             {/* ── 1. App Header ──────────────────────────────── */}
@@ -617,14 +617,14 @@ export default function FamilyHome({
                 className="animate-in"
                 style={{
                   margin: '0 0.75rem',
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  background: 'rgba(108, 111, 245, 0.07)',
-                  border: '1px solid rgba(108, 111, 245, 0.16)',
+                  padding: '6px 10px',
+                  borderRadius: '7px',
+                  background: 'rgba(108, 111, 245, 0.055)',
+                  border: '1px solid rgba(108, 111, 245, 0.14)',
                   animationDelay: '100ms',
                 }}
               >
-                <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary, #8b8aa0)' }}>
+                <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-secondary, #8b8aa0)' }}>
                   {isMorning ? '✦ Dimineață · Începe cu un singur lucru' : '✦ Acum · Începe cu un singur lucru'}
                 </span>
               </div>
@@ -646,9 +646,10 @@ export default function FamilyHome({
                 style={{
                   position: 'relative',
                   borderRadius: '1rem',
-                  background: 'var(--bg-elevated, #1a1b2e)',
-                  border: '1px solid var(--border-default, #1e1f35)',
-                  padding: '14px 14px 13px',
+                  background: 'linear-gradient(180deg, rgba(255,255,255,0.045) 0%, var(--bg-elevated, #1a1b2e) 42%, rgba(24,26,44,0.98) 100%)',
+                  border: '1px solid rgba(255,255,255,0.10)',
+                  boxShadow: '0 10px 24px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.06)',
+                  padding: '12px 12px 11px',
                   overflow: 'hidden',
                 }}
               >
@@ -674,15 +675,15 @@ export default function FamilyHome({
                     position: 'absolute',
                     right: 0,
                     top: 0,
-                    width: 80,
-                    height: 80,
-                    background: 'radial-gradient(circle at top right, rgba(108,111,245,0.08), transparent 70%)',
+                    width: 74,
+                    height: 74,
+                    background: 'radial-gradient(circle at top right, rgba(108,111,245,0.11), transparent 70%)',
                   }}
                 />
 
-                <div style={{ paddingLeft: '10px' }}>
+                <div style={{ paddingLeft: '8px' }}>
                   {/* Row 1: label + timer chip */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '7px' }}>
                     <span
                       style={{
                         fontFamily: 'var(--font-mono, monospace)',
@@ -701,7 +702,7 @@ export default function FamilyHome({
                           background: 'rgba(255,255,255,0.04)',
                           border: '1px solid var(--border-default, #1e1f35)',
                           borderRadius: '5px',
-                          padding: '3px 8px',
+                          padding: '2px 7px',
                           fontFamily: 'var(--font-mono, monospace)',
                           fontSize: '10px',
                           color: 'var(--text-secondary, #8b8aa0)',
@@ -722,12 +723,12 @@ export default function FamilyHome({
                     <>
                       <div
                         style={{
-                          marginTop: '8px',
-                          marginBottom: '6px',
+                          marginTop: '7px',
+                          marginBottom: '5px',
                           fontSize: '1.125rem',
                           fontWeight: 700,
                           color: heroResolved ? 'var(--success-text, #6ee7b7)' : 'var(--text-primary, #eeedf5)',
-                          lineHeight: 1.3,
+                          lineHeight: 1.24,
                           transition: 'color 200ms ease',
                         }}
                       >
@@ -735,16 +736,16 @@ export default function FamilyHome({
                       </div>
 
                       {/* Row 3: meta chips */}
-                      <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '6px', marginBottom: '14px' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '6px', marginBottom: '10px' }}>
                         {heroTimeLabel ? (
                           <span
                             style={{
                               background: 'transparent',
                               border: '1px solid var(--border-strong, #2a2b45)',
                               borderRadius: '6px',
-                              padding: '2px 8px',
+                              padding: '2px 7px',
                               fontFamily: 'var(--font-mono, monospace)',
-                              fontSize: '11px',
+                              fontSize: '10.5px',
                               color: 'var(--text-secondary, #8b8aa0)',
                             }}
                           >
@@ -756,9 +757,9 @@ export default function FamilyHome({
                             background: 'rgba(108,111,245,0.10)',
                             border: '1px solid rgba(108,111,245,0.20)',
                             borderRadius: '6px',
-                            padding: '2px 8px',
+                            padding: '2px 7px',
                             fontFamily: 'var(--font-mono, monospace)',
-                            fontSize: '11px',
+                            fontSize: '10.5px',
                             color: 'var(--accent-text, #a5a8ff)',
                           }}
                         >
@@ -768,25 +769,25 @@ export default function FamilyHome({
 
                       {/* Row 4: action buttons */}
                       {hasNextAction ? (
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
+                        <div style={{ display: 'flex', gap: '7px', marginTop: '3px' }}>
                           <button
                             type="button"
                             style={{
                               flex: 1,
-                              height: '40px',
+                              height: '38px',
                               background: heroResolved
                                 ? 'var(--success-color, #34d399)'
-                                : 'rgba(108,111,245,0.92)',
+                                : 'rgba(104,108,235,0.90)',
                               color: '#fff',
                               fontWeight: 700,
                               fontSize: '14px',
-                              borderRadius: '10px',
-                              border: 'none',
+                              borderRadius: '9px',
+                              border: '1px solid rgba(255,255,255,0.15)',
                               cursor: heroResolved ? 'default' : 'pointer',
                               transition: 'background 200ms ease, box-shadow 200ms ease',
                               boxShadow: heroResolved
-                                ? '0 2px 8px rgba(52,211,153,0.20)'
-                                : '0 1px 4px rgba(108,111,245,0.18)',
+                                ? '0 1px 5px rgba(52,211,153,0.18)'
+                                : '0 1px 3px rgba(108,111,245,0.14), inset 0 1px 0 rgba(255,255,255,0.14)',
                             }}
                             onClick={handleResolve}
                             disabled={heroResolved}
@@ -799,14 +800,14 @@ export default function FamilyHome({
                             <ActionSubmitButton
                               type="submit"
                               style={{
-                                height: '40px',
-                                padding: '0 14px',
-                                background: 'var(--bg-subtle, #1f2035)',
+                                height: '38px',
+                                padding: '0 13px',
+                                background: 'rgba(255,255,255,0.04)',
                                 border: '1px solid var(--border-default, #1e1f35)',
-                                color: 'var(--text-secondary, #8b8aa0)',
+                                color: 'var(--text-primary, #eeedf5)',
                                 fontWeight: 600,
                                 fontSize: '13px',
-                                borderRadius: '10px',
+                                borderRadius: '9px',
                                 cursor: 'pointer',
                                 whiteSpace: 'nowrap' as const,
                               }}
@@ -830,39 +831,40 @@ export default function FamilyHome({
               >
                 <div
                   style={{
-                    borderRadius: '12px',
-                    background: 'var(--bg-raised, #13141f)',
-                    border: '1px solid var(--border-default, #1e1f35)',
-                    padding: '10px 12px',
+                    borderRadius: '11px',
+                    background: 'linear-gradient(180deg, rgba(255,255,255,0.02) 0%, var(--bg-raised, #13141f) 100%)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: '0 6px 16px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04)',
+                    padding: '9px 10px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '8px',
+                    gap: '7px',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #eeedf5)' }}>
                       Coordonare familie
                     </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary, #8b8aa0)' }}>
+                    <div style={{ fontSize: '10.5px', color: 'var(--text-secondary, #8b8aa0)' }}>
                       {familySummaryLabel}
                     </div>
                   </div>
 
                   <div
                     style={{
-                      borderRadius: '9px',
-                      border: '1px solid var(--border-default, #1e1f35)',
-                      background: 'rgba(255,255,255,0.02)',
-                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      background: 'rgba(255,255,255,0.025)',
+                      padding: '7px 9px',
                     }}
                   >
-                    <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-muted, #4a4860)' }}>
+                    <div style={{ fontSize: '9.5px', fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-muted, #4a4860)' }}>
                       Acum
                     </div>
                     <div
                       style={{
                         marginTop: '2px',
-                        fontSize: '13px',
+                        fontSize: '12.5px',
                         fontWeight: 600,
                         color: 'var(--text-primary, #eeedf5)',
                         overflow: 'hidden',
@@ -873,23 +875,23 @@ export default function FamilyHome({
                       {familyPeekItem?.reminder?.title ?? 'Nicio acțiune comună acum'}
                     </div>
                     {familyPeekItem ? (
-                      <div style={{ marginTop: '2px', fontSize: '11px', color: 'var(--text-muted, #4a4860)' }}>
+                      <div style={{ marginTop: '2px', fontSize: '10.5px', color: 'var(--text-muted, #4a4860)' }}>
                         {familyPeekMeta(familyPeekItem)}
                       </div>
                     ) : null}
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '1px' }}>
                     <button
                       type="button"
                       style={{
-                        fontSize: '12px',
+                        fontSize: '11.5px',
                         fontWeight: 600,
                         color: 'var(--accent-text, #a5a8ff)',
-                        background: 'transparent',
+                        background: 'rgba(108,111,245,0.08)',
                         border: '1px solid rgba(108,111,245,0.28)',
-                        borderRadius: '8px',
-                        padding: '6px 12px',
+                        borderRadius: '7px',
+                        padding: '5px 11px',
                         cursor: 'pointer',
                       }}
                       onClick={() => router.push('/app/household')}
@@ -899,7 +901,7 @@ export default function FamilyHome({
                     <button
                       type="button"
                       style={{
-                        fontSize: '11px',
+                        fontSize: '10.5px',
                         fontWeight: 600,
                         color: 'var(--text-secondary, #8b8aa0)',
                         background: 'transparent',
@@ -923,16 +925,16 @@ export default function FamilyHome({
             >
               <div
                 style={{
-                  borderRadius: '9px',
+                  borderRadius: '8px',
                   background: 'var(--bg-raised, #13141f)',
                   border: '1px solid var(--border-default, #1e1f35)',
-                  padding: '8px 12px',
+                  padding: '7px 10px',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                 }}
               >
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary, #8b8aa0)' }}>
+                <div style={{ fontSize: '11.5px', color: 'var(--text-secondary, #8b8aa0)' }}>
                   Începe cu următorul · backlog {todayOpenItems.length + overdueItems.length}
                 </div>
                 <button
