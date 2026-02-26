@@ -173,6 +173,7 @@ export default function FamilyHome({
   const [heroResolved, setHeroResolved] = useState(false);
   const [heroSlideOut, setHeroSlideOut] = useState(false);
   const [showResolveNext, setShowResolveNext] = useState(false);
+  const [familySectionExpanded, setFamilySectionExpanded] = useState(false);
   const [, startResolveTransition] = useTransition();
 
   useEffect(() => {
@@ -915,17 +916,29 @@ export default function FamilyHome({
                 className="animate-in"
                 style={{ margin: '0 0.75rem', animationDelay: '200ms' }}
               >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div
+                <div
+                  style={{
+                    borderRadius: '12px',
+                    background: 'linear-gradient(180deg, rgba(255,255,255,0.02) 0%, var(--bg-raised, #13141f) 100%)',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <button
+                    type="button"
+                    aria-expanded={familySectionExpanded}
+                    onClick={() => setFamilySectionExpanded((prev) => !prev)}
                     style={{
-                      borderRadius: '10px',
-                      background: 'var(--bg-raised, #13141f)',
-                      border: '1px solid rgba(255,255,255,0.07)',
+                      width: '100%',
                       padding: '8px 10px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       gap: '10px',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
@@ -970,137 +983,131 @@ export default function FamilyHome({
                         </div>
                       </div>
                     </div>
-                    <button
-                      type="button"
+                    <span
                       style={{
                         fontSize: '11px',
                         fontFamily: 'var(--font-mono, monospace)',
                         color: 'var(--text-secondary, #8b8aa0)',
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: 0,
                         flexShrink: 0,
                       }}
-                      onClick={() => router.push('/app/household')}
                     >
-                      Detalii ˅
-                    </button>
-                  </div>
+                      {familySectionExpanded ? 'Ascunde ˄' : 'Coordonare ˅'}
+                    </span>
+                  </button>
 
                   <div
                     style={{
-                      borderRadius: '12px',
-                      background: 'linear-gradient(180deg, rgba(255,255,255,0.02) 0%, var(--bg-raised, #13141f) 100%)',
-                      border: '1px solid rgba(255,255,255,0.07)',
-                      padding: '8px 10px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '6px',
+                      maxHeight: familySectionExpanded ? '340px' : '0px',
+                      opacity: familySectionExpanded ? 1 : 0,
+                      overflow: 'hidden',
+                      transition: 'max-height 260ms ease, opacity 180ms ease',
+                      borderTop: familySectionExpanded ? '1px solid rgba(255,255,255,0.05)' : '1px solid transparent',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', minHeight: 18 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #eeedf5)' }}>
-                        Coordonare familie
+                    <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', minHeight: 18 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #eeedf5)' }}>
+                          Coordonare familie
+                        </div>
+                        <div style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono, monospace)' }}>
+                          <span style={{ color: urgentSummaryTone }}>
+                            {familyUrgentCount} urgent
+                          </span>
+                          <span style={{ color: 'var(--text-muted, #4a4860)' }}>
+                            {' · '}{familyConfirmationCount} confirmare
+                          </span>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono, monospace)' }}>
-                        <span style={{ color: urgentSummaryTone }}>
-                          {familyUrgentCount} urgent
-                        </span>
-                        <span style={{ color: 'var(--text-muted, #4a4860)' }}>
-                          {' · '}{familyConfirmationCount} confirmare
-                        </span>
-                      </div>
-                    </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      {familyCoordRows.map((row) => {
-                        return (
-                          <div
-                            key={row.id}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              gap: '8px',
-                              borderRadius: '8px',
-                              border: '1px solid rgba(255,255,255,0.06)',
-                              background: 'rgba(255,255,255,0.025)',
-                              padding: '5px 8px',
-                            }}
-                          >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        {familyCoordRows.map((row) => {
+                          return (
                             <div
+                              key={row.id}
                               style={{
-                                fontSize: '12.5px',
-                                color: 'var(--text-primary, #eeedf5)',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap' as const,
-                                flex: 1,
-                                minWidth: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '8px',
+                                borderRadius: '8px',
+                                border: '1px solid rgba(255,255,255,0.06)',
+                                background: 'rgba(255,255,255,0.025)',
+                                padding: '5px 8px',
                               }}
                             >
-                              {row.title}{row.timeLabel ? ` · ${row.timeLabel}` : ''}
+                              <div
+                                style={{
+                                  fontSize: '12.5px',
+                                  color: 'var(--text-primary, #eeedf5)',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap' as const,
+                                  flex: 1,
+                                  minWidth: 0,
+                                }}
+                              >
+                                {row.title}{row.timeLabel ? ` · ${row.timeLabel}` : ''}
+                              </div>
+                              <span
+                                style={{
+                                  flexShrink: 0,
+                                  fontSize: '10px',
+                                  fontFamily: 'var(--font-mono, monospace)',
+                                  padding: '2px 6px',
+                                  borderRadius: '5px',
+                                  background: row.isUrgent ? 'rgba(245,158,11,0.07)' : 'rgba(255,255,255,0.04)',
+                                  border: row.isUrgent ? '1px solid rgba(245,158,11,0.18)' : '1px solid rgba(255,255,255,0.08)',
+                                  color: row.isUrgent ? 'rgba(239,194,128,0.82)' : 'var(--text-secondary, #8b8aa0)',
+                                }}
+                              >
+                                {row.statusLabel}
+                              </span>
                             </div>
-                            <span
-                              style={{
-                                flexShrink: 0,
-                                fontSize: '10px',
-                                fontFamily: 'var(--font-mono, monospace)',
-                                padding: '2px 6px',
-                                borderRadius: '5px',
-                                background: row.isUrgent ? 'rgba(245,158,11,0.07)' : 'rgba(255,255,255,0.04)',
-                                border: row.isUrgent ? '1px solid rgba(245,158,11,0.18)' : '1px solid rgba(255,255,255,0.08)',
-                                color: row.isUrgent ? 'rgba(239,194,128,0.82)' : 'var(--text-secondary, #8b8aa0)',
-                              }}
-                            >
-                              {row.statusLabel}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
 
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginTop: '3px',
-                        paddingTop: '5px',
-                        borderTop: '1px solid rgba(255,255,255,0.05)',
-                      }}
-                    >
-                      <button
-                        type="button"
+                      <div
                         style={{
-                          fontSize: '11.5px',
-                          fontWeight: 600,
-                          color: 'var(--accent-text, #a5a8ff)',
-                          background: 'rgba(108,111,245,0.06)',
-                          border: '1px solid rgba(108,111,245,0.20)',
-                          borderRadius: '7px',
-                          padding: '4px 9px',
-                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginTop: '3px',
+                          paddingTop: '5px',
+                          borderTop: '1px solid rgba(255,255,255,0.05)',
                         }}
-                        onClick={() => router.push('/app/household')}
                       >
-                        Coordonează
-                      </button>
-                      <button
-                        type="button"
-                        style={{
-                          fontSize: '11px',
-                          color: 'var(--text-secondary, #8b8aa0)',
-                          background: 'transparent',
-                          border: 'none',
-                          cursor: 'pointer',
-                          padding: 0,
-                        }}
-                        onClick={() => router.push('/app/household')}
-                      >
-                        Vezi Family
-                      </button>
+                        <button
+                          type="button"
+                          style={{
+                            fontSize: '11.5px',
+                            fontWeight: 600,
+                            color: 'var(--accent-text, #a5a8ff)',
+                            background: 'rgba(108,111,245,0.06)',
+                            border: '1px solid rgba(108,111,245,0.20)',
+                            borderRadius: '7px',
+                            padding: '4px 9px',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => router.push('/app/household')}
+                        >
+                          Coordonează
+                        </button>
+                        <button
+                          type="button"
+                          style={{
+                            fontSize: '11px',
+                            color: 'var(--text-secondary, #8b8aa0)',
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: 0,
+                          }}
+                          onClick={() => router.push('/app/household')}
+                        >
+                          Vezi Family
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
