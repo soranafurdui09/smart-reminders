@@ -1,5 +1,6 @@
 "use client";
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { markDone } from '@/app/app/actions';
@@ -166,16 +167,23 @@ export default function FocusHome({
     if (!nextInRange?.id) return horizonItems;
     return horizonItems.filter((item) => item.id !== nextInRange.id);
   }, [horizonItems, nextInRange?.id]);
-  const visibleItems = useMemo(() => filteredItems.slice(0, 5), [filteredItems]);
+  const visibleItems = useMemo(() => filteredItems.slice(0, 6), [filteredItems]);
+  const hasMoreVisible = filteredItems.length > visibleItems.length;
   const horizonLabel =
     horizon === '7d'
       ? 'Următoarele 7 zile'
       : horizon === '30d'
         ? 'Următoarele 30 zile'
         : 'Azi';
+  const continuationMessage =
+    horizon === 'today'
+      ? 'Pentru azi ești la zi ✅'
+      : horizon === '7d'
+        ? 'Ai parcurs ce era prioritar pentru 7 zile.'
+        : 'Ai parcurs ce era prioritar pentru 30 zile.';
 
   return (
-    <section className="space-y-2.5">
+    <section className="space-y-2">
       <div className="home-glass-panel rounded-[var(--radius-lg)] px-[var(--space-3)] py-[var(--space-2)]">
         {nextInRange ? (
           <div className="flex items-center justify-between gap-3">
@@ -221,7 +229,7 @@ export default function FocusHome({
         )}
       </div>
 
-      <section className="space-y-2">
+      <section className="space-y-1.5">
         <div className="homeTabToggle flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-[11px]">
           <button
             type="button"
@@ -264,7 +272,7 @@ export default function FocusHome({
               return (
                 <div
                   key={occurrence.id}
-                  className={`flex items-center justify-between gap-3 px-4 py-3 ${
+                  className={`flex items-center justify-between gap-3 px-4 py-2.5 ${
                     index === 0 ? '' : 'border-t border-white/10'
                   }`}
                 >
@@ -293,20 +301,36 @@ export default function FocusHome({
               );
               })}
             </div>
-            {filteredItems.length > 5 ? (
-              <button
-                type="button"
-                className="mt-2 text-xs font-semibold text-white/60 hover:text-white"
-                onClick={() => onShowMore?.(horizon)}
-              >
-                Arată toate
-              </button>
-            ) : null}
+            <div className="flex items-center justify-between px-1 pt-1">
+              <span className="text-[11px] text-white/45">
+                {hasMoreVisible ? `Mai sunt ${filteredItems.length - visibleItems.length} în această perioadă` : continuationMessage}
+              </span>
+              {hasMoreVisible ? (
+                <button
+                  type="button"
+                  className="text-[11px] font-semibold text-white/55 hover:text-white/80"
+                  onClick={() => onShowMore?.(horizon)}
+                >
+                  Arată toate →
+                </button>
+              ) : (
+                <Link href="/app?tab=inbox" className="text-[11px] font-semibold text-white/50 hover:text-white/75">
+                  Vezi toate în Inbox →
+                </Link>
+              )}
+            </div>
           </>
         ) : (
-          <div className="home-glass-panel rounded-[var(--radius-lg)] p-[var(--space-3)] text-sm text-[color:var(--text-2)]">
-            Nu ai nimic urgent azi…
-          </div>
+          <>
+            <div className="home-glass-panel rounded-[var(--radius-lg)] p-[var(--space-3)] text-sm text-[color:var(--text-2)]">
+              Nu ai nimic urgent azi…
+            </div>
+            <div className="flex items-center justify-end">
+              <Link href="/app?tab=inbox" className="text-[11px] font-semibold text-white/50 hover:text-white/75">
+                Vezi toate în Inbox →
+              </Link>
+            </div>
+          </>
         )}
       </section>
     </section>
