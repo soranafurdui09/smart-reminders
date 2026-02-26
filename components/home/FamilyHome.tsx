@@ -139,6 +139,7 @@ export default function FamilyHome({
   const [heroResolved, setHeroResolved] = useState(false);
   const [heroSlideOut, setHeroSlideOut] = useState(false);
   const [showResolveNext, setShowResolveNext] = useState(false);
+  const [familyExpanded, setFamilyExpanded] = useState(false);
   const [, startResolveTransition] = useTransition();
 
   useEffect(() => {
@@ -612,7 +613,7 @@ export default function FamilyHome({
             {header as ReactNode}
 
             {/* ── 2. Morning Banner (06:00–10:00) ────────────── */}
-            {mounted ? (
+            {mounted && isMorning ? (
               <div
                 className="animate-in"
                 style={{
@@ -625,7 +626,7 @@ export default function FamilyHome({
                 }}
               >
                 <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-secondary, #8b8aa0)' }}>
-                  {isMorning ? '✦ Dimineață · Începe cu un singur lucru' : '✦ Acum · Începe cu un singur lucru'}
+                  ✦ Dimineață · Începe cu un singur lucru
                 </span>
               </div>
             ) : null}
@@ -663,7 +664,9 @@ export default function FamilyHome({
                     bottom: '20%',
                     width: 3,
                     borderRadius: '0 3px 3px 0',
-                    background: 'var(--accent-color, #6c6ff5)',
+                    background: (nextTone === 'overdue' || nextTone === 'urgent')
+                      ? 'var(--amber, #f59e0b)'
+                      : 'var(--accent-color, #6c6ff5)',
                   }}
                 />
 
@@ -691,25 +694,52 @@ export default function FamilyHome({
                         fontWeight: 700,
                         textTransform: 'uppercase' as const,
                         letterSpacing: '0.06em',
-                        color: 'var(--accent-text, #a5a8ff)',
+                        color: (nextTone === 'overdue' || nextTone === 'urgent')
+                          ? 'var(--amber-text, #fcd34d)'
+                          : 'var(--accent-text, #a5a8ff)',
                       }}
                     >
                       {heroLabel}
                     </span>
-                    {minutesUntilNext !== null && minutesUntilNext > 0 && minutesUntilNext < 120 ? (
+                    {minutesUntilNext !== null && minutesUntilNext < 120 ? (
                       <span
                         style={{
-                          background: 'rgba(255,255,255,0.04)',
-                          border: '1px solid var(--border-default, #1e1f35)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          background: minutesUntilNext <= 0
+                            ? 'rgba(245,158,11,0.14)'
+                            : minutesUntilNext <= 30
+                              ? 'rgba(245,158,11,0.10)'
+                              : 'rgba(255,255,255,0.04)',
+                          border: minutesUntilNext <= 30
+                            ? '1px solid rgba(245,158,11,0.30)'
+                            : '1px solid var(--border-default, #1e1f35)',
                           borderRadius: '5px',
                           padding: '2px 7px',
                           fontFamily: 'var(--font-mono, monospace)',
                           fontSize: '10px',
-                          color: 'var(--text-secondary, #8b8aa0)',
+                          color: minutesUntilNext <= 30
+                            ? 'var(--amber-text, #fcd34d)'
+                            : 'var(--text-secondary, #8b8aa0)',
                           flexShrink: 0,
                         }}
                       >
-                        În {minutesUntilNext} min
+                        <span
+                          style={{
+                            width: 5,
+                            height: 5,
+                            borderRadius: '50%',
+                            background: minutesUntilNext <= 30
+                              ? 'var(--amber, #f59e0b)'
+                              : 'var(--text-muted, #4a4860)',
+                            flexShrink: 0,
+                            animation: minutesUntilNext <= 30 ? 'ai-pulse 1.6s ease-in-out infinite' : undefined,
+                          }}
+                        />
+                        {minutesUntilNext <= 0
+                          ? 'Scadent acum'
+                          : `Scadent în ${minutesUntilNext} min`}
                       </span>
                     ) : null}
                   </div>
@@ -823,7 +853,7 @@ export default function FamilyHome({
               </div>
             </div>
 
-            {/* ── 4. Family Module ────────────────────────────── */}
+            {/* ── 4. Family Module (accordion) ─────────────────── */}
             {Array.isArray(householdMembers) && householdMembers.length > 1 ? (
               <div
                 className="animate-in"
@@ -831,88 +861,249 @@ export default function FamilyHome({
               >
                 <div
                   style={{
-                    borderRadius: '11px',
-                    background: 'linear-gradient(180deg, rgba(255,255,255,0.02) 0%, var(--bg-raised, #13141f) 100%)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    boxShadow: '0 6px 16px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04)',
-                    padding: '9px 10px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '7px',
+                    borderRadius: '12px',
+                    background: 'var(--bg-raised, #13141f)',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    overflow: 'hidden',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #eeedf5)' }}>
-                      Coordonare familie
-                    </div>
-                    <div style={{ fontSize: '10.5px', color: 'var(--text-secondary, #8b8aa0)' }}>
-                      {familySummaryLabel}
-                    </div>
-                  </div>
-
-                  <div
+                  {/* Collapsed trigger row */}
+                  <button
+                    type="button"
                     style={{
-                      borderRadius: '8px',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      background: 'rgba(255,255,255,0.025)',
-                      padding: '7px 9px',
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '10px 12px',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left' as const,
                     }}
+                    onClick={() => setFamilyExpanded(!familyExpanded)}
+                    aria-expanded={familyExpanded}
                   >
-                    <div style={{ fontSize: '9.5px', fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-muted, #4a4860)' }}>
-                      Acum
+                    {/* Stacked avatars */}
+                    <div style={{ display: 'flex', flexShrink: 0 }}>
+                      {householdMembers.slice(0, 3).map((member: any, idx: number) => {
+                        const memberName = member.label ?? member.display_name ?? member.name ?? '';
+                        const initials = memberName.trim().split(/\s+/).map((w: string) => w[0] ?? '').slice(0, 2).join('').toUpperCase() || '?';
+                        return (
+                          <div
+                            key={member.id ?? idx}
+                            style={{
+                              width: 22,
+                              height: 22,
+                              borderRadius: '50%',
+                              background: 'var(--bg-overlay, #252640)',
+                              border: '1.5px solid var(--bg-raised, #13141f)',
+                              color: 'var(--accent-text, #a5a8ff)',
+                              fontSize: '9px',
+                              fontWeight: 700,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              marginLeft: idx === 0 ? 0 : -6,
+                              position: 'relative' as const,
+                              zIndex: 3 - idx,
+                            }}
+                          >
+                            {idx === 0 && familyUrgentCount > 0 ? (
+                              <span
+                                style={{
+                                  position: 'absolute' as const,
+                                  top: -2,
+                                  right: -2,
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: '50%',
+                                  background: 'var(--amber, #f59e0b)',
+                                  border: '1px solid var(--bg-raised, #13141f)',
+                                }}
+                              />
+                            ) : null}
+                            {initials}
+                          </div>
+                        );
+                      })}
                     </div>
+
+                    {/* Summary text */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #eeedf5)', lineHeight: 1.2 }}>
+                        Familie
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '11px',
+                          fontFamily: 'var(--font-mono, monospace)',
+                          marginTop: '1px',
+                          display: 'flex',
+                          gap: '4px',
+                          flexWrap: 'wrap' as const,
+                        }}
+                      >
+                        {familyUrgentCount > 0 ? (
+                          <span style={{ color: 'var(--amber-text, #fcd34d)' }}>
+                            {familyUrgentCount} urgent
+                          </span>
+                        ) : null}
+                        {familyUrgentCount > 0 && familyUpcomingCount > 0 ? (
+                          <span style={{ color: 'var(--text-muted, #4a4860)' }}>·</span>
+                        ) : null}
+                        {familyUpcomingCount > 0 ? (
+                          <span style={{ color: 'var(--text-muted, #4a4860)' }}>
+                            {familyUpcomingCount} confirmare
+                          </span>
+                        ) : null}
+                        {familyUrgentCount === 0 && familyUpcomingCount === 0 ? (
+                          <span style={{ color: 'var(--text-muted, #4a4860)' }}>totul e aliniat</span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {/* Expand affordance */}
                     <div
                       style={{
-                        marginTop: '2px',
-                        fontSize: '12.5px',
-                        fontWeight: 600,
-                        color: 'var(--text-primary, #eeedf5)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        fontSize: '11px',
+                        color: 'var(--text-muted, #4a4860)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '2px',
+                        flexShrink: 0,
+                        transition: 'transform 300ms ease-out',
                       }}
                     >
-                      {familyPeekItem?.reminder?.title ?? 'Nicio acțiune comună acum'}
+                      Detalii
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          transition: 'transform 300ms ease-out',
+                          transform: familyExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                          fontSize: '9px',
+                        }}
+                      >
+                        ▾
+                      </span>
                     </div>
-                    {familyPeekItem ? (
-                      <div style={{ marginTop: '2px', fontSize: '10.5px', color: 'var(--text-muted, #4a4860)' }}>
-                        {familyPeekMeta(familyPeekItem)}
-                      </div>
-                    ) : null}
-                  </div>
+                  </button>
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '1px' }}>
-                    <button
-                      type="button"
+                  {/* Expandable items */}
+                  <div
+                    style={{
+                      maxHeight: familyExpanded ? '400px' : 0,
+                      overflow: 'hidden',
+                      transition: 'max-height 300ms ease-out',
+                    }}
+                  >
+                    <div
                       style={{
-                        fontSize: '11.5px',
-                        fontWeight: 600,
-                        color: 'var(--accent-text, #a5a8ff)',
-                        background: 'rgba(108,111,245,0.08)',
-                        border: '1px solid rgba(108,111,245,0.28)',
-                        borderRadius: '7px',
-                        padding: '5px 11px',
-                        cursor: 'pointer',
+                        borderTop: '1px solid rgba(255,255,255,0.07)',
+                        padding: '8px 12px',
+                        display: 'flex',
+                        flexDirection: 'column' as const,
+                        gap: '6px',
                       }}
-                      onClick={() => router.push('/app/household')}
                     >
-                      Coordonează
-                    </button>
-                    <button
-                      type="button"
-                      style={{
-                        fontSize: '10.5px',
-                        fontWeight: 600,
-                        color: 'var(--text-secondary, #8b8aa0)',
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: 0,
-                      }}
-                      onClick={() => router.push('/app/household')}
-                    >
-                      Vezi tot
-                    </button>
+                      {householdItemsSlice.length > 0 ? householdItemsSlice.map((occurrence: any, idx: number) => {
+                        const isUrgent = overdueItems.some((o: any) => o.id === occurrence.id);
+                        const title = occurrence.reminder?.title ?? '—';
+                        const rawDate = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
+                        const metaDate = rawDate ? familyPeekMeta(occurrence) : null;
+                        return (
+                          <div
+                            key={occurrence.id ?? idx}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '8px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: '12.5px',
+                                color: 'var(--text-primary, #eeedf5)',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap' as const,
+                                flex: 1,
+                                minWidth: 0,
+                              }}
+                            >
+                              {title}
+                              {metaDate ? (
+                                <span style={{ marginLeft: '6px', fontSize: '10.5px', color: 'var(--text-muted, #4a4860)', fontFamily: 'var(--font-mono, monospace)' }}>
+                                  {metaDate}
+                                </span>
+                              ) : null}
+                            </div>
+                            <span
+                              style={{
+                                flexShrink: 0,
+                                fontSize: '10px',
+                                fontFamily: 'var(--font-mono, monospace)',
+                                padding: '2px 6px',
+                                borderRadius: '5px',
+                                background: isUrgent ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.04)',
+                                border: isUrgent ? '1px solid rgba(245,158,11,0.25)' : '1px solid rgba(255,255,255,0.08)',
+                                color: isUrgent ? 'var(--amber-text, #fcd34d)' : 'var(--text-secondary, #8b8aa0)',
+                              }}
+                            >
+                              {isUrgent ? 'Urgent' : 'Confirmă'}
+                            </span>
+                          </div>
+                        );
+                      }) : (
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted, #4a4860)', padding: '4px 0' }}>
+                          Nicio acțiune comună acum
+                        </div>
+                      )}
+
+                      {/* Footer row */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginTop: '4px',
+                          paddingTop: '6px',
+                          borderTop: '1px solid rgba(255,255,255,0.05)',
+                        }}
+                      >
+                        <button
+                          type="button"
+                          style={{
+                            fontSize: '11.5px',
+                            fontWeight: 600,
+                            color: 'var(--accent-text, #a5a8ff)',
+                            background: 'rgba(108,111,245,0.08)',
+                            border: '1px solid rgba(108,111,245,0.22)',
+                            borderRadius: '7px',
+                            padding: '4px 10px',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => router.push('/app/household')}
+                        >
+                          Coordonează
+                        </button>
+                        <button
+                          type="button"
+                          style={{
+                            fontSize: '11px',
+                            color: 'var(--text-secondary, #8b8aa0)',
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: 0,
+                          }}
+                          onClick={() => router.push('/app/household')}
+                        >
+                          Vezi toate →
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -934,8 +1125,17 @@ export default function FamilyHome({
                   alignItems: 'center',
                 }}
               >
-                <div style={{ fontSize: '11.5px', color: 'var(--text-secondary, #8b8aa0)' }}>
-                  Începe cu următorul · backlog {todayOpenItems.length + overdueItems.length}
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary, #8b8aa0)' }}>
+                  Azi:{' '}
+                  {filteredOverdueCount > 0 ? (
+                    <>
+                      <span style={{ color: 'var(--amber-text, #fcd34d)', fontWeight: 600 }}>
+                        {filteredOverdueCount} urgent
+                      </span>
+                      {' · '}
+                    </>
+                  ) : null}
+                  backlog {todayOpenItems.length + overdueItems.length}
                 </div>
                 <button
                   type="button"
