@@ -10,7 +10,6 @@ import '@/styles/home-premium.css';
 import SemanticSearch from '@/components/SemanticSearch';
 import HomeHeader from '@/components/home/HomeHeader';
 import NextUpCard from '@/components/home/NextUpCard';
-import ModeToggle from '@/app/reminders/ModeToggle';
 import FocusHome from '@/components/home/FocusHome';
 import FamilyHome from '@/components/home/FamilyHome';
 import OverdueDenseRow from '@/components/home/OverdueDenseRow';
@@ -889,19 +888,10 @@ export default function ReminderDashboardSection({
       visible: visibleBucketItems.length
     });
   }, [activeBucket, bucketItems.length, visibleBucketItems.length]);
-  const headerTitle = uiMode === 'focus' ? 'Focus' : copy.dashboard.title;
-  const headerSubtitle =
-    uiMode === 'focus' ? 'Doar ce contează. Minim de zgomot.' : 'Reminderele familiei tale.';
   const headerNode = (
     <HomeHeader
-      title={headerTitle}
-      subtitle={headerSubtitle}
-      modeSwitcher={
-        <ModeToggle
-          value={uiMode}
-          onChange={setUiMode}
-        />
-      }
+      uiMode={uiMode}
+      onModeChange={setUiMode}
     />
   );
   const nextDoseTileLabel = useMemo(() => {

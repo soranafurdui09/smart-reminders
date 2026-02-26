@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { CheckCircle2, Circle } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react';
 import ActionSubmitButton from '@/components/ActionSubmitButton';
 import { markDone, snoozeOccurrence } from '@/app/app/actions';
 import QuickAddBar from '@/components/home/QuickAddBar';
@@ -62,6 +62,7 @@ export default function FamilyHome({
   localeTag,
   router,
   householdMembers,
+  householdItems,
   todayOpenItems,
   soonItems,
   visibleDoses,
@@ -118,6 +119,97 @@ export default function FamilyHome({
   })();
   const controlSessionMax = 3;
   const isControlSessionDone = controlSessionCount >= controlSessionMax;
+
+  // ── New home redesign state ───────────────────────────────────────
+  const [mounted, setMounted] = useState(false);
+  const [isMorning, setIsMorning] = useState(false);
+  const [heroResolved, setHeroResolved] = useState(false);
+  const [heroSlideOut, setHeroSlideOut] = useState(false);
+  const [showResolveNext, setShowResolveNext] = useState(false);
+  const [familyExpanded, setFamilyExpanded] = useState(false);
+  const [, startResolveTransition] = useTransition();
+
+  useEffect(() => {
+    setMounted(true);
+    const h = new Date().getHours();
+    setIsMorning(h >= 6 && h < 10);
+  }, []);
+
+  useEffect(() => {
+    if (!heroResolved) return;
+    const t1 = setTimeout(() => setHeroSlideOut(true), 1100);
+    const t2 = setTimeout(() => setShowResolveNext(true), 1540);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [heroResolved]);
+
+  const minutesUntilNext = useMemo(() => {
+    if (!nextOccurrence) return null;
+    const rawDate = nextOccurrence.snoozed_until ?? nextOccurrence.effective_at ?? nextOccurrence.occur_at;
+    if (!rawDate) return null;
+    const at = new Date(rawDate);
+    if (Number.isNaN(at.getTime())) return null;
+    return Math.round((at.getTime() - Date.now()) / 60000);
+  }, [nextOccurrence]);
+
+  const heroLabel = nextOccurrence?.reminder?.assigned_member_id
+    ? 'FAMILIE · PRIORITATE COMUNĂ'
+    : 'PERSONAL · PRIORITATE';
+
+  const heroContextLabel = nextOccurrence?.reminder?.assigned_member_id
+    ? 'Familie'
+    : 'Personal';
+
+  // Today tasks shown in "Restul Zilei" (excluding the hero task)
+  const todayTasks = useMemo(() => {
+    if (!Array.isArray(todayOpenItems)) return [];
+    return todayOpenItems
+      .filter((item: any) => !nextOccurrence || item.id !== nextOccurrence.id)
+      .slice(0, 6);
+  }, [todayOpenItems, nextOccurrence]);
+
+  // Next task to suggest after hero completion
+  const nextAfterHero = useMemo(() => {
+    if (todayTasks.length > 0) return todayTasks[0];
+    return Array.isArray(filteredSoonItems) && filteredSoonItems.length > 0
+      ? filteredSoonItems[0]
+      : null;
+  }, [todayTasks, filteredSoonItems]);
+
+  // Family module counts
+  const familyUrgentCount = useMemo(() => {
+    if (!Array.isArray(householdItems)) return 0;
+    return householdItems.filter((item: any) => overdueItems.some((o: any) => o.id === item.id)).length;
+  }, [householdItems, overdueItems]);
+
+  const familyUpcomingCount = useMemo(() => {
+    if (!Array.isArray(householdItems)) return 0;
+    return householdItems.filter((item: any) => !overdueItems.some((o: any) => o.id === item.id)).length;
+  }, [householdItems, overdueItems]);
+
+  const householdItemsSlice = useMemo(() => {
+    if (!Array.isArray(householdItems)) return [];
+    return householdItems.slice(0, 4);
+  }, [householdItems]);
+
+  const handleResolve = () => {
+    if (heroResolved) return;
+    if (!nextOccurrence?.id || !nextOccurrence?.reminder?.id || !nextOccurrence?.occur_at) return;
+    setHeroResolved(true);
+    const occurrenceId = nextOccurrence.id;
+    const reminderId = nextOccurrence.reminder.id as string;
+    const occurAt = nextOccurrence.occur_at;
+    // Submit server action after animation completes
+    setTimeout(() => {
+      startResolveTransition(async () => {
+        const formData = new FormData();
+        formData.append('occurrenceId', occurrenceId);
+        formData.append('reminderId', reminderId);
+        formData.append('occurAt', occurAt);
+        formData.append('done_comment', '');
+        await markDone(formData);
+      });
+    }, 1500);
+  };
   const getOverdueMeta = (occurrence: any) => {
     const reminder = occurrence.reminder ?? null;
     const displayAt = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
@@ -508,394 +600,689 @@ export default function FamilyHome({
             ) : null}
           </div>
         ) : (
-          <div className="home-slate space-y-4 today-shell home-compact">
+          <div className="home-slate today-shell home-compact" style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', paddingBottom: '2rem' }}>
             <div className="home-slate-bg" aria-hidden="true" />
 
-            {/* ── TopBar ──────────────────────────────────────── */}
+            {/* ── 1. App Header ──────────────────────────────── */}
             {header as ReactNode}
 
-            {/* ── Greeting ────────────────────────────────────── */}
-            <div className="animate-in px-1">
-              <h2
-                className="text-[1.5rem] font-bold leading-tight"
+            {/* ── 2. Morning Banner (06:00–10:00) ────────────── */}
+            {mounted && isMorning ? (
+              <div
+                className="animate-in"
                 style={{
-                  background: 'linear-gradient(135deg, var(--text-primary, #eeedf5) 0%, var(--accent-text, #a5a8ff) 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
+                  margin: '0 1rem',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  background: 'rgba(108, 111, 245, 0.07)',
+                  border: '1px solid rgba(108, 111, 245, 0.16)',
+                  animationDelay: '100ms',
                 }}
               >
-                Bună ziua! 👋
-              </h2>
-              <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary, #8b8aa0)' }}>
-                {todayOpenItems.length > 0
-                  ? `${todayOpenItems.length} lucruri pentru azi`
-                  : 'Totul e în ordine azi'}
-              </p>
-            </div>
-
-            {/* ── Overdue context chip (amber, NOT red) ────────── */}
-            {filteredOverdueCount > 0 ? (
-              <button
-                type="button"
-                className="pressable animate-in flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left"
-                style={{
-                  background: 'var(--amber-dim, #1c1500)',
-                  border: '1px solid rgba(245,158,11,0.2)',
-                }}
-                onClick={() => router.push('/app?tab=today&segment=overdue')}
-              >
-                <span
-                  className="h-2 w-2 flex-shrink-0 rounded-full"
-                  style={{
-                    background: 'var(--amber, #f59e0b)',
-                    boxShadow: '0 0 6px rgba(245,158,11,0.5)',
-                  }}
-                  aria-hidden="true"
-                />
-                <span className="flex-1 text-sm font-medium" style={{ color: 'var(--amber-text, #fcd34d)' }}>
-                  {filteredOverdueCount} lucruri te așteaptă · începe cu primul
+                <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary, #8b8aa0)' }}>
+                  ✦ Dimineață · Începe cu un singur lucru
                 </span>
-                <span aria-hidden="true" style={{ color: 'var(--text-muted, #4a4860)' }}>›</span>
-              </button>
+              </div>
             ) : null}
 
-            {/* ── Stats row — horizontal scroll ──────────────── */}
-            {tilesReady ? (
-              <div className="animate-in no-scrollbar flex gap-2 overflow-x-auto pb-1">
-                {metrics.map((metric) => {
-                  const colorMap: Record<string, string> = {
-                    'stat-tile-today':            'var(--accent-text, #a5a8ff)',
-                    'stat-tile-soon':             'var(--cyan-text, #67e8f9)',
-                    'stat-tile-meds':             'var(--cyan-text, #67e8f9)',
-                    'stat-tile-overdue':          'var(--amber-text, #fcd34d)',
-                    'stat-tile-overdue-critical': 'var(--amber-text, #fcd34d)',
-                  };
-                  const numberColor = colorMap[metric.tileClass] ?? 'var(--text-primary, #eeedf5)';
-                  return (
-                    <button
-                      key={metric.id}
-                      type="button"
-                      className="pressable flex-shrink-0 rounded-2xl px-4 py-3 text-center"
-                      style={{
-                        background: 'var(--bg-raised, #13141f)',
-                        border: '1px solid var(--border-default, #1e1f35)',
-                        minWidth: '80px',
-                      }}
-                      onClick={() => {
-                        if (metric.id === 'today' || metric.id === 'soon' || metric.id === 'overdue') {
-                          handleSegmentSelect(metric.id);
-                        }
-                      }}
-                    >
-                      <div
-                        className="text-[1.375rem] font-bold leading-none tracking-tight"
-                        style={{ color: numberColor }}
-                      >
-                        {metric.count}
-                      </div>
-                      <div
-                        className="mt-1 text-[0.5625rem] font-semibold uppercase tracking-widest"
-                        style={{ color: 'var(--text-muted, #4a4860)' }}
-                      >
-                        {metric.label}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div
-                    key={`tile-skeleton-${index}`}
-                    className="skeleton h-16 flex-shrink-0 rounded-2xl"
-                    style={{ minWidth: '80px' }}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* ── Next Reminder Card ──────────────────────────── */}
+            {/* ── 3. Hero Card ────────────────────────────────── */}
             <div
-              className={`next-reminder-card animate-in ${nextToneClassName} relative overflow-hidden`}
+              className="animate-in"
               style={{
-                background: 'linear-gradient(135deg, var(--bg-elevated, #1a1b2e), rgba(26,24,46,0.9))',
-                border: '1px solid rgba(108,111,245,0.18)',
-                borderRadius: 'var(--radius-xl, 22px)',
-                padding: '1rem',
+                margin: '0 1rem',
+                animationDelay: '150ms',
+                transition: 'opacity 380ms cubic-bezier(0.16,1,0.3,1), transform 380ms cubic-bezier(0.16,1,0.3,1)',
+                opacity: heroSlideOut ? 0 : 1,
+                transform: heroSlideOut ? 'translateY(-1rem)' : 'translateY(0)',
+                pointerEvents: heroSlideOut ? 'none' : undefined,
               }}
             >
-              {/* Left accent bar */}
               <div
-                className="absolute bottom-3 left-0 top-3 w-[3px] rounded-r"
-                style={{ background: 'linear-gradient(to bottom, var(--accent-color, #6c6ff5), transparent)' }}
-                aria-hidden="true"
-              />
-              {/* Top-right glow */}
-              <div
-                className="pointer-events-none absolute right-0 top-0 h-32 w-32"
-                style={{ background: 'radial-gradient(circle at top right, rgba(108,111,245,0.1), transparent 70%)' }}
-                aria-hidden="true"
-              />
-              <div className="pl-3">
-                {isNextEmpty ? (
-                  <div className="text-sm" style={{ color: 'var(--text-secondary, #8b8aa0)' }}>
-                    {copy.dashboard.nextUpEmpty}
-                  </div>
-                ) : (
-                  <>
-                    <div
-                      className="text-[1rem] font-semibold leading-snug"
-                      style={{ color: 'var(--text-primary, #eeedf5)' }}
+                style={{
+                  position: 'relative',
+                  borderRadius: '1rem',
+                  background: 'var(--bg-elevated, #1a1b2e)',
+                  border: '1px solid var(--border-default, #1e1f35)',
+                  padding: '14px 14px 13px',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Left accent bar */}
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: '20%',
+                    bottom: '20%',
+                    width: 3,
+                    borderRadius: '0 3px 3px 0',
+                    background: nextTone === 'overdue'
+                      ? 'var(--amber, #f59e0b)'
+                      : nextTone === 'urgent'
+                        ? 'var(--amber, #f59e0b)'
+                        : 'var(--accent-color, #6c6ff5)',
+                  }}
+                />
+
+                {/* Top-right glow */}
+                <div
+                  className="pointer-events-none"
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: 0,
+                    width: 80,
+                    height: 80,
+                    background: 'radial-gradient(circle at top right, rgba(108,111,245,0.08), transparent 70%)',
+                  }}
+                />
+
+                <div style={{ paddingLeft: '10px' }}>
+                  {/* Row 1: label + timer chip */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-mono, monospace)',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        textTransform: 'uppercase' as const,
+                        letterSpacing: '0.06em',
+                        color: (nextTone === 'overdue' || nextTone === 'urgent')
+                          ? 'var(--amber-text, #fcd34d)'
+                          : 'var(--accent-text, #a5a8ff)',
+                      }}
                     >
-                      {nextTitle}
-                    </div>
-                    <div className={`time-text mt-1 ${nextTone === 'overdue' ? 'time-amber' : 'time-accent'}`}>
-                      🔔 {nextOccurrenceLabel}
-                    </div>
-                    {nextNotifyTimeLabel ? (
-                      <div className="time-text time-muted mt-0.5">
-                        Te anunț la {nextNotifyTimeLabel}
-                      </div>
+                      {heroLabel}
+                    </span>
+                    {minutesUntilNext !== null && minutesUntilNext > 0 && minutesUntilNext < 120 ? (
+                      <span
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          background: 'rgba(245,158,11,0.10)',
+                          border: '1px solid rgba(245,158,11,0.22)',
+                          borderRadius: '5px',
+                          padding: '3px 8px',
+                          fontFamily: 'var(--font-mono, monospace)',
+                          fontSize: '10px',
+                          color: 'var(--amber-text, #fcd34d)',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 5,
+                            height: 5,
+                            borderRadius: '50%',
+                            background: 'var(--amber, #f59e0b)',
+                            display: 'inline-block',
+                            animation: 'ai-pulse 1.5s ease-in-out infinite',
+                          }}
+                        />
+                        Scadent în {minutesUntilNext} min
+                      </span>
+                    ) : nextTone === 'overdue' ? (
+                      <span
+                        style={{
+                          background: 'rgba(245,158,11,0.10)',
+                          border: '1px solid rgba(245,158,11,0.22)',
+                          borderRadius: '5px',
+                          padding: '3px 8px',
+                          fontFamily: 'var(--font-mono, monospace)',
+                          fontSize: '10px',
+                          color: 'var(--amber-text, #fcd34d)',
+                          flexShrink: 0,
+                        }}
+                      >
+                        ● Restant
+                      </span>
                     ) : null}
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      {nextCategory ? (
-                        <span className="badge badge-accent" style={nextCategoryStyle}>
-                          {nextCategory.label}
+                  </div>
+
+                  {/* Row 2: title */}
+                  {isNextEmpty ? (
+                    <div style={{ marginTop: '12px', color: 'var(--text-secondary, #8b8aa0)', fontSize: '14px' }}>
+                      Totul e în regulă azi ✓
+                    </div>
+                  ) : (
+                    <>
+                      <div
+                        style={{
+                          marginTop: '8px',
+                          marginBottom: '6px',
+                          fontSize: '1.125rem',
+                          fontWeight: 700,
+                          color: heroResolved ? 'var(--success-text, #6ee7b7)' : 'var(--text-primary, #eeedf5)',
+                          lineHeight: 1.3,
+                          transition: 'color 200ms ease',
+                        }}
+                      >
+                        {nextTitle}
+                      </div>
+
+                      {/* Row 3: meta chips */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '6px', marginBottom: '12px' }}>
+                        {nextOccurrenceLabel ? (
+                          <span
+                            style={{
+                              background: 'transparent',
+                              border: '1px solid var(--border-strong, #2a2b45)',
+                              borderRadius: '6px',
+                              padding: '2px 8px',
+                              fontFamily: 'var(--font-mono, monospace)',
+                              fontSize: '11px',
+                              color: 'var(--text-secondary, #8b8aa0)',
+                            }}
+                          >
+                            {nextOccurrenceLabel}
+                          </span>
+                        ) : null}
+                        <span
+                          style={{
+                            background: 'rgba(108,111,245,0.10)',
+                            border: '1px solid rgba(108,111,245,0.20)',
+                            borderRadius: '6px',
+                            padding: '2px 8px',
+                            fontFamily: 'var(--font-mono, monospace)',
+                            fontSize: '11px',
+                            color: 'var(--accent-text, #a5a8ff)',
+                          }}
+                        >
+                          {heroContextLabel}
                         </span>
-                      ) : null}
-                      {nextTone === 'overdue' ? (
-                        <span className="badge badge-amber">Restant</span>
-                      ) : null}
-                    </div>
-                    {hasNextAction ? (
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <form action={markDone}>
-                          <input type="hidden" name="occurrenceId" value={nextOccurrence?.id ?? ''} />
-                          <input type="hidden" name="reminderId" value={nextOccurrence?.reminder?.id ?? ''} />
-                          <input type="hidden" name="occurAt" value={nextOccurrence?.occur_at ?? ''} />
-                          <input type="hidden" name="done_comment" value="" />
-                          <ActionSubmitButton
-                            className="btn btn-primary"
-                            type="submit"
-                            data-action-feedback={copy.common.actionDone}
-                          >
-                            ✓ {copy.dashboard.nextUpAction}
-                          </ActionSubmitButton>
-                        </form>
-                        <form action={snoozeOccurrence}>
-                          <input type="hidden" name="occurrenceId" value={nextOccurrence?.id ?? ''} />
-                          <input type="hidden" name="mode" value="30" />
-                          <ActionSubmitButton
-                            className="btn btn-secondary"
-                            type="submit"
-                            data-action-feedback={copy.common.actionSnoozed}
-                          >
-                            ⏰ Amână
-                          </ActionSubmitButton>
-                        </form>
                       </div>
-                    ) : null}
-                  </>
-                )}
+
+                      {/* Row 4: action buttons */}
+                      {hasNextAction ? (
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            type="button"
+                            style={{
+                              flex: 1,
+                              height: '40px',
+                              background: heroResolved
+                                ? 'var(--success-color, #34d399)'
+                                : 'var(--accent-color, #6c6ff5)',
+                              color: '#fff',
+                              fontWeight: 700,
+                              fontSize: '14px',
+                              borderRadius: '10px',
+                              border: 'none',
+                              cursor: heroResolved ? 'default' : 'pointer',
+                              transition: 'background 200ms ease, box-shadow 200ms ease',
+                              boxShadow: heroResolved
+                                ? '0 3px 12px rgba(52,211,153,0.32)'
+                                : '0 3px 12px rgba(108,111,245,0.28)',
+                            }}
+                            onClick={handleResolve}
+                            disabled={heroResolved}
+                          >
+                            {heroResolved ? '✓ Rezolvat!' : '✓ Rezolvă'}
+                          </button>
+                          <form action={snoozeOccurrence}>
+                            <input type="hidden" name="occurrenceId" value={nextOccurrence?.id ?? ''} />
+                            <input type="hidden" name="mode" value="30" />
+                            <ActionSubmitButton
+                              type="submit"
+                              style={{
+                                height: '40px',
+                                padding: '0 14px',
+                                background: 'var(--bg-subtle, #1f2035)',
+                                border: '1px solid var(--border-default, #1e1f35)',
+                                color: 'var(--text-secondary, #8b8aa0)',
+                                fontWeight: 600,
+                                fontSize: '13px',
+                                borderRadius: '10px',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap' as const,
+                              }}
+                            >
+                              Amână
+                            </ActionSubmitButton>
+                          </form>
+                        </div>
+                      ) : null}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
-            {nextUpActionsSheet}
-
-            <QuickAddBar />
-
-            {/* ── Rezolvă următorul ───────────────────────────── */}
-            {!overdueTopItems.length ? null : (
-              <div className="animate-in space-y-3">
-                {!isControlSessionDone ? (
-                  <form action={markDone}>
-                    <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
-                    <input type="hidden" name="reminderId" value={overdueTopItems[0]?.reminder?.id ?? ''} />
-                    <input type="hidden" name="occurAt" value={overdueTopItems[0]?.occur_at ?? ''} />
-                    <input type="hidden" name="done_comment" value="" />
-                    <ActionSubmitButton
-                      className="btn btn-primary btn-lg w-full"
-                      type="submit"
-                      data-action-feedback={copy.common.actionDone}
-                      disabled={!overdueTopItems[0]}
-                      onClick={() => {
-                        setControlSessionCount((prev: number) => Math.min(prev + 1, controlSessionMax));
-                      }}
-                    >
-                      Rezolvă următorul ({Math.min(controlSessionCount + 1, controlSessionMax)}/{controlSessionMax})
-                    </ActionSubmitButton>
-                  </form>
-                ) : null}
-                <div className="flex flex-wrap items-center gap-4 px-1">
-                  <form action={snoozeOccurrence}>
-                    <input type="hidden" name="occurrenceId" value={overdueTopItems[0]?.id ?? ''} />
-                    <input type="hidden" name="option_id" value="tomorrow" />
-                    <ActionSubmitButton
-                      className="btn btn-ghost text-sm"
-                      type="submit"
-                      data-action-feedback={copy.common.actionSnoozed}
-                      disabled={!overdueTopItems[0]}
-                    >
-                      Mută pe mâine
-                    </ActionSubmitButton>
-                  </form>
+            {/* ── 4. Family Module ────────────────────────────── */}
+            {Array.isArray(householdMembers) && householdMembers.length > 1 ? (
+              <div
+                className="animate-in"
+                style={{ margin: '0 1rem', animationDelay: '200ms' }}
+              >
+                <div
+                  style={{
+                    borderRadius: '12px',
+                    background: 'var(--bg-raised, #13141f)',
+                    border: '1px solid var(--border-default, #1e1f35)',
+                  }}
+                >
+                  {/* Collapsed trigger row */}
                   <button
                     type="button"
-                    className="btn btn-ghost text-sm"
-                    onClick={() => router.push('/app?tab=today&segment=overdue')}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '10px 12px',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left' as const,
+                    }}
+                    onClick={() => setFamilyExpanded(!familyExpanded)}
+                    aria-expanded={familyExpanded}
                   >
-                    Vezi toate
+                    {/* Stacked avatars */}
+                    <div style={{ display: 'flex', flexShrink: 0, position: 'relative' }}>
+                      {householdMembers.slice(0, 2).map((member: any, idx: number) => {
+                        const memberName = member.label ?? member.display_name ?? member.name ?? '';
+                        const initials = memberName.trim().split(/\s+/).map((w: string) => w[0] ?? '').slice(0, 2).join('').toUpperCase() || '?';
+                        return (
+                          <div
+                            key={member.id ?? idx}
+                            style={{
+                              width: 22,
+                              height: 22,
+                              borderRadius: '50%',
+                              background: 'var(--bg-overlay, #252640)',
+                              border: '1.5px solid var(--bg-raised, #13141f)',
+                              color: 'var(--accent-text, #a5a8ff)',
+                              fontSize: '9px',
+                              fontWeight: 700,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              marginLeft: idx === 0 ? 0 : -6,
+                              position: 'relative',
+                              zIndex: 2 - idx,
+                            }}
+                          >
+                            {idx === 0 && familyUrgentCount > 0 ? (
+                              <span
+                                style={{
+                                  position: 'absolute',
+                                  top: -2,
+                                  right: -2,
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: '50%',
+                                  background: 'var(--amber, #f59e0b)',
+                                  border: '1px solid var(--bg-raised, #13141f)',
+                                }}
+                              />
+                            ) : null}
+                            {initials}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Text info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #eeedf5)' }}>
+                        Familie
+                      </div>
+                      <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono, monospace)', marginTop: '1px' }}>
+                        {familyUrgentCount > 0 ? (
+                          <span style={{ color: 'var(--amber-text, #fcd34d)' }}>{familyUrgentCount} urgent</span>
+                        ) : null}
+                        {familyUrgentCount > 0 && familyUpcomingCount > 0 ? (
+                          <span style={{ color: 'var(--text-muted, #4a4860)' }}> · </span>
+                        ) : null}
+                        {familyUpcomingCount > 0 ? (
+                          <span style={{ color: 'var(--text-secondary, #8b8aa0)' }}>{familyUpcomingCount} azi</span>
+                        ) : null}
+                        {familyUrgentCount === 0 && familyUpcomingCount === 0 ? (
+                          <span style={{ color: 'var(--text-muted, #4a4860)' }}>nimic urgent</span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {/* Expand affordance */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted, #4a4860)' }}>Detalii</span>
+                      <span
+                        style={{
+                          fontSize: '9px',
+                          color: 'var(--text-muted, #4a4860)',
+                          transition: 'transform 300ms ease-out',
+                          transform: familyExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                          display: 'inline-block',
+                        }}
+                      >
+                        ▾
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Accordion expanded content */}
+                  <div
+                    style={{
+                      maxHeight: familyExpanded ? '500px' : 0,
+                      overflow: 'hidden',
+                      transition: 'max-height 300ms ease-out',
+                    }}
+                  >
+                    <div style={{ borderTop: '1px solid var(--border-default, #1e1f35)', padding: '8px 12px 12px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px' }}>
+                        {householdItemsSlice.map((occurrence: any) => {
+                          const reminder = occurrence.reminder ?? null;
+                          const isUrgent = overdueItems.some((o: any) => o.id === occurrence.id);
+                          return (
+                            <div
+                              key={occurrence.id}
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}
+                            >
+                              <span
+                                style={{
+                                  fontSize: '12px',
+                                  color: 'var(--text-secondary, #8b8aa0)',
+                                  flex: 1,
+                                  minWidth: 0,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap' as const,
+                                }}
+                              >
+                                {reminder?.title ?? '—'}
+                              </span>
+                              <span
+                                style={{
+                                  flexShrink: 0,
+                                  background: isUrgent ? 'rgba(245,158,11,0.10)' : 'var(--bg-subtle, #1f2035)',
+                                  border: `1px solid ${isUrgent ? 'rgba(245,158,11,0.22)' : 'var(--border-default, #1e1f35)'}`,
+                                  borderRadius: '5px',
+                                  padding: '2px 7px',
+                                  fontFamily: 'var(--font-mono, monospace)',
+                                  fontSize: '10px',
+                                  color: isUrgent ? 'var(--amber-text, #fcd34d)' : 'var(--text-secondary, #8b8aa0)',
+                                }}
+                              >
+                                {isUrgent ? 'Urgent' : 'Confirmă'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                        {householdItemsSlice.length === 0 ? (
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted, #4a4860)' }}>
+                            Nicio activitate recentă.
+                          </div>
+                        ) : null}
+                      </div>
+                      {/* Footer */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px' }}>
+                        <button
+                          type="button"
+                          style={{
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: 'var(--accent-text, #a5a8ff)',
+                            background: 'transparent',
+                            border: '1px solid rgba(108,111,245,0.28)',
+                            borderRadius: '7px',
+                            padding: '5px 10px',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => router.push('/app/household')}
+                        >
+                          Coordonează
+                        </button>
+                        <button
+                          type="button"
+                          style={{
+                            fontSize: '11px',
+                            color: 'var(--text-muted, #4a4860)',
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '5px 0',
+                          }}
+                          onClick={() => router.push('/app?tab=today')}
+                        >
+                          Vezi toate →
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* ── 5. Status Row ───────────────────────────────── */}
+            <div
+              className="animate-in"
+              style={{ margin: '0 1rem', animationDelay: '240ms' }}
+            >
+              <div
+                style={{
+                  borderRadius: '9px',
+                  background: 'var(--bg-raised, #13141f)',
+                  border: '1px solid var(--border-default, #1e1f35)',
+                  padding: '8px 12px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary, #8b8aa0)' }}>
+                  Azi:{' '}
+                  <span style={{ color: 'var(--amber-text, #fcd34d)', fontWeight: 600 }}>
+                    {filteredOverdueCount} urgent
+                  </span>
+                  {' · '}
+                  backlog {todayOpenItems.length + overdueItems.length}
+                </div>
+                <button
+                  type="button"
+                  style={{
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    textTransform: 'uppercase' as const,
+                    letterSpacing: '0.06em',
+                    color: 'var(--accent-text, #a5a8ff)',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => router.push('/app?tab=inbox')}
+                >
+                  INBOX →
+                </button>
+              </div>
+            </div>
+
+            {/* ── 6. Restul Zilei ─────────────────────────────── */}
+            {todayTasks.length > 0 ? (
+              <div
+                className="animate-in"
+                style={{ margin: '0 1rem', animationDelay: '280ms' }}
+              >
+                {/* Section header */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '8px',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-mono, monospace)',
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      textTransform: 'uppercase' as const,
+                      letterSpacing: '0.06em',
+                      color: 'var(--text-muted, #4a4860)',
+                    }}
+                  >
+                    RESTUL ZILEI
+                  </span>
+                  <button
+                    type="button"
+                    style={{
+                      fontFamily: 'var(--font-mono, monospace)',
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      textTransform: 'uppercase' as const,
+                      letterSpacing: '0.06em',
+                      color: 'var(--text-muted, #4a4860)',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => router.push('/app?tab=today')}
+                  >
+                    TOATE →
                   </button>
                 </div>
-              </div>
-            )}
 
-            {isControlSessionDone ? (
-              <div className="text-xs" style={{ color: 'var(--text-secondary, #8b8aa0)' }}>
-                Sesiune încheiată. Restul pot aștepta.
-              </div>
-            ) : null}
-
-            {/* ── Membrii familiei ────────────────────────────── */}
-            {Array.isArray(householdMembers) && householdMembers.length > 1 ? (
-              <section className="animate-in space-y-3 px-[1rem]">
-                <div className="section-label">MEMBRII FAMILIEI</div>
-                <div className="no-scrollbar flex gap-[0.625rem] overflow-x-auto pb-1">
-                  {householdMembers.map((member: any) => {
-                    // householdMembers shape is { id, label } — label holds the display name
-                    const memberName: string = member.display_name ?? member.name ?? member.label ?? '';
-                    const initials = memberName
-                      .trim()
-                      .split(/\s+/)
-                      .map((w: string) => w[0] ?? '')
-                      .slice(0, 2)
-                      .join('')
-                      .toUpperCase() || '?';
-                    return (
-                      <div key={member.id ?? member.user_id} className="flex flex-shrink-0 flex-col items-center gap-1.5">
-                        <div
-                          className="flex h-11 w-11 items-center justify-center rounded-full"
-                          style={{
-                            background: 'var(--bg-subtle, #1f2035)',
-                            border: '1px solid var(--border-default, #1e1f35)',
-                            color: 'var(--accent-text, #a5a8ff)',
-                            fontSize: '0.8125rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {initials}
-                        </div>
-                        <span
-                          className="max-w-[52px] truncate text-center text-[0.6875rem]"
-                          style={{ color: 'var(--text-secondary, #8b8aa0)' }}
-                        >
-                          {memberName.split(' ')[0] ?? memberName}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            ) : null}
-
-            {/* ── Prioritare azi ──────────────────────────────── */}
-            {!overdueTopItems.length ? null : (
-              <section className="animate-in space-y-2 px-[1rem]">
-                <div className="section-label">PRIORITARE AZI</div>
-                {activeFilterLabel ? (
-                  <div className="text-xs" style={{ color: 'var(--text-secondary, #8b8aa0)' }}>
-                    {activeFilterLabel}
-                  </div>
-                ) : null}
-                <div className="stagger space-y-[0.375rem]">
-                  {overdueTopItems.slice(0, 5).map((occurrence: any, index: number) => {
+                {/* Task cards */}
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '6px' }}>
+                  {todayTasks.map((occurrence: any, idx: number) => {
                     const reminder = occurrence.reminder ?? null;
-                    const categoryId = inferReminderCategoryId({
-                      title: reminder?.title,
-                      notes: reminder?.notes,
-                      kind: reminder?.kind,
-                      category: reminder?.category,
-                      medicationDetails: reminder?.medication_details,
-                    });
-                    const category = getReminderCategory(categoryId);
-                    const categoryStyle = getCategoryChipStyle(category.color, true);
-                    const isMissedMed = reminder?.kind === 'medication';
-                    const priorityBarClass = isMissedMed ? 'priority-bar-critical' : 'priority-bar-amber';
-                    const bgTint = isMissedMed
-                      ? 'rgba(248,113,113,0.04)'
-                      : index === 0
-                      ? 'rgba(245,158,11,0.04)'
-                      : 'transparent';
-
+                    const title = reminder?.title ?? '—';
+                    const rawDate = occurrence.snoozed_until ?? occurrence.effective_at ?? occurrence.occur_at;
+                    const timeLabel = rawDate ? new Date(rawDate).toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' }) : null;
+                    const dayDiff = rawDate ? diffDaysInTimeZone(new Date(rawDate), new Date(), effectiveTimeZone || 'UTC') : null;
+                    const metaLabel = dayDiff === 1 ? 'Scadent mâine' : (reminder?.category ?? null);
+                    const isWarnMeta = dayDiff !== null && dayDiff <= 1;
                     return (
                       <div
                         key={occurrence.id}
-                        className={`animate-in priority-bar ${priorityBarClass} rounded-xl py-[0.625rem] px-[0.875rem] ${index !== 0 ? 'opacity-60' : ''}`}
+                        className="animate-in"
                         style={{
-                          background: bgTint,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '8px 12px',
+                          borderRadius: '9px',
+                          background: 'var(--bg-raised, #13141f)',
                           border: '1px solid var(--border-default, #1e1f35)',
+                          animationDelay: `${280 + 60 * idx}ms`,
                         }}
                       >
-                        <div className="min-w-0 space-y-1">
-                          <div
-                            className="line-clamp-2 text-[0.875rem] font-medium leading-snug"
+                        {/* Checkbox */}
+                        <form action={markDone} style={{ flexShrink: 0 }}>
+                          <input type="hidden" name="occurrenceId" value={occurrence.id ?? ''} />
+                          <input type="hidden" name="reminderId" value={reminder?.id ?? ''} />
+                          <input type="hidden" name="occurAt" value={occurrence.occur_at ?? ''} />
+                          <input type="hidden" name="done_comment" value="" />
+                          <ActionSubmitButton
+                            type="submit"
+                            spinner={false}
                             style={{
-                              color: index === 0
-                                ? 'var(--text-primary, #eeedf5)'
-                                : 'var(--text-secondary, #8b8aa0)',
+                              width: 16,
+                              height: 16,
+                              borderRadius: '50%',
+                              border: '1.5px solid var(--border-strong, #2a2b45)',
+                              background: 'transparent',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: 0,
+                              flexShrink: 0,
+                            }}
+                            aria-label={`Marchează ${title} ca rezolvat`}
+                          >
+                            <span style={{ fontSize: '8px', opacity: 0 }}>○</span>
+                          </ActionSubmitButton>
+                        </form>
+
+                        {/* Text */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: '13px',
+                              fontWeight: 600,
+                              color: 'var(--text-primary, #eeedf5)',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap' as const,
                             }}
                           >
-                            {reminder?.title}
+                            {title}
                           </div>
-                          <div className={`time-text ${isMissedMed ? 'time-critical' : 'time-amber'}`}>
-                            {getOverdueMeta(occurrence)}
-                          </div>
-                          {category?.label ? (
-                            <span
-                              className={`badge ${isMissedMed ? 'badge-critical' : 'badge-amber'}`}
-                              style={categoryStyle}
+                          {metaLabel ? (
+                            <div
+                              style={{
+                                fontSize: '11px',
+                                fontFamily: 'var(--font-mono, monospace)',
+                                color: isWarnMeta ? 'var(--amber-text, #fcd34d)' : 'var(--text-muted, #4a4860)',
+                                marginTop: '1px',
+                              }}
                             >
-                              {category.label}
-                            </span>
+                              {metaLabel}
+                            </div>
                           ) : null}
                         </div>
+
+                        {/* Time */}
+                        {timeLabel ? (
+                          <div
+                            style={{
+                              fontSize: '11px',
+                              fontFamily: 'var(--font-mono, monospace)',
+                              color: 'var(--text-muted, #4a4860)',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {timeLabel}
+                          </div>
+                        ) : null}
                       </div>
                     );
                   })}
                 </div>
-              </section>
-            )}
-
-            {/* ── Urmează în curând ───────────────────────────── */}
-            {filteredSoonItems.length ? (
-              <section className="animate-in space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="section-label" style={{ marginBottom: 0 }}>URMEAZĂ ÎN CURÂND</div>
-                  {hasMoreSoon ? (
-                    <button
-                      type="button"
-                      className="btn btn-ghost text-xs"
-                      onClick={() => router.push('/app?tab=today&segment=soon')}
-                    >
-                      Vezi toate
-                    </button>
-                  ) : null}
-                </div>
-                <div className="stagger space-y-2">
-                  {soonPreview.map((occurrence: any) => (
-                    <ReminderRowMobile
-                      key={occurrence.id}
-                      occurrence={occurrence}
-                      locale={locale}
-                      googleConnected={googleConnected}
-                      userTimeZone={effectiveTimeZone}
-                    />
-                  ))}
-                </div>
-              </section>
+              </div>
             ) : null}
+
+            {/* ── 7. Quick Add Bar ────────────────────────────── */}
+            <div
+              className="animate-in"
+              style={{ margin: '0 1rem', animationDelay: '340ms' }}
+            >
+              <QuickAddBar />
+            </div>
+
+            {/* ── 8. Resolve Next (appears after hero completion) */}
+            {showResolveNext && nextAfterHero ? (
+              <div
+                className="animate-in"
+                style={{
+                  margin: '0 1rem',
+                  borderRadius: '10px',
+                  background: 'rgba(108,111,245,0.08)',
+                  border: '1px solid rgba(108,111,245,0.20)',
+                  padding: '10px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                }}
+              >
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary, #8b8aa0)' }}>
+                  → Urmează:{' '}
+                  <span style={{ color: 'var(--text-primary, #eeedf5)', fontWeight: 600 }}>
+                    {(nextAfterHero as any).reminder?.title ?? '—'}
+                  </span>
+                </span>
+              </div>
+            ) : null}
+
+            {/* Legacy: next actions sheet */}
+            {nextUpActionsSheet}
+
           </div>
         )}
       </section>
